@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Claude Code — design mockup</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS — tweak these first, everything derives from them
+     ============================================================ */
+  :root {
+    --bg: #1f2124;          /* panel background */
+    --panel: #26282c;       /* input card / popups */
+    --fg: #d5d8dd;          /* main text */
+    --muted: #8b9096;       /* secondary text */
+    --border: #3a3d43;      /* subtle borders */
+    --border-strong: #45494f;
+    --accent: #d97757;      /* Claude orange */
+    --green: #4ec26b;       /* tool dot */
+    --blue: #4daafc;        /* links */
+    --amber: #d7a35f;       /* inline code */
+    --code-bg: #1a1c1f;     /* IN/OUT + code blocks */
+    --red: #f2827f;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+    font: 13px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  img { max-width: 100%; height: auto; }
+
+  /* scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: #3b3d44 transparent; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3b3d44; border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #4a4d55; background-clip: content-box; }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+  #app { display: flex; flex-direction: column; height: 100%; position: relative; }
+
+  /* ---------- header ---------- */
+  #head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; }
+  #head .title { font-size: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #head .actions { display: flex; gap: 2px; }
+  .icon-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 14px;
+    width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+  .icon-btn:hover { background: var(--panel); color: var(--fg); }
+
+  /* ---------- log ---------- */
+  #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 6px 14px 120px; display: flex; flex-direction: column; gap: 12px; }
+  #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
+    background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
+
+  /* user message: full-width bordered box */
+  .msg-user { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
+
+  /* assistant block: plain text with small dot */
+  .blk { position: relative; padding-left: 18px; }
+  .blk::before { content: '●'; position: absolute; left: 2px; top: 7px; font-size: 6px; color: #6f7378; }
+  .blk > *:first-child { margin-top: 0; } .blk > *:last-child { margin-bottom: 0; }
+  .blk p { margin: .45em 0; }
+  .blk ul { margin: .4em 0; padding-left: 1.3em; }
+  .blk li { margin: .2em 0; }
+  .blk a { color: var(--blue); text-decoration: none; }
+  .blk a:hover { text-decoration: underline; }
+  .blk code { background: #2a2d33; color: var(--amber); padding: 1px 5px; border-radius: 4px;
+    font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
+
+  /* thinking */
+  .think { position: relative; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .think::before { content: '●'; position: absolute; left: 2px; top: 7px; font-size: 6px; color: #6f7378; }
+  .think summary { cursor: pointer; user-select: none; list-style: none; }
+  .think summary::after { content: ' ›'; color: var(--muted); }
+  .think[open] summary::after { content: ' ⌄'; }
+  .think .body { white-space: pre-wrap; font-style: italic; margin-top: 4px; }
+
+  /* tool line + IN/OUT */
+  .tool-line { position: relative; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .tool-line::before { content: '●'; position: absolute; left: 2px; top: 6px; font-size: 6px; color: var(--green); }
+  .tool-line b { color: var(--fg); font-weight: 600; }
+  .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
+  .io { margin: -6px 0 0 18px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .io-row { display: flex; gap: 10px; padding: 6px 10px; }
+  .io-row + .io-row { border-top: 1px solid var(--border); }
+  .io-k { color: #6f7378; font-size: 10px; padding-top: 2px; min-width: 26px; }
+  .io-v { white-space: pre-wrap; word-break: break-all; flex: 1; max-height: 200px; overflow-y: auto; }
+
+  /* code block */
+  .codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: #17181b; color: var(--muted); font-size: 11px; }
+  .codeblock .cb-h button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 5px; padding: 0 8px; cursor: pointer; font: inherit; }
+  .codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .hl-k { color: #c586c0; } .hl-s { color: #ce9178; } .hl-c { color: #6a9955; font-style: italic; } .hl-n { color: #b5cea8; } .hl-v { color: #9cdcfe; }
+
+  /* permission / plan / question card */
+  .card { border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: #232528; }
+  .card.warn { border-color: #6b4a3c; background: #282320; }
+  .card-h { margin-bottom: 8px; }
+  .card-h code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; }
+  .card-b { display: flex; gap: 8px; margin-top: 10px; }
+  .card-b button { border: 0; border-radius: 6px; padding: 5px 14px; cursor: pointer; font: inherit; }
+  .card-b .ok { background: #2ea043; color: #fff; }
+  .card-b .no { background: #3a3d41; color: var(--fg); }
+  .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+    overflow-x: auto; max-height: 240px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .diff .del { color: var(--red); white-space: pre-wrap; }
+  .diff .add { color: var(--green); white-space: pre-wrap; }
+
+  /* undo + status lines */
+  .status { color: var(--muted); font-size: 12px; padding-left: 18px; }
+  .status a { color: var(--accent); text-decoration: none; }
+  .status a:hover { text-decoration: underline; }
+
+  /* ---------- composer ---------- */
+  #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 12px 12px; z-index: 16; }
+  #inputcard { position: relative; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+    padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
+  #inputcard:focus-within { border-color: #565a62; }
+  #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
+    font: inherit; min-height: 22px; max-height: 200px; padding: 0 26px 0 0; }
+  #input::placeholder { color: #6d7278; }
+  #micBtn { position: absolute; top: 8px; right: 10px; }
+  #inputbar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 2px; }
+  .chip-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px;
+    padding: 4px 8px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; }
+  .chip-btn:hover { background: var(--bg); color: var(--fg); }
+  .chip-btn .mono { font-family: ui-monospace, monospace; font-size: 11px; }
+  #send { background: #4a4d52; color: #cfd2d6; border: 0; border-radius: 8px; width: 30px; height: 28px;
+    cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
+  #send.ready { background: var(--accent); color: #fff; }
+  #send.stop { background: #c9403a; color: #fff; }
+
+  /* ---------- popups ---------- */
+  .popup { position: absolute; z-index: 25; bottom: 92px; background: var(--panel); border: 1px solid var(--border-strong);
+    border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 330px; max-width: 94%; }
+  .popup.show { display: block; }
+  #modeMenu { right: 12px; } #modelMenu { left: 12px; } #slashMenu { left: 12px; right: 12px; min-width: 0; }
+  .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--muted);
+    font-size: 11px; }
+  .popup-h kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
+  .popup-item { display: flex; gap: 11px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
+  .popup-item:hover, .popup-item.sel { background: #2f3237; }
+  .pi-ic { color: var(--muted); width: 20px; text-align: center; font-family: ui-monospace, monospace; padding-top: 1px; }
+  .pi-body { flex: 1; min-width: 0; }
+  .pi-title { color: var(--fg); font-size: 13px; }
+  .pi-desc { color: var(--muted); font-size: 11.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pi-check { color: var(--fg); visibility: hidden; padding-top: 2px; }
+  .popup-item.on .pi-check { visibility: visible; }
+  .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 12px; }
+  .effort-dots { display: flex; gap: 5px; align-items: center; }
+  .effort-dots .d { width: 8px; height: 8px; border-radius: 50%; background: #4a4d52; }
+  .effort-dots .d.on { background: var(--blue); }
+  .effort-dots .d.big { width: 12px; height: 12px; }
+
+  /* ---------- dev toolbar (design preview only — not shipped) ---------- */
+  #devbar { position: fixed; top: 8px; right: 8px; z-index: 99; display: flex; gap: 4px; opacity: .25; transition: opacity .15s; }
+  #devbar:hover { opacity: 1; }
+  #devbar button { background: #333; color: #bbb; border: 1px solid #555; border-radius: 5px; font-size: 10px; padding: 2px 7px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="devbar">
+  <button onclick="tg('modeMenu')">mode</button>
+  <button onclick="tg('modelMenu')">model</button>
+  <button onclick="tg('slashMenu')">slash</button>
+</div>
+
+<div id="app">
+  <div id="head">
+    <span class="title">Create a new test.txt file</span>
+    <span class="actions">
+      <button class="icon-btn" title="Past conversations">🕘</button>
+      <button class="icon-btn" title="New conversation">＋</button>
+    </span>
+  </div>
+
+  <div id="log">
+    <div class="msg-user">Print some text with inline code</div>
+
+    <details class="think"><summary>Thinking</summary><div class="body">The user wants a PHP example with inline code…</div></details>
+
+    <div class="blk">
+      <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
+      <p>A few related notes:</p>
+      <ul>
+        <li><code>array_column()</code> works on arrays of arrays <i>and</i> arrays of objects.</li>
+        <li>The null-safe operator <code>?-&gt;</code> short-circuits the whole chain.</li>
+        <li>Prefer <code>str_contains($haystack, $needle)</code> over <code>strpos(...) !== false</code>.</li>
+      </ul>
+      <p>See <a href="#">strict typing</a> and the <a href="#">RFC that introduced it</a> for the original rationale.</p>
+    </div>
+
+    <div class="msg-user">Get unix timestamp from the terminal</div>
+
+    <div class="tool-line"><b>Bash</b><span class="t-desc">Print current Unix timestamp</span></div>
+    <div class="io">
+      <div class="io-row"><span class="io-k">IN</span><span class="io-v">date +%s</span></div>
+      <div class="io-row"><span class="io-k">OUT</span><span class="io-v">1785155723</span></div>
+    </div>
+
+    <div class="blk">
+      <p>Current Unix timestamp: <b>1785155723</b></p>
+      <p>That's <code>2026-07-27</code> (UTC), matching today's date.</p>
+    </div>
+
+    <div class="msg-user">Add a helper function to functions.php</div>
+
+    <div class="tool-line"><b>Read</b><span class="t-desc">D:\sites\demo\functions.php</span></div>
+
+    <div class="card warn">
+      <div class="card-h">Claude wants to run <b>Edit</b> on <code>D:\sites\demo\functions.php</code></div>
+      <div class="diff"><span class="del">- function old_helper() {</span>
+<span class="add">+ function new_helper(string $name): string {</span>
+<span class="add">+     return "Hello, {$name}!";</span>
+<span class="add">+ }</span></div>
+      <div class="card-b"><button class="ok">Accept</button><button class="no">Reject</button></div>
+    </div>
+
+    <div class="blk">
+      <p>Here's the final helper with a docblock:</p>
+      <div class="codeblock">
+        <div class="cb-h"><span>php</span><button>Copy</button></div>
+        <pre><span class="hl-c">/** Greet a user by name. */</span>
+<span class="hl-k">function</span> new_helper(<span class="hl-k">string</span> <span class="hl-v">$name</span>): <span class="hl-k">string</span> {
+    <span class="hl-k">return</span> <span class="hl-s">"Hello, {$name}!"</span>;
+}</pre>
+      </div>
+    </div>
+
+    <div class="status"><a href="#">↩ Undo 1 file change</a></div>
+  </div>
+
+  <div id="fade"></div>
+
+  <div id="composer">
+    <div id="inputcard">
+      <button id="micBtn" class="icon-btn" title="Voice input">🎙</button>
+      <textarea id="input" placeholder="ctrl esc to focus or unfocus Claude"></textarea>
+      <div id="inputbar">
+        <div class="left">
+          <button class="icon-btn" title="Attach">＋</button>
+          <button class="icon-btn" title="Insert file reference">⧉</button>
+        </div>
+        <div class="right">
+          <button class="chip-btn"><span class="mono">&lt;/&gt;</span> Edit automatically</button>
+          <button id="send" title="Send">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modeMenu" class="popup">
+    <div class="popup-h"><span>Modes</span><span><kbd>⇧</kbd>+<kbd>tab</kbd> to switch</span></div>
+    <div class="popup-item"><span class="pi-ic">✋</span><div class="pi-body"><div class="pi-title">Manual</div><div class="pi-desc">Claude will ask for approval before making each edit</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-item on sel"><span class="pi-ic">&lt;/&gt;</span><div class="pi-body"><div class="pi-title">Edit automatically</div><div class="pi-desc">Claude will edit your selected text or the whole file</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-item"><span class="pi-ic">▤</span><div class="pi-body"><div class="pi-title">Plan</div><div class="pi-desc">Claude will explore the code and present a plan before editing</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-item"><span class="pi-ic">⚡</span><div class="pi-body"><div class="pi-title">Auto</div><div class="pi-desc">Claude will approve actions that pass a safety check and pause for anything risky</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-f"><span>⛭ Effort (High)</span><span class="effort-dots"><span class="d on"></span><span class="d on"></span><span class="d on big"></span><span class="d"></span><span class="d"></span></span></div>
+  </div>
+
+  <div id="modelMenu" class="popup">
+    <div class="popup-h"><span>Select a model</span></div>
+    <div class="popup-item on"><div class="pi-body"><div class="pi-title">Default (recommended)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-item"><div class="pi-body"><div class="pi-title">Opus (1M context)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-item"><div class="pi-body"><div class="pi-title">Sonnet</div><div class="pi-desc">Sonnet 5 · Efficient for routine tasks</div></div><span class="pi-check">✓</span></div>
+    <div class="popup-item sel"><div class="pi-body"><div class="pi-title">Haiku</div><div class="pi-desc">Haiku 4.5 · Fastest for quick answers</div></div><span class="pi-check">✓</span></div>
+  </div>
+
+  <div id="slashMenu" class="popup">
+    <div class="popup-h"><span>Commands</span></div>
+    <div class="popup-item sel"><span class="pi-ic">/</span><div class="pi-body"><div class="pi-title">/compact</div><div class="pi-desc">Compact the conversation to free up context</div></div></div>
+    <div class="popup-item"><span class="pi-ic">/</span><div class="pi-body"><div class="pi-title">/context</div><div class="pi-desc">Show current context usage</div></div></div>
+    <div class="popup-item"><span class="pi-ic">/</span><div class="pi-body"><div class="pi-title">/model</div><div class="pi-desc">Switch the model for this session</div></div></div>
+  </div>
+</div>
+
+<script>
+  // dev toolbar toggles (mockup only)
+  function tg(id) {
+    ['modeMenu','modelMenu','slashMenu'].forEach(function (x) {
+      document.getElementById(x).classList.toggle('show', x === id && !document.getElementById(x).classList.contains('show'));
+    });
+  }
+  // send button becomes orange when there's text (like VS Code)
+  var inp = document.getElementById('input'), send = document.getElementById('send');
+  inp.addEventListener('input', function () { send.classList.toggle('ready', inp.value.trim().length > 0); });
+</script>
+</body>
+</html>

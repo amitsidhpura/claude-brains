@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  :root {
+    --bg: #1e1f22; --panel: #2b2d30; --fg: #dfe1e5; --muted: #9aa0a6;
+    --user: #3574f0; --accent: #d97757; --border: #393b40; --code: #1a1b1e;
+    --green: #3fb950; --red: #f2827f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+    font: 13px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  img { max-width: 100%; height: auto; }
+
+  /* slim, modern scrollbars (Chromium/JCEF) */
+  * { scrollbar-width: thin; scrollbar-color: #3b3d44 transparent; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3b3d44; border-radius: 6px;
+    border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #4a4d55; background-clip: content-box; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  #app { display: flex; flex-direction: column; height: 100%; position: relative; }
+  #head { padding: 6px 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-weight: 600; letter-spacing: .04em; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  #head .head-actions { display: flex; gap: 6px; }
+  #head button { background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 11px; }
+  #head button:hover { color: var(--fg); border-color: var(--accent); }
+
+  #history { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; z-index: 40; }
+  .hist-panel { position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+    width: 90%; max-width: 520px; max-height: 80%; overflow: hidden; display: flex; flex-direction: column;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  .hist-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;
+    border-bottom: 1px solid var(--border); font-weight: 600; }
+  .hist-h button { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; }
+  #histList { overflow-y: auto; }
+  .hist-item { padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .hist-item:hover { background: var(--bg); }
+  .hist-item .t { color: var(--fg); }
+  .hist-item .d { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .hist-empty { padding: 16px; color: var(--muted); }
+  #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 12px 104px; display: flex; flex-direction: column; gap: 10px; }
+  #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; z-index: 14; pointer-events: none;
+    background: linear-gradient(to bottom, transparent 0%, var(--bg) 62%); }
+  .msg { max-width: 100%; min-width: 0; word-wrap: break-word; overflow-wrap: anywhere; }
+  .msg.user { align-self: stretch; border: 1px solid #3f434a; border-radius: 8px;
+    padding: 8px 12px; white-space: pre-wrap; }
+  .msg.assistant { align-self: flex-start; width: 100%; position: relative; padding-left: 18px; }
+  .msg.assistant::before { content: '●'; position: absolute; left: 2px; top: 7px; font-size: 6px; color: #6f7378; }
+  .tool { align-self: flex-start; color: var(--muted); font-size: 12px; }
+  .tool b { color: var(--fg); }
+
+  /* tool call line: ● Name  description  (+ IN/OUT boxes) */
+  .tool-line { align-self: stretch; position: relative; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .tool-line::before { content: '●'; position: absolute; left: 2px; top: 6px; font-size: 6px; color: #4ec26b; }
+  .tool-line b { color: var(--fg); font-weight: 600; }
+  .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
+  .io { align-self: stretch; margin: 2px 0 4px 18px; background: #1a1c1f; border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden; font-family: ui-monospace, monospace; font-size: 12px; }
+  .io .io-row { display: flex; gap: 10px; padding: 6px 10px; }
+  .io .io-row + .io-row { border-top: 1px solid var(--border); }
+  .io .io-k { color: #6f7378; font-size: 10px; padding-top: 2px; min-width: 26px; }
+  .io .io-v { white-space: pre-wrap; word-break: break-all; color: var(--fg); flex: 1; max-height: 200px; overflow-y: auto; }
+  .tool .undo { color: var(--accent); text-decoration: none; }
+  .tool .undo:hover { text-decoration: underline; }
+
+  /* empty-state welcome */
+  #welcome { margin: auto; text-align: center; color: var(--muted); max-width: 300px; padding: 20px; }
+  #welcome .w-logo svg { width: 42px; height: 42px; }
+  #welcome .w-title { font-size: 15px; font-weight: 600; color: var(--fg); margin: 10px 0 6px; }
+  #welcome .w-sub { font-size: 12.5px; line-height: 1.6; }
+  #welcome kbd { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; color: var(--fg); }
+
+  /* working indicator */
+  .working { align-self: flex-start; display: flex; gap: 4px; padding: 6px 2px; }
+  .working .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+  .working .dot:nth-child(2) { animation-delay: .2s; }
+  .working .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+  .err { color: var(--red); }
+
+  /* markdown */
+  .md > *:first-child { margin-top: 0; }
+  .md > *:last-child { margin-bottom: 0; }
+  .md h1, .md h2, .md h3 { margin: .8em 0 .4em; line-height: 1.25; }
+  .md h1 { font-size: 1.35em; } .md h2 { font-size: 1.2em; } .md h3 { font-size: 1.08em; }
+  .md p { margin: .5em 0; }
+  .md ul, .md ol { margin: .4em 0; padding-left: 1.4em; }
+  .md li { margin: .15em 0; }
+  .md a { color: #58a6ff; text-decoration: none; }
+  .md a:hover { text-decoration: underline; }
+  .md blockquote { margin: .5em 0; padding: .2em .8em; border-left: 3px solid var(--border); color: var(--muted); }
+  .md hr { border: 0; border-top: 1px solid var(--border); margin: .8em 0; }
+  .md code.ic { background: #2a2d33; color: #d7a35f; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: .92em; }
+  .code { background: var(--code); border: 1px solid var(--border); border-radius: 8px; margin: .5em 0; overflow: hidden; }
+  .code-h { display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 8px; background: #16171a; color: var(--muted); font-size: 11px; }
+  .code-h .copy { background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 5px; padding: 1px 8px; cursor: pointer; font: inherit; }
+  .code pre { margin: 0; padding: 8px; overflow-x: auto; }
+  .code code { font-family: ui-monospace, monospace; font-size: 12px; }
+  .hl-k { color: #c586c0; }              /* keyword  */
+  .hl-s { color: #ce9178; }              /* string   */
+  .hl-c { color: #6a9955; font-style: italic; } /* comment */
+  .hl-n { color: #b5cea8; }              /* number   */
+  .hl-v { color: #9cdcfe; }              /* php var  */
+
+  /* thinking */
+  details.think { color: var(--muted); font-size: 12px; border-left: 2px solid var(--border); padding-left: 8px; }
+  details.think summary { cursor: pointer; user-select: none; }
+  details.think .think-body { white-space: pre-wrap; margin-top: 4px; font-style: italic; }
+
+  /* permission card */
+  .perm { align-self: stretch; border: 1px solid var(--accent); border-radius: 10px; padding: 10px; background: #2a2320; }
+  .perm-h { margin-bottom: 6px; }
+  .perm-h code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  .perm-b { display: flex; gap: 8px; margin-top: 8px; }
+  .perm-b button { border: 0; border-radius: 6px; padding: 5px 14px; cursor: pointer; font: inherit; }
+  .perm-b .ok { background: #2ea043; color: #fff; }
+  .perm-b .no { background: #3a3d41; color: var(--fg); }
+  .ok-t { color: var(--green); } .no-t { color: var(--red); }
+  .perm .q { margin: 10px 0; }
+  .perm .q-t { font-weight: 600; margin-bottom: 5px; }
+  .perm .q-opt { display: block; padding: 3px 0; cursor: pointer; }
+  .perm .q-opt input { margin-right: 6px; }
+  .perm .q-desc { color: var(--muted); }
+  .diff { background: var(--code); border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+    overflow-x: auto; max-height: 260px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .diff .del { color: var(--red); white-space: pre-wrap; }
+  .diff .add-l { color: var(--green); white-space: pre-wrap; }
+  pre { background: var(--code); border: 1px solid var(--border); border-radius: 8px; padding: 8px; overflow-x: auto; max-height: 260px; }
+
+  .att-img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
+  #attachments { display: none; gap: 8px; padding: 6px 8px 0; flex-wrap: wrap; }
+  #attachments .att-chip { position: relative; }
+  #attachments img { height: 46px; border-radius: 6px; border: 1px solid var(--border); display: block; }
+  #attachments button { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%;
+    border: 0; background: #000; color: #fff; cursor: pointer; font-size: 11px; line-height: 1; padding: 0; }
+  /* autocomplete popup (@ files, / commands) */
+  #mention { position: fixed; z-index: 30; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; max-height: 240px; overflow-y: auto; display: none; box-shadow: 0 8px 28px rgba(0,0,0,.5); padding: 4px; }
+  #mention .mi { padding: 5px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
+  #mention .mi.sel { background: var(--user); color: #fff; }
+
+  /* composer */
+  #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px 10px; z-index: 16; }
+  #inputcard { position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 9px 11px; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
+  #inputcard:focus-within { border-color: #55585f; }
+  #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
+    font: inherit; min-height: 22px; max-height: 200px; padding: 0 26px 0 0; }
+  #micBtn { position: absolute; top: 7px; right: 9px; }
+  #inputbar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 4px; }
+  .icon-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 15px;
+    width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+  .icon-btn:hover { background: var(--bg); color: var(--fg); }
+  .chip-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px;
+    padding: 4px 9px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; }
+  .chip-btn:hover { background: var(--bg); color: var(--fg); }
+  .chip-btn .mono { font-family: ui-monospace, monospace; color: var(--accent); font-size: 11px; }
+  #send { background: var(--accent); color: #fff; border: 0; border-radius: 8px; width: 30px; height: 28px;
+    cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
+  #send.stop { background: #c9403a; }
+
+  /* mode / model popups */
+  .popup { position: absolute; z-index: 25; bottom: 84px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 320px; max-width: 94%; }
+  #modeMenu { right: 10px; } #modelMenu { left: 10px; }
+  .popup.show { display: block; }
+  .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 13px; color: var(--muted);
+    font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .popup-h kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; text-transform: none; }
+  .popup-item { display: flex; gap: 11px; align-items: flex-start; padding: 9px 13px; cursor: pointer; }
+  .popup-item:hover { background: var(--bg); }
+  .popup-item .pi-ic { color: var(--accent); width: 20px; text-align: center; font-family: ui-monospace, monospace; }
+  .popup-item .pi-body { flex: 1; }
+  .popup-item .pi-title { color: var(--fg); font-size: 13px; }
+  .popup-item .pi-desc { color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+  .popup-item .pi-check { color: var(--accent); visibility: hidden; }
+  .popup-item.on .pi-check { visibility: visible; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="head">
+    <span>Claude Code</span>
+    <span class="head-actions">
+      <button id="retryBtn" title="Re-run the last prompt">↻ Retry</button>
+      <button id="newBtn" title="Start a new conversation">＋ New</button>
+      <button id="histBtn" title="Past conversations">🕘 History</button>
+    </span>
+  </div>
+  <div id="log">
+    <div id="welcome">
+      <div class="w-logo"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="#d97757" d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z"/></svg></div>
+      <div class="w-title">Claude Code</div>
+      <div class="w-sub">Ask about your project, edit files, run commands.<br>
+        Type <kbd>/</kbd> for commands, <kbd>@</kbd> to reference files, or paste an image.</div>
+    </div>
+  </div>
+  <div id="fade"></div>
+  <div id="composer">
+    <div id="attachments"></div>
+    <div id="inputcard">
+      <button id="micBtn" class="icon-btn" title="Voice input (coming soon)">🎤</button>
+      <textarea id="input" placeholder="Ask Claude…  (Enter to send, Shift+Enter for newline)"></textarea>
+      <div id="inputbar">
+        <div class="left">
+          <button id="attachBtn" class="icon-btn" title="Attach image">＋</button>
+          <button id="modelBtn" class="chip-btn" title="Model"><span id="modelLabel">Default</span></button>
+        </div>
+        <div class="right">
+          <button id="modeBtn" class="chip-btn" title="Permission mode"><span class="mono">&lt;/&gt;</span><span id="modeLabel">Manual</span></button>
+          <button id="send" title="Send">↑</button>
+        </div>
+      </div>
+    </div>
+    <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
+  </div>
+  <div id="modeMenu" class="popup">
+    <div class="popup-h"><span>Modes</span><span><kbd>shift</kbd>+<kbd>tab</kbd> to switch</span></div>
+    <div id="modeItems"></div>
+  </div>
+  <div id="modelMenu" class="popup">
+    <div class="popup-h"><span>Select a model</span></div>
+    <div id="modelItems"></div>
+  </div>
+</div>
+<div id="mention"></div>
+<div id="history"><div class="hist-panel">
+  <div class="hist-h"><span>Past conversations</span><button id="histClose">✕</button></div>
+  <div id="histList"></div>
+</div></div>
+<script>
+  const log = document.getElementById('log');
+  const input = document.getElementById('input');
+  const send = document.getElementById('send');
+  const modeBtn = document.getElementById('modeBtn'), modeMenu = document.getElementById('modeMenu');
+  const modeItems = document.getElementById('modeItems'), modeLabel = document.getElementById('modeLabel');
+  const modelBtn = document.getElementById('modelBtn'), modelMenu = document.getElementById('modelMenu');
+  const modelItems = document.getElementById('modelItems'), modelLabel = document.getElementById('modelLabel');
+  const history = document.getElementById('history');
+  const histList = document.getElementById('histList');
+  const att = document.getElementById('attachments');
+  const welcome = document.getElementById('welcome');
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  // Auto-scroll only when the user is already near the bottom (scroll pinning).
+  let pinned = true;
+  function atBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 40; }
+  function maybeScroll() { if (pinned) log.scrollTop = log.scrollHeight; }
+  log.addEventListener('scroll', () => { pinned = atBottom(); });
+
+  function el(cls, text) {
+    if (welcome) welcome.style.display = 'none';
+    const d = document.createElement('div');
+    d.className = cls; if (text != null) d.textContent = text;
+    log.appendChild(d); maybeScroll(); return d;
+  }
+
+  let workingEl = null;
+  function showWorking() {
+    if (workingEl) return;
+    workingEl = el('working', '');
+    workingEl.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  }
+  function hideWorking() { if (workingEl) { workingEl.remove(); workingEl = null; } }
+
+  /* ---------- tiny offline syntax highlighter ----------
+     Operates on already-HTML-escaped code. Single pass: at each position the first
+     matching alternative wins, so keywords inside strings/comments aren't re-matched. */
+  const KW = new Set((
+    'if else elseif for foreach while do switch case default break continue return yield ' +
+    'function fn func def lambda class interface trait enum struct extends implements new ' +
+    'public private protected static final abstract const let var val readonly ' +
+    'void int float double string bool boolean object mixed array list map ' +
+    'true false null nil none undefined this self super parent ' +
+    'try catch finally throw throws and or not xor in is instanceof typeof as ' +
+    'import from export default async await namespace use package module require include ' +
+    'echo print global type struct range select insert update delete where join on group by ' +
+    'order having union values into set with match when then end'
+  ).split(' '));
+  const HL_RE = /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(\b\d[\d_.]*\b)|(\$[A-Za-z_]\w*)|(\b[A-Za-z_]\w*\b)/g;
+  function highlight(code) {
+    return code.replace(HL_RE, (m, cmt, str, num, varr, ident) => {
+      if (cmt) return '<span class="hl-c">' + cmt + '</span>';
+      if (str) return '<span class="hl-s">' + str + '</span>';
+      if (num) return '<span class="hl-n">' + num + '</span>';
+      if (varr) return '<span class="hl-v">' + varr + '</span>';
+      if (ident) return KW.has(ident) ? '<span class="hl-k">' + ident + '</span>' : ident;
+      return m;
+    });
+  }
+
+  /* ---------- minimal, safe markdown renderer ---------- */
+  function inlineMd(s) {
+    return s
+      .replace(/`([^`]+)`/g, (m, c) => '<code class="ic">' + c + '</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+  function renderMd(srcRaw) {
+    let src = esc(srcRaw);                              // escape everything first
+    const blocks = [];
+    src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {   // fenced code
+      blocks.push('<div class="code"><div class="code-h"><span>' + esc(lang) +
+        '</span><button class="copy">Copy</button></div><pre><code>' +
+        highlight(code.replace(/\n$/, '')) + '</code></pre></div>');
+      return ' B' + (blocks.length - 1) + ' ';
+    });
+    const lines = src.split('\n');
+    let out = '', i = 0;
+    while (i < lines.length) {
+      let line = lines[i];
+      const ph = line.match(/^ B(\d+) $/);
+      if (ph) { out += blocks[+ph[1]]; i++; continue; }
+      if (/^\s*$/.test(line)) { i++; continue; }
+      let m;
+      if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { out += '<h' + m[1].length + '>' + inlineMd(m[2]) + '</h' + m[1].length + '>'; i++; continue; }
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out += '<hr>'; i++; continue; }
+      if (/^\s*>\s?/.test(line)) {
+        let buf = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
+        out += '<blockquote>' + inlineMd(buf.join(' ')) + '</blockquote>'; continue;
+      }
+      if (/^\s*([-*+])\s+/.test(line)) {
+        let buf = [];
+        while (i < lines.length && /^\s*([-*+])\s+/.test(lines[i])) { buf.push('<li>' + inlineMd(lines[i].replace(/^\s*([-*+])\s+/, '')) + '</li>'); i++; }
+        out += '<ul>' + buf.join('') + '</ul>'; continue;
+      }
+      if (/^\s*\d+\.\s+/.test(line)) {
+        let buf = [];
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { buf.push('<li>' + inlineMd(lines[i].replace(/^\s*\d+\.\s+/, '')) + '</li>'); i++; }
+        out += '<ol>' + buf.join('') + '</ol>'; continue;
+      }
+      // paragraph: gather consecutive normal lines
+      let buf = [];
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^ B\d+ $/.test(lines[i]) &&
+             !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !/^\s*>/.test(lines[i])) {
+        buf.push(lines[i]); i++;
+      }
+      out += '<p>' + inlineMd(buf.join('\n')).replace(/\n/g, '<br>') + '</p>';
+    }
+    return out;
+  }
+
+  // delegate copy-button clicks
+  log.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('copy')) {
+      const code = e.target.closest('.code').querySelector('code');
+      const text = code ? code.textContent : '';
+      if (navigator.clipboard) navigator.clipboard.writeText(text);
+      e.target.textContent = 'Copied'; setTimeout(() => { e.target.textContent = 'Copy'; }, 1200);
+    }
+  });
+
+  /* ---------- JS -> Kotlin bridge ---------- */
+  function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
+  window.sendToClaude = function (t) { bridge({ kind: 'user', text: t }); };
+  window.respondPermission = function (id, allow) { bridge({ kind: 'perm', id: id, allow: allow ? 'true' : 'false' }); };
+  /* ---------- mode & model pickers ---------- */
+  const MODES = [
+    { value: 'default', label: 'Manual', ic: '✋', desc: 'Claude asks for approval before each action' },
+    { value: 'acceptEdits', label: 'Edit automatically', ic: '&lt;/&gt;', desc: 'Claude edits files without asking' },
+    { value: 'plan', label: 'Plan', ic: '▤', desc: 'Claude explores and presents a plan before editing' },
+    { value: 'bypassPermissions', label: 'Auto', ic: '⚡', desc: 'Claude approves everything — no prompts' },
+  ];
+  let currentMode = 'default';
+  function renderModes() {
+    modeItems.innerHTML = MODES.map((m) =>
+      '<div class="popup-item' + (m.value === currentMode ? ' on' : '') + '" data-v="' + m.value + '">' +
+      '<span class="pi-ic">' + m.ic + '</span><div class="pi-body"><div class="pi-title">' + esc(m.label) +
+      '</div><div class="pi-desc">' + esc(m.desc) + '</div></div><span class="pi-check">✓</span></div>').join('');
+    Array.from(modeItems.children).forEach((c) => { c.onclick = () => setMode(c.dataset.v); });
+  }
+  function setMode(v) {
+    currentMode = v; const m = MODES.find((x) => x.value === v) || MODES[0];
+    modeLabel.textContent = m.label; bridge({ kind: 'mode', mode: v }); renderModes(); closePopups();
+  }
+  modeBtn.onclick = (e) => { e.stopPropagation(); togglePopup(modeMenu); };
+
+  let models = [], currentModel = null;
+  function renderModels() {
+    modelItems.innerHTML = models.map((m) =>
+      '<div class="popup-item' + (m.value === currentModel ? ' on' : '') + '" data-v="' + esc(m.value) + '">' +
+      '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
+      (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
+      '</div><span class="pi-check">✓</span></div>').join('');
+    Array.from(modelItems.children).forEach((c) => { c.onclick = () => setModel(c.dataset.v); });
+  }
+  function setModel(v) {
+    currentModel = v; const m = models.find((x) => x.value === v);
+    modelLabel.textContent = m ? (m.displayName || v) : v; bridge({ kind: 'model', model: v }); renderModels(); closePopups();
+  }
+  modelBtn.onclick = (e) => { e.stopPropagation(); togglePopup(modelMenu); };
+
+  function togglePopup(p) { const show = !p.classList.contains('show'); closePopups(); if (show) p.classList.add('show'); }
+  function closePopups() { modeMenu.classList.remove('show'); modelMenu.classList.remove('show'); }
+  modeMenu.onclick = (e) => e.stopPropagation();
+  modelMenu.onclick = (e) => e.stopPropagation();
+  document.addEventListener('click', closePopups);
+  renderModes();
+
+  /* ---------- sessions: new / history / resume ---------- */
+  document.getElementById('newBtn').onclick = function () { bridge({ kind: 'new' }); };
+  document.getElementById('histBtn').onclick = function () { bridge({ kind: 'history' }); };
+  document.getElementById('histClose').onclick = function () { history.style.display = 'none'; };
+  history.onclick = function (e) { if (e.target === history) history.style.display = 'none'; };
+
+  function renderHistory(items) {
+    histList.innerHTML = items.length ? '' : '<div class="hist-empty">No past conversations for this project.</div>';
+    items.forEach((s) => {
+      const row = document.createElement('div');
+      row.className = 'hist-item';
+      const when = s.time ? new Date(s.time).toLocaleString() : '';
+      row.innerHTML = '<div class="t">' + esc(s.title) + '</div><div class="d">' + esc(when) + '</div>';
+      row.onclick = () => { history.style.display = 'none'; bridge({ kind: 'resume', id: s.id }); };
+      histList.appendChild(row);
+    });
+    history.style.display = 'block';
+  }
+
+  function clearLogUI() {
+    Array.from(log.children).forEach((c) => { if (c.id !== 'welcome') c.remove(); });
+    if (welcome) welcome.style.display = '';
+    curBubble = null; curRaw = ''; curThink = null; curThinkRaw = ''; workingEl = null;
+    setBusy(false);
+  }
+
+  function renderTranscript(items) {
+    items.forEach((it) => {
+      if (it.role === 'user') { el('msg user', it.text); }
+      else if (it.role === 'assistant') { const b = el('msg assistant md', ''); b.innerHTML = renderMd(it.text); }
+      else if (it.role === 'tool') { const t = el('tool-line', ''); t.innerHTML = '<b>' + esc(it.text) + '</b>'; }
+    });
+    if (items.length) { const d = el('tool', '— resumed —'); }
+  }
+
+  /* ---------- image attachments ---------- */
+  let pending = []; // { media_type, data(base64) }
+  function renderAttachments() {
+    att.innerHTML = '';
+    pending.forEach((p, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'att-chip';
+      chip.innerHTML = '<img src="data:' + p.media_type + ';base64,' + p.data + '"><button data-i="' + i + '">✕</button>';
+      att.appendChild(chip);
+    });
+    att.style.display = pending.length ? 'flex' : 'none';
+    Array.from(att.querySelectorAll('button')).forEach((b) => { b.onclick = () => { pending.splice(+b.dataset.i, 1); renderAttachments(); }; });
+  }
+  function addImageFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result);      // data:<mt>;base64,<data>
+      const comma = url.indexOf(',');
+      const mt = (url.slice(5, url.indexOf(';')) || 'image/png');
+      pending.push({ media_type: mt, data: url.slice(comma + 1) });
+      renderAttachments();
+    };
+    reader.readAsDataURL(file);
+  }
+  input.addEventListener('paste', (e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const it of items) {
+      if (it.kind === 'file' && it.type.indexOf('image/') === 0) {
+        const f = it.getAsFile(); if (f) { addImageFile(f); e.preventDefault(); }
+      }
+    }
+  });
+  ['dragover', 'drop'].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault()));
+  document.addEventListener('drop', (e) => {
+    const fs = (e.dataTransfer && e.dataTransfer.files) || [];
+    for (const f of fs) if (f.type.indexOf('image/') === 0) addImageFile(f);
+  });
+  const attachBtn = document.getElementById('attachBtn');
+  const fileInput = document.getElementById('fileInput');
+  attachBtn.onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    Array.from(fileInput.files).forEach((f) => { if (f.type.indexOf('image/') === 0) addImageFile(f); });
+    fileInput.value = '';
+  };
+
+  function addUserMessage(text, imgs) {
+    const d = el('msg user', '');
+    if (text) { const p = document.createElement('div'); p.textContent = text; d.appendChild(p); }
+    imgs.forEach((im) => {
+      const img = document.createElement('img'); img.className = 'att-img';
+      img.src = 'data:' + im.media_type + ';base64,' + im.data; d.appendChild(img);
+    });
+  }
+
+  let busy = false, stopping = false;
+  function setBusy(b) {
+    busy = b;
+    send.innerHTML = b ? '■' : '↑';
+    send.title = b ? 'Stop' : 'Send';
+    send.classList.toggle('stop', b);
+    if (b) showWorking(); else hideWorking();
+  }
+
+  let lastUser = null;                 // { text, images } — for Retry
+  let turnId = null, turnHadEdit = false; // for Rewind
+  function uuid() { try { return crypto.randomUUID(); } catch (_) { return 'id-' + Math.random().toString(16).slice(2); } }
+
+  function sendTurn(t, imgs) {
+    addUserMessage(t, imgs);
+    lastUser = { text: t, images: imgs };
+    turnId = uuid(); turnHadEdit = false;
+    bridge({ kind: 'user', id: turnId, text: t, images: imgs.map((p) => ({ media_type: p.media_type, data: p.data })) });
+    stopping = false;
+    setBusy(true);
+  }
+
+  function submit() {
+    const t = input.value.trim();
+    if (!t && !pending.length) return;
+    const imgs = pending;
+    input.value = ''; pending = []; renderAttachments();
+    sendTurn(t, imgs);
+  }
+  send.onclick = function () { if (busy) { stopping = true; bridge({ kind: 'stop' }); } else submit(); };
+
+  document.getElementById('retryBtn').onclick = function () {
+    if (busy || !lastUser) return;
+    sendTurn(lastUser.text, lastUser.images);
+  };
+
+  // Ctrl/Cmd+N: new conversation
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); bridge({ kind: 'new' }); }
+  });
+
+  /* ---------- autocomplete: @-mentions (files) + /slash commands ---------- */
+  let files = [];
+  let slashCommands = [];
+  const menu = document.getElementById('mention');
+  let menuItems = [], menuSel = -1, menuStart = 0; // menuItems: [{ins, disp}]
+
+  function currentMention() {
+    const m = input.value.slice(0, input.selectionStart).match(/(?:^|\s)@([^\s@]*)$/);
+    return m ? { q: m[1], start: input.selectionStart - m[1].length } : null;
+  }
+  function currentSlash() {
+    const m = input.value.slice(0, input.selectionStart).match(/^\/(\S*)$/);
+    return m ? { q: m[1], start: 0 } : null; // replaces the whole leading /token
+  }
+  function hideMenu() { menu.style.display = 'none'; menuItems = []; menuSel = -1; }
+
+  function openMenu(start, entries) {
+    if (!entries.length) return hideMenu();
+    menuStart = start; menuItems = entries; menuSel = 0;
+    menu.innerHTML = entries.map((e, i) =>
+      '<div class="mi' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' + esc(e.disp) + '</div>').join('');
+    const r = input.getBoundingClientRect();
+    menu.style.display = 'block';
+    menu.style.left = r.left + 'px';
+    menu.style.width = r.width + 'px';
+    menu.style.top = (r.top - Math.min(220, menu.scrollHeight) - 4) + 'px';
+    Array.from(menu.children).forEach((c) => { c.onclick = () => pick(+c.dataset.i); });
+  }
+  function updateAuto() {
+    const sl = currentSlash();
+    if (sl) {
+      const q = sl.q.toLowerCase();
+      const cmds = slashCommands.filter((c) => (c.name || '').toLowerCase().includes(q)).slice(0, 30)
+        .map((c) => ({ ins: '/' + c.name, disp: '/' + c.name + (c.description ? '  —  ' + c.description : '') }));
+      if (!cmds.length) return hideMenu();
+      return openMenu(sl.start, cmds);
+    }
+    const men = currentMention();
+    if (men) {
+      const q = men.q.toLowerCase();
+      return openMenu(men.start, files.filter((f) => f.toLowerCase().includes(q)).slice(0, 20)
+        .map((f) => ({ ins: f, disp: f })));
+    }
+    hideMenu();
+  }
+  function pick(idx) {
+    const e = menuItems[idx];
+    if (!e) return hideMenu();
+    const v = input.value, pos = input.selectionStart;
+    input.value = v.slice(0, menuStart) + e.ins + ' ' + v.slice(pos);
+    const caret = menuStart + e.ins.length + 1;
+    input.setSelectionRange(caret, caret);
+    input.focus(); hideMenu();
+  }
+  function moveSel(d) {
+    if (!menuItems.length) return;
+    menuSel = (menuSel + d + menuItems.length) % menuItems.length;
+    Array.from(menu.children).forEach((c, i) => c.classList.toggle('sel', i === menuSel));
+    const selEl = menu.children[menuSel]; if (selEl) selEl.scrollIntoView({ block: 'nearest' });
+  }
+  input.addEventListener('input', updateAuto);
+
+  input.addEventListener('keydown', (e) => {
+    if (menu.style.display === 'block') {
+      if (e.key === 'ArrowDown') { e.preventDefault(); return moveSel(1); }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); return moveSel(-1); }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); return pick(menuSel); }
+      if (e.key === 'Escape')    { e.preventDefault(); return hideMenu(); }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+  });
+
+  /* ---------- Kotlin -> page ---------- */
+  let curBubble = null, curRaw = '';
+  let curThink = null, curThinkRaw = '';
+  let openTool = null;        // tool block currently streaming its input
+  const toolsById = {};       // tool_use id -> {el, name, io} for OUT boxes
+
+  window.onClaudeEvent = function (raw) {
+    let ev; try { ev = JSON.parse(raw); } catch (_) { return; }
+    switch (ev.type) {
+      case 'stream_event':       return onStream(ev.event || {});
+      case 'user':               return onUserEvent(ev);
+      case 'result':             return onResult(ev);
+      case 'permission_request': return renderPermission(ev);
+      case 'files':              files = ev.items || []; return;
+      case '__commands':         slashCommands = ev.items || []; return;
+      case '__models':
+        models = ev.items || [];
+        currentModel = ev.selected || (models[0] && models[0].value) || null;
+        { const cm = models.find((m) => m.value === currentModel); if (cm) modelLabel.textContent = cm.displayName || cm.value; }
+        renderModels();
+        return;
+      case 'system':
+        if (ev.subtype === 'init' && ev.slash_commands && !slashCommands.length) {
+          slashCommands = ev.slash_commands.map((n) => ({ name: n }));
+        }
+        return;
+      case 'sessions':           return renderHistory(ev.items || []);
+      case '__transcript':       return renderTranscript(ev.items || []);
+      case '__rewind_check': {
+        const r = ev.result || {};
+        const files = r.filesChanged || [];
+        const changed = files.length > 0 || r.insertions > 0 || r.deletions > 0;
+        if (r.canRewind && changed) {
+          const tid = ev.id;
+          const u = el('tool', '');
+          const label = files.length ? ('↩ Undo ' + files.length + ' file change' + (files.length !== 1 ? 's' : '')) : '↩ Undo file changes';
+          u.innerHTML = '<a href="#" class="undo">' + label + '</a>';
+          u.querySelector('.undo').onclick = (e) => {
+            e.preventDefault(); u.textContent = 'Undoing…'; bridge({ kind: 'rewind', id: tid, dry: 'false' });
+          };
+        }
+        return;
+      }
+      case '__rewind': {
+        const r = ev.result || {};
+        el('tool', r.canRewind === false ? (r.error || 'Nothing to undo') : '↩ Reverted file changes');
+        return;
+      }
+      case '__clear':            return clearLogUI();
+      case '__exit':             setBusy(false); return el('tool err', 'claude process exited (' + ev.code + ')');
+    }
+  };
+
+  function onStream(e) {
+    switch (e.type) {
+      case 'message_start':
+        curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
+        break;
+      case 'content_block_start': {
+        const cb = e.content_block || {};
+        hideWorking();
+        if (cb.type === 'tool_use') {
+          const t = el('tool-line', '');
+          t.innerHTML = '<b>' + esc(cb.name || 'tool') + '</b><span class="t-desc"></span>';
+          openTool = { el: t, name: cb.name || 'tool', json: '' };
+          if (cb.id) toolsById[cb.id] = openTool;
+          curBubble = null; // text after a tool starts a fresh block
+          if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'].indexOf(cb.name) >= 0) turnHadEdit = true;
+        } else if (cb.type === 'thinking') {
+          curThink = document.createElement('details'); curThink.className = 'think';
+          curThink.innerHTML = '<summary>Thinking…</summary><div class="think-body"></div>';
+          log.appendChild(curThink); curThinkRaw = '';
+        }
+        break;
+      }
+      case 'content_block_delta': {
+        const d = e.delta || {};
+        if (d.type === 'text_delta') {
+          hideWorking();
+          if (!curBubble) { curBubble = el('msg assistant md', ''); }
+          curRaw += d.text; curBubble.innerHTML = renderMd(curRaw); maybeScroll();
+        } else if (d.type === 'thinking_delta' && curThink) {
+          curThinkRaw += (d.thinking || ''); curThink.querySelector('.think-body').textContent = curThinkRaw;
+          maybeScroll();
+        } else if (d.type === 'input_json_delta' && openTool) {
+          openTool.json += (d.partial_json || '');
+        }
+        break;
+      }
+      case 'content_block_stop':
+        if (openTool) {
+          try {
+            const inp = JSON.parse(openTool.json || '{}');
+            const desc = inp.description || inp.file_path || inp.path || inp.pattern || '';
+            if (desc) openTool.el.querySelector('.t-desc').textContent = String(desc).slice(0, 140);
+            if (openTool.name === 'Bash' && inp.command) {
+              const io = document.createElement('div'); io.className = 'io';
+              io.innerHTML = '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>';
+              io.querySelector('.io-v').textContent = String(inp.command).slice(0, 2000);
+              openTool.el.after(io); openTool.io = io; maybeScroll();
+            }
+          } catch (_) {}
+          openTool = null;
+        }
+        break;
+      case 'message_stop':
+        curBubble = null; curThink = null;
+        break;
+    }
+  }
+
+  // tool_result frames (OUT boxes for Bash)
+  function onUserEvent(ev) {
+    const content = (ev.message && ev.message.content) || [];
+    if (!Array.isArray(content)) return;
+    content.forEach((b) => {
+      if (b.type !== 'tool_result') return;
+      const t = toolsById[b.tool_use_id];
+      if (!t || t.name !== 'Bash') return;
+      let txt = '';
+      if (typeof b.content === 'string') txt = b.content;
+      else if (Array.isArray(b.content)) txt = b.content.filter((x) => x.type === 'text').map((x) => x.text).join('\n');
+      txt = (txt || '').trim();
+      if (!txt) return;
+      const row = document.createElement('div'); row.className = 'io-row';
+      row.innerHTML = '<span class="io-k">OUT</span><span class="io-v"></span>';
+      row.querySelector('.io-v').textContent = txt.slice(0, 2000);
+      if (!t.io) { t.io = document.createElement('div'); t.io.className = 'io'; t.el.after(t.io); }
+      t.io.appendChild(row);
+      maybeScroll();
+    });
+  }
+
+  function onResult(ev) {
+    curBubble = null;
+    setBusy(false);
+    if (ev.is_error) {
+      if (stopping) { el('tool', '⏹ Stopped'); }
+      else {
+        const msg = (typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error');
+        el('msg err', msg);
+      }
+    } else if (turnHadEdit && turnId) {
+      bridge({ kind: 'rewind', id: turnId, dry: 'true' }); // check what can be undone
+    }
+    stopping = false;
+  }
+
+  /* ---------- permission card ---------- */
+  function diffLines(prefix, cls, s) {
+    return String(s).split('\n').map(l => '<div class="' + cls + '">' + prefix + esc(l) + '</div>').join('');
+  }
+  function previewHtml(inp) {
+    if (inp.old_string !== undefined || inp.new_string !== undefined) {
+      return '<div class="diff">' + diffLines('- ', 'del', inp.old_string || '') + diffLines('+ ', 'add-l', inp.new_string || '') + '</div>';
+    }
+    if (inp.content !== undefined) return '<div class="diff">' + diffLines('+ ', 'add-l', inp.content) + '</div>';
+    const cmd = inp.command || inp.description;
+    if (cmd !== undefined) return '<pre>' + esc(String(cmd)).slice(0, 4000) + '</pre>';
+    return '';
+  }
+  function renderQuestion(ev, inp) {
+    const questions = inp.questions || [];
+    const card = document.createElement('div'); card.className = 'perm';
+    let html = '<div class="perm-h">❓ <b>Claude has a question</b></div>';
+    questions.forEach((q, qi) => {
+      html += '<div class="q"><div class="q-t">' + esc(q.question) + '</div>';
+      (q.options || []).forEach((o, oi) => {
+        html += '<label class="q-opt"><input type="' + (q.multiSelect ? 'checkbox' : 'radio') +
+          '" name="q' + qi + '" data-q="' + qi + '" data-oi="' + oi + '"><span>' + esc(o.label) +
+          (o.description ? ' <span class="q-desc">— ' + esc(o.description) + '</span>' : '') + '</span></label>';
+      });
+      html += '</div>';
+    });
+    html += '<div class="perm-b"><button class="ok">Submit</button></div>';
+    card.innerHTML = html;
+    log.appendChild(card); maybeScroll();
+    card.querySelector('.ok').onclick = () => {
+      const answers = {};
+      questions.forEach((q, qi) => {
+        const chosen = Array.from(card.querySelectorAll('input[data-q="' + qi + '"]:checked'))
+          .map((el) => (q.options[+el.dataset.oi] || {}).label).filter(Boolean);
+        answers[q.question] = chosen.join(', ');
+      });
+      card.querySelectorAll('input').forEach((el) => { el.disabled = true; });
+      card.querySelector('.perm-b').innerHTML = '<span class="ok-t">✓ Answered</span>';
+      bridge({ kind: 'answer', id: ev.id, answers: JSON.stringify(answers) });
+    };
+  }
+
+  function renderPermission(ev) {
+    let inp = {}; try { inp = JSON.parse(ev.input); } catch (_) {}
+    if (ev.tool === 'AskUserQuestion' && inp.questions) return renderQuestion(ev, inp);
+    const isPlan = ev.tool === 'ExitPlanMode' || inp.plan !== undefined;
+    const file = inp.file_path || inp.path || '';
+    const card = document.createElement('div'); card.className = 'perm';
+    if (isPlan) {
+      card.innerHTML =
+        '<div class="perm-h">📋 <b>Plan</b> — ready to implement?</div>' +
+        '<div class="md">' + renderMd(inp.plan || '') + '</div>' +
+        '<div class="perm-b"><button class="ok">Approve &amp; implement</button><button class="no">Keep planning</button></div>';
+    } else {
+      card.innerHTML =
+        '<div class="perm-h">🔧 Claude wants to run <b>' + esc(ev.tool) + '</b>' +
+          (file ? ' on <code>' + esc(file) + '</code>' : '') + '</div>' +
+        previewHtml(inp) +
+        '<div class="perm-b"><button class="ok">Accept</button><button class="no">Reject</button></div>';
+    }
+    log.appendChild(card); maybeScroll();
+    const done = (allow) => {
+      card.querySelector('.perm-b').innerHTML = allow
+        ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + '</span>'
+        : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + '</span>';
+      window.respondPermission(ev.id, allow);
+    };
+    card.querySelector('.ok').onclick = () => done(true);
+    card.querySelector('.no').onclick = () => done(false);
+  }
+</script>
+</body>
+</html>

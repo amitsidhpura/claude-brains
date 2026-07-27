@@ -1,0 +1,10 @@
+# Anthropic's extracted VS Code extension — proprietary, personal reference only. NEVER commit.
+/vscode/
+
+# Build & IDE artifacts
+.idea/
+*.iml
+phpstorm-plugin/.gradle/
+phpstorm-plugin/build/
+phpstorm-plugin/.intellijPlatform/
+phpstorm-plugin/gradle/wrapper/gradle-wrapper.jar
