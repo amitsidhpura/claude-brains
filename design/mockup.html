@@ -9,284 +9,946 @@
      DESIGN TOKENS — tweak these first, everything derives from them
      ============================================================ */
   :root {
-    --bg: #1f2124;          /* panel background */
+    --bg: #1a1a1a;          /* panel background */
     --panel: #26282c;       /* input card / popups */
     --fg: #d5d8dd;          /* main text */
     --muted: #8b9096;       /* secondary text */
+    --dot: #6f7378;         /* timeline dots, IN/OUT labels */
     --border: #3a3d43;      /* subtle borders */
     --border-strong: #45494f;
     --accent: #d97757;      /* Claude orange */
     --green: #4ec26b;       /* tool dot */
     --blue: #4daafc;        /* links */
     --amber: #d7a35f;       /* inline code */
-    --code-bg: #1a1c1f;     /* IN/OUT + code blocks */
+    --code-bg: #141414;     /* dark code surfaces: IN/OUT, diff, cmd, codeblock header */
     --red: #f2827f;
-    --radius: 8px;
+    --raised: #2a2d33;      /* chips, inline code, small raised surfaces */
+    --raised-hover: #31343a;
+    --hover: #2f3237;       /* list rows / icon buttons on hover */
+    --warn-border: #6b4a3c; /* permission & question card frame */
+    --warn-bg: #282320;
+    --ok: #0d542b;         /* confirm buttons (Accept / Submit) */
+    --ok-hover: #146e3a;
+    --radius: 6px;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
-    font: 13px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  html { margin: 0; height: 100%; }
+  body { margin: 0; height: 100%; overflow: hidden; background: #101114; color: var(--fg);
+    font: 13px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
   img { max-width: 100%; height: auto; }
+
+  /* ---------- resizable preview frame (design preview only — not shipped) ---------- */
+  #frame { position: relative; height: 100%; width: var(--frame-w, 420px);
+    flex: 0 0 auto; background: var(--bg); box-shadow: 0 0 0 1px var(--border), 0 0 40px rgba(0,0,0,.5); }
+  #grip { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; z-index: 60; cursor: ew-resize; }
+  #grip::after { content: ''; position: absolute; top: 0; left: 3px; width: 2px; height: 100%;
+    background: var(--border-strong); opacity: 0; transition: opacity .12s; }
+  #grip:hover::after, #grip.drag::after { opacity: 1; background: var(--accent); }
+  body.resizing { cursor: ew-resize; user-select: none; }
+  body.resizing #app { pointer-events: none; }
 
   /* scrollbars */
   * { scrollbar-width: thin; scrollbar-color: #3b3d44 transparent; }
   ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3b3d44; border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb { background: #3b3d44; border-radius: var(--radius); border: 2px solid transparent; background-clip: content-box; }
   ::-webkit-scrollbar-thumb:hover { background: #4a4d55; background-clip: content-box; }
   ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 
   #app { display: flex; flex-direction: column; height: 100%; position: relative; }
 
   /* ---------- header ---------- */
-  #head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; }
+  #head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); }
   #head .title { font-size: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #head .actions { display: flex; gap: 2px; }
+  #head .actions { display: flex; gap: 10px; }
   .icon-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 14px;
-    width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
-  .icon-btn:hover { background: var(--panel); color: var(--fg); }
+    padding: 0; width: auto; height: auto; border-radius: var(--radius); display: inline-flex; align-items: center; justify-content: center; }
+  .icon-btn:hover { color: var(--fg); }
+  #head .icon-btn:hover { background: var(--hover); }
+  .icon-btn svg { width: 19px; height: 19px; display: block; }
 
   /* ---------- log ---------- */
-  #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 6px 14px 120px; display: flex; flex-direction: column; gap: 12px; }
+  #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px; display: flex; flex-direction: column; gap: 18px; }
   #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
     background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
 
-  /* user message: full-width bordered box */
-  .msg-user { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
+  /* a turn = one user message + the assistant content that answers it */
+  .turn { display: flex; flex-direction: column; gap: 18px; }
+
+  /* user message: full-width bordered box, sticks to the top of its turn while you scroll */
+  .msg-user { position: sticky; top: 0; z-index: 6;
+    background: #1b2129; border: 1px solid #374a63;
+    border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
+  .msg-user.has-undo { padding-right: 34px; }
+  .msg-user .undo { position: absolute; top: 6px; right: 7px; background: transparent; border: 0; color: var(--muted);
+    cursor: pointer; padding: 3px; border-radius: var(--radius); display: inline-flex; align-items: center; justify-content: center; }
+  .msg-user .undo:hover { color: var(--fg); }
+  .msg-user .undo svg { width: 16px; height: 16px; display: block; }
 
   /* assistant block: plain text with small dot */
-  .blk { position: relative; padding-left: 18px; }
-  .blk::before { content: '●'; position: absolute; left: 2px; top: 7px; font-size: 6px; color: #6f7378; }
+  .blk { position: relative; padding-left: 22px; }
+  .blk::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
   .blk > *:first-child { margin-top: 0; } .blk > *:last-child { margin-bottom: 0; }
   .blk p { margin: .45em 0; }
   .blk ul { margin: .4em 0; padding-left: 1.3em; }
   .blk li { margin: .2em 0; }
   .blk a { color: var(--blue); text-decoration: none; }
   .blk a:hover { text-decoration: underline; }
-  .blk code { background: #2a2d33; color: var(--amber); padding: 1px 5px; border-radius: 4px;
+  .blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 4px;
     font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 
   /* thinking */
-  .think { position: relative; padding-left: 18px; color: var(--muted); font-size: 13px; }
-  .think::before { content: '●'; position: absolute; left: 2px; top: 7px; font-size: 6px; color: #6f7378; }
+  .think { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px; }
+  .think::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
   .think summary { cursor: pointer; user-select: none; list-style: none; }
   .think summary::after { content: ' ›'; color: var(--muted); }
   .think[open] summary::after { content: ' ⌄'; }
   .think .body { white-space: pre-wrap; font-style: italic; margin-top: 4px; }
 
+  /* live progress: thinking-in-progress + generating */
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  @keyframes twinkle { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.65); opacity: .5; } }
+  .think-live { position: relative; padding-left: 22px; }
+  .think-live::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+  .think-live .th { color: var(--muted); font-size: 13px; }
+  .think-live .shimmer { background: linear-gradient(90deg, #797d84 35%, #eceff4 50%, #797d84 65%); background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.6s linear infinite; }
+  .generating { position: relative; display: flex; align-items: baseline; gap: 8px; padding-left: 22px; color: var(--fg); font-size: 13px; }
+  .generating .spin { position: absolute; left: 0; top: 0; width: 14px; text-align: center; color: var(--accent);
+    font-size: 14px; line-height: 20px; }
+  .generating .verb { background: linear-gradient(90deg, #c2603d 35%, #f2b492 50%, #c2603d 65%); background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.6s linear infinite; }
+  .generating .meta { color: var(--muted); }
+  .generating .meta svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 1px; }
+
   /* tool line + IN/OUT */
-  .tool-line { position: relative; padding-left: 18px; font-size: 13px; color: var(--muted); }
-  .tool-line::before { content: '●'; position: absolute; left: 2px; top: 6px; font-size: 6px; color: var(--green); }
+  .tool-line { position: relative; padding-left: 22px; font-size: 13px; color: var(--muted); }
+  .tool-line::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+  .tool-line.fail::before { background: var(--red); }
   .tool-line b { color: var(--fg); font-weight: 600; }
   .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
-  .io { margin: -6px 0 0 18px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+  .path { font-family: ui-monospace, Consolas, monospace; }
+  .io { margin: -6px 0 0 22px; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
     overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
   .io-row { display: flex; gap: 10px; padding: 6px 10px; }
   .io-row + .io-row { border-top: 1px solid var(--border); }
-  .io-k { color: #6f7378; font-size: 10px; padding-top: 2px; min-width: 26px; }
+  .io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 26px; }
   .io-v { white-space: pre-wrap; word-break: break-all; flex: 1; max-height: 200px; overflow-y: auto; }
 
   /* code block */
-  .codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: #17181b; color: var(--muted); font-size: 11px; }
-  .codeblock .cb-h button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 5px; padding: 0 8px; cursor: pointer; font: inherit; }
+  .codeblock { margin: .5em 0 0; background: #202226; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: var(--code-bg); color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+  .codeblock .cb-h button { background: transparent; border: 0; color: var(--muted); border-radius: var(--radius); padding: 2px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; }
+  .codeblock .cb-h button:hover { color: var(--fg); }
+  .codeblock .cb-h button svg { width: 14px; height: 14px; display: block; }
   .codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
   .hl-k { color: #c586c0; } .hl-s { color: #ce9178; } .hl-c { color: #6a9955; font-style: italic; } .hl-n { color: #b5cea8; } .hl-v { color: #9cdcfe; }
 
   /* permission / plan / question card */
-  .card { border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: #232528; }
-  .card.warn { border-color: #6b4a3c; background: #282320; }
+  .card { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 10px 12px; background: #232528; }
+  .card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
   .card-h { margin-bottom: 8px; }
-  .card-h code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; }
+  .card-h code { font-family: ui-monospace, Consolas, monospace; color: var(--fg); }
   .card-b { display: flex; gap: 8px; margin-top: 10px; }
-  .card-b button { border: 0; border-radius: 6px; padding: 5px 14px; cursor: pointer; font: inherit; }
-  .card-b .ok { background: #2ea043; color: #fff; }
+  .card-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .card-b button svg { width: 15px; height: 15px; }
+  .card-b .ok { background: var(--ok); color: #fff; }
+  .card-b .ok:hover { background: var(--ok-hover); }
   .card-b .no { background: #3a3d41; color: var(--fg); }
-  .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  .card-b .no:hover { background: #474a4f; }
+  .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
     overflow-x: auto; max-height: 240px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-  .diff .del { color: var(--red); white-space: pre-wrap; }
-  .diff .add { color: var(--green); white-space: pre-wrap; }
+  .diff .del { display: block; color: var(--red); white-space: pre-wrap; }
+  .diff .add { display: block; color: var(--green); white-space: pre-wrap; }
 
-  /* undo + status lines */
-  .status { color: var(--muted); font-size: 12px; padding-left: 18px; }
-  .status a { color: var(--accent); text-decoration: none; }
-  .status a:hover { text-decoration: underline; }
+  /* markdown inside a card (e.g. plan) — drop the timeline dot */
+  .card .blk { padding-left: 0; margin-top: 8px; }
+  .card .blk::before { display: none; }
+
+  /* AskUserQuestion option text */
+  .q-body { display: flex; flex-direction: column; min-width: 0; }
+  .q-t { color: var(--fg); font-size: 13px; }
+  .q-d { font-size: 11px; margin-top: 1px; }   /* color set by the .ask warm-tone rule */
+
+  /* AskUserQuestion — tabbed multi-question card */
+  .ask { border: 1px solid var(--warn-border); border-radius: var(--radius); background: var(--warn-bg); }
+  .ask-h { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 12px 0; }
+  .ask-tabs { display: flex; gap: 18px; }
+  .ask-tab { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px;
+    padding: 0 0 9px; border-bottom: 2px solid transparent; }
+  .ask-tab.active { color: var(--fg); border-bottom-color: var(--warn-border); }
+  .ask-tab:hover { color: var(--fg); }
+  .ask-q { padding: 12px 14px; color: var(--fg); font-size: 13px; line-height: 1.5; }
+  .ask-list { display: flex; flex-direction: column; padding: 0 8px 6px; gap: 2px; }
+  .ask-opt { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: var(--radius); cursor: pointer; }
+  .ask-opt:hover { background: rgba(217,119,87,.07); }
+  .ask-opt.checked { background: rgba(217,119,87,.14); }
+  .ask-opt input { position: absolute; inset: 0; width: auto; height: auto; margin: 0; opacity: 0; cursor: pointer; }
+  .ask-ind { display: inline-flex; flex: 0 0 auto; margin-top: 1px; color: var(--fg); }
+  .ask-ind svg { width: 16px; height: 16px; display: block; }
+  .ask-other { padding: 2px 8px 6px 36px; }
+  .ask-other input { width: 100%; background: transparent; border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 7px 10px;
+    color: var(--fg); font: inherit; font-size: 13px; outline: none; }
+  .ask-other input::placeholder { color: var(--dot); }
+  .ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
+  .ask-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 13px;
+    display: inline-flex; align-items: center; gap: 6px; }
+  .ask-b button svg { width: 15px; height: 15px; }
+  .ask-go { background: var(--ok); color: #fff; }
+  .ask-go:hover:not(:disabled) { background: var(--ok-hover); }
+  .ask-go:disabled { opacity: .45; cursor: not-allowed; }
+  .ask-no { background: #3a3d41; color: var(--fg); }
+  .ask-no:hover { background: #474a4f; }
+  .ask-foot { padding: 0 14px 12px; font-size: 12px; }
+  /* warm muted tone for secondary text inside the question card */
+  .ask .q-d, .ask-foot, .ask-tab { color: #e4bda6; }
+
+  /* error block */
+  .error { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #6b3a3a; background: #241a1a; color: var(--red);
+    border-radius: var(--radius); padding: 8px 11px; font-size: 13px; }
+  .error svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+  .error code { font-family: ui-monospace, Consolas, monospace; }
+
+  /* history panel (past conversations) */
+  #histPanel { position: absolute; right: 10px; z-index: 30; width: 300px; background: var(--panel);
+    border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; }
+  #histPanel.show { display: block; }
+  .hist-h { padding: 9px 13px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .hist-item { padding: 8px 13px; cursor: pointer; }
+  .hist-item:hover { background: var(--hover); }
+  .hist-item .t { color: var(--fg); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-item .d { color: var(--muted); font-size: 11px; margin-top: 1px; }
+
+  /* image placeholder (shared by chips + user-message images) */
+  .ph-img { position: relative; display: block; background: linear-gradient(135deg, #35486b, #6b3555); }
+  .ph-img svg { position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; color: rgba(255,255,255,.75); }
+
+  /* composer attachment chips (image.png 283×162 · .gitignore · …) */
+  #chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--border); }
+  .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--raised);
+    border: 1px solid var(--border-strong); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
+  .att .rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
+    background: var(--raised); border: 0; color: var(--muted); cursor: pointer; padding: 3px; border-radius: 4px;
+    box-shadow: -6px 0 6px var(--raised); }
+  .att .rm:hover { color: var(--fg); }
+  .att .rm svg { width: 12px; height: 12px; display: block; }
+  .att:hover .rm { display: inline-flex; }
+  .att .thumb { width: 16px; height: 16px; border-radius: 3px; overflow: hidden; display: inline-flex; flex: 0 0 auto; }
+  .att .thumb .ph-img { width: 100%; height: 100%; }
+  .att .thumb .ph-img svg { width: 10px; height: 10px; }
+  .att > svg { width: 14px; height: 14px; color: var(--muted); flex: 0 0 auto; }
+  .att .meta { color: var(--muted); font-size: 11px; }
+
+  /* attachments inside a user message: chip row on top, click opens preview */
+  .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .att.click { cursor: pointer; }
+  .att.click:hover { background: var(--raised-hover); border-color: #565a62; }
+
+  /* attachment preview popup */
+  #lightbox { position: absolute; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.55); }
+  #lightbox.show { display: flex; }
+  .lb-box { position: relative; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+    padding: 10px; box-shadow: 0 12px 38px rgba(0,0,0,.6); max-width: 86%; }
+  .lb-img { width: 320px; max-width: 100%; height: 200px; border-radius: var(--radius); overflow: hidden; }
+  .lb-img .ph-img { width: 100%; height: 100%; }
+  .lb-cap { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .lb-x { position: absolute; top: -12px; right: -12px; width: 26px; height: 26px; border-radius: 50%; background: var(--raised);
+    border: 1px solid var(--border-strong); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .lb-x:hover { background: var(--raised-hover); }
+  .lb-x svg { width: 14px; height: 14px; }
+
+  /* command preview in permission card (Bash) */
+  .card .cmd { margin: 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; overflow-x: auto; }
+
+  /* retry — timeline line: icon sits in the dot column, text at the shared indent */
+  .retry { position: relative; padding-left: 22px; font-size: 13px; }
+  .retry a { color: var(--muted); text-decoration: none; }
+  .retry a:hover { color: var(--fg); }
+  .retry svg { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px; }
 
   /* ---------- composer ---------- */
-  #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 12px 12px; z-index: 16; }
-  #inputcard { position: relative; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+  #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
+    display: flex; justify-content: center; }
+  #inputcard { position: relative; width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
     padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
-  #inputcard:focus-within { border-color: #565a62; }
+  #inputcard:focus-within { border-color: var(--accent); box-shadow: 0 2px 14px rgba(0,0,0,.35), 0 0 0 3px rgba(217,119,87,.15); }
   #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
-    font: inherit; min-height: 22px; max-height: 200px; padding: 0 26px 0 0; }
-  #input::placeholder { color: #6d7278; }
-  #micBtn { position: absolute; top: 8px; right: 10px; }
-  #inputbar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-  #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 2px; }
-  .chip-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px;
-    padding: 4px 8px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; }
-  .chip-btn:hover { background: var(--bg); color: var(--fg); }
-  .chip-btn .mono { font-family: ui-monospace, monospace; font-size: 11px; }
-  #send { background: #4a4d52; color: #cfd2d6; border: 0; border-radius: 8px; width: 30px; height: 28px;
-    cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
-  #send.ready { background: var(--accent); color: #fff; }
+    font: inherit; line-height: 20px; height: 20px; max-height: 200px; padding: 0; overflow-y: hidden; }
+  #input::placeholder { color: var(--dot); }
+  #inputbar { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 8px -12px 0; padding: 8px 12px 0; border-top: 1px solid var(--border); }
+  #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 10px; }
+  .chip-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; line-height: 1;
+    border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
+  .chip-btn:hover { color: var(--fg); }
+  #send { background: var(--accent); color: #fff; border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  #inputbar svg { width: 18px; height: 18px; }
+  #send:hover { background: #e28a6b; }
+  #inputbar button { padding: 4px; }
+  #inputbar .left button { padding: 4px 0; }
+  #send svg { display: block; }   /* size comes from the shared #inputbar svg rule */
   #send.stop { background: #c9403a; color: #fff; }
+  #send.stop:hover { background: #d9534d; }
+  #send .ic-stop { display: none; }
+  #send.stop .ic-send { display: none; }
+  #send.stop .ic-stop { display: block; }
 
   /* ---------- popups ---------- */
-  .popup { position: absolute; z-index: 25; bottom: 92px; background: var(--panel); border: 1px solid var(--border-strong);
-    border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 330px; max-width: 94%; }
+  .popup { position: absolute; z-index: 25; bottom: calc(100% + 1px); background: var(--panel); border: 1px solid var(--border-strong);
+    border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 330px; }
   .popup.show { display: block; }
-  #modeMenu { right: 12px; } #modelMenu { left: 12px; } #slashMenu { left: 12px; right: 12px; min-width: 0; }
+  #modeMenu { right: 0; } #modelMenu { right: 0; } #slashMenu { left: 0; min-width: 0; max-width: 100%; }
+  .menu-anchor { position: relative; display: inline-flex; align-items: center; }
+  .menu-anchor .popup { bottom: calc(100% + 9px); }
+  #slashList { max-height: 320px; overflow-y: auto; padding-bottom: 4px; }
+  .popup-empty { padding: 10px 14px; color: var(--muted); font-size: 12px; }
+  #attachMenu { left: 0; min-width: 220px; }
+  #attachMenu .popup-item { align-items: center; }
   .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--muted);
     font-size: 11px; }
-  .popup-h kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
   .popup-item { display: flex; gap: 11px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
-  .popup-item:hover, .popup-item.sel { background: #2f3237; }
-  .pi-ic { color: var(--muted); width: 20px; text-align: center; font-family: ui-monospace, monospace; padding-top: 1px; }
+  .popup-item:hover, .popup-item.sel { background: var(--hover); }
+  .pi-ic { color: var(--muted); width: 20px; text-align: center; font-family: ui-monospace, monospace; padding-top: 1px;
+    display: inline-flex; align-items: flex-start; justify-content: center; flex: 0 0 20px; }
+  .pi-ic svg { width: 17px; height: 17px; }
+  .popup-item.sel .pi-ic, .popup-item.sel .pi-title { color: var(--fg); }
   .pi-body { flex: 1; min-width: 0; }
   .pi-title { color: var(--fg); font-size: 13px; }
-  .pi-desc { color: var(--muted); font-size: 11.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pi-check { color: var(--fg); visibility: hidden; padding-top: 2px; }
+  .pi-desc { color: var(--muted); font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pi-check { color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
+  .pi-check svg { width: 16px; height: 16px; }
   .popup-item.on .pi-check { visibility: visible; }
-  .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-top: 1px solid var(--border);
+  .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--border);
     color: var(--muted); font-size: 12px; }
-  .effort-dots { display: flex; gap: 5px; align-items: center; }
-  .effort-dots .d { width: 8px; height: 8px; border-radius: 50%; background: #4a4d52; }
-  .effort-dots .d.on { background: var(--blue); }
-  .effort-dots .d.big { width: 12px; height: 12px; }
+  .ef-label { display: flex; align-items: center; gap: 7px; }
+  .ef-label svg { width: 15px; height: 15px; }
+  .ef-label b { color: var(--fg); font-weight: 600; }
+  .effort { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0; }
+  .effort .d { width: 9px; height: 9px; border-radius: 50%; background: #4a4d52; transition: background .1s, transform .1s; }
+  .effort .d.on { background: var(--accent); }
+  .effort .d.cur { transform: scale(1.5); background: var(--accent); }
+  .effort:hover .d { background: #5a5d63; }
+  .effort:hover .d.on { background: var(--accent); }
 
   /* ---------- dev toolbar (design preview only — not shipped) ---------- */
-  #devbar { position: fixed; top: 8px; right: 8px; z-index: 99; display: flex; gap: 4px; opacity: .25; transition: opacity .15s; }
+  #devbar { position: fixed; top: 8px; right: 8px; z-index: 99; display: flex; flex-direction: column; align-items: stretch; gap: 4px; opacity: .3; transition: opacity .15s; }
   #devbar:hover { opacity: 1; }
-  #devbar button { background: #333; color: #bbb; border: 1px solid #555; border-radius: 5px; font-size: 10px; padding: 2px 7px; cursor: pointer; }
+  #devbar button { background: #333; color: #bbb; border: 1px solid #555; border-radius: 5px; font-size: 10px; padding: 3px 7px; cursor: pointer; text-align: center; }
+  #devbar button.wpreset.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #devbar .sep { width: 100%; height: 1px; background: #555; margin: 3px 0; }
+  #wlabel { color: #ddd; background: #333; border: 1px solid #555; border-radius: 5px; font-size: 10px;
+    font-family: ui-monospace, monospace; padding: 2px 7px; min-width: 52px; text-align: center; }
 </style>
 </head>
 <body>
 <div id="devbar">
-  <button onclick="tg('modeMenu')">mode</button>
-  <button onclick="tg('modelMenu')">model</button>
-  <button onclick="tg('slashMenu')">slash</button>
+  <button onclick="tg('modeMenu', event)">mode</button>
+  <button onclick="tg('modelMenu', event)">model</button>
+  <button onclick="tg('slashMenu', event)">slash</button>
+  <button onclick="event.stopPropagation(); document.getElementById('send').classList.toggle('stop')">stop</button>
+  <span class="sep"></span>
+  <button class="wpreset" data-w="300">300</button>
+  <button class="wpreset" data-w="360">360</button>
+  <button class="wpreset" data-w="420">420</button>
+  <button class="wpreset" data-w="520">520</button>
+  <button class="wpreset" data-w="0">full</button>
+  <span id="wlabel">420px</span>
 </div>
 
+<div id="frame">
 <div id="app">
   <div id="head">
     <span class="title">Create a new test.txt file</span>
     <span class="actions">
-      <button class="icon-btn" title="Past conversations">🕘</button>
-      <button class="icon-btn" title="New conversation">＋</button>
+      <button class="icon-btn" title="Past conversations" onclick="tgHist(event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+      <button class="icon-btn" title="New conversation"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
     </span>
   </div>
 
+  <div id="lightbox">
+    <div class="lb-box">
+      <button class="lb-x" title="Close"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      <div class="lb-img"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></div>
+      <div class="lb-cap" id="lbCap">image.png</div>
+    </div>
+  </div>
+
+  <div id="histPanel">
+    <div class="hist-h">Past conversations</div>
+    <div class="hist-item"><div class="t">Create a new test.txt file</div><div class="d">Today, 14:32</div></div>
+    <div class="hist-item"><div class="t">Fix payment gateway retry logic</div><div class="d">Yesterday, 18:05</div></div>
+    <div class="hist-item"><div class="t">Refactor SessionStore JSONL parsing</div><div class="d">2 days ago</div></div>
+    <div class="hist-item"><div class="t">Add dark-mode toggle to settings page and persist the choice</div><div class="d">Jul 21</div></div>
+  </div>
+
   <div id="log">
-    <div class="msg-user">Print some text with inline code</div>
+    <div class="turn">
+      <div class="msg-user">Print some text with inline code</div>
 
-    <details class="think"><summary>Thinking</summary><div class="body">The user wants a PHP example with inline code…</div></details>
+      <details class="think"><summary>Thought for 6s</summary><div class="body">The user wants a PHP example with inline code…</div></details>
 
-    <div class="blk">
-      <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
-      <p>A few related notes:</p>
-      <ul>
-        <li><code>array_column()</code> works on arrays of arrays <i>and</i> arrays of objects.</li>
-        <li>The null-safe operator <code>?-&gt;</code> short-circuits the whole chain.</li>
-        <li>Prefer <code>str_contains($haystack, $needle)</code> over <code>strpos(...) !== false</code>.</li>
-      </ul>
-      <p>See <a href="#">strict typing</a> and the <a href="#">RFC that introduced it</a> for the original rationale.</p>
-    </div>
-
-    <div class="msg-user">Get unix timestamp from the terminal</div>
-
-    <div class="tool-line"><b>Bash</b><span class="t-desc">Print current Unix timestamp</span></div>
-    <div class="io">
-      <div class="io-row"><span class="io-k">IN</span><span class="io-v">date +%s</span></div>
-      <div class="io-row"><span class="io-k">OUT</span><span class="io-v">1785155723</span></div>
-    </div>
-
-    <div class="blk">
-      <p>Current Unix timestamp: <b>1785155723</b></p>
-      <p>That's <code>2026-07-27</code> (UTC), matching today's date.</p>
-    </div>
-
-    <div class="msg-user">Add a helper function to functions.php</div>
-
-    <div class="tool-line"><b>Read</b><span class="t-desc">D:\sites\demo\functions.php</span></div>
-
-    <div class="card warn">
-      <div class="card-h">Claude wants to run <b>Edit</b> on <code>D:\sites\demo\functions.php</code></div>
-      <div class="diff"><span class="del">- function old_helper() {</span>
-<span class="add">+ function new_helper(string $name): string {</span>
-<span class="add">+     return "Hello, {$name}!";</span>
-<span class="add">+ }</span></div>
-      <div class="card-b"><button class="ok">Accept</button><button class="no">Reject</button></div>
-    </div>
-
-    <div class="blk">
-      <p>Here's the final helper with a docblock:</p>
-      <div class="codeblock">
-        <div class="cb-h"><span>php</span><button>Copy</button></div>
-        <pre><span class="hl-c">/** Greet a user by name. */</span>
-<span class="hl-k">function</span> new_helper(<span class="hl-k">string</span> <span class="hl-v">$name</span>): <span class="hl-k">string</span> {
-    <span class="hl-k">return</span> <span class="hl-s">"Hello, {$name}!"</span>;
-}</pre>
+      <div class="blk">
+        <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
+        <p>A few related notes:</p>
+        <ul>
+          <li><code>array_column()</code> works on arrays of arrays <i>and</i> arrays of objects.</li>
+          <li>The null-safe operator <code>?-&gt;</code> short-circuits the whole chain.</li>
+          <li>Prefer <code>str_contains($haystack, $needle)</code> over <code>strpos(...) !== false</code>.</li>
+        </ul>
+        <p>See <a href="#">strict typing</a> and the <a href="#">RFC that introduced it</a> for the original rationale.</p>
       </div>
     </div>
 
-    <div class="status"><a href="#">↩ Undo 1 file change</a></div>
+    <div class="turn">
+      <div class="msg-user">Get unix timestamp from the terminal</div>
+
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Print current Unix timestamp</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">date +%s</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">1785155723</span></div>
+      </div>
+
+      <div class="blk">
+        <p>Current Unix timestamp: <b>1785155723</b></p>
+        <p>That's <code>2026-07-27</code> (UTC), matching today's date.</p>
+      </div>
+    </div>
+
+    <div class="turn">
+      <div class="msg-user has-undo">Add a helper function to functions.php<button class="undo" title="Undo file changes from this turn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button></div>
+
+      <div class="tool-line"><b>Read</b><span class="t-desc path">D:\sites\demo\functions.php</span></div>
+
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Edit</b> on <code>D:\sites\demo\functions.php</code></div>
+        <div class="diff"><span class="del">- function old_helper() {</span>
+<span class="add">+ function new_helper(string $name): string {</span>
+<span class="add">+     return "Hello, {$name}!";</span>
+<span class="add">+ }</span></div>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Reject</button></div>
+      </div>
+
+      <div class="blk">
+        <p>Here's the final helper with a docblock:</p>
+        <div class="codeblock">
+          <div class="cb-h"><span>php</span><button title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
+          <pre><span class="hl-c">/** Greet a user by name. */</span>
+<span class="hl-k">function</span> new_helper(<span class="hl-k">string</span> <span class="hl-v">$name</span>): <span class="hl-k">string</span> {
+    <span class="hl-k">return</span> <span class="hl-s">"Hello, {$name}!"</span>;
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="turn">
+      <div class="msg-user"><span class="msg-atts"><span class="att click" onclick="openLB('image.png')"><span class="thumb"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></span>image.png<span class="meta">260×130</span></span></span>Here's a screenshot of the broken layout — can you spot the issue?</div>
+      <div class="blk"><p>The sidebar overlaps the content because <code>#nav</code> is missing <code>flex-shrink: 0</code> — the flex container squeezes it under the main column.</p></div>
+    </div>
+
+    <div class="turn">
+      <div class="msg-user">Ask me a few questions to plan my week off.</div>
+      <div class="ask">
+        <div class="ask-h">
+          <div class="ask-tabs">
+            <button class="ask-tab active" data-q="0">Getaway</button>
+            <button class="ask-tab" data-q="1">Unwind</button>
+            <button class="ask-tab" data-q="2">Mastery</button>
+          </div>
+        </div>
+
+        <div class="ask-panel" data-q="0">
+          <div class="ask-q">Imagine you've just been handed a completely free, all-expenses-paid week off with no work, no obligations, and no one depending on you — where would you most want to spend that time to feel truly recharged and refreshed?</div>
+          <div class="ask-list">
+            <label class="ask-opt checked"><input type="radio" name="q0" checked><span class="q-body"><span class="q-t">Beach resort</span><span class="q-d">Sun, sand, and the sound of waves — total relaxation by the ocean.</span></span></label>
+            <label class="ask-opt"><input type="radio" name="q0"><span class="q-body"><span class="q-t">Mountain cabin</span><span class="q-d">Crisp air, quiet forests, and cozy evenings away from the crowds.</span></span></label>
+            <label class="ask-opt"><input type="radio" name="q0"><span class="q-body"><span class="q-t">Bustling city</span><span class="q-d">Museums, restaurants, nightlife, and the energy of a new metropolis.</span></span></label>
+            <label class="ask-opt"><input type="radio" name="q0"><span class="q-body"><span class="q-t">Road trip</span><span class="q-d">Open highways, spontaneous stops, and the freedom to go anywhere.</span></span></label>
+            <label class="ask-opt ask-opt-other"><input type="radio" name="q0"><span class="q-body"><span class="q-t">Other</span></span></label>
+            <div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>
+          </div>
+        </div>
+
+        <div class="ask-panel" data-q="1" hidden>
+          <div class="ask-q">After a demanding stretch of work, how do you most naturally decompress and recover your energy?</div>
+          <div class="ask-list">
+            <label class="ask-opt checked"><input type="radio" name="q1" checked><span class="q-body"><span class="q-t">Quiet &amp; solo</span><span class="q-d">Reading, a long bath, or simply doing nothing.</span></span></label>
+            <label class="ask-opt"><input type="radio" name="q1"><span class="q-body"><span class="q-t">Move your body</span><span class="q-d">A hard workout, a run, or a long walk to reset.</span></span></label>
+            <label class="ask-opt"><input type="radio" name="q1"><span class="q-body"><span class="q-t">With people</span><span class="q-d">Friends, family, a shared meal or a night out.</span></span></label>
+            <label class="ask-opt ask-opt-other"><input type="radio" name="q1"><span class="q-body"><span class="q-t">Other</span></span></label>
+            <div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>
+          </div>
+        </div>
+
+        <div class="ask-panel" data-q="2" hidden>
+          <div class="ask-q">If you had unlimited time this year, which new skills would you most love to master? Select all that apply.</div>
+          <div class="ask-list">
+            <label class="ask-opt"><input type="checkbox" name="q2"><span class="q-body"><span class="q-t">A new language</span><span class="q-d">Hold a real conversation in another tongue.</span></span></label>
+            <label class="ask-opt"><input type="checkbox" name="q2"><span class="q-body"><span class="q-t">An instrument</span><span class="q-d">Play the piano, guitar, or something new.</span></span></label>
+            <label class="ask-opt"><input type="checkbox" name="q2"><span class="q-body"><span class="q-t">A craft</span><span class="q-d">Cooking, woodworking, or photography.</span></span></label>
+            <label class="ask-opt ask-opt-other"><input type="checkbox" name="q2"><span class="q-body"><span class="q-t">Other</span></span></label>
+            <div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>
+          </div>
+        </div>
+
+        <div class="ask-b">
+          <button class="ask-go"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Submit answers</button>
+          <button class="ask-no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" x2="15" y1="15" y2="9"/></svg>Cancel</button>
+        </div>
+        <div class="ask-foot">Esc to cancel</div>
+      </div>
+    </div>
+
+    <div class="turn">
+      <div class="msg-user">Plan the refactor of the payment module</div>
+      <div class="card">
+        <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
+        <div class="blk">
+          <ul>
+            <li>Extract <code>PaymentGateway</code> into an interface with Stripe/PayPal adapters</li>
+            <li>Move validation into a dedicated <code>PaymentValidator</code></li>
+            <li>Wrap network calls in a retry helper with backoff</li>
+            <li>Backfill unit tests around the new seams</li>
+          </ul>
+        </div>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Approve &amp; implement</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.029 4.285A2 2 0 0 0 7 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/><path d="M3 4v16"/></svg>Keep planning</button></div>
+      </div>
+    </div>
+
+    <div class="turn">
+      <div class="msg-user">Create a config file and run the build</div>
+
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Write</b> on <code>config/app.php</code></div>
+        <div class="diff"><span class="add">+ &lt;?php</span>
+<span class="add">+ return [</span>
+<span class="add">+     'name'  =&gt; 'Demo',</span>
+<span class="add">+     'debug' =&gt; false,</span>
+<span class="add">+ ];</span></div>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Reject</button></div>
+      </div>
+
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Bash</b></div>
+        <pre class="cmd">npm run build</pre>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Reject</button></div>
+      </div>
+
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Run the production build</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">npm run build</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">vite v5.2.0 building for production…</span></div>
+      </div>
+
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">npm run build — exited with code 1</span></div>
+
+      <div class="error"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><div>Build failed — <code>config/app.php</code> was not found because the Write was rejected.</div></div>
+
+      <div class="retry"><a href="#"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Retry</a></div>
+    </div>
+
+    <div class="turn">
+      <div class="msg-user">Do some dummy process so I can see Claude's famous working animation.</div>
+
+      <div class="think-live">
+        <div class="th"><span class="shimmer">Thinking…</span> <span class="tok">· 132 tokens</span></div>
+      </div>
+
+      <div class="blk"><p>I'll run a few harmless dummy tasks so the spinner cycles through its words.</p></div>
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Running 1 shell command…</span></div>
+      <div class="generating">
+        <span class="spin" id="workSpin">✳</span>
+        <span class="verb" id="workVerb">Wandering…</span>
+        <span class="meta">(<span id="workEl">6s</span> · <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg><span id="workTok">88</span> tokens · thought for 4s)</span>
+      </div>
+    </div>
   </div>
 
   <div id="fade"></div>
 
   <div id="composer">
     <div id="inputcard">
-      <button id="micBtn" class="icon-btn" title="Voice input">🎙</button>
-      <textarea id="input" placeholder="ctrl esc to focus or unfocus Claude"></textarea>
+      <div id="chips">
+        <span class="att"><span class="thumb"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></span>image.png<span class="meta">283×162</span><button class="rm" title="Remove" onclick="this.parentElement.remove()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
+        <span class="att"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>.gitignore<button class="rm" title="Remove" onclick="this.parentElement.remove()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
+      </div>
+      <textarea id="input" rows="1" placeholder="ctrl esc to focus or unfocus Claude"></textarea>
       <div id="inputbar">
         <div class="left">
-          <button class="icon-btn" title="Attach">＋</button>
-          <button class="icon-btn" title="Insert file reference">⧉</button>
+          <button class="icon-btn" title="Attach" onclick="tg('attachMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg></button>
+          <button class="icon-btn" title="Slash commands" onclick="tg('slashMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" x2="15" y1="15" y2="9"/></svg></button>
         </div>
         <div class="right">
-          <button class="chip-btn"><span class="mono">&lt;/&gt;</span> Edit automatically</button>
-          <button id="send" title="Send">↑</button>
+          <span class="menu-anchor">
+          <button class="chip-btn" id="modelChip" onclick="tg('modelMenu', event)">Default</button>
+          <div id="modelMenu" class="popup">
+            <div class="popup-h"><span>Select a model</span></div>
+            <div class="popup-item on"><div class="pi-body"><div class="pi-title">Default (recommended)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-item"><div class="pi-body"><div class="pi-title">Opus (1M context)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-item"><div class="pi-body"><div class="pi-title">Sonnet</div><div class="pi-desc">Sonnet 5 · Efficient for routine tasks</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-item"><div class="pi-body"><div class="pi-title">Haiku</div><div class="pi-desc">Haiku 4.5 · Fastest for quick answers</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+          </div>
+          </span>
+          <span class="menu-anchor">
+          <button class="chip-btn" id="modeChip" onclick="tg('modeMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg> Auto mode</button>
+          <div id="modeMenu" class="popup">
+            <div class="popup-h"><span>Modes</span></div>
+            <div class="popup-item"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></span><div class="pi-body"><div class="pi-title">Ask before edits</div><div class="pi-desc">Claude will ask for approval before making each edit</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-item"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg></span><div class="pi-body"><div class="pi-title">Edit automatically</div><div class="pi-desc">Claude will edit your selected text or the whole file</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-item"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span><div class="pi-body"><div class="pi-title">Plan mode</div><div class="pi-desc">Claude will explore the code and present a plan before editing</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-item on"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></span><div class="pi-body"><div class="pi-title">Auto mode</div><div class="pi-desc">Claude will automatically choose the best permission mode for each task</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <div class="popup-f">
+              <span class="ef-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z"/><path d="m2.5 21.5 1.4-1.4"/><path d="m20.1 3.9 1.4-1.4"/><path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z"/><path d="m9.6 14.4 4.8-4.8"/></svg>Effort <b id="efName">High</b></span>
+              <span class="effort" id="effort">
+        <span class="d" data-l="Low"></span>
+        <span class="d" data-l="Medium"></span>
+        <span class="d" data-l="High"></span>
+        <span class="d" data-l="Very High"></span>
+        <span class="d" data-l="Max"></span>
+              </span>
+            </div>
+          </div>
+          </span>
+          <button id="send" title="Send"><svg class="ic-send" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg><svg class="ic-stop" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
         </div>
+
+      <div id="attachMenu" class="popup">
+        <div class="popup-item"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></span><div class="pi-body"><div class="pi-title">Upload from computer</div></div></div>
+        <div class="popup-item"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><div class="pi-body"><div class="pi-title">Add context</div></div></div>
+        <div class="popup-item"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span><div class="pi-body"><div class="pi-title">Browse the web</div></div></div>
+      </div>
+      </div>
+
+      <div id="slashMenu" class="popup">
+        <div class="popup-h"><span>Slash Commands</span></div>
+        <div id="slashList"></div>
       </div>
     </div>
   </div>
-
-  <div id="modeMenu" class="popup">
-    <div class="popup-h"><span>Modes</span><span><kbd>⇧</kbd>+<kbd>tab</kbd> to switch</span></div>
-    <div class="popup-item"><span class="pi-ic">✋</span><div class="pi-body"><div class="pi-title">Manual</div><div class="pi-desc">Claude will ask for approval before making each edit</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-item on sel"><span class="pi-ic">&lt;/&gt;</span><div class="pi-body"><div class="pi-title">Edit automatically</div><div class="pi-desc">Claude will edit your selected text or the whole file</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-item"><span class="pi-ic">▤</span><div class="pi-body"><div class="pi-title">Plan</div><div class="pi-desc">Claude will explore the code and present a plan before editing</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-item"><span class="pi-ic">⚡</span><div class="pi-body"><div class="pi-title">Auto</div><div class="pi-desc">Claude will approve actions that pass a safety check and pause for anything risky</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-f"><span>⛭ Effort (High)</span><span class="effort-dots"><span class="d on"></span><span class="d on"></span><span class="d on big"></span><span class="d"></span><span class="d"></span></span></div>
-  </div>
-
-  <div id="modelMenu" class="popup">
-    <div class="popup-h"><span>Select a model</span></div>
-    <div class="popup-item on"><div class="pi-body"><div class="pi-title">Default (recommended)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-item"><div class="pi-body"><div class="pi-title">Opus (1M context)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-item"><div class="pi-body"><div class="pi-title">Sonnet</div><div class="pi-desc">Sonnet 5 · Efficient for routine tasks</div></div><span class="pi-check">✓</span></div>
-    <div class="popup-item sel"><div class="pi-body"><div class="pi-title">Haiku</div><div class="pi-desc">Haiku 4.5 · Fastest for quick answers</div></div><span class="pi-check">✓</span></div>
-  </div>
-
-  <div id="slashMenu" class="popup">
-    <div class="popup-h"><span>Commands</span></div>
-    <div class="popup-item sel"><span class="pi-ic">/</span><div class="pi-body"><div class="pi-title">/compact</div><div class="pi-desc">Compact the conversation to free up context</div></div></div>
-    <div class="popup-item"><span class="pi-ic">/</span><div class="pi-body"><div class="pi-title">/context</div><div class="pi-desc">Show current context usage</div></div></div>
-    <div class="popup-item"><span class="pi-ic">/</span><div class="pi-body"><div class="pi-title">/model</div><div class="pi-desc">Switch the model for this session</div></div></div>
-  </div>
+</div>
+<div id="grip" title="Drag to resize preview"></div>
 </div>
 
 <script>
   // dev toolbar toggles (mockup only)
-  function tg(id) {
-    ['modeMenu','modelMenu','slashMenu'].forEach(function (x) {
+  var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu'];
+  function tg(id, e) {
+    if (e) e.stopPropagation();
+    MENUS.forEach(function (x) {
       document.getElementById(x).classList.toggle('show', x === id && !document.getElementById(x).classList.contains('show'));
     });
+    var p = document.getElementById(id);
+    if (!p.classList.contains('show')) return;
+    if (id === 'slashMenu') {
+      renderSlash(inp.value.charAt(0) === '/' ? inp.value.slice(1) : '');
+      inp.focus();
+    } else {
+      // cursor starts on the current selection (checkmarked item), else the first item
+      var items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
+      items.forEach(function (x) { x.classList.remove('sel'); });
+      var cur = p.querySelector('.popup-item.on') || items[0];
+      if (cur) cur.classList.add('sel');
+    }
   }
-  // send button becomes orange when there's text (like VS Code)
-  var inp = document.getElementById('input'), send = document.getElementById('send');
-  inp.addEventListener('input', function () { send.classList.toggle('ready', inp.value.trim().length > 0); });
+  function activeMenu() {
+    for (var i = 0; i < MENUS.length; i++) {
+      var p = document.getElementById(MENUS[i]);
+      if (p.classList.contains('show')) return p;
+    }
+    return null;
+  }
+  // ↑/↓ + Enter keyboard navigation for every dropdown; one Escape handler for all overlays
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var lb = document.getElementById('lightbox');
+      if (lb.classList.contains('show')) { lb.classList.remove('show'); return; }
+      var m = activeMenu();
+      if (m) { m.classList.remove('show'); return; }
+      document.getElementById('histPanel').classList.remove('show');
+      return;
+    }
+    var p = activeMenu(); if (!p) return;
+    var items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
+    if (!items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      var i = items.findIndex(function (x) { return x.classList.contains('sel'); });
+      i = (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items.forEach(function (x, n) { x.classList.toggle('sel', n === i); });
+      items[i].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      var s = p.querySelector('.popup-item.sel');
+      if (s) { e.preventDefault(); s.click(); }
+    }
+  });
+  // hovering a row moves the keyboard cursor there — one highlight, never two
+  document.addEventListener('mouseover', function (e) {
+    var item = e.target.closest('.popup-item');
+    if (!item) return;
+    var p = item.closest('.popup');
+    if (!p || !p.classList.contains('show') || item.classList.contains('sel')) return;
+    p.querySelectorAll('.popup-item').forEach(function (x) { x.classList.remove('sel'); });
+    item.classList.add('sel');
+  });
+  // attachment preview popup
+  function openLB(name) {
+    document.getElementById('lbCap').textContent = name;
+    document.getElementById('lightbox').classList.add('show');
+  }
+  document.getElementById('lightbox').addEventListener('click', function (e) {
+    if (e.target === this || e.target.closest('.lb-x')) this.classList.remove('show');
+  });
+
+  // history panel toggle (top edge tracks the real header height)
+  function tgHist(e) {
+    if (e) e.stopPropagation();
+    var p = document.getElementById('histPanel');
+    p.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';
+    p.classList.toggle('show');
+  }
+  // close any open dropdown when clicking outside of it
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#histPanel')) document.getElementById('histPanel').classList.remove('show');
+    if (e.target.closest('.popup')) return;
+    MENUS.forEach(function (x) { document.getElementById(x).classList.remove('show'); });
+  });
+  var inp = document.getElementById('input');
+  // auto-grow: starts at one line, expands up to 10 lines, then scrolls
+  var LINE = 20, MAXLINES = 10;
+  function autoGrow() {
+    var max = LINE * MAXLINES;
+    if (!inp.value) {                 // empty: rest at exactly one line (ignore placeholder metrics)
+      inp.style.height = LINE + 'px';
+      inp.style.overflowY = 'hidden';
+      return;
+    }
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, max) + 'px';
+    inp.style.overflowY = inp.scrollHeight > max ? 'auto' : 'hidden';
+  }
+  // keep the log clear of the (growing) composer: pad the log to the composer's height
+  var composerEl = document.getElementById('composer'), logEl = document.getElementById('log'), fadeEl = document.getElementById('fade');
+  // align the composer's right edge with the log content (compensate for the log scrollbar)
+  function syncGutter() {
+    var sb = logEl.offsetWidth - logEl.clientWidth;   // actual scrollbar width (0 if none)
+    composerEl.style.paddingRight = (14 + sb) + 'px';
+  }
+  new ResizeObserver(function () {
+    var h = composerEl.offsetHeight;
+    var atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 40;
+    logEl.style.paddingBottom = (h + 12) + 'px';
+    fadeEl.style.height = (h + 18) + 'px';
+    if (atBottom) logEl.scrollTop = logEl.scrollHeight;   // stay pinned while typing
+    syncGutter();
+  }).observe(composerEl);
+  new ResizeObserver(syncGutter).observe(logEl);
+  syncGutter();
+
+  inp.addEventListener('input', function () {
+    autoGrow();
+    // slash-command autocomplete: open + filter while the line starts with "/"
+    var slashOpen = document.getElementById('slashMenu').classList.contains('show');
+    var v = inp.value;
+    // if the menu was opened via the button, adding the first character inserts the leading slash
+    if (slashOpen && v.length && v.charAt(0) !== '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
+      inp.value = '/' + v;
+      var end = inp.value.length; inp.setSelectionRange(end, end);
+      v = inp.value;
+    }
+    if (v.charAt(0) === '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
+      renderSlash(v.slice(1));
+      ['modeMenu','modelMenu','attachMenu'].forEach(function (x) { document.getElementById(x).classList.remove('show'); });
+      document.getElementById('slashMenu').classList.add('show');
+    } else {
+      document.getElementById('slashMenu').classList.remove('show');
+    }
+  });
+  autoGrow();
+
+  // ---- resizable preview frame (mockup only) ----
+  var frame = document.getElementById('frame'), grip = document.getElementById('grip'), wlabel = document.getElementById('wlabel');
+  var MINW = 240, WKEY = 'mockup-frame-w';
+  function setWidth(px, persist) {
+    if (!px) {                              // 0 = full window width
+      frame.style.width = '100%';
+      wlabel.textContent = 'full';
+    } else {
+      px = Math.max(MINW, Math.min(px, window.innerWidth));
+      frame.style.setProperty('--frame-w', px + 'px');
+      frame.style.width = '';
+      wlabel.textContent = Math.round(px) + 'px';
+    }
+    document.querySelectorAll('.wpreset').forEach(function (b) {
+      b.classList.toggle('on', +b.dataset.w === (px || 0));
+    });
+    if (persist !== false) { try { localStorage.setItem(WKEY, String(px || 0)); } catch (e) {} }
+  }
+  document.querySelectorAll('.wpreset').forEach(function (b) {
+    b.addEventListener('click', function () { setWidth(+b.dataset.w); });
+  });
+  grip.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    document.body.classList.add('resizing'); grip.classList.add('drag');
+    // frame is centered — expand symmetrically from the window centre
+    function move(ev) { setWidth(2 * (ev.clientX - window.innerWidth / 2)); }
+    function up() {
+      document.body.classList.remove('resizing'); grip.classList.remove('drag');
+      document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+    }
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  });
+  var saved = 420; try { var s = localStorage.getItem(WKEY); if (s !== null) saved = +s; } catch (e) {}
+  setWidth(saved, false);
+
+  // ---- effort slider (fills dots up to the selected level) ----
+  var effort = document.getElementById('effort'), efName = document.getElementById('efName');
+  var efDots = [].slice.call(effort.querySelectorAll('.d'));
+  function setEffort(i) {
+    efDots.forEach(function (d, n) { d.classList.toggle('on', n <= i); d.classList.toggle('cur', n === i); });
+    efName.textContent = efDots[i].dataset.l;
+  }
+  efDots.forEach(function (d, i) { d.addEventListener('click', function () { setEffort(i); }); });
+  setEffort(2); // default: High
+
+  // ---- mode/model selection: checkmark follows the pick, chip label syncs, menu closes ----
+  document.querySelectorAll('#modeMenu .popup-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      document.querySelectorAll('#modeMenu .popup-item').forEach(function (x) { x.classList.remove('on'); });
+      item.classList.add('on');
+      document.getElementById('modeChip').innerHTML =
+        item.querySelector('.pi-ic').innerHTML + ' ' + item.querySelector('.pi-title').textContent;
+      document.getElementById('modeMenu').classList.remove('show');
+    });
+  });
+  document.querySelectorAll('#modelMenu .popup-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      document.querySelectorAll('#modelMenu .popup-item').forEach(function (x) { x.classList.remove('on'); });
+      item.classList.add('on');
+      document.getElementById('modelChip').textContent =
+        item.querySelector('.pi-title').textContent.replace(/\s*\(.*\)$/, '');
+      document.getElementById('modelMenu').classList.remove('show');
+    });
+  });
+  document.querySelectorAll('#attachMenu .popup-item').forEach(function (item) {
+    item.addEventListener('click', function () { document.getElementById('attachMenu').classList.remove('show'); });
+  });
+
+  // ---- slash commands (list + live filtering) ----
+  var SLASH = [
+    { name: '/compact',         desc: 'Compact the conversation to free up context' },
+    { name: '/context',         desc: 'Show current context usage' },
+    { name: '/config',          desc: 'Open settings' },
+    { name: '/cost',            desc: 'Show token usage and cost for this session' },
+    { name: '/model',           desc: 'Switch the model for this session' },
+    { name: '/clear',           desc: 'Clear the conversation and start fresh' },
+    { name: '/review',          desc: 'Review a GitHub pull request' },
+    { name: '/security-review', desc: 'Review pending changes for vulnerabilities' },
+    { name: '/simplify',        desc: 'Clean up the changed code for reuse and clarity' },
+    { name: '/init',            desc: 'Initialize a CLAUDE.md for the project' },
+    { name: '/agents',          desc: 'Create and manage subagents' },
+    { name: '/vim',             desc: 'Toggle vim editing mode' },
+    { name: '/help',            desc: 'Show available commands' },
+  ];
+  var slashList = document.getElementById('slashList');
+  function renderSlash(q) {
+    var ql = (q || '').toLowerCase();
+    var hits = SLASH.filter(function (c) {
+      return c.name.toLowerCase().indexOf(ql) !== -1 || c.desc.toLowerCase().indexOf(ql) !== -1;
+    });
+    if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
+    slashList.innerHTML = hits.map(function (c, i) {
+      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="' + c.name + '">' +
+        '<div class="pi-body"><div class="pi-title">' + c.name + '</div><div class="pi-desc">' + c.desc + '</div></div></div>';
+    }).join('');
+  }
+  slashList.addEventListener('click', function (e) {
+    var item = e.target.closest('.popup-item'); if (!item) return;
+    inp.value = item.dataset.cmd + ' ';
+    document.getElementById('slashMenu').classList.remove('show');
+    inp.focus(); autoGrow();
+  });
+  renderSlash('');
+
+  // ---- "Claude is working" spinner: cycle the whimsical verbs + tick meta ----
+  var VERBS = ['Wandering','Drizzling','Pondering','Percolating','Noodling','Simmering','Conjuring',
+    'Cogitating','Marinating','Wibbling','Frolicking','Puttering','Ruminating','Spelunking','Vibing',
+    'Reticulating','Brewing','Churning','Mulling','Musing','Schlepping','Manifesting','Transmuting',
+    'Honking','Booping','Concocting','Finagling','Moseying','Shimmying','Tinkering','Whirring','Germinating'];
+  var workVerb = document.getElementById('workVerb'),
+      workEl = document.getElementById('workEl'),
+      workTok = document.getElementById('workTok');
+  var workSpin = document.getElementById('workSpin');
+  if (workSpin) {
+    // Claude's hand-drawn flower spinner: cycle the star glyphs (grow → shrink)
+    var FRAMES = ['✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳'];
+    var fi = 0;
+    setInterval(function () { fi = (fi + 1) % FRAMES.length; workSpin.textContent = FRAMES[fi]; }, 175);
+  }
+  if (workVerb) {
+    var vi = 0, sec = 6, tok = 88;
+    setInterval(function () { vi = (vi + 1) % VERBS.length; workVerb.textContent = VERBS[vi] + '…'; }, 1800);
+    setInterval(function () {
+      sec += 1; tok += 5 + Math.floor(Math.random() * 45);
+      workEl.textContent = sec + 's';
+      workTok.textContent = tok;
+    }, 1000);
+  }
+
+  // ---- AskUserQuestion: highlight, Other input, tabs, submit-enable ----
+  var IND = {
+    rOff: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+    rOn:  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>',
+    cOff: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>',
+    cOn:  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"/><path d="m9 11 3 3L22 4"/></svg>'
+  };
+  document.querySelectorAll('.ask').forEach(function (ask) {
+    var tabs = ask.querySelectorAll('.ask-tab');
+    var panels = ask.querySelectorAll('.ask-panel');
+    var go = ask.querySelector('.ask-go');
+    var names = {};
+    ask.querySelectorAll('.ask-opt input').forEach(function (i) { names[i.name] = true; });
+    // insert an icon indicator span after each hidden native input
+    ask.querySelectorAll('.ask-opt').forEach(function (opt) {
+      var ind = document.createElement('span');
+      ind.className = 'ask-ind';
+      opt.querySelector('input').insertAdjacentElement('afterend', ind);
+    });
+    function refresh() {
+      ask.querySelectorAll('.ask-opt').forEach(function (opt) {
+        var input = opt.querySelector('input');
+        opt.classList.toggle('checked', input.checked);
+        var chk = input.type === 'checkbox';
+        opt.querySelector('.ask-ind').innerHTML = chk ? (input.checked ? IND.cOn : IND.cOff) : (input.checked ? IND.rOn : IND.rOff);
+      });
+      panels.forEach(function (p) {
+        var other = p.querySelector('.ask-opt-other input');
+        var box = p.querySelector('.ask-other');
+        if (box) box.hidden = !(other && other.checked);
+      });
+      var allAnswered = Object.keys(names).every(function (n) {
+        return ask.querySelector('input[name="' + n + '"]:checked');
+      });
+      if (go) go.disabled = !allAnswered;
+    }
+    function selectTab(idx) {
+      tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
+      panels.forEach(function (p, n) { p.hidden = n !== idx; });
+    }
+    tabs.forEach(function (tab, idx) { tab.addEventListener('click', function () { selectTab(idx); }); });
+    ask.querySelectorAll('.ask-opt input').forEach(function (i) {
+      i.addEventListener('change', function () {
+        refresh();
+        // single-select: jump to the next question, unless "Other" (needs typing) or last tab
+        var opt = i.closest('.ask-opt');
+        if (i.type === 'radio' && !opt.classList.contains('ask-opt-other')) {
+          var idx = Array.prototype.indexOf.call(panels, i.closest('.ask-panel'));
+          if (idx > -1 && idx < panels.length - 1) selectTab(idx + 1);
+        }
+      });
+    });
+    refresh();
+  });
 </script>
 </body>
 </html>
