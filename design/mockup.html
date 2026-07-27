@@ -13,7 +13,7 @@
     --panel: #26282c;       /* input card / popups */
     --fg: #d5d8dd;          /* main text */
     --muted: #8b9096;       /* secondary text */
-    --dot: #6f7378;         /* timeline dots, IN/OUT labels */
+    --dot: #6f7378;         /* thinking dots, IN/OUT labels */
     --border: #3a3d43;      /* subtle borders */
     --border-strong: #45494f;
     --accent: #d97757;      /* Claude orange */
@@ -87,7 +87,7 @@
 
   /* assistant block: plain text with small dot */
   .blk { position: relative; padding-left: 22px; }
-  .blk::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+  .blk::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--fg); }
   .blk > *:first-child { margin-top: 0; } .blk > *:last-child { margin-bottom: 0; }
   .blk p { margin: .45em 0; }
   .blk ul { margin: .4em 0; padding-left: 1.3em; }
@@ -150,12 +150,12 @@
   .card-h { margin-bottom: 8px; }
   .card-h code { font-family: ui-monospace, Consolas, monospace; color: var(--fg); }
   .card-b { display: flex; gap: 8px; margin-top: 10px; }
-  .card-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
-  .card-b button svg { width: 15px; height: 15px; }
-  .card-b .ok { background: var(--ok); color: #fff; }
-  .card-b .ok:hover { background: var(--ok-hover); }
-  .card-b .no { background: #3a3d41; color: var(--fg); }
-  .card-b .no:hover { background: #474a4f; }
+  .card-b button, .ask-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .card-b button svg, .ask-b button svg { width: 15px; height: 15px; }
+  .ok { background: var(--ok); color: #fff; }
+  .ok:hover:not(:disabled) { background: var(--ok-hover); }
+  .no { background: #3a3d41; color: var(--fg); }
+  .no:hover { background: #474a4f; }
   .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
     overflow-x: auto; max-height: 240px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
   .diff .del { display: block; color: var(--red); white-space: pre-wrap; }
@@ -191,14 +191,7 @@
     color: var(--fg); font: inherit; font-size: 13px; outline: none; }
   .ask-other input::placeholder { color: var(--dot); }
   .ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
-  .ask-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 13px;
-    display: inline-flex; align-items: center; gap: 6px; }
-  .ask-b button svg { width: 15px; height: 15px; }
-  .ask-go { background: var(--ok); color: #fff; }
-  .ask-go:hover:not(:disabled) { background: var(--ok-hover); }
   .ask-go:disabled { opacity: .45; cursor: not-allowed; }
-  .ask-no { background: #3a3d41; color: var(--fg); }
-  .ask-no:hover { background: #474a4f; }
   .ask-foot { padding: 0 14px 12px; font-size: 12px; }
   /* warm muted tone for secondary text inside the question card */
   .ask .q-d, .ask-foot, .ask-tab { color: #e4bda6; }
@@ -493,8 +486,8 @@
         </div>
 
         <div class="ask-b">
-          <button class="ask-go"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Submit answers</button>
-          <button class="ask-no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" x2="15" y1="15" y2="9"/></svg>Cancel</button>
+          <button class="ask-go ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Submit answers</button>
+          <button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" x2="15" y1="15" y2="9"/></svg>Cancel</button>
         </div>
         <div class="ask-foot">Esc to cancel</div>
       </div>
@@ -570,8 +563,8 @@
   <div id="composer">
     <div id="inputcard">
       <div id="chips">
-        <span class="att"><span class="thumb"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></span>image.png<span class="meta">283×162</span><button class="rm" title="Remove" onclick="this.parentElement.remove()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
-        <span class="att"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>.gitignore<button class="rm" title="Remove" onclick="this.parentElement.remove()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
+        <span class="att"><span class="thumb"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></span>image.png<span class="meta">283×162</span><button class="rm" title="Remove" onclick="rmAtt(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
+        <span class="att"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>.gitignore<button class="rm" title="Remove" onclick="rmAtt(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
       </div>
       <textarea id="input" rows="1" placeholder="ctrl esc to focus or unfocus Claude"></textarea>
       <div id="inputbar">
@@ -691,6 +684,12 @@
     p.querySelectorAll('.popup-item').forEach(function (x) { x.classList.remove('sel'); });
     item.classList.add('sel');
   });
+  // removing the last attachment chip collapses the whole row (and its divider)
+  function rmAtt(btn) {
+    var chips = btn.closest('#chips');
+    btn.parentElement.remove();
+    if (chips && !chips.querySelector('.att')) chips.style.display = 'none';
+  }
   // attachment preview popup
   function openLB(name) {
     document.getElementById('lbCap').textContent = name;
