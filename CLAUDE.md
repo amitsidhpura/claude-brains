@@ -61,6 +61,7 @@ mode/model popups, bottom fade), tool-window icon (grey/white on selection).
 DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
 usage/tokens display, auto-include selection / Alt+K, voice input.
 
-NEXT: iterate design via design/mockup.html against VS Code screenshots, then port approved
-styles into chat.html. Remaining ideas: editor-title accept/reject, @-symbol mentions,
-conversation-level rewind, worktrees, extensibility status view.
+NEXT: port the finalized design/mockup.html into chat.html — see docs/port-plan.md
+(3 phases: CSS+chrome → renderer → sandbox verify; mockup is the source of truth, its
+devbar/frame scaffolding does not ship). After the port: editor-title accept/reject,
+@-symbol mentions, conversation-level rewind, worktrees, extensibility status view.
