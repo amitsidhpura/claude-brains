@@ -56,7 +56,9 @@ mode switcher (Manual/Edit automatically/Plan/Auto), model selector (persisted),
 menu with descriptions, @-file-mentions, image paste/drop, markdown+syntax highlight, thinking,
 stop/interrupt, retry, per-turn file rewind (dry-run gated), sessions (new/history/resume+replay),
 Ctrl+N, VS Code-style document UI (user boxes, dot blocks, tool lines with IN/OUT, composer,
-mode/model popups, bottom fade), tool-window icon (grey/white on selection).
+mode/model popups, bottom fade), tool-window icon (grey/white on selection), per-request
+completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resume aware),
+dev gallery (Ctrl+Alt+G renders every transient state in the live webview).
 
 DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
 usage/tokens display, auto-include selection / Alt+K, voice input.
@@ -65,8 +67,11 @@ UI: chat.html is fully ported to the mockup design (Phase 1 chrome + Phase 2 ren
 docs/port-plan.md). Styles live ONLY in webview/chat.css (spliced at `<!--CSS-->`; mockup links
 the same file). Turn model: `.turn` > sticky `.msg-user` (in-box undo) + `.blk` dot blocks +
 `.tool-line` (green/red dot) with `.io` IN/OUT + canon `.card`/`.ask` cards. Live thinking +
-flower-spinner working line. Editing chat.html markup? mirror it in the mockup fixture too.
+flower-spinner working line + `.done` completion summary at request end. Status lines
+(⏹ Stopped / ↩ Reverted) hang their glyph (`.s-ic`, SVG or emoji) in the 22px dot column via
+`statusLine()`; timeline lines are 13px. Editing chat.html markup? mirror it in the mockup fixture too.
 
 NEXT: Phase 3 — verify the ported UI in a runIde sandbox against real streaming (token meta from
-message_delta.usage, undo placement, ask Other/multiSelect, fail dots). Then: editor-title
-accept/reject, @-symbol mentions, conversation-level rewind, worktrees, extensibility status view.
+message_delta.usage, undo placement, ask Other/multiSelect, fail dots) — the Ctrl+Alt+G gallery
+renders every transient state without driving the CLI. Then: editor-title accept/reject,
+@-symbol mentions, conversation-level rewind, worktrees, extensibility status view.
