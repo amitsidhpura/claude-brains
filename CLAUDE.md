@@ -56,9 +56,11 @@ mode switcher (Manual/Edit automatically/Plan/Auto), model selector (persisted),
 menu with descriptions, @-file-mentions, image paste/drop, markdown+syntax highlight, thinking,
 stop/interrupt, retry, per-turn file rewind (dry-run gated), sessions (new/history/resume+replay),
 Ctrl+N, VS Code-style document UI (user boxes, dot blocks, tool lines with IN/OUT, composer,
-mode/model popups, bottom fade), tool-window icon (grey/white on selection), per-request
+mode/model popups, top+bottom scroll fades), tool-window icon (grey/white on selection), per-request
 completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resume aware),
-dev gallery (Ctrl+Alt+G renders every transient state in the live webview).
+dev gallery (Ctrl+Alt+G renders every transient state in the live webview),
+line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
+±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).
 
 DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
 usage/tokens display, auto-include selection / Alt+K, voice input.
@@ -66,10 +68,14 @@ usage/tokens display, auto-include selection / Alt+K, voice input.
 UI: chat.html is fully ported to the mockup design (Phase 1 chrome + Phase 2 renderer, see
 docs/port-plan.md). Styles live ONLY in webview/chat.css (spliced at `<!--CSS-->`; mockup links
 the same file). Turn model: `.turn` > sticky `.msg-user` (in-box undo) + `.blk` dot blocks +
-`.tool-line` (green/red dot) with `.io` IN/OUT + canon `.card`/`.ask` cards. Live thinking +
-flower-spinner working line + `.done` completion summary at request end. Status lines
-(⏹ Stopped / ↩ Reverted) hang their glyph (`.s-ic`, SVG or emoji) in the 22px dot column via
-`statusLine()`; timeline lines are 13px. Editing chat.html markup? mirror it in the mockup fixture too.
+`.tool-line` (green/red dot) with `.io` IN/OUT + canon `.card`/`.ask` cards (plan card shares the
+`--warn` feedback surface). Live thinking (chevron collapse, live Ns timer, hide-0s) + flower-spinner
+working line (live chars/4 token estimate; hide-0) + `.done` completion summary at request end. Status
+lines (⏹ Stopped / ↩ Reverted) hang their glyph (`.s-ic`, SVG or emoji) in the 22px dot column via
+`statusLine()`; timeline lines are 13px. Diff gutter line numbers come from `ChatPanel.editLineStart`
+(finds old_string in the file, reading FRESH from disk since the CLI edits out-of-band). Auto-scroll
+pinning re-asserts on rAF so empty-then-innerHTML blocks land fully at bottom. Editing chat.html
+markup? mirror it in the mockup fixture too.
 
 NEXT: Phase 3 — verify the ported UI in a runIde sandbox against real streaming (token meta from
 message_delta.usage, undo placement, ask Other/multiSelect, fail dots) — the Ctrl+Alt+G gallery
