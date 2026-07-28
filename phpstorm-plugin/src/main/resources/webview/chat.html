@@ -187,7 +187,7 @@
   const turnRecs = {};               // turnId -> { userEl }
 
   function el(cls, text) {
-    if (welcome) welcome.style.display = 'none';
+    if (welcome) { welcome.style.display = 'none'; log.classList.remove('empty'); }
     const d = document.createElement('div');
     d.className = cls; if (text != null) d.textContent = text;
     const parent = curTurn || log;
@@ -197,7 +197,7 @@
     maybeScroll(); return d;
   }
   function newTurn() {
-    if (welcome) welcome.style.display = 'none';
+    if (welcome) { welcome.style.display = 'none'; log.classList.remove('empty'); }
     curTurn = document.createElement('div');
     curTurn.className = 'turn';
     log.appendChild(curTurn);
@@ -537,7 +537,7 @@
 
   function clearLogUI() {
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
-    if (welcome) welcome.style.display = '';
+    if (welcome) { welcome.style.display = ''; log.classList.add('empty'); }
     curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
     curTurn = null; workingEl = null; activeAsk = null;
     turnTokens = 0; msgTokens = 0;

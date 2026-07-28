@@ -133,9 +133,19 @@ both directions — an argument for `contain-intrinsic-size: auto <fallback>`, w
 remember real sizes once a turn has been rendered. `auto` measured identically to a fixed value in
 the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
 
-## Ranked options (not yet implemented)
+## Ranked options
 
-1. `content-visibility: auto` on `.turn` — biggest win, fixes *scrolling*, needs the flex→block change.
+1. **DONE 2026-07-29** — `content-visibility: auto` on `.turn`. `#log` became `display: block`
+   with `#log > * + * { margin-top: 18px }` replacing `gap`, and flexes again only via `#log.empty`
+   while the welcome screen is up (that is what `margin: auto` needs to centre it) — chat.html and
+   the mockup both toggle that class. Verified after the change: turn spacing still 18px, welcome
+   still centred, `.msg-user` still pins (held at the container top with its turn scrolled 40px
+   past), layout ~0ms for 1000 turns.
+   OPEN: the `300px` fallback in `contain-intrinsic-size: auto 300px` is a guess. Synthetic turns
+   measured 193px, giving a 65% scrollbar overestimate; real turns with cards/diffs run much taller.
+   The `auto` keyword should decay that error as turns are visited and remembered, but headless
+   never marks a turn rendered, so that half is UNVERIFIED — check the scrollbar in a sandbox and
+   tune the fallback there.
 2. Stop inlining base64 images in the transcript frame; load on lightbox open. Halves image-heavy frames.
 3. Chunk the transcript push — currently one ~4 MB string escaped into a JS literal, shipped through
    `executeJavaScript` and `JSON.parse`d in one hit.

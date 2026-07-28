@@ -61,7 +61,14 @@ img { max-width: 100%; height: auto; }
 .icon-btn svg { width: 19px; height: 19px; display: block; }
 
 /* ---------- log ---------- */
-#log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px; display: flex; flex-direction: column; gap: 18px; }
+/* BLOCK, not flex. content-visibility's contain-intrinsic-size is ignored while the element is a
+   flex item, so skipped turns would collapse to zero and the scrollbar would read ~6% of the real
+   document (see docs/limits.md). `#log > * + *` reproduces the old `gap: 18px` for every direct
+   child, including the status/summary lines that are appended outside a turn. */
+#log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px; }
+#log > * + * { margin-top: 18px; }
+/* flex again only while the welcome screen is up, so its `margin: auto` can centre it */
+#log.empty { display: flex; flex-direction: column; }
 #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
 /* top fade: content vanishes as it scrolls under the header. The first ~18px is solid --bg so
@@ -91,7 +98,11 @@ img { max-width: 100%; height: auto; }
   background: var(--raised); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
 
 /* a turn = one user message + the assistant content that answers it */
-.turn { display: flex; flex-direction: column; gap: 18px; }
+/* Off-screen turns skip layout and paint entirely: 2000 turns went 132ms -> 4ms. The intrinsic
+   size is only a scrollbar placeholder; `auto` lets the browser remember a turn's real height once
+   it has been rendered, which matters because turns range from one line to a 400-row diff. */
+.turn { display: flex; flex-direction: column; gap: 18px;
+  content-visibility: auto; contain-intrinsic-size: auto 300px; }
 
 /* user message: full-width bordered box, sticks to the top of its turn while you scroll */
 .msg-user { position: sticky; top: 0; z-index: 6;
