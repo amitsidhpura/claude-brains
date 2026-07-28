@@ -107,6 +107,25 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun listSessions(): List<com.syncroze.claudecode.session.SessionStore.SessionInfo> =
         com.syncroze.claudecode.session.SessionStore.list(cwd.path)
 
+    /**
+     * Open a file referenced in the chat (tool line path, card header) in the editor.
+     * Mirrors [com.syncroze.claudecode.bridge.IdeTools]'s `openFile`, which is private and
+     * MCP-facing; paths from the transcript are usually absolute, but a relative one is resolved
+     * against the project root so @-mention style references work too.
+     */
+    fun openFile(rawPath: String): Boolean {
+        val p = rawPath.trim().replace('\\', '/')
+        if (p.isEmpty()) return false
+        val fs = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
+        val vf = fs.findFileByPath(p)
+            ?: project.basePath?.let { fs.findFileByPath("$it/${p.trimStart('/')}") }
+            ?: return false
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
+            com.intellij.openapi.fileEditor.OpenFileDescriptor(project, vf).navigate(true)
+        }
+        return true
+    }
+
     /** Transcript the live CLI is writing, once known (null on a fresh session until it reports). */
     fun currentSessionId(): String? = cli?.sessionId
 
@@ -120,6 +139,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         if (id == cli?.sessionId) return false
         return com.syncroze.claudecode.session.SessionStore.delete(cwd.path, id)
     }
+
+    /** Context in use at the end of a past conversation, so a resumed thread shows its gauge. */
+    fun contextTokens(id: String): Long =
+        com.syncroze.claudecode.session.SessionStore.contextTokens(cwd.path, id)
 
     /** Renderable blocks of a past conversation, for replay into the UI. */
     fun readTranscript(id: String): List<kotlinx.serialization.json.JsonObject> =

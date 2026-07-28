@@ -84,6 +84,12 @@ Ctrl+N, VS Code-style document UI (user boxes, dot blocks, tool lines with IN/OU
 mode/model popups, top+bottom scroll fades), tool-window icon (grey/white on selection), per-request
 completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resume aware),
 dev gallery (Ctrl+Alt+G renders every transient state in the live webview),
+context gauge in the composer (share of the window the next request carries — latest request's
+input+cache_read+cache_creation, NOT a sum; orange ≥50%; click sends /compact via `sendTurn`).
+The window is not a number in the initialize payload: the 1M variants are tagged `[1m]`, on
+`resolvedModel` for default/opus but on `value` for fable — check both. Usage above the known
+window still promotes to 1M, so an untagged future model can't pin a wrong denominator.
+Clickable file references (`.t-desc.path`, `.card-h code`) open in the editor via `kind:"open"`,
 line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
 ±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).
 

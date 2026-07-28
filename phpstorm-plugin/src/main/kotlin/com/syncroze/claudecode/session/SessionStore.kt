@@ -40,8 +40,11 @@ object SessionStore {
      * Only the tail is read, since we want the last such record; falls back to mtime if the tail
      * holds no conversation record (e.g. a huge trailing tool result).
      */
-    private fun lastActivityOf(f: File): Long {
-        val window = 256L * 1024
+    /**
+     * Last records of a transcript, without reading the whole file. The first line is dropped when
+     * the file is larger than the window, since seeking mid-file lands inside a record.
+     */
+    private fun tailLines(f: File, window: Long = 256L * 1024): List<String> {
         val text = runCatching {
             java.io.RandomAccessFile(f, "r").use { raf ->
                 val from = maxOf(0L, raf.length() - window)
@@ -50,11 +53,12 @@ object SessionStore {
                 raf.readFully(buf)
                 String(buf, Charsets.UTF_8)
             }
-        }.getOrNull() ?: return f.lastModified()
+        }.getOrNull() ?: return emptyList()
+        return text.lineSequence().drop(if (f.length() > window) 1 else 0).toList()
+    }
 
-        // drop the first line: seeking mid-file almost always lands inside a record
-        val lines = text.lineSequence().drop(if (f.length() > window) 1 else 0).toList()
-        for (line in lines.asReversed()) {
+    private fun lastActivityOf(f: File): Long {
+        for (line in tailLines(f).asReversed()) {
             if (!line.contains("\"timestamp\"")) continue
             val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
             val type = obj["type"]?.jsonPrimitive?.content
@@ -91,6 +95,27 @@ object SessionStore {
         }
         tokenCache[f.path] = Triple(f.lastModified(), f.length(), total)
         return total
+    }
+
+    /**
+     * Context in use at the end of a session: the last assistant record's prompt size
+     * (input + cache read + cache creation). Not a sum — every request re-sends the whole
+     * conversation, so the newest request's prompt IS the current context size. Lets a resumed
+     * thread show its gauge straight away instead of waiting for the next turn.
+     */
+    fun contextTokens(cwd: String, id: String): Long {
+        val f = File(projectDir(cwd), "$id.jsonl")
+        if (!f.isFile) return 0
+        for (line in tailLines(f).asReversed()) {
+            if (!line.contains("\"usage\"")) continue
+            val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
+            if (obj["type"]?.jsonPrimitive?.content != "assistant") continue
+            val u = obj["message"]?.jsonObject?.get("usage")?.jsonObject ?: continue
+            fun n(k: String) = u[k]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+            val used = n("input_tokens") + n("cache_read_input_tokens") + n("cache_creation_input_tokens")
+            if (used > 0) return used
+        }
+        return 0
     }
 
     /**

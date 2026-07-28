@@ -94,6 +94,7 @@ class ChatPanel(project: Project, parent: Disposable) {
             "resume" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
                 clearLog(); pushTranscript(id); session.resumeSession(id)
             }
+            "open" -> msg["path"]?.jsonPrimitive?.content?.let { session.openFile(it) }
             "history" -> pushSessions()
             "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
                 session.deleteSession(it); pushSessions()
@@ -109,6 +110,7 @@ class ChatPanel(project: Project, parent: Disposable) {
     private fun pushTranscript(id: String) {
         val frame = buildJsonObject {
             put("type", "__transcript")
+            put("context", session.contextTokens(id))   // seeds the context gauge
             put("items", buildJsonArray { session.readTranscript(id).forEach { add(it) } })
         }
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))

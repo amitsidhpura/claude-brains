@@ -10,6 +10,7 @@ import kotlinx.serialization.json.long
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -166,6 +167,34 @@ class SessionStoreTest {
                 ?.let { java.time.Instant.parse(it).toEpochMilli() }
         }.maxOrNull()
         assertEquals(lastMsg, info.lastActivity, "not the last user/assistant timestamp")
+    }
+
+    /**
+     * Context in use is the LAST request's prompt size, not a sum over the session: every request
+     * re-sends the whole conversation, so summing would multiply-count and read far too high.
+     */
+    @Test
+    fun `contextTokens is the last request's prompt size, not a running total`() {
+        val f = File(SessionStore.projectDir(CWD), "$ID.jsonl")
+        var expected = 0L
+        var summed = 0L
+        f.forEachLine { line ->
+            val o = runCatching { Json.parseToJsonElement(line).jsonObject }.getOrNull() ?: return@forEachLine
+            if (o["type"]?.jsonPrimitive?.content != "assistant") return@forEachLine
+            val u = o["message"]?.jsonObject?.get("usage")?.jsonObject ?: return@forEachLine
+            fun n(k: String) = u[k]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+            val prompt = n("input_tokens") + n("cache_read_input_tokens") + n("cache_creation_input_tokens")
+            if (prompt > 0) { expected = prompt; summed += prompt }
+        }
+        assertTrue(expected > 0, "fixture has no usage to measure")
+        assertEquals(expected, SessionStore.contextTokens(CWD, ID))
+        assertTrue(summed > expected, "fixture too small to distinguish last-vs-sum")
+        assertNotEquals(summed, SessionStore.contextTokens(CWD, ID), "summed the session instead")
+    }
+
+    @Test
+    fun `contextTokens is zero for an unknown session`() {
+        assertEquals(0L, SessionStore.contextTokens(CWD, "never-existed"))
     }
 
     /** Deletion is irreversible, so it must take the sidecar with it and refuse anything odd. */

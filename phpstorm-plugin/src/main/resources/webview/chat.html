@@ -55,6 +55,7 @@
             </div>
           </span>
           <button id="slashBtn" class="icon-btn" title="Slash commands"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" x2="15" y1="15" y2="9"/></svg></button>
+          <button id="ctxChip" class="chip-btn ctx" hidden></button>
         </div>
         <div class="right">
           <span class="menu-anchor">
@@ -170,6 +171,14 @@
       else { log.scrollTop = log.scrollHeight; updateScrollBtn(); }
     })(t0);
   }
+  // File references open in the editor. Delegated from #log so it covers live, replayed and
+  // gallery-rendered paths without every render site wiring its own handler.
+  log.addEventListener('click', function (e) {
+    const ref = e.target.closest('.t-desc.path, .card-h code');
+    if (!ref) return;
+    const p = (ref.textContent || '').trim();
+    if (p) bridge({ kind: 'open', path: p });
+  });
   log.addEventListener('scroll', function () { pinned = atBottom(); updateScrollBtn(); });
   if (scrollBtn) scrollBtn.onclick = function () { smoothToBottom(); input.focus(); };
 
@@ -474,6 +483,8 @@
   function setModel(v) {
     currentModel = v; const m = models.find(function (x) { return x.value === v; });
     if (m) modelChip.textContent = chipName(m);
+    // switching between a 1M model and a 200k one changes the denominator
+    { const w = windowOf(m); if (w) { ctxWindowFromCli = w; renderContext(); } }
     bridge({ kind: 'model', model: v }); renderModels(); closeMenus();
   }
   modelChip.onclick = function (e) { tg('modelMenu', e); };
@@ -530,6 +541,9 @@
     curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
     curTurn = null; workingEl = null; activeAsk = null;
     turnTokens = 0; msgTokens = 0;
+    // a fresh conversation carries no context; a resume re-seeds it from the __transcript frame,
+    // which Kotlin pushes straight after this clear
+    ctxUsed = 0; renderContext();
     hideWorking();
     setBusy(false);
   }
@@ -1088,6 +1102,8 @@
       case '__models':
         models = ev.items || [];
         currentModel = ev.selected || (models[0] && models[0].value) || null;
+        { const w = windowOf(models.find(function (m) { return m.value === currentModel; }));
+          if (w) { ctxWindowFromCli = w; renderContext(); } }
         { const cm = models.find(function (m) { return m.value === currentModel; }); if (cm) modelChip.textContent = chipName(cm); }
         renderModels();
         return;
@@ -1104,7 +1120,7 @@
         }
         return;
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
-      case '__transcript':       return renderTranscript(ev.items || []);
+      case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || []);
       case '__rewind_check': {
         const r = ev.result || {};
         const fc = r.filesChanged || [];
@@ -1163,10 +1179,14 @@
 
   function onStream(e) {
     switch (e.type) {
-      case 'message_start':
+      case 'message_start': {
         curBubble = null; curRaw = '';
         msgTokens = 0; msgChars = 0;
+        const u = (e.message || {}).usage || {};   // prompt side only arrives here
+        setContext((u.input_tokens || 0) + (u.cache_read_input_tokens || 0) +
+          (u.cache_creation_input_tokens || 0));
         break;
+      }
       case 'content_block_start': {
         const cb = e.content_block || {};
         if (cb.type === 'tool_use') {
@@ -1308,6 +1328,55 @@
     if (days < 7) return days + ' days ago';
     return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ', ' + clock;
   }
+  /* ---------- context gauge ----------
+   * Context in use is the LATEST request's prompt size (input + cache read + cache creation), not
+   * a running sum: every request re-sends the whole conversation, so the newest number IS the
+   * current size. The window is not in the stream — take it from the models payload when the CLI
+   * offers one, otherwise infer, since a prompt above the standard window can only mean 1M.
+   */
+  const CTX_STD = 200000, CTX_1M = 1000000, CTX_WARN_PCT = 50;
+  let ctxUsed = 0, ctxWindowFromCli = 0;
+  const ctxChip = document.getElementById('ctxChip');
+  function ctxWindow() {
+    const w = ctxWindowFromCli || CTX_STD;
+    return ctxUsed > w ? CTX_1M : w;   // a prompt over the known window can only be the 1M variant
+  }
+  /**
+   * The initialize payload carries no numeric window; the 1M variants are tagged "[1m]" — on
+   * `resolvedModel` for default/opus (claude-opus-5[1m]) but on `value` for fable
+   * (claude-fable-5[1m], resolvedModel plain), so both fields have to be checked.
+   */
+  function windowOf(m) {
+    if (!m) return 0;
+    return /\[1m\]/i.test(String(m.resolvedModel || '') + ' ' + String(m.value || '')) ? CTX_1M : CTX_STD;
+  }
+  function setContext(used) {
+    if (!(used > 0)) return;
+    ctxUsed = used;
+    renderContext();
+  }
+  function renderContext() {
+    if (!ctxChip) return;
+    if (!ctxUsed) {   // clear, not just hide, so a stale figure can never flash back
+      ctxChip.hidden = true; ctxChip.textContent = ''; ctxChip.title = '';
+      ctxChip.classList.remove('warn');
+      return;
+    }
+    const win = ctxWindow();
+    const pct = Math.min(100, Math.round(ctxUsed / win * 100));
+    ctxChip.hidden = false;
+    ctxChip.textContent = pct + '%';
+    ctxChip.classList.toggle('warn', pct >= CTX_WARN_PCT);
+    ctxChip.title = fmtTok(ctxUsed) + ' of ' + fmtTok(win) + ' context used — click to /compact';
+  }
+  // Go through sendTurn, exactly as typing "/compact" and pressing Enter does: a bare
+  // bridge({kind:'user'}) reaches the CLI but creates no turn id, no user block and no busy
+  // state, so the panel sits there looking like the click did nothing.
+  if (ctxChip) ctxChip.onclick = function () {
+    if (busy || !ctxUsed) return;     // request in flight, or nothing to compact yet
+    sendTurn('/compact', []);
+  };
+
   function fmtSize(b) {
     b = Number(b) || 0;
     if (!b) return '';

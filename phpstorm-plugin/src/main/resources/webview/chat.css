@@ -180,6 +180,10 @@ img { max-width: 100%; height: auto; }
 .tool-line.fail::before { background: var(--red); }
 .tool-line b { color: var(--fg); font-weight: 600; }
 .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
+/* file references open in the editor — only the ones that ARE paths (.path), not free-text
+   descriptions, so nothing invites a click that would do nothing */
+.tool-line .t-desc.path, .card-h code { cursor: pointer; }
+.tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
 .path { font-family: ui-monospace, Consolas, monospace; }
 .io { margin: -6px 0 0 22px; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
@@ -380,6 +384,9 @@ img { max-width: 100%; height: auto; }
   border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
 .chip-btn:hover { color: var(--fg); }
 .chip-btn svg { width: 14px; height: 14px; }
+/* context gauge: share of the window the next request will carry. Click to /compact.
+   Wears .chip-btn (same as the model selector); only the over-threshold tint is its own. */
+.ctx.warn, .ctx.warn:hover { color: var(--accent); }
 #inputbar .icon-btn { color: var(--user-muted); }
 #inputbar .icon-btn:hover { color: var(--fg); }
 #send { background: var(--accent); color: #fff; border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
@@ -387,7 +394,8 @@ img { max-width: 100%; height: auto; }
 #inputbar svg { width: 18px; height: 18px; }
 #send:hover { background: #e28a6b; }
 #inputbar button { padding: 4px; }
-#inputbar .left button { padding: 4px 0; }
+#inputbar .left button { padding: 4px 0; }   /* icon buttons: no side padding */
+#inputbar .chip-btn { padding: 4px 0; }      /* context / model / mode chips: same, gap does the spacing */
 #send svg { display: block; }   /* size comes from the shared #inputbar svg rule */
 #send.stop { background: #c9403a; color: #fff; }
 #send.stop:hover { background: #d9534d; }
