@@ -33,9 +33,12 @@ object SessionStore {
      */
     private const val IMAGE_BUDGET = 4 * 1024 * 1024
 
+    /** Root holding `.claude/projects`. Overridable so tests can point at a fixture tree. */
+    internal var claudeHome: File = File(System.getProperty("user.home"))
+
     fun projectDir(cwd: String): File {
         val enc = cwd.replace(Regex("[^a-zA-Z0-9]"), "-")
-        return File(File(System.getProperty("user.home"), ".claude/projects"), enc)
+        return File(File(claudeHome, ".claude/projects"), enc)
     }
 
     fun list(cwd: String, limit: Int = 40): List<SessionInfo> {

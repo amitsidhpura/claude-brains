@@ -58,6 +58,13 @@ zip in `build/distributions/`.
 - `instrumentCode = false` is required (task crashes on MS JDK 21; we don't need it).
 - `buildSearchableOptions = false` — no settings UI yet, so it only cost a headless IDE launch
   per build. Re-enable when the deferred settings page lands.
+- `./gradlew test` — plain JUnit 5 over `SessionStore` (no IntelliJ deps), against a fixture of
+  real trimmed CLI records in `src/test/resources/fixtures/`. Do NOT re-add
+  `testFramework(TestFrameworkType.Platform)` without platform tests: it registers a JUnit
+  `LauncherSessionListener` that can't instantiate outside an IDE fixture and kills the test JVM.
+  `SessionStore.claudeHome` is `internal var` so tests point at a temp tree, not the real `~/.claude`.
+- `./gradlew probe --args="<projectPath> <sessionId>"` — dump the replay blocks for any real
+  session without launching the IDE. Fastest way to tell a parser bug from a renderer bug.
 - `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
 

@@ -1,4 +1,3 @@
-import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     id("java")
@@ -24,13 +23,33 @@ dependencies {
 
         // JCEF + platform APIs come with the platform; nothing extra needed for the sidebar.
         instrumentationTools()
-        testFramework(TestFrameworkType.Platform)
+        // No testFramework(TestFrameworkType.Platform): our tests are plain JUnit 5 over
+        // SessionStore, which has no IntelliJ dependencies. The platform test framework registers
+        // a JUnit LauncherSessionListener that cannot instantiate outside a real IDE test fixture,
+        // which kills the test JVM at startup. Re-add it alongside actual platform tests.
     }
 
     // Tiny, dependency-free WebSocket server for the IDE-MCP bridge.
     implementation("org.java-websocket:Java-WebSocket:1.5.7")
     // JSON-RPC framing.
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test { useJUnitPlatform() }
+
+/**
+ * Print the replay blocks SessionStore produces for a real session, without launching the IDE:
+ *   ./gradlew probe --args="/path/to/project <session-uuid>"
+ * SessionStore has no IntelliJ dependencies, so it runs standalone.
+ */
+tasks.register<JavaExec>("probe") {
+    group = "verification"
+    description = "Dump replay blocks for a session: --args=\"<projectPath> <sessionId>\""
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "com.syncroze.claudecode.session.SessionProbeKt"
 }
 
 intellijPlatform {
