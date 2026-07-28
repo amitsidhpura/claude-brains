@@ -68,8 +68,6 @@ img { max-width: 100%; height: auto; }
 #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px; }
 #log > * { margin-bottom: 18px; }
 #log > *:last-child { margin-bottom: 0; }
-/* flex again only while the welcome screen is up, so its `margin: auto` can centre it */
-#log.empty { display: flex; flex-direction: column; }
 #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
 /* top fade: content vanishes as it scrolls under the header. The first ~18px is solid --bg so
@@ -90,8 +88,12 @@ img { max-width: 100%; height: auto; }
 #scrollBtn svg { width: 16px; height: 16px; display: block; }
 
 /* welcome / empty state — centered in the log until the first message */
-#welcome { margin: auto; max-width: 440px; padding: 24px 20px; text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* Centres itself rather than relying on the parent being a flex container: #log is display:block
+   now, and `margin: auto` also lost to `#log > *:last-child { margin-bottom: 0 }` on specificity,
+   which pinned it to the bottom. min-height spans #log's content box (above the composer overlay),
+   so justify-content does the vertical centring with no JS and no state to get wrong. */
+#welcome { margin: 0 auto; max-width: 440px; padding: 24px 20px; text-align: center; min-height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
 .w-logo svg { width: 48px; height: 48px; display: block; }
 .w-title { font-size: 17px; font-weight: 600; color: var(--fg); }
 .w-sub { font-size: 13px; line-height: 1.65; color: var(--muted); }

@@ -793,9 +793,6 @@
   function setWelcome(on) {
     var log = document.getElementById('log'), w = document.getElementById('welcome');
     w.style.display = on ? '' : 'none';
-    // #log is display:block now (content-visibility needs .turn not to be a flex item), so it
-    // flexes again only while welcome is up — that is what centres it. Mirrors chat.html.
-    log.classList.toggle('empty', on);
     Array.prototype.forEach.call(log.children, function (c) {
       if (c.id !== 'welcome') c.style.display = on ? 'none' : '';
     });
