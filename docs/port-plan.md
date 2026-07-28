@@ -10,7 +10,17 @@ the spinner/verbs/token counters (the renderer drives those from real stream eve
 
 ## Phases
 
-### Phase 1 — CSS + static chrome (resource-only; verify with a single runIde restart)
+### Phase 1 — CSS + static chrome — **DONE 2026-07-28** (pending sandbox check)
+Notes from the implementation:
+- `webview/chat.css` created (canon from mockup + a marked LEGACY section for classes the
+  current renderer still emits — delete it in Phase 2). Mockup `<link>`s the same file;
+  `ChatPanel.loadUi()` splices it at `<!--CSS-->`.
+- Effort: the CLI supports `/effort <level>` at runtime (verified: "Set effort level to high");
+  levels low/medium/high/xhigh/max. The slider ships, wired to send `/effort` — the CLI's
+  confirmation appears as a normal assistant reply.
+- Header retry button replaced by the mockup's timeline `.retry` line (shown after errors).
+- attachMenu ships with Upload-from-computer + Add-context (inserts `@`); "Browse the web"
+  omitted until there's a backend for it.
 - **Split the CSS into `webview/chat.css` (single source of truth).** `ChatPanel.loadUi()`
   reads chat.html as a string and calls `loadHTML()` — there is no base URL, so a plain
   `<link href="chat.css">` will NOT resolve inside JCEF. Instead splice at load time: read
@@ -27,7 +37,24 @@ the spinner/verbs/token counters (the renderer drives those from real stream eve
 - **During this phase:** check `docs/ide-mcp-protocol.md` / control protocol for a
   reasoning-effort setting. If none exists, the effort slider in the mode menu is cosmetic — drop it.
 
-### Phase 2 — renderer changes (the bulk)
+### Phase 2 — renderer changes — **DONE 2026-07-28** (pending sandbox verify)
+Full rewrite of chat.html body+script to the canon markup; legacy CSS section deleted.
+Implemented: `.turn` wrapping (curTurn), sticky `.msg-user` with in-message `.undo` (shown from
+dry-run rewind, keyed by turnId→userEl), in-message attachment chips → `#lightbox`; canon cards
+(Edit old→new diff, Write additions, Bash `.cmd`, plan `.card` with blk + step-forward button);
+tabbed AskUserQuestion (`renderAsk`: header tabs, icon indicators, Other→text input,
+auto-advance, submit-enable, Cancel/Esc); slash popup + legacy @-mention popup; live thinking
+(`.think-live` shimmer + ~char/4 token estimate → `<details>` "Thought for Ns"); working line
+(flower `FRAMES`, `VERBS`, elapsed + `message_delta.usage.output_tokens` meta); red fail dots
+(`tool_result.is_error`); `.error` block + `.retry` line; effort slider → `/effort`.
+Remaining polish → Phase 3.
+
+Phase 2 leftovers / to verify in sandbox:
+- Token meta relies on `message_delta.usage.output_tokens` — confirm the CLI emits it midstream.
+- Undo button is keyed to the turn's user box; confirm placement + removal after revert.
+- Ask "Other" free-text path + multiSelect submission shape.
+
+### Phase 2 (original notes)
 - Wrap each turn in `.turn`; `.msg-user` is sticky; undo button lives **inside** the message
   (`.has-undo` + `.undo`, shown only when dry-run rewind says so).
 - Permission cards → `.card` / `.card.warn`: Edit (old→new diff), Write (additions), Bash

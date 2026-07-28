@@ -61,7 +61,12 @@ mode/model popups, bottom fade), tool-window icon (grey/white on selection).
 DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
 usage/tokens display, auto-include selection / Alt+K, voice input.
 
-NEXT: port the finalized design/mockup.html into chat.html — see docs/port-plan.md
-(3 phases: CSS+chrome → renderer → sandbox verify; mockup is the source of truth, its
-devbar/frame scaffolding does not ship). After the port: editor-title accept/reject,
-@-symbol mentions, conversation-level rewind, worktrees, extensibility status view.
+UI: chat.html is fully ported to the mockup design (Phase 1 chrome + Phase 2 renderer, see
+docs/port-plan.md). Styles live ONLY in webview/chat.css (spliced at `<!--CSS-->`; mockup links
+the same file). Turn model: `.turn` > sticky `.msg-user` (in-box undo) + `.blk` dot blocks +
+`.tool-line` (green/red dot) with `.io` IN/OUT + canon `.card`/`.ask` cards. Live thinking +
+flower-spinner working line. Editing chat.html markup? mirror it in the mockup fixture too.
+
+NEXT: Phase 3 — verify the ported UI in a runIde sandbox against real streaming (token meta from
+message_delta.usage, undo placement, ask Other/multiSelect, fail dots). Then: editor-title
+accept/reject, @-symbol mentions, conversation-level rewind, worktrees, extensibility status view.

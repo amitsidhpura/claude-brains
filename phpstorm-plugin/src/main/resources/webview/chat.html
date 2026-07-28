@@ -3,200 +3,31 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<style>
-  :root {
-    --bg: #1e1f22; --panel: #2b2d30; --fg: #dfe1e5; --muted: #9aa0a6;
-    --user: #3574f0; --accent: #d97757; --border: #393b40; --code: #1a1b1e;
-    --green: #3fb950; --red: #f2827f;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
-    font: 13px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
-  img { max-width: 100%; height: auto; }
-
-  /* slim, modern scrollbars (Chromium/JCEF) */
-  * { scrollbar-width: thin; scrollbar-color: #3b3d44 transparent; }
-  ::-webkit-scrollbar { width: 9px; height: 9px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3b3d44; border-radius: 6px;
-    border: 2px solid transparent; background-clip: content-box; }
-  ::-webkit-scrollbar-thumb:hover { background: #4a4d55; background-clip: content-box; }
-  ::-webkit-scrollbar-corner { background: transparent; }
-  ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
-  #app { display: flex; flex-direction: column; height: 100%; position: relative; }
-  #head { padding: 6px 10px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    font-weight: 600; letter-spacing: .04em; color: var(--muted); font-size: 11px; text-transform: uppercase; }
-  #head .head-actions { display: flex; gap: 6px; }
-  #head button { background: transparent; border: 1px solid var(--border); color: var(--muted);
-    border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 11px; }
-  #head button:hover { color: var(--fg); border-color: var(--accent); }
-
-  #history { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; z-index: 40; }
-  .hist-panel { position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
-    width: 90%; max-width: 520px; max-height: 80%; overflow: hidden; display: flex; flex-direction: column;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
-  .hist-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;
-    border-bottom: 1px solid var(--border); font-weight: 600; }
-  .hist-h button { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; }
-  #histList { overflow-y: auto; }
-  .hist-item { padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
-  .hist-item:hover { background: var(--bg); }
-  .hist-item .t { color: var(--fg); }
-  .hist-item .d { color: var(--muted); font-size: 11px; margin-top: 2px; }
-  .hist-empty { padding: 16px; color: var(--muted); }
-  #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 12px 104px; display: flex; flex-direction: column; gap: 10px; }
-  #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; z-index: 14; pointer-events: none;
-    background: linear-gradient(to bottom, transparent 0%, var(--bg) 62%); }
-  .msg { max-width: 100%; min-width: 0; word-wrap: break-word; overflow-wrap: anywhere; }
-  .msg.user { align-self: stretch; border: 1px solid #3f434a; border-radius: 8px;
-    padding: 8px 12px; white-space: pre-wrap; }
-  .msg.assistant { align-self: flex-start; width: 100%; position: relative; padding-left: 18px; }
-  .msg.assistant::before { content: '●'; position: absolute; left: 2px; top: 7px; font-size: 6px; color: #6f7378; }
-  .tool { align-self: flex-start; color: var(--muted); font-size: 12px; }
-  .tool b { color: var(--fg); }
-
-  /* tool call line: ● Name  description  (+ IN/OUT boxes) */
-  .tool-line { align-self: stretch; position: relative; padding-left: 18px; font-size: 13px; color: var(--muted); }
-  .tool-line::before { content: '●'; position: absolute; left: 2px; top: 6px; font-size: 6px; color: #4ec26b; }
-  .tool-line b { color: var(--fg); font-weight: 600; }
-  .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
-  .io { align-self: stretch; margin: 2px 0 4px 18px; background: #1a1c1f; border: 1px solid var(--border);
-    border-radius: 6px; overflow: hidden; font-family: ui-monospace, monospace; font-size: 12px; }
-  .io .io-row { display: flex; gap: 10px; padding: 6px 10px; }
-  .io .io-row + .io-row { border-top: 1px solid var(--border); }
-  .io .io-k { color: #6f7378; font-size: 10px; padding-top: 2px; min-width: 26px; }
-  .io .io-v { white-space: pre-wrap; word-break: break-all; color: var(--fg); flex: 1; max-height: 200px; overflow-y: auto; }
-  .tool .undo { color: var(--accent); text-decoration: none; }
-  .tool .undo:hover { text-decoration: underline; }
-
-  /* empty-state welcome */
-  #welcome { margin: auto; text-align: center; color: var(--muted); max-width: 300px; padding: 20px; }
-  #welcome .w-logo svg { width: 42px; height: 42px; }
-  #welcome .w-title { font-size: 15px; font-weight: 600; color: var(--fg); margin: 10px 0 6px; }
-  #welcome .w-sub { font-size: 12.5px; line-height: 1.6; }
-  #welcome kbd { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; color: var(--fg); }
-
-  /* working indicator */
-  .working { align-self: flex-start; display: flex; gap: 4px; padding: 6px 2px; }
-  .working .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
-  .working .dot:nth-child(2) { animation-delay: .2s; }
-  .working .dot:nth-child(3) { animation-delay: .4s; }
-  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
-  .err { color: var(--red); }
-
-  /* markdown */
-  .md > *:first-child { margin-top: 0; }
-  .md > *:last-child { margin-bottom: 0; }
-  .md h1, .md h2, .md h3 { margin: .8em 0 .4em; line-height: 1.25; }
-  .md h1 { font-size: 1.35em; } .md h2 { font-size: 1.2em; } .md h3 { font-size: 1.08em; }
-  .md p { margin: .5em 0; }
-  .md ul, .md ol { margin: .4em 0; padding-left: 1.4em; }
-  .md li { margin: .15em 0; }
-  .md a { color: #58a6ff; text-decoration: none; }
-  .md a:hover { text-decoration: underline; }
-  .md blockquote { margin: .5em 0; padding: .2em .8em; border-left: 3px solid var(--border); color: var(--muted); }
-  .md hr { border: 0; border-top: 1px solid var(--border); margin: .8em 0; }
-  .md code.ic { background: #2a2d33; color: #d7a35f; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: .92em; }
-  .code { background: var(--code); border: 1px solid var(--border); border-radius: 8px; margin: .5em 0; overflow: hidden; }
-  .code-h { display: flex; justify-content: space-between; align-items: center;
-    padding: 3px 8px; background: #16171a; color: var(--muted); font-size: 11px; }
-  .code-h .copy { background: transparent; border: 1px solid var(--border); color: var(--muted);
-    border-radius: 5px; padding: 1px 8px; cursor: pointer; font: inherit; }
-  .code pre { margin: 0; padding: 8px; overflow-x: auto; }
-  .code code { font-family: ui-monospace, monospace; font-size: 12px; }
-  .hl-k { color: #c586c0; }              /* keyword  */
-  .hl-s { color: #ce9178; }              /* string   */
-  .hl-c { color: #6a9955; font-style: italic; } /* comment */
-  .hl-n { color: #b5cea8; }              /* number   */
-  .hl-v { color: #9cdcfe; }              /* php var  */
-
-  /* thinking */
-  details.think { color: var(--muted); font-size: 12px; border-left: 2px solid var(--border); padding-left: 8px; }
-  details.think summary { cursor: pointer; user-select: none; }
-  details.think .think-body { white-space: pre-wrap; margin-top: 4px; font-style: italic; }
-
-  /* permission card */
-  .perm { align-self: stretch; border: 1px solid var(--accent); border-radius: 10px; padding: 10px; background: #2a2320; }
-  .perm-h { margin-bottom: 6px; }
-  .perm-h code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
-  .perm-b { display: flex; gap: 8px; margin-top: 8px; }
-  .perm-b button { border: 0; border-radius: 6px; padding: 5px 14px; cursor: pointer; font: inherit; }
-  .perm-b .ok { background: #2ea043; color: #fff; }
-  .perm-b .no { background: #3a3d41; color: var(--fg); }
-  .ok-t { color: var(--green); } .no-t { color: var(--red); }
-  .perm .q { margin: 10px 0; }
-  .perm .q-t { font-weight: 600; margin-bottom: 5px; }
-  .perm .q-opt { display: block; padding: 3px 0; cursor: pointer; }
-  .perm .q-opt input { margin-right: 6px; }
-  .perm .q-desc { color: var(--muted); }
-  .diff { background: var(--code); border: 1px solid var(--border); border-radius: 8px; padding: 8px;
-    overflow-x: auto; max-height: 260px; font-family: ui-monospace, monospace; font-size: 12px; }
-  .diff .del { color: var(--red); white-space: pre-wrap; }
-  .diff .add-l { color: var(--green); white-space: pre-wrap; }
-  pre { background: var(--code); border: 1px solid var(--border); border-radius: 8px; padding: 8px; overflow-x: auto; max-height: 260px; }
-
-  .att-img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
-  #attachments { display: none; gap: 8px; padding: 6px 8px 0; flex-wrap: wrap; }
-  #attachments .att-chip { position: relative; }
-  #attachments img { height: 46px; border-radius: 6px; border: 1px solid var(--border); display: block; }
-  #attachments button { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%;
-    border: 0; background: #000; color: #fff; cursor: pointer; font-size: 11px; line-height: 1; padding: 0; }
-  /* autocomplete popup (@ files, / commands) */
-  #mention { position: fixed; z-index: 30; background: var(--panel); border: 1px solid var(--border);
-    border-radius: 10px; max-height: 240px; overflow-y: auto; display: none; box-shadow: 0 8px 28px rgba(0,0,0,.5); padding: 4px; }
-  #mention .mi { padding: 5px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
-  #mention .mi.sel { background: var(--user); color: #fff; }
-
-  /* composer */
-  #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px 10px; z-index: 16; }
-  #inputcard { position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-    padding: 9px 11px; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
-  #inputcard:focus-within { border-color: #55585f; }
-  #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
-    font: inherit; min-height: 22px; max-height: 200px; padding: 0 26px 0 0; }
-  #micBtn { position: absolute; top: 7px; right: 9px; }
-  #inputbar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-  #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 4px; }
-  .icon-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 15px;
-    width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
-  .icon-btn:hover { background: var(--bg); color: var(--fg); }
-  .chip-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px;
-    padding: 4px 9px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; }
-  .chip-btn:hover { background: var(--bg); color: var(--fg); }
-  .chip-btn .mono { font-family: ui-monospace, monospace; color: var(--accent); font-size: 11px; }
-  #send { background: var(--accent); color: #fff; border: 0; border-radius: 8px; width: 30px; height: 28px;
-    cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
-  #send.stop { background: #c9403a; }
-
-  /* mode / model popups */
-  .popup { position: absolute; z-index: 25; bottom: 84px; background: var(--panel); border: 1px solid var(--border);
-    border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 320px; max-width: 94%; }
-  #modeMenu { right: 10px; } #modelMenu { left: 10px; }
-  .popup.show { display: block; }
-  .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 13px; color: var(--muted);
-    font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-  .popup-h kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; text-transform: none; }
-  .popup-item { display: flex; gap: 11px; align-items: flex-start; padding: 9px 13px; cursor: pointer; }
-  .popup-item:hover { background: var(--bg); }
-  .popup-item .pi-ic { color: var(--accent); width: 20px; text-align: center; font-family: ui-monospace, monospace; }
-  .popup-item .pi-body { flex: 1; }
-  .popup-item .pi-title { color: var(--fg); font-size: 13px; }
-  .popup-item .pi-desc { color: var(--muted); font-size: 11.5px; margin-top: 1px; }
-  .popup-item .pi-check { color: var(--accent); visibility: hidden; }
-  .popup-item.on .pi-check { visibility: visible; }
-</style>
+<!--CSS-->
 </head>
 <body>
 <div id="app">
   <div id="head">
-    <span>Claude Code</span>
-    <span class="head-actions">
-      <button id="retryBtn" title="Re-run the last prompt">↻ Retry</button>
-      <button id="newBtn" title="Start a new conversation">＋ New</button>
-      <button id="histBtn" title="Past conversations">🕘 History</button>
+    <span class="title">Claude Code</span>
+    <span class="actions">
+      <button id="histBtn" class="icon-btn" title="Past conversations"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+      <button id="newBtn" class="icon-btn" title="New conversation"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
     </span>
   </div>
+
+  <div id="histPanel">
+    <div class="hist-h">Past conversations</div>
+    <div id="histList" class="hist-list"></div>
+  </div>
+
+  <div id="lightbox">
+    <div class="lb-box">
+      <button class="lb-x" title="Close"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      <div class="lb-img"><img id="lbImg" alt=""></div>
+      <div class="lb-cap" id="lbCap"></div>
+    </div>
+  </div>
+
   <div id="log">
     <div id="welcome">
       <div class="w-logo"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="#d97757" d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z"/></svg></div>
@@ -205,51 +36,99 @@
         Type <kbd>/</kbd> for commands, <kbd>@</kbd> to reference files, or paste an image.</div>
     </div>
   </div>
+
   <div id="fade"></div>
+
   <div id="composer">
-    <div id="attachments"></div>
     <div id="inputcard">
-      <button id="micBtn" class="icon-btn" title="Voice input (coming soon)">🎤</button>
-      <textarea id="input" placeholder="Ask Claude…  (Enter to send, Shift+Enter for newline)"></textarea>
+      <div id="chips" style="display:none"></div>
+      <textarea id="input" rows="1" placeholder="Ask Claude…  (Enter to send, Shift+Enter for newline)"></textarea>
       <div id="inputbar">
         <div class="left">
-          <button id="attachBtn" class="icon-btn" title="Attach image">＋</button>
-          <button id="modelBtn" class="chip-btn" title="Model"><span id="modelLabel">Default</span></button>
+          <span class="menu-anchor">
+            <button id="attachBtn" class="icon-btn" title="Attach"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg></button>
+            <div id="attachMenu" class="popup">
+              <div class="popup-item" data-act="upload"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></span><div class="pi-body"><div class="pi-title">Upload from computer</div></div></div>
+              <div class="popup-item" data-act="context"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><div class="pi-body"><div class="pi-title">Add context</div></div></div>
+            </div>
+          </span>
+          <button id="slashBtn" class="icon-btn" title="Slash commands"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" x2="15" y1="15" y2="9"/></svg></button>
         </div>
         <div class="right">
-          <button id="modeBtn" class="chip-btn" title="Permission mode"><span class="mono">&lt;/&gt;</span><span id="modeLabel">Manual</span></button>
-          <button id="send" title="Send">↑</button>
+          <span class="menu-anchor">
+            <button class="chip-btn" id="modelChip">Default</button>
+            <div id="modelMenu" class="popup">
+              <div class="popup-h"><span>Select a model</span></div>
+              <div id="modelItems"></div>
+            </div>
+          </span>
+          <span class="menu-anchor">
+            <button class="chip-btn" id="modeChip"></button>
+            <div id="modeMenu" class="popup">
+              <div class="popup-h"><span>Modes</span></div>
+              <div id="modeItems">
+                <div class="popup-item" data-v="default"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></span><div class="pi-body"><div class="pi-title">Ask before edits</div><div class="pi-desc">Claude will ask for approval before making each edit</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+                <div class="popup-item" data-v="acceptEdits"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg></span><div class="pi-body"><div class="pi-title">Edit automatically</div><div class="pi-desc">Claude will edit your selected text or the whole file</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+                <div class="popup-item" data-v="plan"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span><div class="pi-body"><div class="pi-title">Plan mode</div><div class="pi-desc">Claude will explore the code and present a plan before editing</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+                <div class="popup-item" data-v="bypassPermissions"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></span><div class="pi-body"><div class="pi-title">Auto mode</div><div class="pi-desc">Claude will approve actions automatically — no prompts</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+              </div>
+              <div class="popup-f">
+                <span class="ef-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z"/><path d="m2.5 21.5 1.4-1.4"/><path d="m20.1 3.9 1.4-1.4"/><path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z"/><path d="m9.6 14.4 4.8-4.8"/></svg>Effort <b id="efName">High</b></span>
+                <span class="effort" id="effort">
+                  <span class="d" data-l="Low" data-v="low"></span>
+                  <span class="d" data-l="Medium" data-v="medium"></span>
+                  <span class="d" data-l="High" data-v="high"></span>
+                  <span class="d" data-l="Very High" data-v="xhigh"></span>
+                  <span class="d" data-l="Max" data-v="max"></span>
+                </span>
+              </div>
+            </div>
+          </span>
+          <button id="send" title="Send"><svg class="ic-send" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg><svg class="ic-stop" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
         </div>
+      </div>
+      <div id="slashMenu" class="popup">
+        <div class="popup-h"><span>Slash Commands</span></div>
+        <div id="slashList"></div>
       </div>
     </div>
     <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
   </div>
-  <div id="modeMenu" class="popup">
-    <div class="popup-h"><span>Modes</span><span><kbd>shift</kbd>+<kbd>tab</kbd> to switch</span></div>
-    <div id="modeItems"></div>
-  </div>
-  <div id="modelMenu" class="popup">
-    <div class="popup-h"><span>Select a model</span></div>
-    <div id="modelItems"></div>
-  </div>
 </div>
 <div id="mention"></div>
-<div id="history"><div class="hist-panel">
-  <div class="hist-h"><span>Past conversations</span><button id="histClose">✕</button></div>
-  <div id="histList"></div>
-</div></div>
 <script>
   const log = document.getElementById('log');
   const input = document.getElementById('input');
   const send = document.getElementById('send');
-  const modeBtn = document.getElementById('modeBtn'), modeMenu = document.getElementById('modeMenu');
-  const modeItems = document.getElementById('modeItems'), modeLabel = document.getElementById('modeLabel');
-  const modelBtn = document.getElementById('modelBtn'), modelMenu = document.getElementById('modelMenu');
-  const modelItems = document.getElementById('modelItems'), modelLabel = document.getElementById('modelLabel');
-  const history = document.getElementById('history');
+  const modeChip = document.getElementById('modeChip');
+  const modelChip = document.getElementById('modelChip');
+  const modeItemsEl = document.getElementById('modeItems');
+  const modelItems = document.getElementById('modelItems');
+  const histPanel = document.getElementById('histPanel');
   const histList = document.getElementById('histList');
-  const att = document.getElementById('attachments');
+  const chips = document.getElementById('chips');
   const welcome = document.getElementById('welcome');
+  const composerEl = document.getElementById('composer');
+  const fadeEl = document.getElementById('fade');
+  const slashList = document.getElementById('slashList');
+  const lightbox = document.getElementById('lightbox');
+
+  /* ---------- shared icons ---------- */
+  const SVG_CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>';
+  const SVG_X = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+  const SVG_CIRCLE_X = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
+  const SVG_STEP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.029 4.285A2 2 0 0 0 7 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/><path d="M3 4v16"/></svg>';
+  const SVG_RETRY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
+  const SVG_UNDO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>';
+  const SVG_COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+  const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
+  const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
+  const IND = {
+    rOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+    rOn:  SVG_CHECK,
+    cOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>',
+    cOn:  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"/><path d="m9 11 3 3L22 4"/></svg>'
+  };
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
@@ -259,24 +138,56 @@
   function maybeScroll() { if (pinned) log.scrollTop = log.scrollHeight; }
   log.addEventListener('scroll', () => { pinned = atBottom(); });
 
+  /* ---------- turn structure: user box + everything that answers it ---------- */
+  let curTurn = null;                // .turn container for the current exchange
+  const turnRecs = {};               // turnId -> { userEl }
+
   function el(cls, text) {
     if (welcome) welcome.style.display = 'none';
     const d = document.createElement('div');
     d.className = cls; if (text != null) d.textContent = text;
-    log.appendChild(d); maybeScroll(); return d;
+    (curTurn || log).appendChild(d); maybeScroll(); return d;
+  }
+  function newTurn() {
+    if (welcome) welcome.style.display = 'none';
+    curTurn = document.createElement('div');
+    curTurn.className = 'turn';
+    log.appendChild(curTurn);
+    return curTurn;
   }
 
-  let workingEl = null;
+  /* ---------- working line: flower spinner + whimsical verbs + meta ---------- */
+  const FRAMES = ['✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳'];
+  const VERBS = ['Wandering','Drizzling','Pondering','Percolating','Noodling','Simmering','Conjuring',
+    'Cogitating','Marinating','Wibbling','Frolicking','Puttering','Ruminating','Spelunking','Vibing',
+    'Reticulating','Brewing','Churning','Mulling','Musing','Schlepping','Manifesting','Transmuting',
+    'Honking','Booping','Concocting','Finagling','Moseying','Shimmying','Tinkering','Whirring','Germinating'];
+  let workingEl = null, workTimers = [], workStart = 0, turnTokens = 0, msgTokens = 0;
   function showWorking() {
     if (workingEl) return;
-    workingEl = el('working', '');
-    workingEl.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+    workingEl = el('generating', '');
+    workStart = Date.now();
+    workingEl.innerHTML = '<span class="spin">✳</span><span class="verb"></span>' +
+      '<span class="meta">(<span class="w-el">0s</span> · ' + SVG_DOWN + '<span class="w-tok">0</span> tokens)</span>';
+    const spin = workingEl.querySelector('.spin'), verb = workingEl.querySelector('.verb');
+    const wEl = workingEl.querySelector('.w-el');
+    let fi = 0, vi = Math.floor(Math.random() * VERBS.length);
+    verb.textContent = VERBS[vi] + '…';
+    workTimers.push(setInterval(function () { fi = (fi + 1) % FRAMES.length; spin.textContent = FRAMES[fi]; }, 175));
+    workTimers.push(setInterval(function () { vi = (vi + 1) % VERBS.length; verb.textContent = VERBS[vi] + '…'; }, 1800));
+    workTimers.push(setInterval(function () { wEl.textContent = Math.round((Date.now() - workStart) / 1000) + 's'; }, 1000));
   }
-  function hideWorking() { if (workingEl) { workingEl.remove(); workingEl = null; } }
+  function updateWorkTokens() {
+    if (!workingEl) return;
+    const t = workingEl.querySelector('.w-tok');
+    if (t) t.textContent = String(turnTokens + msgTokens);
+  }
+  function hideWorking() {
+    workTimers.forEach(clearInterval); workTimers = [];
+    if (workingEl) { workingEl.remove(); workingEl = null; }
+  }
 
-  /* ---------- tiny offline syntax highlighter ----------
-     Operates on already-HTML-escaped code. Single pass: at each position the first
-     matching alternative wins, so keywords inside strings/comments aren't re-matched. */
+  /* ---------- tiny offline syntax highlighter ---------- */
   const KW = new Set((
     'if else elseif for foreach while do switch case default break continue return yield ' +
     'function fn func def lambda class interface trait enum struct extends implements new ' +
@@ -300,7 +211,7 @@
     });
   }
 
-  /* ---------- minimal, safe markdown renderer ---------- */
+  /* ---------- minimal, safe markdown renderer (canon markup) ---------- */
   function inlineMd(s) {
     return s
       .replace(/`([^`]+)`/g, (m, c) => '<code class="ic">' + c + '</code>')
@@ -312,16 +223,16 @@
     let src = esc(srcRaw);                              // escape everything first
     const blocks = [];
     src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {   // fenced code
-      blocks.push('<div class="code"><div class="code-h"><span>' + esc(lang) +
-        '</span><button class="copy">Copy</button></div><pre><code>' +
-        highlight(code.replace(/\n$/, '')) + '</code></pre></div>');
-      return ' B' + (blocks.length - 1) + ' ';
+      blocks.push('<div class="codeblock"><div class="cb-h"><span>' + esc(lang) +
+        '</span><button class="copy" title="Copy">' + SVG_COPY + '</button></div><pre>' +
+        highlight(code.replace(/\n$/, '')) + '</pre></div>');
+      return ' B' + (blocks.length - 1) + ' ';
     });
     const lines = src.split('\n');
     let out = '', i = 0;
     while (i < lines.length) {
       let line = lines[i];
-      const ph = line.match(/^ B(\d+) $/);
+      const ph = line.match(/^ B(\d+) $/);
       if (ph) { out += blocks[+ph[1]]; i++; continue; }
       if (/^\s*$/.test(line)) { i++; continue; }
       let m;
@@ -344,7 +255,7 @@
       }
       // paragraph: gather consecutive normal lines
       let buf = [];
-      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^ B\d+ $/.test(lines[i]) &&
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^ B\d+ $/.test(lines[i]) &&
              !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !/^\s*>/.test(lines[i])) {
         buf.push(lines[i]); i++;
       }
@@ -353,123 +264,232 @@
     return out;
   }
 
-  // delegate copy-button clicks
+  // delegate copy-button clicks (codeblock header icon)
   log.addEventListener('click', (e) => {
-    if (e.target && e.target.classList.contains('copy')) {
-      const code = e.target.closest('.code').querySelector('code');
-      const text = code ? code.textContent : '';
-      if (navigator.clipboard) navigator.clipboard.writeText(text);
-      e.target.textContent = 'Copied'; setTimeout(() => { e.target.textContent = 'Copy'; }, 1200);
-    }
+    const btn = e.target.closest('.copy');
+    if (!btn) return;
+    const pre = btn.closest('.codeblock').querySelector('pre');
+    if (navigator.clipboard && pre) navigator.clipboard.writeText(pre.textContent);
+    btn.innerHTML = SVG_CHECK;
+    setTimeout(() => { btn.innerHTML = SVG_COPY; }, 1200);
   });
 
   /* ---------- JS -> Kotlin bridge ---------- */
   function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
   window.sendToClaude = function (t) { bridge({ kind: 'user', text: t }); };
   window.respondPermission = function (id, allow) { bridge({ kind: 'perm', id: id, allow: allow ? 'true' : 'false' }); };
-  /* ---------- mode & model pickers ---------- */
-  const MODES = [
-    { value: 'default', label: 'Manual', ic: '✋', desc: 'Claude asks for approval before each action' },
-    { value: 'acceptEdits', label: 'Edit automatically', ic: '&lt;/&gt;', desc: 'Claude edits files without asking' },
-    { value: 'plan', label: 'Plan', ic: '▤', desc: 'Claude explores and presents a plan before editing' },
-    { value: 'bypassPermissions', label: 'Auto', ic: '⚡', desc: 'Claude approves everything — no prompts' },
-  ];
-  let currentMode = 'default';
-  function renderModes() {
-    modeItems.innerHTML = MODES.map((m) =>
-      '<div class="popup-item' + (m.value === currentMode ? ' on' : '') + '" data-v="' + m.value + '">' +
-      '<span class="pi-ic">' + m.ic + '</span><div class="pi-body"><div class="pi-title">' + esc(m.label) +
-      '</div><div class="pi-desc">' + esc(m.desc) + '</div></div><span class="pi-check">✓</span></div>').join('');
-    Array.from(modeItems.children).forEach((c) => { c.onclick = () => setMode(c.dataset.v); });
-  }
-  function setMode(v) {
-    currentMode = v; const m = MODES.find((x) => x.value === v) || MODES[0];
-    modeLabel.textContent = m.label; bridge({ kind: 'mode', mode: v }); renderModes(); closePopups();
-  }
-  modeBtn.onclick = (e) => { e.stopPropagation(); togglePopup(modeMenu); };
 
+  /* ---------- dropdown system (mode / model / slash / attach) ---------- */
+  const MENUS = ['modeMenu', 'modelMenu', 'slashMenu', 'attachMenu'];
+  function menuEl(id) { return document.getElementById(id); }
+  function tg(id, e) {
+    if (e) e.stopPropagation();
+    MENUS.forEach(function (x) {
+      menuEl(x).classList.toggle('show', x === id && !menuEl(x).classList.contains('show'));
+    });
+    const p = menuEl(id);
+    if (!p.classList.contains('show')) return;
+    if (id === 'slashMenu') {
+      renderSlash(input.value.charAt(0) === '/' ? input.value.slice(1) : '');
+      input.focus();
+    } else {
+      const items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
+      items.forEach(function (x) { x.classList.remove('sel'); });
+      const cur = p.querySelector('.popup-item.on') || items[0];
+      if (cur) cur.classList.add('sel');
+    }
+  }
+  function activeMenu() {
+    for (let i = 0; i < MENUS.length; i++) if (menuEl(MENUS[i]).classList.contains('show')) return menuEl(MENUS[i]);
+    return null;
+  }
+  function closeMenus() { MENUS.forEach(function (x) { menuEl(x).classList.remove('show'); }); }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (lightbox.classList.contains('show')) { lightbox.classList.remove('show'); return; }
+      const m = activeMenu();
+      if (m) { m.classList.remove('show'); return; }
+      if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
+      if (activeAsk) { cancelAsk(); return; }
+      return;
+    }
+    const p = activeMenu(); if (!p) return;
+    const items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
+    if (!items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      let i = items.findIndex(function (x) { return x.classList.contains('sel'); });
+      i = (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items.forEach(function (x, n) { x.classList.toggle('sel', n === i); });
+      items[i].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      const s = p.querySelector('.popup-item.sel');
+      if (s) { e.preventDefault(); s.click(); }
+    }
+  });
+  document.addEventListener('mouseover', function (e) {
+    const item = e.target.closest('.popup-item');
+    if (!item) return;
+    const p = item.closest('.popup');
+    if (!p || !p.classList.contains('show') || item.classList.contains('sel')) return;
+    p.querySelectorAll('.popup-item').forEach(function (x) { x.classList.remove('sel'); });
+    item.classList.add('sel');
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#histPanel') && !e.target.closest('#histBtn')) histPanel.classList.remove('show');
+    if (e.target.closest('.popup')) return;
+    closeMenus();
+  });
+  lightbox.addEventListener('click', function (e) {
+    if (e.target === lightbox || e.target.closest('.lb-x')) lightbox.classList.remove('show');
+  });
+  function openLB(src, name) {
+    document.getElementById('lbImg').src = src;
+    document.getElementById('lbCap').textContent = name || '';
+    lightbox.classList.add('show');
+  }
+
+  /* ---------- mode picker ---------- */
+  let currentMode = 'default';
+  function syncModeUI() {
+    Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
+      item.classList.toggle('on', item.dataset.v === currentMode);
+    });
+    const cur = modeItemsEl.querySelector('.popup-item.on');
+    if (cur) modeChip.innerHTML = cur.querySelector('.pi-ic').innerHTML + ' ' + esc(cur.querySelector('.pi-title').textContent);
+  }
+  Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
+    item.addEventListener('click', function () {
+      currentMode = item.dataset.v;
+      syncModeUI();
+      bridge({ kind: 'mode', mode: currentMode });
+      closeMenus();
+    });
+  });
+  modeChip.onclick = function (e) { tg('modeMenu', e); };
+  syncModeUI();
+
+  /* ---------- effort slider (sends /effort <level>) ---------- */
+  const effortEl = document.getElementById('effort'), efName = document.getElementById('efName');
+  const efDots = Array.prototype.slice.call(effortEl.querySelectorAll('.d'));
+  function setEffortUI(i) {
+    efDots.forEach(function (d, n) { d.classList.toggle('on', n <= i); d.classList.toggle('cur', n === i); });
+    efName.textContent = efDots[i].dataset.l;
+  }
+  efDots.forEach(function (d, i) {
+    d.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setEffortUI(i);
+      bridge({ kind: 'user', text: '/effort ' + d.dataset.v });
+    });
+  });
+  setEffortUI(2); // default: High
+
+  /* ---------- model picker ---------- */
   let models = [], currentModel = null;
+  function chipName(m) { return (m.displayName || m.value).replace(/\s*\(.*\)$/, ''); }
   function renderModels() {
-    modelItems.innerHTML = models.map((m) =>
-      '<div class="popup-item' + (m.value === currentModel ? ' on' : '') + '" data-v="' + esc(m.value) + '">' +
-      '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
-      (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
-      '</div><span class="pi-check">✓</span></div>').join('');
-    Array.from(modelItems.children).forEach((c) => { c.onclick = () => setModel(c.dataset.v); });
+    modelItems.innerHTML = models.map(function (m) {
+      return '<div class="popup-item' + (m.value === currentModel ? ' on' : '') + '" data-v="' + esc(m.value) + '">' +
+        '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
+        (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
+        '</div><span class="pi-check">' + SVG_CHECK + '</span></div>';
+    }).join('');
+    Array.prototype.forEach.call(modelItems.children, function (c) {
+      c.onclick = function () { setModel(c.dataset.v); };
+    });
   }
   function setModel(v) {
-    currentModel = v; const m = models.find((x) => x.value === v);
-    modelLabel.textContent = m ? (m.displayName || v) : v; bridge({ kind: 'model', model: v }); renderModels(); closePopups();
+    currentModel = v; const m = models.find(function (x) { return x.value === v; });
+    if (m) modelChip.textContent = chipName(m);
+    bridge({ kind: 'model', model: v }); renderModels(); closeMenus();
   }
-  modelBtn.onclick = (e) => { e.stopPropagation(); togglePopup(modelMenu); };
-
-  function togglePopup(p) { const show = !p.classList.contains('show'); closePopups(); if (show) p.classList.add('show'); }
-  function closePopups() { modeMenu.classList.remove('show'); modelMenu.classList.remove('show'); }
-  modeMenu.onclick = (e) => e.stopPropagation();
-  modelMenu.onclick = (e) => e.stopPropagation();
-  document.addEventListener('click', closePopups);
-  renderModes();
+  modelChip.onclick = function (e) { tg('modelMenu', e); };
 
   /* ---------- sessions: new / history / resume ---------- */
   document.getElementById('newBtn').onclick = function () { bridge({ kind: 'new' }); };
-  document.getElementById('histBtn').onclick = function () { bridge({ kind: 'history' }); };
-  document.getElementById('histClose').onclick = function () { history.style.display = 'none'; };
-  history.onclick = function (e) { if (e.target === history) history.style.display = 'none'; };
-
+  document.getElementById('histBtn').onclick = function (e) {
+    e.stopPropagation();
+    if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
+    bridge({ kind: 'history' }); // Kotlin answers with a 'sessions' event -> renderHistory shows the panel
+  };
   function renderHistory(items) {
     histList.innerHTML = items.length ? '' : '<div class="hist-empty">No past conversations for this project.</div>';
-    items.forEach((s) => {
+    items.forEach(function (s) {
       const row = document.createElement('div');
       row.className = 'hist-item';
       const when = s.time ? new Date(s.time).toLocaleString() : '';
       row.innerHTML = '<div class="t">' + esc(s.title) + '</div><div class="d">' + esc(when) + '</div>';
-      row.onclick = () => { history.style.display = 'none'; bridge({ kind: 'resume', id: s.id }); };
+      row.onclick = function () { histPanel.classList.remove('show'); bridge({ kind: 'resume', id: s.id }); };
       histList.appendChild(row);
     });
-    history.style.display = 'block';
+    histPanel.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';
+    histPanel.classList.add('show');
   }
 
   function clearLogUI() {
-    Array.from(log.children).forEach((c) => { if (c.id !== 'welcome') c.remove(); });
+    Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';
-    curBubble = null; curRaw = ''; curThink = null; curThinkRaw = ''; workingEl = null;
+    curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
+    curTurn = null; workingEl = null; activeAsk = null;
+    turnTokens = 0; msgTokens = 0;
+    hideWorking();
     setBusy(false);
   }
 
   function renderTranscript(items) {
-    items.forEach((it) => {
-      if (it.role === 'user') { el('msg user', it.text); }
-      else if (it.role === 'assistant') { const b = el('msg assistant md', ''); b.innerHTML = renderMd(it.text); }
+    items.forEach(function (it) {
+      if (it.role === 'user') {
+        newTurn();
+        const d = document.createElement('div');
+        d.className = 'msg-user'; d.textContent = it.text;
+        curTurn.appendChild(d);
+      }
+      else if (it.role === 'assistant') { const b = el('blk', ''); b.innerHTML = renderMd(it.text); }
       else if (it.role === 'tool') { const t = el('tool-line', ''); t.innerHTML = '<b>' + esc(it.text) + '</b>'; }
     });
-    if (items.length) { const d = el('tool', '— resumed —'); }
+    if (items.length) { el('status', '— resumed —'); }
+    maybeScroll();
   }
 
-  /* ---------- image attachments ---------- */
-  let pending = []; // { media_type, data(base64) }
+  /* ---------- attachments (composer chips) ---------- */
+  let pending = []; // { media_type, data(base64), name, w, h }
+  function attChipHtml(p, withRm, i) {
+    return '<span class="thumb"><img src="data:' + p.media_type + ';base64,' + p.data + '"></span>' +
+      esc(p.name || 'image.png') +
+      (p.w ? '<span class="meta">' + p.w + '×' + p.h + '</span>' : '') +
+      (withRm ? '<button class="rm" title="Remove" data-i="' + i + '">' + SVG_X + '</button>' : '');
+  }
   function renderAttachments() {
-    att.innerHTML = '';
-    pending.forEach((p, i) => {
+    chips.innerHTML = '';
+    pending.forEach(function (p, i) {
       const chip = document.createElement('span');
-      chip.className = 'att-chip';
-      chip.innerHTML = '<img src="data:' + p.media_type + ';base64,' + p.data + '"><button data-i="' + i + '">✕</button>';
-      att.appendChild(chip);
+      chip.className = 'att';
+      chip.innerHTML = attChipHtml(p, true, i);
+      chips.appendChild(chip);
     });
-    att.style.display = pending.length ? 'flex' : 'none';
-    Array.from(att.querySelectorAll('button')).forEach((b) => { b.onclick = () => { pending.splice(+b.dataset.i, 1); renderAttachments(); }; });
+    chips.style.display = pending.length ? 'flex' : 'none';
+    Array.prototype.forEach.call(chips.querySelectorAll('.rm'), function (b) {
+      b.onclick = function () { pending.splice(+b.dataset.i, 1); renderAttachments(); };
+    });
   }
   function addImageFile(file) {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = function () {
       const url = String(reader.result);      // data:<mt>;base64,<data>
       const comma = url.indexOf(',');
       const mt = (url.slice(5, url.indexOf(';')) || 'image/png');
-      pending.push({ media_type: mt, data: url.slice(comma + 1) });
+      const item = { media_type: mt, data: url.slice(comma + 1), name: file.name || 'image.png', w: 0, h: 0 };
+      pending.push(item);
       renderAttachments();
+      const probe = new Image();
+      probe.onload = function () { item.w = probe.naturalWidth; item.h = probe.naturalHeight; renderAttachments(); };
+      probe.src = url;
     };
     reader.readAsDataURL(file);
   }
-  input.addEventListener('paste', (e) => {
+  input.addEventListener('paste', function (e) {
     const items = (e.clipboardData && e.clipboardData.items) || [];
     for (const it of items) {
       if (it.kind === 'file' && it.type.indexOf('image/') === 0) {
@@ -477,32 +497,56 @@
       }
     }
   });
-  ['dragover', 'drop'].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault()));
-  document.addEventListener('drop', (e) => {
+  ['dragover', 'drop'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
+  document.addEventListener('drop', function (e) {
     const fs = (e.dataTransfer && e.dataTransfer.files) || [];
     for (const f of fs) if (f.type.indexOf('image/') === 0) addImageFile(f);
   });
-  const attachBtn = document.getElementById('attachBtn');
   const fileInput = document.getElementById('fileInput');
-  attachBtn.onclick = () => fileInput.click();
-  fileInput.onchange = () => {
-    Array.from(fileInput.files).forEach((f) => { if (f.type.indexOf('image/') === 0) addImageFile(f); });
+  document.getElementById('attachBtn').onclick = function (e) { tg('attachMenu', e); };
+  Array.prototype.forEach.call(document.querySelectorAll('#attachMenu .popup-item'), function (item) {
+    item.addEventListener('click', function () {
+      closeMenus();
+      if (item.dataset.act === 'upload') fileInput.click();
+      else if (item.dataset.act === 'context') {
+        const pos = input.selectionStart || input.value.length;
+        input.value = input.value.slice(0, pos) + '@' + input.value.slice(pos);
+        input.setSelectionRange(pos + 1, pos + 1);
+        input.focus(); updateAuto();
+      }
+    });
+  });
+  fileInput.onchange = function () {
+    Array.from(fileInput.files).forEach(function (f) { if (f.type.indexOf('image/') === 0) addImageFile(f); });
     fileInput.value = '';
   };
+  document.getElementById('slashBtn').onclick = function (e) { tg('slashMenu', e); };
 
+  /* ---------- send / stop / retry ---------- */
   function addUserMessage(text, imgs) {
-    const d = el('msg user', '');
-    if (text) { const p = document.createElement('div'); p.textContent = text; d.appendChild(p); }
-    imgs.forEach((im) => {
-      const img = document.createElement('img'); img.className = 'att-img';
-      img.src = 'data:' + im.media_type + ';base64,' + im.data; d.appendChild(img);
-    });
+    newTurn();
+    const d = document.createElement('div');
+    d.className = 'msg-user';
+    if (imgs.length) {
+      const atts = document.createElement('span');
+      atts.className = 'msg-atts';
+      imgs.forEach(function (p) {
+        const chip = document.createElement('span');
+        chip.className = 'att click';
+        chip.innerHTML = attChipHtml(p, false, 0);
+        chip.onclick = function () { openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'image.png'); };
+        atts.appendChild(chip);
+      });
+      d.appendChild(atts);
+    }
+    if (text) d.appendChild(document.createTextNode(text));
+    curTurn.appendChild(d); maybeScroll();
+    return d;
   }
 
   let busy = false, stopping = false;
   function setBusy(b) {
     busy = b;
-    send.innerHTML = b ? '■' : '↑';
     send.title = b ? 'Stop' : 'Send';
     send.classList.toggle('stop', b);
     if (b) showWorking(); else hideWorking();
@@ -513,10 +557,12 @@
   function uuid() { try { return crypto.randomUUID(); } catch (_) { return 'id-' + Math.random().toString(16).slice(2); } }
 
   function sendTurn(t, imgs) {
-    addUserMessage(t, imgs);
+    const userEl = addUserMessage(t, imgs);
     lastUser = { text: t, images: imgs };
     turnId = uuid(); turnHadEdit = false;
-    bridge({ kind: 'user', id: turnId, text: t, images: imgs.map((p) => ({ media_type: p.media_type, data: p.data })) });
+    turnRecs[turnId] = { userEl: userEl };
+    turnTokens = 0; msgTokens = 0;
+    bridge({ kind: 'user', id: turnId, text: t, images: imgs.map(function (p) { return { media_type: p.media_type, data: p.data }; }) });
     stopping = false;
     setBusy(true);
   }
@@ -525,24 +571,80 @@
     const t = input.value.trim();
     if (!t && !pending.length) return;
     const imgs = pending;
-    input.value = ''; pending = []; renderAttachments();
+    input.value = ''; pending = []; renderAttachments(); autoGrow();
+    closeMenus(); hideMenu();
     sendTurn(t, imgs);
   }
   send.onclick = function () { if (busy) { stopping = true; bridge({ kind: 'stop' }); } else submit(); };
 
-  document.getElementById('retryBtn').onclick = function () {
-    if (busy || !lastUser) return;
-    sendTurn(lastUser.text, lastUser.images);
-  };
+  function addRetryLine() {
+    if (!lastUser) return;
+    const r = el('retry', '');
+    r.innerHTML = '<a href="#">' + SVG_RETRY + 'Retry</a>';
+    r.querySelector('a').onclick = function (e) {
+      e.preventDefault();
+      if (!busy && lastUser) { r.remove(); sendTurn(lastUser.text, lastUser.images); }
+    };
+  }
 
   // Ctrl/Cmd+N: new conversation
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); bridge({ kind: 'new' }); }
   });
 
-  /* ---------- autocomplete: @-mentions (files) + /slash commands ---------- */
+  /* ---------- auto-grow textarea + composer-height tracking ---------- */
+  const LINE = 20, MAXLINES = 10;
+  function autoGrow() {
+    const max = LINE * MAXLINES;
+    if (!input.value) {                 // empty: rest at exactly one line (ignore placeholder metrics)
+      input.style.height = LINE + 'px';
+      input.style.overflowY = 'hidden';
+      return;
+    }
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, max) + 'px';
+    input.style.overflowY = input.scrollHeight > max ? 'auto' : 'hidden';
+  }
+  function syncGutter() {
+    const sb = log.offsetWidth - log.clientWidth;   // actual scrollbar width (0 if none)
+    composerEl.style.paddingRight = (14 + sb) + 'px';
+  }
+  new ResizeObserver(function () {
+    const h = composerEl.offsetHeight;
+    const wasAtBottom = atBottom();
+    log.style.paddingBottom = (h + 12) + 'px';
+    fadeEl.style.height = (h + 18) + 'px';
+    if (wasAtBottom) log.scrollTop = log.scrollHeight;   // stay pinned while typing
+    syncGutter();
+  }).observe(composerEl);
+  new ResizeObserver(syncGutter).observe(log);
+  syncGutter();
+  autoGrow();
+
+  /* ---------- slash commands (popup) + @-mentions (legacy popup) ---------- */
   let files = [];
   let slashCommands = [];
+
+  function renderSlash(q) {
+    const ql = (q || '').toLowerCase();
+    const hits = slashCommands.filter(function (c) {
+      return (c.name || '').toLowerCase().indexOf(ql) !== -1 ||
+             (c.description || '').toLowerCase().indexOf(ql) !== -1;
+    }).slice(0, 40);
+    if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
+    slashList.innerHTML = hits.map(function (c, i) {
+      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '">' +
+        '<div class="pi-body"><div class="pi-title">/' + esc(c.name) + '</div>' +
+        (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
+    }).join('');
+  }
+  slashList.addEventListener('click', function (e) {
+    const item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
+    input.value = item.dataset.cmd + ' ';
+    menuEl('slashMenu').classList.remove('show');
+    input.focus(); autoGrow();
+  });
+
   const menu = document.getElementById('mention');
   let menuItems = [], menuSel = -1, menuStart = 0; // menuItems: [{ins, disp}]
 
@@ -550,38 +652,27 @@
     const m = input.value.slice(0, input.selectionStart).match(/(?:^|\s)@([^\s@]*)$/);
     return m ? { q: m[1], start: input.selectionStart - m[1].length } : null;
   }
-  function currentSlash() {
-    const m = input.value.slice(0, input.selectionStart).match(/^\/(\S*)$/);
-    return m ? { q: m[1], start: 0 } : null; // replaces the whole leading /token
-  }
   function hideMenu() { menu.style.display = 'none'; menuItems = []; menuSel = -1; }
 
   function openMenu(start, entries) {
     if (!entries.length) return hideMenu();
     menuStart = start; menuItems = entries; menuSel = 0;
-    menu.innerHTML = entries.map((e, i) =>
-      '<div class="mi' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' + esc(e.disp) + '</div>').join('');
+    menu.innerHTML = entries.map(function (e, i) {
+      return '<div class="mi' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' + esc(e.disp) + '</div>';
+    }).join('');
     const r = input.getBoundingClientRect();
     menu.style.display = 'block';
     menu.style.left = r.left + 'px';
     menu.style.width = r.width + 'px';
-    menu.style.top = (r.top - Math.min(220, menu.scrollHeight) - 4) + 'px';
-    Array.from(menu.children).forEach((c) => { c.onclick = () => pick(+c.dataset.i); });
+    menu.style.top = (r.top - Math.min(240, menu.scrollHeight) - 4) + 'px';
+    Array.prototype.forEach.call(menu.children, function (c) { c.onclick = function () { pick(+c.dataset.i); }; });
   }
   function updateAuto() {
-    const sl = currentSlash();
-    if (sl) {
-      const q = sl.q.toLowerCase();
-      const cmds = slashCommands.filter((c) => (c.name || '').toLowerCase().includes(q)).slice(0, 30)
-        .map((c) => ({ ins: '/' + c.name, disp: '/' + c.name + (c.description ? '  —  ' + c.description : '') }));
-      if (!cmds.length) return hideMenu();
-      return openMenu(sl.start, cmds);
-    }
     const men = currentMention();
     if (men) {
       const q = men.q.toLowerCase();
-      return openMenu(men.start, files.filter((f) => f.toLowerCase().includes(q)).slice(0, 20)
-        .map((f) => ({ ins: f, disp: f })));
+      return openMenu(men.start, files.filter(function (f) { return f.toLowerCase().includes(q); }).slice(0, 20)
+        .map(function (f) { return { ins: f, disp: f }; }));
     }
     hideMenu();
   }
@@ -592,30 +683,52 @@
     input.value = v.slice(0, menuStart) + e.ins + ' ' + v.slice(pos);
     const caret = menuStart + e.ins.length + 1;
     input.setSelectionRange(caret, caret);
-    input.focus(); hideMenu();
+    input.focus(); hideMenu(); autoGrow();
   }
   function moveSel(d) {
     if (!menuItems.length) return;
     menuSel = (menuSel + d + menuItems.length) % menuItems.length;
-    Array.from(menu.children).forEach((c, i) => c.classList.toggle('sel', i === menuSel));
+    Array.prototype.forEach.call(menu.children, function (c, i) { c.classList.toggle('sel', i === menuSel); });
     const selEl = menu.children[menuSel]; if (selEl) selEl.scrollIntoView({ block: 'nearest' });
   }
-  input.addEventListener('input', updateAuto);
 
-  input.addEventListener('keydown', (e) => {
-    if (menu.style.display === 'block') {
+  input.addEventListener('input', function () {
+    autoGrow();
+    updateAuto();
+    // slash-command autocomplete: open + filter while the line starts with "/"
+    const slashOpen = menuEl('slashMenu').classList.contains('show');
+    let v = input.value;
+    // if the menu was opened via the button, the first typed character gets the leading slash
+    if (slashOpen && v.length && v.charAt(0) !== '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
+      input.value = '/' + v;
+      const end = input.value.length; input.setSelectionRange(end, end);
+      v = input.value;
+    }
+    if (v.charAt(0) === '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
+      renderSlash(v.slice(1));
+      ['modeMenu', 'modelMenu', 'attachMenu'].forEach(function (x) { menuEl(x).classList.remove('show'); });
+      menuEl('slashMenu').classList.add('show');
+    } else {
+      menuEl('slashMenu').classList.remove('show');
+    }
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (menu.style.display === 'block') {           // legacy @-mention popup
       if (e.key === 'ArrowDown') { e.preventDefault(); return moveSel(1); }
       if (e.key === 'ArrowUp')   { e.preventDefault(); return moveSel(-1); }
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); return pick(menuSel); }
       if (e.key === 'Escape')    { e.preventDefault(); return hideMenu(); }
     }
+    if (activeMenu()) return;                       // popup menus own the keys (document handler)
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
   });
 
   /* ---------- Kotlin -> page ---------- */
   let curBubble = null, curRaw = '';
-  let curThink = null, curThinkRaw = '';
+  let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0;
   let openTool = null;        // tool block currently streaming its input
+  let pendingUndo = null;     // turn rec awaiting a __rewind result
   const toolsById = {};       // tool_use id -> {el, name, io} for OUT boxes
 
   window.onClaudeEvent = function (raw) {
@@ -630,49 +743,72 @@
       case '__models':
         models = ev.items || [];
         currentModel = ev.selected || (models[0] && models[0].value) || null;
-        { const cm = models.find((m) => m.value === currentModel); if (cm) modelLabel.textContent = cm.displayName || cm.value; }
+        { const cm = models.find(function (m) { return m.value === currentModel; }); if (cm) modelChip.textContent = chipName(cm); }
         renderModels();
         return;
       case 'system':
         if (ev.subtype === 'init' && ev.slash_commands && !slashCommands.length) {
-          slashCommands = ev.slash_commands.map((n) => ({ name: n }));
+          slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
         }
         return;
       case 'sessions':           return renderHistory(ev.items || []);
       case '__transcript':       return renderTranscript(ev.items || []);
       case '__rewind_check': {
         const r = ev.result || {};
-        const files = r.filesChanged || [];
-        const changed = files.length > 0 || r.insertions > 0 || r.deletions > 0;
-        if (r.canRewind && changed) {
-          const tid = ev.id;
-          const u = el('tool', '');
-          const label = files.length ? ('↩ Undo ' + files.length + ' file change' + (files.length !== 1 ? 's' : '')) : '↩ Undo file changes';
-          u.innerHTML = '<a href="#" class="undo">' + label + '</a>';
-          u.querySelector('.undo').onclick = (e) => {
-            e.preventDefault(); u.textContent = 'Undoing…'; bridge({ kind: 'rewind', id: tid, dry: 'false' });
+        const fc = r.filesChanged || [];
+        const changed = fc.length > 0 || r.insertions > 0 || r.deletions > 0;
+        const rec = turnRecs[ev.id];
+        if (r.canRewind && changed && rec && rec.userEl && !rec.userEl.querySelector('.undo')) {
+          const n = fc.length;
+          rec.userEl.classList.add('has-undo');
+          const btn = document.createElement('button');
+          btn.className = 'undo';
+          btn.title = n ? ('Undo ' + n + ' file change' + (n !== 1 ? 's' : '') + ' from this turn') : 'Undo file changes from this turn';
+          btn.innerHTML = SVG_UNDO;
+          btn.onclick = function () {
+            btn.disabled = true;
+            pendingUndo = rec;
+            bridge({ kind: 'rewind', id: ev.id, dry: 'false' });
           };
+          rec.userEl.appendChild(btn);
         }
         return;
       }
       case '__rewind': {
         const r = ev.result || {};
-        el('tool', r.canRewind === false ? (r.error || 'Nothing to undo') : '↩ Reverted file changes');
+        el('status', r.canRewind === false ? (r.error || 'Nothing to undo') : '↩ Reverted file changes');
+        if (pendingUndo && pendingUndo.userEl) {
+          const b = pendingUndo.userEl.querySelector('.undo');
+          if (b) b.remove();
+          pendingUndo.userEl.classList.remove('has-undo');
+          pendingUndo = null;
+        }
         return;
       }
       case '__clear':            return clearLogUI();
-      case '__exit':             setBusy(false); return el('tool err', 'claude process exited (' + ev.code + ')');
+      case '__exit':             setBusy(false); return el('status err', 'claude process exited (' + ev.code + ')');
     }
   };
+
+  function finishThinking() {
+    if (!curThink) return;
+    const secs = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
+    const det = document.createElement('details');
+    det.className = 'think';
+    det.innerHTML = '<summary>Thought for ' + secs + 's</summary><div class="body"></div>';
+    det.querySelector('.body').textContent = curThinkRaw;
+    curThink.replaceWith(det);
+    curThink = null; curThinkRaw = '';
+  }
 
   function onStream(e) {
     switch (e.type) {
       case 'message_start':
-        curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
+        curBubble = null; curRaw = '';
+        msgTokens = 0;
         break;
       case 'content_block_start': {
         const cb = e.content_block || {};
-        hideWorking();
         if (cb.type === 'tool_use') {
           const t = el('tool-line', '');
           t.innerHTML = '<b>' + esc(cb.name || 'tool') + '</b><span class="t-desc"></span>';
@@ -681,9 +817,9 @@
           curBubble = null; // text after a tool starts a fresh block
           if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'].indexOf(cb.name) >= 0) turnHadEdit = true;
         } else if (cb.type === 'thinking') {
-          curThink = document.createElement('details'); curThink.className = 'think';
-          curThink.innerHTML = '<summary>Thinking…</summary><div class="think-body"></div>';
-          log.appendChild(curThink); curThinkRaw = '';
+          curThink = el('think-live', '');
+          curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span> <span class="tok"></span></div>';
+          thinkStart = Date.now(); thinkChars = 0; curThinkRaw = '';
         }
         break;
       }
@@ -691,22 +827,35 @@
         const d = e.delta || {};
         if (d.type === 'text_delta') {
           hideWorking();
-          if (!curBubble) { curBubble = el('msg assistant md', ''); }
+          if (!curBubble) { curBubble = el('blk', ''); }
           curRaw += d.text; curBubble.innerHTML = renderMd(curRaw); maybeScroll();
         } else if (d.type === 'thinking_delta' && curThink) {
-          curThinkRaw += (d.thinking || ''); curThink.querySelector('.think-body').textContent = curThinkRaw;
+          curThinkRaw += (d.thinking || '');
+          thinkChars += (d.thinking || '').length;
+          const tok = curThink.querySelector('.tok');
+          if (tok) tok.textContent = '· ' + Math.max(1, Math.round(thinkChars / 4)) + ' tokens';
           maybeScroll();
         } else if (d.type === 'input_json_delta' && openTool) {
           openTool.json += (d.partial_json || '');
         }
         break;
       }
+      case 'message_delta':
+        if (e.usage && typeof e.usage.output_tokens === 'number') {
+          msgTokens = e.usage.output_tokens;
+          updateWorkTokens();
+        }
+        break;
       case 'content_block_stop':
         if (openTool) {
           try {
             const inp = JSON.parse(openTool.json || '{}');
             const desc = inp.description || inp.file_path || inp.path || inp.pattern || '';
-            if (desc) openTool.el.querySelector('.t-desc').textContent = String(desc).slice(0, 140);
+            if (desc) {
+              const dEl = openTool.el.querySelector('.t-desc');
+              dEl.textContent = String(desc).slice(0, 140);
+              if (desc === inp.file_path || desc === inp.path) dEl.classList.add('path');
+            }
             if (openTool.name === 'Bash' && inp.command) {
               const io = document.createElement('div'); io.className = 'io';
               io.innerHTML = '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>';
@@ -715,25 +864,31 @@
             }
           } catch (_) {}
           openTool = null;
+        } else if (curThink) {
+          finishThinking();
         }
         break;
       case 'message_stop':
-        curBubble = null; curThink = null;
+        curBubble = null;
+        finishThinking();
+        turnTokens += msgTokens; msgTokens = 0;
         break;
     }
   }
 
-  // tool_result frames (OUT boxes for Bash)
+  // tool_result frames: OUT boxes for Bash + red fail dots
   function onUserEvent(ev) {
     const content = (ev.message && ev.message.content) || [];
     if (!Array.isArray(content)) return;
-    content.forEach((b) => {
+    content.forEach(function (b) {
       if (b.type !== 'tool_result') return;
       const t = toolsById[b.tool_use_id];
-      if (!t || t.name !== 'Bash') return;
+      if (!t) return;
+      if (b.is_error) t.el.classList.add('fail');
+      if (t.name !== 'Bash') return;
       let txt = '';
       if (typeof b.content === 'string') txt = b.content;
-      else if (Array.isArray(b.content)) txt = b.content.filter((x) => x.type === 'text').map((x) => x.text).join('\n');
+      else if (Array.isArray(b.content)) txt = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
       txt = (txt || '').trim();
       if (!txt) return;
       const row = document.createElement('div'); row.className = 'io-row';
@@ -747,12 +902,16 @@
 
   function onResult(ev) {
     curBubble = null;
+    finishThinking();
     setBusy(false);
     if (ev.is_error) {
-      if (stopping) { el('tool', '⏹ Stopped'); }
+      if (stopping) { el('status', '⏹ Stopped'); }
       else {
         const msg = (typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error');
-        el('msg err', msg);
+        const err = el('error', '');
+        err.innerHTML = SVG_ALERT + '<div></div>';
+        err.querySelector('div').textContent = msg;
+        addRetryLine();
       }
     } else if (turnHadEdit && turnId) {
       bridge({ kind: 'rewind', id: turnId, dry: 'true' }); // check what can be undone
@@ -760,75 +919,153 @@
     stopping = false;
   }
 
-  /* ---------- permission card ---------- */
-  function diffLines(prefix, cls, s) {
-    return String(s).split('\n').map(l => '<div class="' + cls + '">' + prefix + esc(l) + '</div>').join('');
+  /* ---------- permission / plan cards ---------- */
+  function cardBtns(okLabel, okSvg, noLabel, noSvg) {
+    return '<div class="card-b"><button class="ok">' + okSvg + okLabel + '</button>' +
+      '<button class="no">' + noSvg + noLabel + '</button></div>';
   }
-  function previewHtml(inp) {
+  function diffLines(prefix, cls, s) {
+    return String(s).split('\n').map(function (l) { return '<span class="' + cls + '">' + prefix + esc(l) + '</span>'; }).join('');
+  }
+  function previewHtml(tool, inp) {
     if (inp.old_string !== undefined || inp.new_string !== undefined) {
-      return '<div class="diff">' + diffLines('- ', 'del', inp.old_string || '') + diffLines('+ ', 'add-l', inp.new_string || '') + '</div>';
+      return '<div class="diff">' + diffLines('- ', 'del', inp.old_string || '') + diffLines('+ ', 'add', inp.new_string || '') + '</div>';
     }
-    if (inp.content !== undefined) return '<div class="diff">' + diffLines('+ ', 'add-l', inp.content) + '</div>';
+    if (inp.content !== undefined) return '<div class="diff">' + diffLines('+ ', 'add', inp.content) + '</div>';
     const cmd = inp.command || inp.description;
-    if (cmd !== undefined) return '<pre>' + esc(String(cmd)).slice(0, 4000) + '</pre>';
+    if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd)).slice(0, 4000) + '</pre>';
     return '';
   }
-  function renderQuestion(ev, inp) {
+
+  /* ---------- AskUserQuestion — tabbed card ---------- */
+  let activeAsk = null; // { card, ev, cancel }
+  function cancelAsk() {
+    if (!activeAsk) return;
+    const a = activeAsk; activeAsk = null;
+    a.card.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
+    a.card.querySelector('.ask-b').innerHTML = '<span class="no-t">✗ Cancelled</span>';
+    a.card.querySelector('.ask-foot').remove();
+    window.respondPermission(a.ev.id, false);
+  }
+  function renderAsk(ev, inp) {
     const questions = inp.questions || [];
-    const card = document.createElement('div'); card.className = 'perm';
-    let html = '<div class="perm-h">❓ <b>Claude has a question</b></div>';
-    questions.forEach((q, qi) => {
-      html += '<div class="q"><div class="q-t">' + esc(q.question) + '</div>';
-      (q.options || []).forEach((o, oi) => {
-        html += '<label class="q-opt"><input type="' + (q.multiSelect ? 'checkbox' : 'radio') +
-          '" name="q' + qi + '" data-q="' + qi + '" data-oi="' + oi + '"><span>' + esc(o.label) +
-          (o.description ? ' <span class="q-desc">— ' + esc(o.description) + '</span>' : '') + '</span></label>';
-      });
-      html += '</div>';
+    const card = document.createElement('div');
+    card.className = 'ask';
+    let html = '<div class="ask-h"><div class="ask-tabs">';
+    questions.forEach(function (q, i) {
+      html += '<button class="ask-tab' + (i === 0 ? ' active' : '') + '" data-q="' + i + '">' + esc(q.header || ('Q' + (i + 1))) + '</button>';
     });
-    html += '<div class="perm-b"><button class="ok">Submit</button></div>';
-    card.innerHTML = html;
-    log.appendChild(card); maybeScroll();
-    card.querySelector('.ok').onclick = () => {
-      const answers = {};
-      questions.forEach((q, qi) => {
-        const chosen = Array.from(card.querySelectorAll('input[data-q="' + qi + '"]:checked'))
-          .map((el) => (q.options[+el.dataset.oi] || {}).label).filter(Boolean);
-        answers[q.question] = chosen.join(', ');
+    html += '</div></div>';
+    questions.forEach(function (q, i) {
+      html += '<div class="ask-panel" data-q="' + i + '"' + (i === 0 ? '' : ' hidden') + '>';
+      html += '<div class="ask-q">' + esc(q.question) + '</div><div class="ask-list">';
+      const type = q.multiSelect ? 'checkbox' : 'radio';
+      (q.options || []).forEach(function (o, oi) {
+        html += '<label class="ask-opt"><input type="' + type + '" name="aq' + i + '" data-oi="' + oi + '">' +
+          '<span class="ask-ind"></span><span class="q-body"><span class="q-t">' + esc(o.label) + '</span>' +
+          (o.description ? '<span class="q-d">' + esc(o.description) + '</span>' : '') + '</span></label>';
       });
-      card.querySelectorAll('input').forEach((el) => { el.disabled = true; });
-      card.querySelector('.perm-b').innerHTML = '<span class="ok-t">✓ Answered</span>';
+      html += '<label class="ask-opt ask-opt-other"><input type="' + type + '" name="aq' + i + '" data-oi="-1">' +
+        '<span class="ask-ind"></span><span class="q-body"><span class="q-t">Other</span></span></label>';
+      html += '<div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>';
+      html += '</div></div>';
+    });
+    html += '<div class="ask-b"><button class="ask-go ok">' + SVG_CHECK + 'Submit answers</button>' +
+      '<button class="no">' + SVG_CIRCLE_X + 'Cancel</button></div>';
+    html += '<div class="ask-foot">Esc to cancel</div>';
+    card.innerHTML = html;
+    (curTurn || log).appendChild(card); maybeScroll();
+
+    const tabs = card.querySelectorAll('.ask-tab');
+    const panels = card.querySelectorAll('.ask-panel');
+    const go = card.querySelector('.ask-go');
+    function refresh() {
+      card.querySelectorAll('.ask-opt').forEach(function (opt) {
+        const inpEl = opt.querySelector('input');
+        opt.classList.toggle('checked', inpEl.checked);
+        const chk = inpEl.type === 'checkbox';
+        opt.querySelector('.ask-ind').innerHTML = chk ? (inpEl.checked ? IND.cOn : IND.cOff) : (inpEl.checked ? IND.rOn : IND.rOff);
+      });
+      panels.forEach(function (p) {
+        const other = p.querySelector('.ask-opt-other input');
+        const box = p.querySelector('.ask-other');
+        if (box) box.hidden = !(other && other.checked);
+      });
+      const allAnswered = Array.prototype.every.call(panels, function (p, i) {
+        return card.querySelector('input[name="aq' + i + '"]:checked');
+      });
+      go.disabled = !allAnswered;
+    }
+    function selectTab(idx) {
+      tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
+      panels.forEach(function (p, n) { p.hidden = n !== idx; });
+    }
+    tabs.forEach(function (tab, idx) { tab.addEventListener('click', function () { selectTab(idx); }); });
+    card.querySelectorAll('.ask-opt input').forEach(function (i) {
+      i.addEventListener('change', function () {
+        refresh();
+        const opt = i.closest('.ask-opt');
+        if (i.type === 'radio' && !opt.classList.contains('ask-opt-other')) {
+          const idx = Array.prototype.indexOf.call(panels, i.closest('.ask-panel'));
+          if (idx > -1 && idx < panels.length - 1) selectTab(idx + 1);
+        }
+      });
+    });
+    go.onclick = function () {
+      const answers = {};
+      questions.forEach(function (q, i) {
+        const panel = panels[i];
+        const labels = [];
+        panel.querySelectorAll('.ask-opt input:checked').forEach(function (inpEl) {
+          const oi = +inpEl.dataset.oi;
+          if (oi >= 0) { labels.push((q.options[oi] || {}).label); }
+          else {
+            const typed = (panel.querySelector('.ask-other input') || {}).value || '';
+            if (typed.trim()) labels.push(typed.trim());
+          }
+        });
+        answers[q.question] = labels.filter(Boolean).join(', ');
+      });
+      card.querySelectorAll('input').forEach(function (i2) { i2.disabled = true; });
+      card.querySelector('.ask-b').innerHTML = '<span class="ok-t">✓ Answered</span>';
+      const foot = card.querySelector('.ask-foot'); if (foot) foot.remove();
+      activeAsk = null;
       bridge({ kind: 'answer', id: ev.id, answers: JSON.stringify(answers) });
     };
+    card.querySelector('.ask-b .no').onclick = cancelAsk;
+    refresh();
+    activeAsk = { card: card, ev: ev };
   }
 
   function renderPermission(ev) {
     let inp = {}; try { inp = JSON.parse(ev.input); } catch (_) {}
-    if (ev.tool === 'AskUserQuestion' && inp.questions) return renderQuestion(ev, inp);
+    if (ev.tool === 'AskUserQuestion' && inp.questions) return renderAsk(ev, inp);
     const isPlan = ev.tool === 'ExitPlanMode' || inp.plan !== undefined;
     const file = inp.file_path || inp.path || '';
-    const card = document.createElement('div'); card.className = 'perm';
+    const card = document.createElement('div');
     if (isPlan) {
+      card.className = 'card';
       card.innerHTML =
-        '<div class="perm-h">📋 <b>Plan</b> — ready to implement?</div>' +
-        '<div class="md">' + renderMd(inp.plan || '') + '</div>' +
-        '<div class="perm-b"><button class="ok">Approve &amp; implement</button><button class="no">Keep planning</button></div>';
+        '<div class="card-h"><b>Ready to code?</b> Here is my plan:</div>' +
+        '<div class="blk">' + renderMd(inp.plan || '') + '</div>' +
+        cardBtns('Approve &amp; implement', SVG_CHECK, 'Keep planning', SVG_STEP);
     } else {
+      card.className = 'card warn';
       card.innerHTML =
-        '<div class="perm-h">🔧 Claude wants to run <b>' + esc(ev.tool) + '</b>' +
+        '<div class="card-h">Claude wants to run <b>' + esc(ev.tool) + '</b>' +
           (file ? ' on <code>' + esc(file) + '</code>' : '') + '</div>' +
-        previewHtml(inp) +
-        '<div class="perm-b"><button class="ok">Accept</button><button class="no">Reject</button></div>';
+        previewHtml(ev.tool, inp) +
+        cardBtns('Accept', SVG_CHECK, 'Reject', SVG_CIRCLE_X);
     }
-    log.appendChild(card); maybeScroll();
-    const done = (allow) => {
-      card.querySelector('.perm-b').innerHTML = allow
+    (curTurn || log).appendChild(card); maybeScroll();
+    const done = function (allow) {
+      card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + '</span>'
         : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + '</span>';
       window.respondPermission(ev.id, allow);
     };
-    card.querySelector('.ok').onclick = () => done(true);
-    card.querySelector('.no').onclick = () => done(false);
+    card.querySelector('.ok').onclick = function () { done(true); };
+    card.querySelector('.no').onclick = function () { done(false); };
   }
 </script>
 </body>
