@@ -499,16 +499,200 @@
     setBusy(false);
   }
 
+  /* ---------- transcript replay ----------
+     Rebuilds a past conversation with the same blocks the live path draws. The CLI's JSONL
+     carries everything needed: thinking, tool inputs, tool_result (stdout / is_error) and
+     `toolUseResult.structuredPatch` — an authoritative diff with real line numbers, so replayed
+     edits don't need the live path's prefix/suffix heuristic. Cards replay resolved (no
+     controls): a tool that appears in the transcript is one that actually ran. */
+  const MAX_DIFF_ROWS = 400;
+
+  // structuredPatch hunks -> diff rows. Removed lines number off the old file, kept/added off the new.
+  function patchRows(hunks) {
+    let rows = '', n = 0, truncated = false;
+    for (let h = 0; h < hunks.length && !truncated; h++) {
+      const hunk = hunks[h] || {};
+      if (h > 0) rows += diffRow('ctx', '  ', null, '⋯');
+      let oldLine = hunk.oldStart || 1, newLine = hunk.newStart || 1;
+      const lines = hunk.lines || [];
+      for (let i = 0; i < lines.length; i++) {
+        if (n++ >= MAX_DIFF_ROWS) { truncated = true; break; }
+        const raw = lines[i], mark = raw.charAt(0), body = raw.slice(1);
+        if (mark === '-') rows += diffRow('del', '- ', oldLine++, body);
+        else if (mark === '+') rows += diffRow('add', '+ ', newLine++, body);
+        else { rows += diffRow('ctx', '  ', newLine, body); oldLine++; newLine++; }
+      }
+    }
+    if (truncated) rows += diffRow('ctx', '  ', null, '… diff truncated');
+    return rows;
+  }
+
+  // The diff/preview body for a replayed edit, or '' when the tool has nothing to show.
+  function replayDiff(it) {
+    if (it.patch && it.patch.length) return '<div class="diff">' + patchRows(it.patch) + '</div>';
+    if (it.oldStr != null || it.newStr != null) {
+      return '<div class="diff">' + renderEditDiff(it.oldStr || '', it.newStr || '') + '</div>';
+    }
+    if (it.content != null) {
+      const lines = String(it.content).split('\n');
+      const shown = lines.slice(0, MAX_DIFF_ROWS);
+      let rows = diffLines('+ ', 'add', shown.join('\n'), 1);
+      if (lines.length > shown.length) rows += diffRow('ctx', '  ', null, '… diff truncated');
+      return '<div class="diff">' + rows + '</div>';
+    }
+    return '';
+  }
+
+  // Resolved permission card: what ran, its diff, and a static outcome instead of buttons.
+  // "Applied" rather than "Accepted" — the transcript records that the edit ran, not whether a
+  // human approved it or an auto mode did.
+  function replayCard(it) {
+    // ExitPlanMode replays as the plan card, same surface and wording as the live one
+    if (it.plan) {
+      const plan = el('card warn', '');
+      plan.innerHTML =
+        '<div class="card-h"><b>Ready to code?</b> Here is my plan:</div>' +
+        '<div class="blk">' + renderMd(it.plan) + '</div>' +
+        '<div class="card-b">' + (it.denied
+          ? '<span class="no-t">✗ Kept planning</span>'
+          : '<span class="ok-t">✓ Approved</span>') + '</div>';
+      return;
+    }
+    const body = replayDiff(it);
+    if (!body) return;
+    const card = el('card warn', '');
+    card.innerHTML = '<div class="card-h"><b>' + esc(it.text) + '</b>' +
+      (it.file ? ' on <code>' + esc(it.file) + '</code>' : '') + '</div>' + body +
+      '<div class="card-b">' + (it.denied
+        ? '<span class="no-t">✗ Rejected</span>'
+        : '<span class="ok-t">✓ Applied</span>') + '</div>';
+  }
+
+  // Answered AskUserQuestion: questions with the chosen options checked, no inputs.
+  function replayAsk(it) {
+    const qs = it.questions || [];
+    if (!qs.length) return;
+    const answers = it.answers || {};
+    const card = el('ask ask-done', '');
+    // Mirror renderAsk's structure exactly — tab header + one panel per question — so a resumed
+    // card is indistinguishable from a live one that has just been answered.
+    let html = '<div class="ask-h"><div class="ask-tabs">';
+    qs.forEach(function (q, i) {
+      html += '<button class="ask-tab' + (i === 0 ? ' active' : '') + '" data-q="' + i + '">' +
+        esc(q.header || ('Q' + (i + 1))) + '</button>';
+    });
+    html += '</div></div>';
+    const freeText = []; // per-question "Other" text, assigned after innerHTML (esc() leaves quotes)
+    qs.forEach(function (q, i) {
+      // answers arrive as one string (multi-select is comma-joined); prefer an exact label
+      // match so a single answer containing a comma isn't split apart
+      const raw = String(answers[q.question] == null ? '' : answers[q.question]);
+      const labels = (q.options || []).map(function (o) { return o.label; });
+      const picked = labels.indexOf(raw) >= 0 ? [raw]
+        : raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      const indOn = q.multiSelect ? IND.cOn : IND.rOn;
+      const indOff = q.multiSelect ? IND.cOff : IND.rOff;
+      html += '<div class="ask-panel" data-q="' + i + '"' + (i === 0 ? '' : ' hidden') + '>';
+      html += '<div class="ask-q">' + esc(q.question) + '</div><div class="ask-list">';
+      (q.options || []).forEach(function (o) {
+        const on = picked.indexOf(o.label) >= 0;
+        html += '<div class="ask-opt' + (on ? ' checked' : '') + '">' +
+          '<span class="ask-ind">' + (on ? indOn : indOff) + '</span>' +
+          '<span class="q-body"><span class="q-t">' + esc(o.label) + '</span>' +
+          (o.description ? '<span class="q-d">' + esc(o.description) + '</span>' : '') +
+          '</span></div>';
+      });
+      // a free-text answer matches no option — live renders it as the "Other" row plus the
+      // (now disabled) text field, so do the same instead of inventing a bespoke row
+      const free = picked.filter(function (p) {
+        return !(q.options || []).some(function (o) { return o.label === p; });
+      });
+      freeText[i] = free.join(', ');
+      html += '<div class="ask-opt ask-opt-other' + (free.length ? ' checked' : '') + '">' +
+        '<span class="ask-ind">' + (free.length ? indOn : indOff) + '</span>' +
+        '<span class="q-body"><span class="q-t">Other</span></span></div>';
+      html += '<div class="ask-other"' + (free.length ? '' : ' hidden') +
+        '><input type="text" disabled></div>';
+      html += '</div></div>';
+    });
+    card.innerHTML = html + '<div class="ask-b">' + (it.denied
+      ? '<span class="no-t">✗ Cancelled</span>'   // interrupted before an answer was sent
+      : '<span class="ok-t">✓ Answered</span>') + '</div>';
+
+    card.querySelectorAll('.ask-panel').forEach(function (p, i) {
+      if (freeText[i]) p.querySelector('.ask-other input').value = freeText[i];
+    });
+    // tabs stay navigable, exactly as they do on a live card after it has been answered
+    const tabs = card.querySelectorAll('.ask-tab');
+    const panels = card.querySelectorAll('.ask-panel');
+    tabs.forEach(function (tab, idx) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
+        panels.forEach(function (p, n) { p.hidden = n !== idx; });
+      });
+    });
+  }
+
   function renderTranscript(items) {
     items.forEach(function (it) {
-      if (it.role === 'user') {
-        newTurn();
-        const d = document.createElement('div');
-        d.className = 'msg-user'; d.textContent = it.text;
-        curTurn.appendChild(d);
+      switch (it.role) {
+        case 'user':
+          addUserMessage(it.text || '', it.images || []);
+          break;
+        case 'assistant': {
+          const b = el('blk', ''); b.innerHTML = renderMd(it.text);
+          break;
+        }
+        case 'status':
+          statusLine(it.text, it.icon === 'stop' ? SVG_STOP : null);
+          break;
+        case 'done': {
+          const d = el('done', '');
+          d.innerHTML = '<span class="star">✻</span> ' +
+            DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)] +
+            ' for ' + fmtDur(it.durMs || 0) +
+            ' · ' + SVG_DOWN + fmtTok(it.tokens || 0) + ' tokens';
+          break;
+        }
+        case 'thinking': {
+          // collapsed like a finished live turn; durMs is record-to-record wall time, so it is
+          // an approximation of the live timer and is omitted when unavailable
+          const det = document.createElement('details');
+          det.className = 'think';
+          const secs = it.durMs ? Math.round(it.durMs / 1000) : 0;
+          det.innerHTML = '<summary>Thought' + (secs ? ' for ' + secs + 's' : '') +
+            SVG_CHEVRON + '</summary><div class="body"></div>';
+          det.querySelector('.body').textContent = it.text;
+          (curTurn || log).appendChild(det);
+          break;
+        }
+        case 'ask':
+          replayAsk(it);
+          break;
+        case 'tool': {
+          const t = el('tool-line', '');
+          t.innerHTML = '<b>' + esc(it.text) + '</b><span class="t-desc"></span>';
+          if (it.isError) t.classList.add('fail');
+          if (it.desc) {
+            const d = t.querySelector('.t-desc');
+            d.textContent = it.desc;
+            if (it.isPath) d.classList.add('path');
+          }
+          if (it.cmd || it.out) {
+            const io = document.createElement('div'); io.className = 'io';
+            io.innerHTML =
+              (it.cmd ? '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>' : '') +
+              (it.out ? '<div class="io-row"><span class="io-k">OUT</span><span class="io-v"></span></div>' : '');
+            const vs = io.querySelectorAll('.io-v');
+            let i = 0;
+            if (it.cmd) vs[i++].textContent = it.cmd;
+            if (it.out) vs[i].textContent = it.out;
+            t.after(io);
+          }
+          replayCard(it);
+          break;
+        }
       }
-      else if (it.role === 'assistant') { const b = el('blk', ''); b.innerHTML = renderMd(it.text); }
-      else if (it.role === 'tool') { const t = el('tool-line', ''); t.innerHTML = '<b>' + esc(it.text) + '</b>'; }
     });
     if (items.length) { el('status', '— resumed —'); }
     scrollToBottom();
@@ -518,7 +702,8 @@
   /* ---------- attachments (composer chips) ---------- */
   let pending = []; // { media_type, data(base64), name, w, h }
   function attChipHtml(p, withRm, i) {
-    return '<span class="thumb"><img src="data:' + p.media_type + ';base64,' + p.data + '"></span>' +
+    // replayed chips past the transcript image budget carry a name but no data — skip the thumb
+    return (p.data ? '<span class="thumb"><img src="data:' + p.media_type + ';base64,' + p.data + '"></span>' : '') +
       esc(p.name || 'image.png') +
       (p.w ? '<span class="meta">' + p.w + '×' + p.h + '</span>' : '') +
       (withRm ? '<button class="rm" title="Remove" data-i="' + i + '">' + SVG_X + '</button>' : '');
@@ -594,9 +779,9 @@
       atts.className = 'msg-atts';
       imgs.forEach(function (p) {
         const chip = document.createElement('span');
-        chip.className = 'att click';
+        chip.className = p.data ? 'att click' : 'att';
         chip.innerHTML = attChipHtml(p, false, 0);
-        chip.onclick = function () { openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'image.png'); };
+        if (p.data) chip.onclick = function () { openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'image.png'); };
         atts.appendChild(chip);
       });
       d.appendChild(atts);
@@ -961,7 +1146,9 @@
         if (openTool) {
           try {
             const inp = JSON.parse(openTool.json || '{}');
-            const desc = inp.description || inp.file_path || inp.path || inp.pattern || '';
+            // query/url cover ToolSearch, WebSearch and WebFetch, which carry no description
+            const desc = inp.description || inp.file_path || inp.path || inp.pattern ||
+              inp.query || inp.url || '';
             if (desc) {
               const dEl = openTool.el.querySelector('.t-desc');
               dEl.textContent = String(desc).slice(0, 140);
@@ -1329,6 +1516,26 @@
     // status lines
     statusLine('Stopped', SVG_STOP);
     statusLine('Reverted file changes', '↩');
+
+    // ---- replayed transcript blocks (the resume path, drawn by renderTranscript itself) ----
+    renderTranscript([
+      { role: 'user', text: 'Replayed turn — bump the rate constant.' },
+      { role: 'thinking', text: 'Checking where the constant is used before editing.' },
+      { role: 'assistant', text: 'Found it in `src/util/math.ts` — updating now.' },
+      { role: 'tool', text: 'Read', desc: 'src/util/math.ts', isPath: true },
+      { role: 'tool', text: 'Bash', desc: 'Show the current value', cmd: 'grep rate src/util/math.ts',
+        out: 'export const rate = 0.1;' },
+      { role: 'tool', text: 'Bash', desc: 'Lint the project', cmd: 'npm run lint',
+        out: 'error: unexpected token', isError: true },
+      { role: 'tool', text: 'Edit', desc: 'src/util/math.ts', isPath: true, file: 'src/util/math.ts',
+        patch: [{ oldStart: 41, newStart: 41, lines: [
+          '   // pricing', '-  export const rate = 0.1;', '+  export const rate = 0.15;', '   ' ] }] },
+      { role: 'ask',
+        questions: [{ header: 'Rollout', question: 'Ship the new rate now?', options: [
+          { label: 'Ship it', description: 'Deploy with the next release.' },
+          { label: 'Hold', description: 'Wait for approval.' } ] }],
+        answers: { 'Ship the new rate now?': 'Ship it' } },
+    ]);
 
     awaitingUser = false; // clear the flag the permission/ask cards set, so real input isn't blocked
     maybeScroll();

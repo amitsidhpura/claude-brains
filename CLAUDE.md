@@ -44,9 +44,20 @@ redistribute Anthropic's extension.js / webview / claude.exe.**
   `tool_result` blocks (used for Bash IN/OUT boxes).
 
 ## Build / run
-Open `phpstorm-plugin/` in IntelliJ IDEA → Gradle task `runIde` (launches sandbox PhpStorm).
-- JDK auto-provisioned via Foojay resolver; platform needs Java 21 (`jvmToolchain(21)`).
+`cd phpstorm-plugin && ./gradlew runIde` (launches a sandbox PhpStorm), or the same task from
+IntelliJ. `./gradlew compileKotlin` for a fast type-check; `buildPlugin` produces the installable
+zip in `build/distributions/`.
+- Build JVM must be **Java 21**. Do NOT use the JBR bundled with a recent PhpStorm — 2026.x ships
+  JDK 25 and Gradle 8.10.2 refuses to run on anything above 23. Linux dev box uses Temurin 21 at
+  `~/.jdks/jdk-21.0.12+8` (also IntelliJ's auto-detect dir); `~/.zshrc` exports `JAVA_HOME`.
+- Gradle 8.10.2 at `~/.local/opt/gradle-8.10.2`, matching `gradle-wrapper.properties`. The wrapper
+  (`gradlew` + `gradle-wrapper.jar`) IS committed — without the jar a clean clone can't bootstrap.
+- `runIde` runs on the JBR bundled inside the *downloaded* `phpstorm("2024.2")` dependency
+  (JBR 21 `-jcef`, has `libcef.so`), NOT on the build JVM — that's what makes the JCEF webview work.
+  First run downloads ~1 GB into `~/.gradle/caches`; after that builds are seconds.
 - `instrumentCode = false` is required (task crashes on MS JDK 21; we don't need it).
+- `buildSearchableOptions = false` — no settings UI yet, so it only cost a headless IDE launch
+  per build. Re-enable when the deferred settings page lands.
 - `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
 
@@ -77,17 +88,40 @@ lines (⏹ Stopped / ↩ Reverted) hang their glyph (`.s-ic`, SVG or emoji) in t
 pinning re-asserts on rAF so empty-then-innerHTML blocks land fully at bottom. Editing chat.html
 markup? mirror it in the mockup fixture too.
 
-Sessions/resume: `SessionStore.readTranscript` now strips the CLI's injected bookkeeping so a
-resumed thread stays clean — `cleanInjected()` drops `<local-command-caveat>` (isMeta) /
-`<local-command-stdout>` / `<task-notification>` user messages and collapses a
-`<command-name>/x</command-name>…<command-args>y</command-args>` block to a compact `/x y`.
+Sessions/resume: `SessionStore.readTranscript` returns rich `JsonObject` blocks (not flat
+role+text) so replay matches live rendering — roles `user` (text + base64 images, 4 MB budget then
+name-only chips) / `thinking` / `assistant` / `tool` (desc + `.path`, Bash IN/OUT, `isError`) /
+`ask`. Tool items are indexed by `tool_use_id` and patched when their result record is read.
+Diffs come from `toolUseResult.structuredPatch` — authoritative hunks with real line numbers, so
+replay uses `patchRows()` instead of the live path's prefix/suffix heuristic (`renderEditDiff`
+stays the fallback). Replayed cards are resolved, non-interactive: edits show `✓ Applied`
+("Applied", not "Accepted" — the transcript can't tell a manual approval from an auto mode), ask
+cards mirror `renderAsk`'s structure exactly — `.ask-h` tab header (clickable), one `.ask-panel`
+per question, checkbox vs radio glyphs by `multiSelect`, free text as the `Other` row + disabled
+field — marked `.ask-done` (hover/cursor suppressed). That class must NOT be `.done`: that's the
+completion-summary line and its 22px dot-column indent silently shifted the whole card right.
+Geometry verified equal to live in headless Chrome. `cleanInjected()` still
+drops `<local-command-caveat>` (isMeta) / `<local-command-stdout>` / `<task-notification>` and
+collapses `<command-name>/x</command-name>…<command-args>y</command-args>` to `/x y`.
+Titles: the CLI writes `ai-title` records (no `summary` in current sessions) — `titleOf()` prefers
+summary → last ai-title → first user message.
 
-NEXT (user's active focus): **session polish — many known issues in resume/history**. Resume
-replay is still lossy vs. live rendering (readTranscript only reproduces user text + assistant
-text + bare tool-name lines; no diffs/cards/thinking/IN-OUT/attachments/images, no ordering guarantees
-for interleaved sidechains, titles/summary heuristics rough). Audit `SessionStore.kt` +
-`renderTranscript()` together and decide how faithfully to rebuild each block on resume.
-Then Phase 3: verify the ported UI in a runIde sandbox against real streaming (token meta from
-message_delta.usage, undo placement, ask Other/multiSelect, fail dots) — the Ctrl+Alt+G gallery
-renders every transient state without driving the CLI. Then: editor-title accept/reject,
-@-symbol mentions, conversation-level rewind, worktrees, extensibility status view.
+NEXT: **Phase 3 — verify in a runIde sandbox** (nothing since the resume rewrite has been run;
+this laptop has no JDK/Gradle, so it was validated by parsing real JSONL + `node --check` only).
+Check: resumed threads (thinking/diffs/IN-OUT/images/ask cards render, big sessions stay
+responsive — a 5.7 MB session yields ~876 blocks), history titles now read as ai-titles, then the
+live path against real streaming (token meta from `message_delta.usage`, undo placement, ask
+Other/multiSelect, fail dots). Ctrl+Alt+G renders every transient state *including* a replayed
+transcript sample, without driving the CLI.
+Replay also reconstructs, from fields the parser previously ignored: plan cards (`ExitPlanMode`
+`input.plan`), `⏹ Stopped` status lines (`interruptedByShutdown`, replacing the bogus
+"[Request interrupted by user]" user box), refusal state (`toolDenialKind` → `✗ Rejected` /
+`✗ Kept planning` / `✗ Cancelled` instead of a false `✓ Applied`), the `✻ … for Ns · ↓ N tokens`
+summary (per-request `message.usage.output_tokens` + timestamp span, skipped when tokens are 0),
+and thinking durations (record-to-record wall time — an approximation, live times the stream).
+NB: many sessions store `thinking` blocks with an EMPTY body and only a `signature`, so those
+replay as nothing at all; ~2.1k of 6.6k local thinking blocks carry text.
+Known gaps deliberately left:
+sidechain/subagent ordering untested (no `isSidechain` records in local sessions yet).
+Then: editor-title accept/reject, @-symbol mentions, conversation-level rewind, worktrees,
+extensibility status view.

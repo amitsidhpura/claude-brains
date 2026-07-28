@@ -107,8 +107,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun listSessions(): List<com.syncroze.claudecode.session.SessionStore.SessionInfo> =
         com.syncroze.claudecode.session.SessionStore.list(cwd.path)
 
-    /** Rendered turns of a past conversation, for replay into the UI. */
-    fun readTranscript(id: String): List<com.syncroze.claudecode.session.SessionStore.TranscriptItem> =
+    /** Renderable blocks of a past conversation, for replay into the UI. */
+    fun readTranscript(id: String): List<kotlinx.serialization.json.JsonObject> =
         com.syncroze.claudecode.session.SessionStore.readTranscript(cwd.path, id)
 
     fun sendUserText(text: String) = cli?.sendUserText(text)

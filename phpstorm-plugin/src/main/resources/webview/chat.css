@@ -214,6 +214,11 @@ img { max-width: 100%; height: auto; }
 .ask-other input { width: 100%; background: transparent; border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 7px 10px;
   color: var(--fg); font: inherit; font-size: 13px; outline: none; }
 .ask-other input::placeholder { color: var(--dot); }
+/* replayed (historical) card: answers are a record, not a control.
+   NB: must not be called `.done` — that's the completion-summary line (22px dot-column indent). */
+.ask-done .ask-opt { cursor: default; }
+.ask-done .ask-opt:hover { background: transparent; }
+.ask-done .ask-opt.checked:hover { background: rgba(217,119,87,.14); }
 .ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
 .ask-go:disabled { opacity: .45; cursor: not-allowed; }
 .ask-foot { padding: 0 14px 12px; font-size: 12px; }

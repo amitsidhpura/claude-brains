@@ -106,11 +106,7 @@ class ChatPanel(project: Project, parent: Disposable) {
     private fun pushTranscript(id: String) {
         val frame = buildJsonObject {
             put("type", "__transcript")
-            put("items", buildJsonArray {
-                session.readTranscript(id).forEach { t ->
-                    add(buildJsonObject { put("role", t.role); put("text", t.text) })
-                }
-            })
+            put("items", buildJsonArray { session.readTranscript(id).forEach { add(it) } })
         }
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))
     }
