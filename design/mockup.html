@@ -77,7 +77,7 @@
     <div class="turn">
       <div class="msg-user">Print some text with inline code</div>
 
-      <details class="think"><summary>Thought for 6s</summary><div class="body">The user wants a PHP example with inline code…</div></details>
+      <details class="think"><summary>Thought for 6s<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">The user wants a PHP example with inline code…</div></details>
 
       <div class="blk">
         <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
@@ -113,10 +113,11 @@
 
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Edit</b> on <code>D:\sites\demo\functions.php</code></div>
-        <div class="diff"><span class="del">- function old_helper() {</span>
-<span class="add">+ function new_helper(string $name): string {</span>
-<span class="add">+     return "Hello, {$name}!";</span>
-<span class="add">+ }</span></div>
+        <div class="diff"><span class="ctx"><span class="ln">13</span>  // helper functions</span>
+<span class="del"><span class="ln">14</span>- function old_helper() {</span>
+<span class="add"><span class="ln">14</span>+ function new_helper(string $name): string {</span>
+<span class="add"><span class="ln">15</span>+     return "Hello, {$name}!";</span>
+<span class="add"><span class="ln">16</span>+ }</span></div>
         <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Reject</button></div>
       </div>
 
@@ -211,11 +212,11 @@
 
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Write</b> on <code>config/app.php</code></div>
-        <div class="diff"><span class="add">+ &lt;?php</span>
-<span class="add">+ return [</span>
-<span class="add">+     'name'  =&gt; 'Demo',</span>
-<span class="add">+     'debug' =&gt; false,</span>
-<span class="add">+ ];</span></div>
+        <div class="diff"><span class="add"><span class="ln">1</span>+ &lt;?php</span>
+<span class="add"><span class="ln">2</span>+ return [</span>
+<span class="add"><span class="ln">3</span>+     'name'  =&gt; 'Demo',</span>
+<span class="add"><span class="ln">4</span>+     'debug' =&gt; false,</span>
+<span class="add"><span class="ln">5</span>+ ];</span></div>
         <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Reject</button></div>
       </div>
 
@@ -242,7 +243,7 @@
       <div class="msg-user">Do some dummy process so I can see Claude's famous working animation.</div>
 
       <div class="think-live">
-        <div class="th"><span class="shimmer">Thinking…</span> <span class="tok">· 132 tokens</span></div>
+        <div class="th"><span class="shimmer">Thinking…</span><span class="th-el-wrap"> · <span class="th-el">3s</span></span><span class="tok"> · 132 tokens</span></div>
       </div>
 
       <div class="blk"><p>I'll run a few harmless dummy tasks so the spinner cycles through its words.</p></div>
@@ -271,6 +272,7 @@
 
   <div id="fade"></div>
   <div id="fade-top"></div>
+  <button id="scrollBtn" class="show" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
 
   <div id="composer">
     <div id="inputcard">

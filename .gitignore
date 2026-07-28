@@ -5,6 +5,7 @@
 .idea/
 *.iml
 phpstorm-plugin/.gradle/
+phpstorm-plugin/.kotlin/
 phpstorm-plugin/build/
 phpstorm-plugin/.intellijPlatform/
 phpstorm-plugin/gradle/wrapper/gradle-wrapper.jar

@@ -131,6 +131,41 @@ class ChatPanel(project: Project, parent: Disposable) {
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))
     }
 
+    /**
+     * 1-based line where an Edit/Write lands in the file, so the diff can show a line-number gutter.
+     * Edit: locate `old_string` in the current file text. Write: line 1. null when it can't be found.
+     */
+    private fun editLineStart(tool: String, inputJson: String): Int? {
+        val obj = runCatching { json.parseToJsonElement(inputJson).jsonObject }.getOrNull() ?: return null
+        if (tool == "Write") return 1
+        if (tool != "Edit") return null
+        val path = (obj["file_path"] ?: obj["path"])?.jsonPrimitive?.content ?: return null
+        val old = obj["old_string"]?.jsonPrimitive?.content ?: return null
+        val text = readFileText(path) ?: return null
+        val idx = text.indexOf(old)
+        if (idx < 0) return null
+        var line = 1
+        for (i in 0 until idx) if (text[i] == '\n') line++
+        return line
+    }
+
+    /**
+     * Current text of a file. Reads fresh from disk (the CLI applies edits to disk out-of-band, so
+     * the IDE's VFS/document cache is stale right after an edit) — but honors the in-editor buffer
+     * when it has genuine unsaved changes, since that's what Claude matched `old_string` against.
+     */
+    private fun readFileText(path: String): String? = runCatching {
+        val vf = com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(path.replace('\\', '/'))
+        val unsaved: String? = if (vf != null) {
+            com.intellij.openapi.application.ReadAction.compute<String?, RuntimeException> {
+                val fdm = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
+                val doc = fdm.getDocument(vf)
+                if (doc != null && fdm.isDocumentUnsaved(doc)) doc.text else null
+            }
+        } else null
+        unsaved ?: java.io.File(path).readText()
+    }.getOrNull()
+
     private fun loadUi() {
         // loadHTML has no base URL, so a <link> can't resolve — splice the shared
         // stylesheet (webview/chat.css, also linked by design/mockup.html) at the marker.
@@ -153,6 +188,7 @@ class ChatPanel(project: Project, parent: Disposable) {
                     put("id", requestId)
                     put("tool", toolName)
                     put("input", inputJson) // raw JSON string; the page parses/pretty-prints
+                    editLineStart(toolName, inputJson)?.let { put("lineStart", it) } // for the diff gutter
                 }
                 pushEvent(json.encodeToString(JsonObject.serializer(), frame))
             },

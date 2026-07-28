@@ -39,6 +39,7 @@
 
   <div id="fade"></div>
   <div id="fade-top"></div>
+  <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
 
   <div id="composer">
     <div id="inputcard">
@@ -125,6 +126,7 @@
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
   const SVG_STOP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>';
+  const SVG_CHEVRON = '<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'; // chevron-right; CSS rotates it down when open
   const IND = {
     rOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
     rOn:  SVG_CHECK,
@@ -136,9 +138,35 @@
 
   // Auto-scroll only when the user is already near the bottom (scroll pinning).
   let pinned = true;
+  const scrollBtn = document.getElementById('scrollBtn');
   function atBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 40; }
-  function maybeScroll() { if (pinned) log.scrollTop = log.scrollHeight; }
-  log.addEventListener('scroll', () => { pinned = atBottom(); });
+  function updateScrollBtn() { if (scrollBtn) scrollBtn.classList.toggle('show', !atBottom()); }
+  function scrollToBottom() { pinned = true; log.scrollTop = log.scrollHeight; updateScrollBtn(); }
+  // Scroll now, then re-assert on the next frame — many blocks are appended empty via el() (which
+  // scrolls) and filled with innerHTML right after, growing ~a line; the rAF lands on final height.
+  let scrollRaf = 0;
+  function maybeScroll() {
+    if (pinned) {
+      log.scrollTop = log.scrollHeight;
+      if (!scrollRaf) scrollRaf = requestAnimationFrame(function () { scrollRaf = 0; if (pinned) log.scrollTop = log.scrollHeight; });
+    }
+    updateScrollBtn();
+  }
+  // animated glide to bottom (manual easeOutCubic — native smooth-scroll doesn't animate reliably
+  // in every CEF build). Recomputes the target each frame so it still lands if content grows.
+  function smoothToBottom() {
+    const start = log.scrollTop, t0 = performance.now(), dur = 320;
+    pinned = true;
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const target = log.scrollHeight - log.clientHeight;
+      log.scrollTop = start + (target - start) * (1 - Math.pow(1 - p, 3));
+      if (p < 1) requestAnimationFrame(step);
+      else { log.scrollTop = log.scrollHeight; updateScrollBtn(); }
+    })(t0);
+  }
+  log.addEventListener('scroll', function () { pinned = atBottom(); updateScrollBtn(); });
+  if (scrollBtn) scrollBtn.onclick = function () { smoothToBottom(); input.focus(); };
 
   /* ---------- turn structure: user box + everything that answers it ---------- */
   let curTurn = null;                // .turn container for the current exchange
@@ -483,7 +511,8 @@
       else if (it.role === 'tool') { const t = el('tool-line', ''); t.innerHTML = '<b>' + esc(it.text) + '</b>'; }
     });
     if (items.length) { el('status', '— resumed —'); }
-    maybeScroll();
+    scrollToBottom();
+    requestAnimationFrame(scrollToBottom); // once more after late layout (images/highlighting settle)
   }
 
   /* ---------- attachments (composer chips) ---------- */
@@ -586,18 +615,22 @@
   }
 
   let lastUser = null;                 // { text, images } — for Retry
+  let history = [], histIdx = 0, histDraft = ''; // sent-message history for ↑/↓ recall
   let turnId = null, turnHadEdit = false; // for Rewind
   function uuid() { try { return crypto.randomUUID(); } catch (_) { return 'id-' + Math.random().toString(16).slice(2); } }
 
   function sendTurn(t, imgs) {
     const userEl = addUserMessage(t, imgs);
     lastUser = { text: t, images: imgs };
+    if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
+    histIdx = history.length; histDraft = '';
     turnId = uuid(); turnHadEdit = false;
     turnRecs[turnId] = { userEl: userEl };
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0;
     bridge({ kind: 'user', id: turnId, text: t, images: imgs.map(function (p) { return { media_type: p.media_type, data: p.data }; }) });
     stopping = false;
     setBusy(true);
+    smoothToBottom();
   }
 
   function submit() {
@@ -647,8 +680,9 @@
     const wasAtBottom = atBottom();
     log.style.paddingBottom = (h + 12) + 'px';
     fadeEl.style.height = (h + 18) + 'px';
+    if (scrollBtn) scrollBtn.style.bottom = (h + 20) + 'px'; // float just above the composer
     if (wasAtBottom) log.scrollTop = log.scrollHeight;   // stay pinned while typing
-    syncGutter();
+    syncGutter(); updateScrollBtn();
   }).observe(composerEl);
   new ResizeObserver(syncGutter).observe(log);
   syncGutter();
@@ -761,11 +795,28 @@
     }
     if (activeMenu()) return;                       // popup menus own the keys (document handler)
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } // Ctrl/Cmd+Enter sends; plain Enter = newline
+    // ↑/↓ recall sent messages — only at the edges so line movement still works in a multi-line draft
+    const caret = input.selectionStart;
+    const onFirstLine = input.value.slice(0, caret).indexOf('\n') === -1;
+    const onLastLine = input.value.indexOf('\n', caret) === -1;
+    if (e.key === 'ArrowUp' && onFirstLine && histIdx > 0) {
+      e.preventDefault();
+      if (histIdx === history.length) histDraft = input.value; // stash the in-progress draft
+      histIdx--;
+      input.value = history[histIdx]; autoGrow();
+      const end = input.value.length; input.setSelectionRange(end, end);
+    } else if (e.key === 'ArrowDown' && onLastLine && histIdx < history.length) {
+      e.preventDefault();
+      histIdx++;
+      input.value = histIdx === history.length ? histDraft : history[histIdx]; autoGrow();
+      const end = input.value.length; input.setSelectionRange(end, end);
+    }
   });
+  input.addEventListener('input', function () { histIdx = history.length; }); // typing exits history mode
 
   /* ---------- Kotlin -> page ---------- */
   let curBubble = null, curRaw = '';
-  let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0;
+  let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0, thinkTimer = null;
   let openTool = null;        // tool block currently streaming its input
   let pendingUndo = null;     // turn rec awaiting a __rewind result
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
@@ -841,10 +892,11 @@
 
   function finishThinking() {
     if (!curThink) return;
+    if (thinkTimer) { clearInterval(thinkTimer); thinkTimer = null; }
     const secs = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
     const det = document.createElement('details');
     det.className = 'think';
-    det.innerHTML = '<summary>Thought for ' + secs + 's</summary><div class="body"></div>';
+    det.innerHTML = '<summary>Thought for ' + secs + 's' + SVG_CHEVRON + '</summary><div class="body"></div>';
     det.querySelector('.body').textContent = curThinkRaw;
     curThink.replaceWith(det);
     curThink = null; curThinkRaw = '';
@@ -867,8 +919,16 @@
           if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'].indexOf(cb.name) >= 0) turnHadEdit = true;
         } else if (cb.type === 'thinking') {
           curThink = el('think-live', '');
-          curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span> <span class="tok"></span></div>';
+          curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
+            '<span class="th-el-wrap" hidden> · <span class="th-el"></span></span><span class="tok"></span></div>';
           thinkStart = Date.now(); thinkChars = 0; curThinkRaw = '';
+          const thEl = curThink.querySelector('.th-el'), thWrap = curThink.querySelector('.th-el-wrap');
+          thinkTimer = setInterval(function () {
+            if (!curThink) { clearInterval(thinkTimer); thinkTimer = null; return; }
+            const secs = Math.round((Date.now() - thinkStart) / 1000);
+            thEl.textContent = secs + 's';
+            thWrap.hidden = secs <= 0;   // hide "· 0s" until at least a second has passed
+          }, 1000);
         }
         break;
       }
@@ -884,7 +944,7 @@
           thinkChars += (d.thinking || '').length;
           msgChars += (d.thinking || '').length; estimateMsgTokens();
           const tok = curThink.querySelector('.tok');
-          if (tok) tok.textContent = '· ' + fmtTok(Math.max(1, Math.round(thinkChars / 4))) + ' tokens';
+          if (tok) tok.textContent = ' · ' + fmtTok(Math.max(1, Math.round(thinkChars / 4))) + ' tokens';
           maybeScroll();
         } else if (d.type === 'input_json_delta' && openTool) {
           openTool.json += (d.partial_json || '');
@@ -1023,14 +1083,38 @@
     return '<div class="card-b"><button class="ok">' + okSvg + okLabel + '</button>' +
       '<button class="no">' + noSvg + noLabel + '</button></div>';
   }
-  function diffLines(prefix, cls, s) {
-    return String(s).split('\n').map(function (l) { return '<span class="' + cls + '">' + prefix + esc(l) + '</span>'; }).join('');
+  function diffRow(cls, prefix, num, text) {
+    const g = (typeof num === 'number') ? '<span class="ln">' + num + '</span>' : '';
+    return '<span class="' + cls + '">' + g + prefix + esc(text) + '</span>';
   }
-  function previewHtml(tool, inp) {
+  function diffLines(prefix, cls, s, startLine) {
+    const hasNum = typeof startLine === 'number';
+    return String(s).split('\n').map(function (l, i) { return diffRow(cls, prefix, hasNum ? startLine + i : null, l); }).join('');
+  }
+  // Claude's Edit anchors appends/prepends by repeating unchanged lines in both old_string and
+  // new_string. Trim the common prefix/suffix so those render as context (no -/+) and only the
+  // real changes are marked — otherwise a 2-line append looks like "remove 2, add 4".
+  function renderEditDiff(oldStr, newStr, lineStart) {
+    const O = String(oldStr).split('\n'), N = String(newStr).split('\n');
+    const num = typeof lineStart === 'number' ? lineStart : null;
+    const at = function (i) { return num == null ? null : num + i; };
+    let p = 0;
+    while (p < O.length && p < N.length && O[p] === N[p]) p++;
+    let s = 0;
+    while (s < O.length - p && s < N.length - p && O[O.length - 1 - s] === N[N.length - 1 - s]) s++;
+    let rows = '';
+    for (let i = 0; i < p; i++) rows += diffRow('ctx', '  ', at(i), O[i]);            // common prefix
+    for (let i = p; i < O.length - s; i++) rows += diffRow('del', '- ', at(i), O[i]); // removed
+    for (let i = p; i < N.length - s; i++) rows += diffRow('add', '+ ', at(i), N[i]); // added
+    const added = (N.length - s) - p;
+    for (let i = 0; i < s; i++) rows += diffRow('ctx', '  ', at(p + added + i), N[N.length - s + i]); // common suffix
+    return rows;
+  }
+  function previewHtml(tool, inp, lineStart) {
     if (inp.old_string !== undefined || inp.new_string !== undefined) {
-      return '<div class="diff">' + diffLines('- ', 'del', inp.old_string || '') + diffLines('+ ', 'add', inp.new_string || '') + '</div>';
+      return '<div class="diff">' + renderEditDiff(inp.old_string || '', inp.new_string || '', lineStart) + '</div>';
     }
-    if (inp.content !== undefined) return '<div class="diff">' + diffLines('+ ', 'add', inp.content) + '</div>';
+    if (inp.content !== undefined) return '<div class="diff">' + diffLines('+ ', 'add', inp.content, (typeof lineStart === 'number' ? lineStart : 1)) + '</div>';
     const cmd = inp.command || inp.description;
     if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd)).slice(0, 4000) + '</pre>';
     return '';
@@ -1156,7 +1240,7 @@
       card.innerHTML =
         '<div class="card-h">Claude wants to run <b>' + esc(ev.tool) + '</b>' +
           (file ? ' on <code>' + esc(file) + '</code>' : '') + '</div>' +
-        previewHtml(ev.tool, inp) +
+        previewHtml(ev.tool, inp, ev.lineStart) +
         cardBtns('Accept', SVG_CHECK, 'Reject', SVG_CIRCLE_X);
     }
     (curTurn || log).appendChild(card); maybeScroll();
@@ -1189,7 +1273,7 @@
     // collapsed thinking
     const th = document.createElement('details');
     th.className = 'think';
-    th.innerHTML = '<summary>Thought for 4s</summary><div class="body">Weighing a couple of approaches before writing the diff…</div>';
+    th.innerHTML = '<summary>Thought for 4s' + SVG_CHEVRON + '</summary><div class="body">Weighing a couple of approaches before writing the diff…</div>';
     (curTurn || log).appendChild(th);
 
     // tool line — success (with path)
@@ -1211,7 +1295,7 @@
     t3.innerHTML = '<b>Bash</b><span class="t-desc">Lint the project</span>';
 
     // permission card — Edit diff
-    renderPermission({ tool: 'Edit', id: 'gallery-edit', input: JSON.stringify({
+    renderPermission({ tool: 'Edit', id: 'gallery-edit', lineStart: 42, input: JSON.stringify({
       file_path: 'src/util/math.ts', old_string: 'export const rate = 0.1;', new_string: 'export const rate = 0.15;' }) });
 
     // plan card
