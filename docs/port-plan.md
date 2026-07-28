@@ -11,6 +11,14 @@ the spinner/verbs/token counters (the renderer drives those from real stream eve
 ## Phases
 
 ### Phase 1 — CSS + static chrome (resource-only; verify with a single runIde restart)
+- **Split the CSS into `webview/chat.css` (single source of truth).** `ChatPanel.loadUi()`
+  reads chat.html as a string and calls `loadHTML()` — there is no base URL, so a plain
+  `<link href="chat.css">` will NOT resolve inside JCEF. Instead splice at load time: read
+  both resources and replace a `<!--CSS-->` marker in the HTML with `<style>…</style>`
+  (3-line change in `loadUi()`). `design/mockup.html` then `<link>`s the same file relatively
+  (`../phpstorm-plugin/src/main/resources/webview/chat.css`), which browsers resolve over
+  `file://`. Do this as PART of Phase 1 — retrofitting later is much more work.
+  After this, styling-only iterations = edit one file, no porting step.
 - Copy the token block (`:root`) and all component CSS; drop the frame/devbar/scrollbar-preview sections.
 - Composer: chips row (`#chips`), auto-grow textarea (`rows=1`, `LINE=20`, `MAXLINES=10`,
   empty state pinned to one line), button bar with divider, paperclip/slash icon buttons,
@@ -79,3 +87,14 @@ Expect a handful of streaming edge-case fixes.
 - File paths get `.path` (monospace); `card-h code` is plain monospace, no background.
 - Icon sizes: 12 (micro) / 14 (small) / 15 (inside buttons) / 16 (indicators) / 18 (composer bar) / 19 (header).
 - All colors go through the `:root` tokens — no new hardcoded hexes.
+
+## After the port — how design iteration works
+- **Styling changes** (colors, spacing, radii, hovers, tokens): edit `webview/chat.css` only.
+  The mockup links the same file, so browser preview and plugin stay in sync automatically.
+- **Structural changes** (a block gains an element): two places — the mockup fixture AND the
+  renderer's template string in chat.html. Treat the mockup markup as canonical and copy it
+  verbatim into the renderer.
+- **Gallery mode (worth adding):** a dev flag in the real chat.html that injects the mockup's
+  fixture blocks into the live webview, so every state (error, ask card, spinner, fail dot)
+  can be verified in JCEF without driving the CLI into producing one.
+- The mockup keeps only: demo markup fixtures, devbar/frame scaffolding, demo JS timers.

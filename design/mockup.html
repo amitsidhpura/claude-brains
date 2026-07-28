@@ -27,6 +27,12 @@
     --hover: #2f3237;       /* list rows / icon buttons on hover */
     --warn-border: #6b4a3c; /* permission & question card frame */
     --warn-bg: #282320;
+    --user-bg: #1b2129;     /* user input surfaces: message box + composer */
+    --user-border: #374a63;
+    --user-raised: #242e3c; /* capsules on user surfaces (attachment chips) */
+    --user-raised-hover: #2c394c;
+    --user-divider: #2d3c54;/* internal borders on user surfaces */
+    --user-muted: #8ba3c7;  /* secondary text/icons on user surfaces */
     --ok: #0d542b;         /* confirm buttons (Accept / Submit) */
     --ok-hover: #146e3a;
     --radius: 6px;
@@ -77,7 +83,7 @@
 
   /* user message: full-width bordered box, sticks to the top of its turn while you scroll */
   .msg-user { position: sticky; top: 0; z-index: 6;
-    background: #1b2129; border: 1px solid #374a63;
+    background: var(--user-bg); border: 1px solid var(--user-border);
     border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
   .msg-user.has-undo { padding-right: 34px; }
   .msg-user .undo { position: absolute; top: 6px; right: 7px; background: transparent; border: 0; color: var(--muted);
@@ -217,25 +223,25 @@
   .ph-img svg { position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; color: rgba(255,255,255,.75); }
 
   /* composer attachment chips (image.png 283×162 · .gitignore · …) */
-  #chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--border); }
-  .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--raised);
-    border: 1px solid var(--border-strong); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
+  #chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--user-divider); }
+  .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--user-raised);
+    border: 1px solid var(--user-border); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
   .att .rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
-    background: var(--raised); border: 0; color: var(--muted); cursor: pointer; padding: 3px; border-radius: 4px;
-    box-shadow: -6px 0 6px var(--raised); }
+    background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 4px;
+    box-shadow: -6px 0 6px var(--user-raised); }
   .att .rm:hover { color: var(--fg); }
   .att .rm svg { width: 12px; height: 12px; display: block; }
   .att:hover .rm { display: inline-flex; }
   .att .thumb { width: 16px; height: 16px; border-radius: 3px; overflow: hidden; display: inline-flex; flex: 0 0 auto; }
   .att .thumb .ph-img { width: 100%; height: 100%; }
   .att .thumb .ph-img svg { width: 10px; height: 10px; }
-  .att > svg { width: 14px; height: 14px; color: var(--muted); flex: 0 0 auto; }
-  .att .meta { color: var(--muted); font-size: 11px; }
+  .att > svg { width: 14px; height: 14px; color: var(--user-muted); flex: 0 0 auto; }
+  .att .meta { color: var(--user-muted); font-size: 11px; }
 
   /* attachments inside a user message: chip row on top, click opens preview */
   .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .att.click { cursor: pointer; }
-  .att.click:hover { background: var(--raised-hover); border-color: #565a62; }
+  .att.click:hover { background: var(--user-raised-hover); }
 
   /* attachment preview popup */
   #lightbox { position: absolute; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center;
@@ -264,17 +270,19 @@
   /* ---------- composer ---------- */
   #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
     display: flex; justify-content: center; }
-  #inputcard { position: relative; width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+  #inputcard { position: relative; width: 100%; max-width: 720px; background: var(--user-bg); border: 1px solid var(--user-border); border-radius: 12px;
     padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
   #inputcard:focus-within { border-color: var(--accent); box-shadow: 0 2px 14px rgba(0,0,0,.35), 0 0 0 3px rgba(217,119,87,.15); }
   #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
     font: inherit; line-height: 20px; height: 20px; max-height: 200px; padding: 0; overflow-y: hidden; }
-  #input::placeholder { color: var(--dot); }
-  #inputbar { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 8px -12px 0; padding: 8px 12px 0; border-top: 1px solid var(--border); }
+  #input::placeholder { color: var(--user-muted); }
+  #inputbar { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 8px -12px 0; padding: 8px 12px 0; border-top: 1px solid var(--user-divider); }
   #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 10px; }
-  .chip-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; line-height: 1;
+  .chip-btn { background: transparent; border: 0; color: var(--user-muted); cursor: pointer; font: inherit; font-size: 12px; line-height: 1;
     border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
   .chip-btn:hover { color: var(--fg); }
+  #inputbar .icon-btn { color: var(--user-muted); }
+  #inputbar .icon-btn:hover { color: var(--fg); }
   #send { background: var(--accent); color: #fff; border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
     cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   #inputbar svg { width: 18px; height: 18px; }
@@ -289,32 +297,32 @@
   #send.stop .ic-stop { display: block; }
 
   /* ---------- popups ---------- */
-  .popup { position: absolute; z-index: 25; bottom: calc(100% + 1px); background: var(--panel); border: 1px solid var(--border-strong);
+  .popup { position: absolute; z-index: 25; bottom: calc(100% + 1px); background: var(--user-bg); border: 1px solid var(--user-border);
     border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 330px; }
   .popup.show { display: block; }
   #modeMenu { right: 0; } #modelMenu { right: 0; } #slashMenu { left: 0; min-width: 0; max-width: 100%; }
   .menu-anchor { position: relative; display: inline-flex; align-items: center; }
   .menu-anchor .popup { bottom: calc(100% + 9px); }
   #slashList { max-height: 320px; overflow-y: auto; padding-bottom: 4px; }
-  .popup-empty { padding: 10px 14px; color: var(--muted); font-size: 12px; }
+  .popup-empty { padding: 10px 14px; color: var(--user-muted); font-size: 12px; }
   #attachMenu { left: 0; min-width: 220px; }
   #attachMenu .popup-item { align-items: center; }
-  .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--muted);
+  .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--user-muted);
     font-size: 11px; }
   .popup-item { display: flex; gap: 11px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
-  .popup-item:hover, .popup-item.sel { background: var(--hover); }
-  .pi-ic { color: var(--muted); width: 20px; text-align: center; font-family: ui-monospace, monospace; padding-top: 1px;
+  .popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
+  .pi-ic { color: var(--user-muted); width: 20px; text-align: center; font-family: ui-monospace, monospace; padding-top: 1px;
     display: inline-flex; align-items: flex-start; justify-content: center; flex: 0 0 20px; }
   .pi-ic svg { width: 17px; height: 17px; }
   .popup-item.sel .pi-ic, .popup-item.sel .pi-title { color: var(--fg); }
   .pi-body { flex: 1; min-width: 0; }
   .pi-title { color: var(--fg); font-size: 13px; }
-  .pi-desc { color: var(--muted); font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pi-desc { color: var(--user-muted); font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pi-check { color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
   .pi-check svg { width: 16px; height: 16px; }
   .popup-item.on .pi-check { visibility: visible; }
-  .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--border);
-    color: var(--muted); font-size: 12px; }
+  .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--user-divider);
+    color: var(--user-muted); font-size: 12px; }
   .ef-label { display: flex; align-items: center; gap: 7px; }
   .ef-label svg { width: 15px; height: 15px; }
   .ef-label b { color: var(--fg); font-weight: 600; }
