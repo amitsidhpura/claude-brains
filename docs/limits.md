@@ -75,3 +75,70 @@ shorter than what was approved.
 sum `message.usage.output_tokens`, rejecting lines on a substring before parsing. Cached by
 `(mtime, size)`, so a 177 MB session is scanned once (~0.5s) rather than on every panel open.
 `lastActivityOf` reads only the trailing 256 KB.
+
+---
+
+# Big-session performance
+
+Measured 2026-07-29 on this machine, headless Chrome (no compositor) + the real `SessionStore`.
+Numbers to be re-taken in JCEF before trusting their magnitude; the *shape* should hold.
+
+## Where the time actually goes
+
+Parsing is not the bottleneck:
+
+| session | file | blocks | `readTranscript` | frame shipped to the webview |
+|---|---|---|---|---|
+| claude-code-phpstorm | 10 MB | 1,848 | 175 ms | 4.18 MB |
+| syncroze-core | 177 MB | 4,000 (capped) | 91 ms | 4.29 MB |
+
+What the frame is made of differs sharply by session, so there is no single fix:
+
+- **phpstorm**: 57% of the 4.18 MB is base64 image payload — 2.38 MB from just 46 blocks.
+- **core**: 9% images; the bulk is tool blocks (2.26 MB) and thinking (0.69 MB).
+
+DOM construction is trivial; **layout is the cost**, and it scales with the whole document
+rather than the visible part:
+
+| turns | build | layout + scroll |
+|---|---|---|
+| 400 | 2 ms | 49 ms |
+| 2000 | 8 ms | 132 ms |
+| 2000 + `content-visibility: auto` | 9 ms | 4 ms |
+
+## content-visibility: the flex trap
+
+`content-visibility: auto` skips layout/paint for off-screen subtrees. Off-screen elements then
+have no measured height, so `contain-intrinsic-size` supplies a placeholder — and the scrollbar is
+only as honest as that estimate.
+
+**`contain-intrinsic-size` is ignored while the element is a flex item.** `#log` is
+`display: flex; flex-direction: column; gap: 18px`, so skipped `.turn`s collapse to zero and only
+the 18px gaps survive:
+
+| container | intrinsic size | document height | error |
+|---|---|---|---|
+| flex (current) | — | 213,100 | ground truth |
+| flex | `0 250px` | 18,116 | **−91%, estimate ignored** |
+| block | none | 18,134 | −91% |
+| block | `0 213px` (true average) | 231,134 | +8% |
+| block | `0 250px` | 268,134 | +26% |
+| block | `0 400px` | 418,134 | +96% |
+
+So adopting it is not additive: `#log` must become `display: block` with margins on `.turn`
+replacing `gap`. Layout drops 41 ms → 2 ms either way; the estimate only governs scrollbar honesty.
+
+Turn heights here vary from a one-line "ok" to a 400-row diff, so no single average is right in
+both directions — an argument for `contain-intrinsic-size: auto <fallback>`, which lets the browser
+remember real sizes once a turn has been rendered. `auto` measured identically to a fixed value in
+the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
+
+## Ranked options (not yet implemented)
+
+1. `content-visibility: auto` on `.turn` — biggest win, fixes *scrolling*, needs the flex→block change.
+2. Stop inlining base64 images in the transcript frame; load on lightbox open. Halves image-heavy frames.
+3. Chunk the transcript push — currently one ~4 MB string escaped into a JS literal, shipped through
+   `executeJavaScript` and `JSON.parse`d in one hit.
+4. Defer per-block markdown/highlight until visible. `clampBlock` is the suspect: one rAF per block,
+   each reading `scrollHeight` after a DOM mutation — classic layout thrash at ~1,850 blocks. UNMEASURED.
+5. Windowed rendering (newest N turns + "load earlier"). Probably unnecessary if 1–3 land.
