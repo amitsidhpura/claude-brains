@@ -198,10 +198,18 @@
   }
   function newTurn() {
     if (welcome) { welcome.style.display = 'none'; log.classList.remove('empty'); }
-    curTurn = document.createElement('div');
-    curTurn.className = 'turn';
-    log.appendChild(curTurn);
-    return curTurn;
+    const turn = document.createElement('div');
+    turn.className = 'turn';
+    // Everything except the user message lives in .turn-body, which is what gets
+    // content-visibility. The message must stay OUTSIDE it: containment makes the contained
+    // element a stacking context, which would scope .msg-user's z-index and let #fade-top
+    // paint over the pinned message.
+    const body = document.createElement('div');
+    body.className = 'turn-body';
+    turn.appendChild(body);
+    log.appendChild(turn);
+    curTurn = body;
+    return turn;
   }
 
   /* ---------- working line: flower spinner + whimsical verbs + meta ---------- */
@@ -849,7 +857,7 @@
   }
 
   function addUserMessage(text, imgs) {
-    newTurn();
+    const turnEl = newTurn();
     const d = document.createElement('div');
     d.className = 'msg-user';
     if (imgs.length) {
@@ -865,7 +873,7 @@
       d.appendChild(atts);
     }
     if (text) d.appendChild(document.createTextNode(text));
-    curTurn.appendChild(d); maybeScroll();
+    turnEl.prepend(d); maybeScroll();   // before .turn-body, and outside its containment
     clampBlock(d, 12);   // long prompts collapse to a fade + Show more
     return d;
   }

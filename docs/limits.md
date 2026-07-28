@@ -135,14 +135,20 @@ the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
 
 ## Ranked options
 
-1. **DONE 2026-07-29** — `content-visibility: auto` on `.turn`. `#log` became `display: block`
+1. **DONE 2026-07-29** — `content-visibility: auto` on `.turn-body`. `#log` became `display: block`
    with `#log > * + * { margin-top: 18px }` replacing `gap`, and flexes again only via `#log.empty`
    while the welcome screen is up (that is what `margin: auto` needs to centre it) — chat.html and
    the mockup both toggle that class. Verified after the change: turn spacing still 18px, welcome
    still centred, `.msg-user` still pins (held at the container top with its turn scrolled 40px
    past), layout ~0ms for 1000 turns.
-   OPEN: the `300px` fallback in `contain-intrinsic-size: auto 300px` is a guess. Synthetic turns
-   measured 193px, giving a 65% scrollbar overestimate; real turns with cards/diffs run much taller.
+   Two regressions came out of the first attempt (content-visibility on `.turn` itself) and shaped
+   the final shape: (a) containment makes the element a STACKING CONTEXT, so `.msg-user`'s `z-index: 6`
+   was scoped inside the turn and `#fade-top` (z 5) painted over the pinned message — hence
+   `.turn-body`, with the user message left outside it; (b) `#log > * + *` gave the FIRST turn a top
+   margin, because a `display:none` `#welcome` still counts as a sibling for `+` — now
+   `margin-bottom` with a `:last-child` reset, since a display:none element generates no box.
+   OPEN: the `250px` fallback in `contain-intrinsic-size: auto 300px` is a guess. Synthetic turns
+   measured ~193px, so it still overestimates; real turns with cards/diffs run much taller.
    The `auto` keyword should decay that error as turns are visited and remembered, but headless
    never marks a turn rendered, so that half is UNVERIFIED — check the scrollbar in a sandbox and
    tune the fallback there.
