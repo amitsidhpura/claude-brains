@@ -578,7 +578,7 @@
     lastUser = { text: t, images: imgs };
     turnId = uuid(); turnHadEdit = false;
     turnRecs[turnId] = { userEl: userEl };
-    turnTokens = 0; msgTokens = 0;
+    turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0;
     bridge({ kind: 'user', id: turnId, text: t, images: imgs.map(function (p) { return { media_type: p.media_type, data: p.data }; }) });
     stopping = false;
     setBusy(true);
@@ -746,6 +746,8 @@
   let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0;
   let openTool = null;        // tool block currently streaming its input
   let pendingUndo = null;     // turn rec awaiting a __rewind result
+  let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
+  let reqTokens = 0;          // output tokens summed across every result turn in one user request
   const toolsById = {};       // tool_use id -> {el, name, io} for OUT boxes
 
   window.onClaudeEvent = function (raw) {
@@ -764,8 +766,15 @@
         renderModels();
         return;
       case 'system':
-        if (ev.subtype === 'init' && ev.slash_commands && !slashCommands.length) {
-          slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
+        if (ev.subtype === 'init') {
+          if (ev.slash_commands && !slashCommands.length) {
+            slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
+          }
+        } else if (ev.subtype === 'background_tasks_changed') {
+          // A background subagent suspends the turn: each suspension emits a `result`, and the
+          // CLI resumes with another once the task reports back. Track how many are still running
+          // so onResult can tell an intermediate suspend from the request's true end.
+          pendingBgTasks = (ev.tasks || []).length;
         }
         return;
       case 'sessions':           return renderHistory(ev.items || []);
@@ -916,9 +925,34 @@
     });
   }
 
+  const DONE_VERBS = ['Baked', 'Brewed', 'Cooked', 'Conjured', 'Simmered', 'Pondered', 'Cogitated',
+    'Noodled', 'Percolated', 'Marinated', 'Ruminated', 'Concocted', 'Wrangled', 'Finagled',
+    'Assembled', 'Crafted', 'Whipped up', 'Mulled', 'Churned', 'Distilled', 'Tinkered', 'Puttered'];
+  function fmtDur(ms) {
+    let s = Math.max(1, Math.round(ms / 1000));
+    const h = Math.floor(s / 3600); s -= h * 3600;
+    const m = Math.floor(s / 60); s -= m * 60;
+    const parts = [];
+    if (h) parts.push(h + 'h');
+    if (m) parts.push(m + 'm');
+    if (s || !parts.length) parts.push(s + 's');
+    return parts.join(' ');
+  }
+
   function onResult(ev) {
+    const usage = ev.usage || {};
+    if (typeof usage.output_tokens === 'number') reqTokens += usage.output_tokens;
     curBubble = null;
     finishThinking();
+    // A background subagent suspends the turn: the CLI emits an intermediate `result` while the
+    // task runs, then resumes and emits the real one after it reports back (same session_id, so
+    // that can't discriminate). Don't finalize — no summary, keep the loader spinning — while any
+    // background task is still pending. background_tasks_changed empties just before the last result.
+    if (!ev.is_error && pendingBgTasks > 0) return;
+    // Total request wall-clock (workStart persists across suspends since we don't setBusy(false)
+    // on the intermediate results); reqTokens is summed across every turn in the request.
+    const durMs = workStart ? Date.now() - workStart : (typeof ev.duration_ms === 'number' ? ev.duration_ms : 0);
+    const outTok = reqTokens || (turnTokens + msgTokens);
     setBusy(false);
     if (ev.is_error) {
       if (stopping) { el('status', '⏹ Stopped'); }
@@ -929,8 +963,12 @@
         err.querySelector('div').textContent = msg;
         addRetryLine();
       }
-    } else if (turnHadEdit && turnId) {
-      bridge({ kind: 'rewind', id: turnId, dry: 'true' }); // check what can be undone
+    } else {
+      const verb = DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)];
+      const done = el('done', '');
+      done.innerHTML = '<span class="star">✻</span> ' + verb + ' for ' + fmtDur(durMs) +
+        ' · ' + SVG_DOWN + outTok + ' tokens';
+      if (turnHadEdit && turnId) bridge({ kind: 'rewind', id: turnId, dry: 'true' }); // check for undo
     }
     stopping = false;
   }
