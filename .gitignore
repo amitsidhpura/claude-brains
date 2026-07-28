@@ -8,7 +8,8 @@ phpstorm-plugin/.gradle/
 phpstorm-plugin/.kotlin/
 phpstorm-plugin/build/
 phpstorm-plugin/.intellijPlatform/
-phpstorm-plugin/gradle/wrapper/gradle-wrapper.jar
+# NB: gradle/wrapper/gradle-wrapper.jar is deliberately NOT ignored — the wrapper
+# only bootstraps if the jar is committed, so a fresh clone can run ./gradlew.
 
 # Third-party reference clones (not ours)
 /reference/

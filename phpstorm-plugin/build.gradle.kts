@@ -38,6 +38,10 @@ intellijPlatform {
     // Disabling it avoids the buggy :instrumentCode task in this plugin version.
     instrumentCode = false
 
+    // No settings UI yet, so this only costs a headless IDE launch per build (~30s).
+    // Re-enable when the deferred settings page lands.
+    buildSearchableOptions = false
+
     pluginConfiguration {
         id = "com.syncroze.claude-code"
         name = "Claude Code (Syncroze)"
