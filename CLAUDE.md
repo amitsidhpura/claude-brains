@@ -65,6 +65,12 @@ zip in `build/distributions/`.
   `SessionStore.claudeHome` is `internal var` so tests point at a temp tree, not the real `~/.claude`.
 - `./gradlew probe --args="<projectPath> <sessionId>"` — dump the replay blocks for any real
   session without launching the IDE. Fastest way to tell a parser bug from a renderer bug.
+- Measuring layout in headless Chrome (`--dump-dom` + a probe script) settles CSS questions fast,
+  with two traps: (1) don't copy `mockup.html` elsewhere to inject a probe — its stylesheet link is
+  relative (`../phpstorm-plugin/…`) and silently resolves to nothing, so you measure an UNSTYLED
+  page; write the probe copy into `design/`. (2) headless has no compositor, so
+  `requestAnimationFrame` fires ~once per 400ms and rAF-driven animations (scroll glide, auto-scroll
+  re-assert) read as frozen — stub `requestAnimationFrame` onto `setTimeout` to test them.
 - `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
 
@@ -113,13 +119,19 @@ collapses `<command-name>/x</command-name>…<command-args>y</command-args>` to 
 Titles: the CLI writes `ai-title` records (no `summary` in current sessions) — `titleOf()` prefers
 summary → last ai-title → first user message.
 
-NEXT: **Phase 3 — verify in a runIde sandbox** (nothing since the resume rewrite has been run;
-this laptop has no JDK/Gradle, so it was validated by parsing real JSONL + `node --check` only).
-Check: resumed threads (thinking/diffs/IN-OUT/images/ask cards render, big sessions stay
-responsive — a 5.7 MB session yields ~876 blocks), history titles now read as ai-titles, then the
-live path against real streaming (token meta from `message_delta.usage`, undo placement, ask
-Other/multiSelect, fail dots). Ctrl+Alt+G renders every transient state *including* a replayed
-transcript sample, without driving the CLI.
+NEXT: **Phase 3 — finish sandbox verification.** A resumed session now renders correctly in
+`runIde` (confirmed 2026-07-28), which covers the parser rewrite, structuredPatch diffs, ask tab
+header, plan cards, Stopped lines, refusal states and summaries. Still unexercised, because a
+good-looking screenshot doesn't reach them:
+- a BIG session (5.7 MB → ~876 blocks) — the transcript ships as one `executeJavaScript` string,
+  so watch for a stall on resume
+- images past the 4 MB budget (falls back to name-only chips)
+- a multi-question ask card — replayed tab switching is wired but has never been clicked
+- thinking with real text: local phpstorm/testing sessions are 100% empty bodies, so
+  `syncroze-core` is the only place collapsed thinking and durations appear at all
+- live path: token meta from `message_delta.usage`, undo placement, ask Other/multiSelect, fail dots
+Ctrl+Alt+G renders every transient state without driving the CLI; `./gradlew probe` dumps the
+replay blocks for any session, which is the fastest way to split a parser bug from a renderer bug.
 Replay also reconstructs, from fields the parser previously ignored: plan cards (`ExitPlanMode`
 `input.plan`), `⏹ Stopped` status lines (`interruptedByShutdown`, replacing the bogus
 "[Request interrupted by user]" user box), refusal state (`toolDenialKind` → `✗ Rejected` /
@@ -129,6 +141,13 @@ and thinking durations (record-to-record wall time — an approximation, live ti
 NB: many sessions store `thinking` blocks with an EMPTY body and only a `signature`, so those
 replay as nothing at all; ~2.1k of 6.6k local thinking blocks carry text.
 Known gaps deliberately left:
-sidechain/subagent ordering untested (no `isSidechain` records in local sessions yet).
+- sidechain/subagent ordering untested (no `isSidechain` records in local sessions yet)
+- tool lines still blank for tools whose input has no `description`/path/`pattern`/`query`/`url`:
+  `TaskUpdate` (has `activeForm`, ~308 local occurrences — the biggest), `Skill` (`skill`),
+  `TaskOutput`/`TaskStop` (`task_id`). Each needs a bespoke key, so the generic chain won't do it.
+  Bash and AskUserQuestion are blank BY DESIGN (IN box / card carry the content).
+- API-error records (`isApiErrorMessage`, 14 locally — "session limit", "usage credits") replay as
+  ordinary message text; live draws an `.error` block with an alert icon and a Retry line.
+- replayed user turns have no undo button, and never will — rewind needs a live CLI + client uuid.
 Then: editor-title accept/reject, @-symbol mentions, conversation-level rewind, worktrees,
 extensibility status view.
