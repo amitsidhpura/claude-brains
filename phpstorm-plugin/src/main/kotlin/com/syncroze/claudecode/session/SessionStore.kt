@@ -22,7 +22,93 @@ import java.io.File
  */
 object SessionStore {
 
-    data class SessionInfo(val id: String, val title: String, val lastModified: Long)
+    data class SessionInfo(
+        val id: String,
+        /** Last real conversation activity — NOT the file mtime; see [lastActivityOf]. */
+        val lastActivity: Long,
+        val title: String,
+        val sizeBytes: Long = 0,
+        val tokens: Long = 0,
+    )
+
+    /**
+     * Timestamp of the last user/assistant record. The file's mtime is *last touched*, not *last
+     * talked*: merely resuming a session makes the CLI append bookkeeping (`mode`,
+     * `queue-operation`, `last-prompt`), which bumps mtime by up to an hour or more without any
+     * conversation happening — so a session appeared to "update" just by being opened.
+     *
+     * Only the tail is read, since we want the last such record; falls back to mtime if the tail
+     * holds no conversation record (e.g. a huge trailing tool result).
+     */
+    private fun lastActivityOf(f: File): Long {
+        val window = 256L * 1024
+        val text = runCatching {
+            java.io.RandomAccessFile(f, "r").use { raf ->
+                val from = maxOf(0L, raf.length() - window)
+                raf.seek(from)
+                val buf = ByteArray((raf.length() - from).toInt())
+                raf.readFully(buf)
+                String(buf, Charsets.UTF_8)
+            }
+        }.getOrNull() ?: return f.lastModified()
+
+        // drop the first line: seeking mid-file almost always lands inside a record
+        val lines = text.lineSequence().drop(if (f.length() > window) 1 else 0).toList()
+        for (line in lines.asReversed()) {
+            if (!line.contains("\"timestamp\"")) continue
+            val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
+            val type = obj["type"]?.jsonPrimitive?.content
+            if (type != "user" && type != "assistant") continue
+            val ts = obj["timestamp"]?.jsonPrimitive?.content ?: continue
+            runCatching { return java.time.Instant.parse(ts).toEpochMilli() }
+        }
+        return f.lastModified()
+    }
+
+    /** path -> (mtime, size, tokens): a 170 MB transcript is scanned once, not on every panel open. */
+    private val tokenCache = HashMap<String, Triple<Long, Long, Long>>()
+
+    /**
+     * Total output tokens across the session. Only assistant records carry `usage`, so reject lines
+     * on a substring before paying for a JSON parse — that keeps even the largest local transcript
+     * (177 MB) well under a second, and the cache means it is paid once.
+     */
+    private fun tokensOf(f: File): Long {
+        val cached = tokenCache[f.path]
+        if (cached != null && cached.first == f.lastModified() && cached.second == f.length()) {
+            return cached.third
+        }
+        var total = 0L
+        runCatching {
+            f.bufferedReader().useLines { lines ->
+                for (line in lines) {
+                    if (!line.contains("\"output_tokens\"")) continue
+                    val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
+                    total += obj["message"]?.jsonObject?.get("usage")?.jsonObject
+                        ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                }
+            }
+        }
+        tokenCache[f.path] = Triple(f.lastModified(), f.length(), total)
+        return total
+    }
+
+    /**
+     * Delete a session transcript and its sibling `<id>/` directory (overflow tool results).
+     * Irreversible — the caller is responsible for confirming. Returns false if the id looks
+     * unsafe or the transcript was not there.
+     */
+    fun delete(cwd: String, id: String): Boolean {
+        // the id arrives from the webview: never let it walk out of the project directory
+        if (!id.matches(Regex("[A-Za-z0-9_-]{1,128}"))) return false
+        val dir = projectDir(cwd)
+        val transcript = File(dir, "$id.jsonl")
+        if (transcript.parentFile?.canonicalFile != dir.canonicalFile) return false
+        val sidecar = File(dir, id)
+        if (sidecar.isDirectory) sidecar.deleteRecursively()
+        tokenCache.remove(transcript.path)
+        return transcript.isFile && transcript.delete()
+    }
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -44,9 +130,13 @@ object SessionStore {
     fun list(cwd: String, limit: Int = 40): List<SessionInfo> {
         val files = projectDir(cwd).listFiles { f -> f.isFile && f.name.endsWith(".jsonl") }
             ?: return emptyList()
-        return files.sortedByDescending { it.lastModified() }
+        // sort on the same value we display, so ordering matches the dates the user reads
+        return files.map { it to lastActivityOf(it) }
+            .sortedByDescending { it.second }
             .take(limit)
-            .map { SessionInfo(it.nameWithoutExtension, titleOf(it), it.lastModified()) }
+            .map { (f, activity) ->
+                SessionInfo(f.nameWithoutExtension, activity, titleOf(f), f.length(), tokensOf(f))
+            }
     }
 
     /**

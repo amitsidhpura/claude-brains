@@ -1,8 +1,10 @@
 package com.syncroze.claudecode.session
 
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import org.junit.jupiter.api.AfterAll
@@ -135,6 +137,62 @@ class SessionStoreTest {
         assertTrue(think.isNotEmpty(), "thinking block was dropped")
         assertTrue(think[0]["text"]!!.jsonPrimitive.content.isNotBlank())
         assertNotNull(think[0]["durMs"], "no duration derived from record timestamps")
+    }
+
+    @Test
+    fun `list reports size on disk and total output tokens`() {
+        val info = SessionStore.list(CWD).first { it.id == ID }
+        assertTrue(info.sizeBytes > 0, "size not reported")
+        assertTrue(info.tokens > 0, "tokens not summed from message.usage")
+    }
+
+    /**
+     * Resuming a session appends bookkeeping records, bumping mtime without any conversation.
+     * The listed time must follow the last real message, not the file.
+     */
+    @Test
+    fun `listed time follows the last message, not the file mtime`() {
+        val f = File(SessionStore.projectDir(CWD), "$ID.jsonl")
+        val touched = System.currentTimeMillis() + 600_000  // pretend the CLI just wrote to it
+        f.setLastModified(touched)
+
+        val info = SessionStore.list(CWD).first { it.id == ID }
+        assertTrue(info.lastActivity < touched - 1000, "date tracked mtime, not the transcript")
+
+        val lastMsg = f.readLines().mapNotNull { line ->
+            runCatching { Json.parseToJsonElement(line).jsonObject }.getOrNull()
+                ?.takeIf { it["type"]?.jsonPrimitive?.content in setOf("user", "assistant") }
+                ?.get("timestamp")?.jsonPrimitive?.content
+                ?.let { java.time.Instant.parse(it).toEpochMilli() }
+        }.maxOrNull()
+        assertEquals(lastMsg, info.lastActivity, "not the last user/assistant timestamp")
+    }
+
+    /** Deletion is irreversible, so it must take the sidecar with it and refuse anything odd. */
+    @Test
+    fun `delete removes the transcript and its tool-results sidecar`() {
+        val dir = SessionStore.projectDir(CWD)
+        val victim = "doomed-session"
+        File(dir, "$victim.jsonl").writeBytes(File(dir, "$ID.jsonl").readBytes())
+        val sidecar = File(dir, "$victim/tool-results").apply { mkdirs() }
+        File(sidecar, "overflow.txt").writeText("x")
+
+        assertTrue(SessionStore.list(CWD).any { it.id == victim }, "fixture not listed")
+        assertTrue(SessionStore.delete(CWD, victim), "delete reported failure")
+        assertFalse(File(dir, "$victim.jsonl").exists(), "transcript survived")
+        assertFalse(File(dir, victim).exists(), "sidecar directory survived")
+        assertTrue(SessionStore.list(CWD).none { it.id == victim })
+        assertTrue(File(dir, "$ID.jsonl").exists(), "deleting one session took out another")
+    }
+
+    @Test
+    fun `delete refuses ids that would escape the project directory`() {
+        val outside = File(home, "keep-me.jsonl").apply { writeText("{}") }
+        listOf("../keep-me", "../../keep-me", "a/b", "", "with space").forEach {
+            assertFalse(SessionStore.delete(CWD, it), "accepted unsafe id: '$it'")
+        }
+        assertTrue(outside.exists(), "a traversal id deleted a file outside the project dir")
+        assertFalse(SessionStore.delete(CWD, "never-existed"), "reported success for a missing id")
     }
 
     @Test

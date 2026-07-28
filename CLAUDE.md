@@ -8,6 +8,7 @@ redistribute Anthropic's extension.js / webview / claude.exe.**
 - `phpstorm-plugin/` — the plugin (Kotlin, Gradle IntelliJ Platform 2.x, JCEF webview UI)
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
 - `docs/feature-checklist.md` — feature parity checklist + status (the working TODO list)
+- `docs/limits.md` — every size cap (clamped / scrolled / truncated / volume) and where it is set
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved
   changes get ported into `phpstorm-plugin/src/main/resources/webview/chat.html`
 - `vscode/` — NOT in git. Extracted official VS Code extension (from

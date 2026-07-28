@@ -107,6 +107,20 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun listSessions(): List<com.syncroze.claudecode.session.SessionStore.SessionInfo> =
         com.syncroze.claudecode.session.SessionStore.list(cwd.path)
 
+    /** Transcript the live CLI is writing, once known (null on a fresh session until it reports). */
+    fun currentSessionId(): String? = cli?.sessionId
+
+    /**
+     * Delete a past conversation from disk. Irreversible; the UI confirms first.
+     * Refuses the live transcript: the CLI reopens the file per write, so deleting it mid-session
+     * just recreates it with the remaining records — a silently truncated history rather than a
+     * removal. This is the backstop; the UI also hides delete on the current row.
+     */
+    fun deleteSession(id: String): Boolean {
+        if (id == cli?.sessionId) return false
+        return com.syncroze.claudecode.session.SessionStore.delete(cwd.path, id)
+    }
+
     /** Renderable blocks of a past conversation, for replay into the UI. */
     fun readTranscript(id: String): List<kotlinx.serialization.json.JsonObject> =
         com.syncroze.claudecode.session.SessionStore.readTranscript(cwd.path, id)

@@ -126,6 +126,9 @@
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
   const SVG_STOP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>';
+  const SVG_CHEV_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  const SVG_CHEV_UP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>';
+  const SVG_TRASH ='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
   // same glyph as the top-bar history button — a replayed thread is history
   const SVG_HISTORY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
   const SVG_CHEVRON = '<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'; // chevron-right; CSS rotates it down when open
@@ -204,26 +207,31 @@
     if (workingEl) return;
     workingEl = el('generating', '');
     if (!workStart) workStart = Date.now(); // cumulative across gaps within a turn
-    workingEl.innerHTML = '<span class="spin">✳</span><span class="verb"></span>' +
-      '<span class="meta">(<span class="w-el">0s</span>' +
-      '<span class="w-tok-wrap" hidden> · ' + SVG_DOWN + '<span class="w-tok"></span> tokens</span>)</span>';
+    workingEl.innerHTML = '<span class="spin">✳</span><span class="verb"></span><span class="meta"></span>';
     const spin = workingEl.querySelector('.spin'), verb = workingEl.querySelector('.verb');
-    const wEl = workingEl.querySelector('.w-el');
-    wEl.textContent = Math.round((Date.now() - workStart) / 1000) + 's'; // show real elapsed at once
-    updateWorkTokens();                                                  // populate + hide when 0
+    updateWorkTokens();                     // composes the meta; empty until there is something to say
     let fi = 0, vi = Math.floor(Math.random() * VERBS.length);
     verb.textContent = VERBS[vi] + '…';
     workTimers.push(setInterval(function () { fi = (fi + 1) % FRAMES.length; spin.textContent = FRAMES[fi]; }, 175));
     workTimers.push(setInterval(function () { vi = (vi + 1) % VERBS.length; verb.textContent = VERBS[vi] + '…'; }, 1800));
-    workTimers.push(setInterval(function () { wEl.textContent = Math.round((Date.now() - workStart) / 1000) + 's'; }, 1000));
+    workTimers.push(setInterval(updateWorkTokens, 1000));
   }
+  /**
+   * Compose "(3s · ↓ 60 tokens)" from whichever parts are non-zero. Rebuilt rather than toggled so
+   * the separator can't strand: no "(0s)" in the first second, no "( · ↓ 60 tokens)" if tokens
+   * land first, and no empty parens (or its flex gap) when there is nothing to report at all.
+   */
   function updateWorkTokens() {
     if (!workingEl) return;
+    const meta = workingEl.querySelector('.meta');
+    if (!meta) return;
+    const secs = workStart ? Math.round((Date.now() - workStart) / 1000) : 0;
     const total = turnTokens + msgTokens;
-    const t = workingEl.querySelector('.w-tok');
-    const wrap = workingEl.querySelector('.w-tok-wrap');
-    if (t) t.textContent = fmtTok(total);
-    if (wrap) wrap.hidden = total <= 0;   // don't show "· ↓ 0 tokens"
+    const parts = [];
+    if (secs > 0) parts.push('<span class="w-el">' + secs + 's</span>');
+    if (total > 0) parts.push(SVG_DOWN + '<span class="w-tok">' + fmtTok(total) + '</span> tokens');
+    meta.innerHTML = parts.length ? '(' + parts.join(' · ') + ')' : '';
+    meta.hidden = parts.length === 0;
   }
   // No authoritative usage arrives until message_delta (end of message), so show a live
   // chars/4 estimate as text/thinking streams; message_delta then reconciles to the real count.
@@ -477,14 +485,39 @@
     if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
     bridge({ kind: 'history' }); // Kotlin answers with a 'sessions' event -> renderHistory shows the panel
   };
-  function renderHistory(items) {
+  function renderHistory(items, current) {
     histList.innerHTML = items.length ? '' : '<div class="hist-empty">No past conversations for this project.</div>';
     items.forEach(function (s) {
       const row = document.createElement('div');
-      row.className = 'hist-item';
-      const when = s.time ? new Date(s.time).toLocaleString() : '';
-      row.innerHTML = '<div class="t">' + esc(s.title) + '</div><div class="d">' + esc(when) + '</div>';
+      const isCurrent = !!current && s.id === current;
+      row.className = isCurrent ? 'hist-item current' : 'hist-item';
+      const meta = [fmtWhen(s.time), fmtSize(s.size), fmtTok(s.tokens) + ' tokens'].filter(Boolean).join(' · ');
+      row.innerHTML = '<div class="t">' + esc(s.title) +
+        (isCurrent ? '<span class="badge">current</span>' : '') +
+        '</div><div class="d">' + esc(meta) + '</div>' +
+        // the CLI reopens the transcript per write, so deleting the live one truncates rather
+        // than removes it — no delete affordance here, and the service refuses it as a backstop
+        (isCurrent ? '' :
+          '<button class="hist-del" title="Delete conversation">' + SVG_TRASH + '</button>' +
+          '<div class="hist-confirm"><span>Delete permanently?</span>' +
+            '<button class="yes">' + SVG_CHECK + 'Delete</button>' +
+            '<button class="no">' + SVG_CIRCLE_X + 'Cancel</button></div>');
       row.onclick = function () { histPanel.classList.remove('show'); bridge({ kind: 'resume', id: s.id }); };
+      if (!isCurrent) {
+        // arm/disarm in place rather than a modal; stopPropagation so the row doesn't resume
+        row.querySelector('.hist-del').onclick = function (e) {
+          e.stopPropagation(); row.classList.add('arm');
+        };
+        row.querySelector('.hist-confirm .no').onclick = function (e) {
+          e.stopPropagation(); row.classList.remove('arm');
+        };
+        row.querySelector('.hist-confirm .yes').onclick = function (e) {
+          e.stopPropagation();
+          row.remove();                     // optimistic; Kotlin re-pushes the real list
+          bridge({ kind: 'delete', id: s.id });
+        };
+        row.querySelector('.hist-confirm').onclick = function (e) { e.stopPropagation(); };
+      }
       histList.appendChild(row);
     });
     histPanel.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';
@@ -642,7 +675,7 @@
           addUserMessage(it.text || '', it.images || []);
           break;
         case 'assistant': {
-          const b = el('blk', ''); b.innerHTML = renderMd(it.text);
+          const b = el('blk', ''); b.innerHTML = renderMd(it.text); clampCode(b);
           break;
         }
         case 'status':
@@ -772,6 +805,35 @@
   document.getElementById('slashBtn').onclick = function (e) { tg('slashMenu', e); };
 
   /* ---------- send / stop / retry ---------- */
+  /**
+   * Collapse an over-long block to `lines` with a fade and a Show more toggle. Measured after a
+   * frame so the real height is known; blocks that fit keep no affordance at all.
+   */
+  function clampBlock(elm, lines) {
+    if (!elm || elm.dataset.clamped) return;
+    elm.dataset.clamped = '1';
+    elm.style.setProperty('--clamp-lines', lines);
+    elm.classList.add('clip');
+    requestAnimationFrame(function () {
+      if (elm.scrollHeight <= elm.clientHeight + 4) { elm.classList.remove('clip'); return; }
+      const btn = document.createElement('button');
+      btn.className = 'clamp-more';
+      const paint = function (open) {
+        btn.innerHTML = open ? SVG_CHEV_UP : SVG_CHEV_DOWN;
+        btn.title = open ? 'Show less' : 'Show more';   // icon-only, so the tooltip carries the label
+      };
+      paint(false);
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        paint(elm.classList.toggle('open'));
+      };
+      elm.appendChild(btn);   // inside the block, so it reads as belonging to it
+    });
+  }
+  function clampCode(root) {
+    if (root) root.querySelectorAll('.codeblock pre').forEach(function (p) { clampBlock(p, 16); });
+  }
+
   function addUserMessage(text, imgs) {
     newTurn();
     const d = document.createElement('div');
@@ -790,6 +852,7 @@
     }
     if (text) d.appendChild(document.createTextNode(text));
     curTurn.appendChild(d); maybeScroll();
+    clampBlock(d, 12);   // long prompts collapse to a fade + Show more
     return d;
   }
 
@@ -861,6 +924,9 @@
   function syncGutter() {
     const sb = log.offsetWidth - log.clientWidth;   // actual scrollbar width (0 if none)
     composerEl.style.paddingRight = (14 + sb) + 'px';
+    // #scrollBtn centres on #app (full panel), but in-block buttons centre inside #log's content
+    // box, which the scrollbar narrows — without this they sit sb/2 apart.
+    if (scrollBtn) scrollBtn.style.left = sb ? 'calc(50% - ' + (sb / 2) + 'px)' : '50%';
   }
   new ResizeObserver(function () {
     const h = composerEl.offsetHeight;
@@ -1037,7 +1103,7 @@
           pendingBgTasks = (ev.tasks || []).length;
         }
         return;
-      case 'sessions':           return renderHistory(ev.items || []);
+      case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       return renderTranscript(ev.items || []);
       case '__rewind_check': {
         const r = ev.result || {};
@@ -1175,6 +1241,7 @@
         }
         break;
       case 'message_stop':
+        clampCode(curBubble);   // only once the block is final, not on every delta
         curBubble = null;
         finishThinking();
         turnTokens += msgTokens; msgTokens = 0; msgChars = 0;
@@ -1222,9 +1289,40 @@
     return d;
   }
   // 1847 -> "1.8k", 12345 -> "12.3k", 999 -> "999" (compact once past a thousand)
+  // History timestamps: recent ones read relatively (as the mockup does), older ones fall back to
+  // "28 Jul 2026, 11:36 PM". Formatted by hand rather than toLocaleString so the webview's locale
+  // can't turn it into 7/28/2026, 11:36:02 PM.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function fmtWhen(t) {
+    if (!t) return '';
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return '';
+    let h = d.getHours();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const clock = h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ampm;
+    const startOf = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    const days = Math.round((startOf(new Date()) - startOf(d)) / 86400000);
+    if (days <= 0) return 'Today, ' + clock;
+    if (days === 1) return 'Yesterday, ' + clock;
+    if (days < 7) return days + ' days ago';
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ', ' + clock;
+  }
+  function fmtSize(b) {
+    b = Number(b) || 0;
+    if (!b) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return Math.round(b / 1024) + ' KB';
+    return (b / 1048576 >= 10 ? Math.round(b / 1048576) : Math.round(b / 104857.6) / 10) + ' MB';
+  }
   function fmtTok(n) {
     n = Number(n) || 0;
     if (n < 1000) return String(n);
+    // whole-session totals reach millions, so roll over rather than printing "23695k"
+    if (n >= 1000000) {
+      const m = n / 1000000;
+      return (m >= 100 ? Math.round(m) : Math.round(m * 10) / 10).toString() + 'M';
+    }
     const k = n / 1000;
     return (k >= 100 ? Math.round(k) : Math.round(k * 10) / 10).toString() + 'k';
   }
@@ -1439,6 +1537,7 @@
         cardBtns('Accept', SVG_CHECK, 'Reject', SVG_CIRCLE_X);
     }
     (curTurn || log).appendChild(card); maybeScroll();
+    clampBlock(card.querySelector('.cmd'), 14);   // whole scripts land here
     const done = function (allow) {
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + '</span>'

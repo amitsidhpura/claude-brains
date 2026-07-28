@@ -30,6 +30,8 @@
   --user-muted: #8ba3c7;  /* secondary text/icons on user surfaces */
   --ok: #0d542b;         /* confirm buttons (Accept / Submit) */
   --ok-hover: #146e3a;
+  --danger: #6e1f1f;     /* destructive confirm (Delete) — solid like --ok, not the light --red */
+  --danger-hover: #8b2626;
   --radius: 6px;
 }
 * { box-sizing: border-box; }
@@ -95,6 +97,34 @@ img { max-width: 100%; height: auto; }
 .msg-user { position: sticky; top: 0; z-index: 6;
   background: var(--user-bg); border: 1px solid var(--user-border);
   border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
+
+/* Over-long blocks collapse to a fade + toggle rather than getting their own scrollbar: a nested
+   scroll area inside #log traps the wheel. The toggle lives INSIDE the block, sitting on the fade,
+   so it reads as part of that block; space is reserved for it so it never covers text.
+   --clip-fade matches the surface the block is drawn on; the button itself wears #scrollBtn's skin. */
+.clip { --clip-fade: var(--bg); position: relative; overflow: hidden;
+  max-height: calc(var(--clamp-lines, 12) * 1.5em); padding-bottom: 24px; }
+.clip.open { max-height: none; }
+.clip:not(.open)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 58px;
+  pointer-events: none; background: linear-gradient(to bottom, transparent, var(--clip-fade) 60%); }
+.msg-user.clip { --clip-fade: var(--user-bg); }
+.card .cmd.clip { --clip-fade: var(--code-bg); }
+.codeblock pre.clip { --clip-fade: #202226; }
+
+/* A tab straddling the block's bottom edge: bottom:0 puts it against the inner edge of the
+   container's border, and dropping its own bottom border lets the two merge into one line.
+   Space is reserved in both states (.clip padding-bottom) so it never covers text. */
+.clamp-more { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 2;
+  /* even width: centring halves an odd width onto x.5, which antialiases the 1px side borders
+     across two pixel columns and makes them look fainter than the crisp top border */
+  width: 48px; height: 18px; padding: 0; cursor: pointer;
+  border-radius: var(--radius) var(--radius) 0 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  /* same skin as #scrollBtn — the two sit in one vertical line and should read as one family */
+  background: var(--user-bg); border: 1px solid var(--user-border); border-bottom: 0;
+  color: var(--user-muted); }
+.clamp-more:hover { background: var(--user-raised-hover); color: var(--fg); border-color: var(--accent); }
+.clamp-more svg { width: 13px; height: 13px; display: block; }
 .msg-user.has-undo { padding-right: 34px; }
 .msg-user .undo { position: absolute; top: 6px; right: 7px; background: transparent; border: 0; color: var(--muted);
   cursor: pointer; padding: 3px; border-radius: var(--radius); display: inline-flex; align-items: center; justify-content: center; }
@@ -241,10 +271,32 @@ img { max-width: 100%; height: auto; }
 #histPanel.show { display: block; }
 .hist-h { padding: 9px 13px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
 .hist-list { max-height: 340px; overflow-y: auto; }
-.hist-item { padding: 8px 13px; cursor: pointer; }
+.hist-item { position: relative; padding: 8px 13px; cursor: pointer; }
 .hist-item:hover { background: var(--hover); }
+/* delete: hidden until hover, overlaid so the title keeps its full width (no layout shift) */
+.hist-del { position: absolute; top: 50%; right: 9px; transform: translateY(-50%); display: none;
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; }
+.hist-item:hover .hist-del { display: block; }
+.hist-del:hover { color: var(--red); }
+.hist-del svg { width: 15px; height: 15px; display: block; }
+/* armed state: the row becomes the confirmation, so there is no modal to mis-click */
+.hist-confirm { display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--fg); }
+.hist-item.arm .t, .hist-item.arm .d, .hist-item.arm .hist-del { display: none; }
+.hist-item.arm .hist-confirm { display: flex; }
+.hist-item.arm { cursor: default; background: var(--warn-bg); }
+.hist-confirm span { flex: 1; }
+.hist-confirm button { border: 0; border-radius: 4px; padding: 3px 8px; font: inherit; font-size: 12px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.hist-confirm button svg { width: 13px; height: 13px; }
+.hist-confirm .yes { background: var(--danger); color: #fff; }
+.hist-confirm .yes:hover { background: var(--danger-hover); }
+/* .no inherits the shared neutral button colours */
 .hist-item .t { color: var(--fg); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hist-item .d { color: var(--muted); font-size: 11px; margin-top: 1px; }
+/* live transcript: labelled, and deliberately has no delete control */
+.hist-item.current .t { display: flex; align-items: center; gap: 6px; }
+.hist-item .badge { flex: 0 0 auto; font-size: 10px; line-height: 1; padding: 2px 5px; border-radius: 3px;
+  background: var(--user-raised); color: var(--user-muted); border: 1px solid var(--user-border); }
 .hist-empty { padding: 12px 13px; color: var(--muted); font-size: 12px; }
 
 /* image placeholder (shared by chips + user-message images) */

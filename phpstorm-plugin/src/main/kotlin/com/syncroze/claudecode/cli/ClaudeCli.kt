@@ -36,6 +36,16 @@ class ClaudeCli(
     private val onExit: (Int) -> Unit,
 ) {
     private val log = Logger.getInstance(ClaudeCli::class.java)
+
+    /**
+     * Transcript the CLI is currently writing (`~/.claude/projects/<enc-cwd>/<id>.jsonl`), so the UI
+     * can refuse to delete it out from under a live session. Known immediately when resuming; for a
+     * fresh session the CLI assigns the id, so it stays null until an event carries it.
+     */
+    @Volatile
+    var sessionId: String? = resumeSessionId
+        private set
+
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var process: Process? = null
     private var stdin: OutputStreamWriter? = null
@@ -101,7 +111,14 @@ class ClaudeCli(
         when (obj?.get("type")?.jsonPrimitive?.content) {
             "control_request" -> handleControlRequest(obj!!)
             "control_response" -> handleControlResponse(obj!!)
-            else -> onEvent(line)
+            else -> {
+                // conversation events carry the id of the transcript being written; accept either
+                // spelling since the stream and the on-disk records disagree (session_id/sessionId)
+                (obj?.get("session_id") ?: obj?.get("sessionId"))?.jsonPrimitive?.content
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { if (it != sessionId) { sessionId = it; log.info("live session $it") } }
+                onEvent(line)
+            }
         }
     }
 

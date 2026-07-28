@@ -95,6 +95,9 @@ class ChatPanel(project: Project, parent: Disposable) {
                 clearLog(); pushTranscript(id); session.resumeSession(id)
             }
             "history" -> pushSessions()
+            "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
+                session.deleteSession(it); pushSessions()
+            }
         }
     }
 
@@ -114,12 +117,15 @@ class ChatPanel(project: Project, parent: Disposable) {
     private fun pushSessions() {
         val frame = buildJsonObject {
             put("type", "sessions")
+            session.currentSessionId()?.let { put("current", it) } // row is marked, delete hidden
             put("items", buildJsonArray {
                 session.listSessions().forEach { s ->
                     add(buildJsonObject {
                         put("id", s.id)
                         put("title", s.title)
-                        put("time", s.lastModified)
+                        put("time", s.lastActivity)
+                        put("size", s.sizeBytes)
+                        put("tokens", s.tokens)
                     })
                 }
             })
