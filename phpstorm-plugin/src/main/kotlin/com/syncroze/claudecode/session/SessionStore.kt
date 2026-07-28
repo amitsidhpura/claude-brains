@@ -66,8 +66,12 @@ object SessionStore {
                     if (line.isBlank()) continue
                     val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
                     when (obj["type"]?.jsonPrimitive?.content) {
-                        "user" -> userTextFull(obj)?.takeIf { it.isNotBlank() }
-                            ?.let { out.add(TranscriptItem("user", it)) }
+                        "user" -> {
+                            val isMeta = obj["isMeta"]?.jsonPrimitive?.content == "true" // caveat wrapper
+                            if (!isMeta) userTextFull(obj)?.takeIf { it.isNotBlank() }
+                                ?.let { cleanInjected(it) }?.takeIf { it.isNotBlank() }
+                                ?.let { out.add(TranscriptItem("user", it)) }
+                        }
                         "assistant" -> {
                             val content = obj["message"]?.jsonObject?.get("content")
                             if (content is JsonArray) {
@@ -89,6 +93,26 @@ object SessionStore {
             }
         }
         return out
+    }
+
+    // The CLI injects bookkeeping as user messages: slash-command wrappers and background-task
+    // notifications. Drop the caveat/stdout/task-notification wrappers (plumbing the main agent
+    // consumes — its own replies carry the user-facing content), and collapse a
+    // <command-name>/x</command-name>…<command-args>y</command-args> block into a compact "/x y".
+    private val CMD_RE = Regex(
+        "<command-name>\\s*(.*?)\\s*</command-name>.*?<command-args>\\s*(.*?)\\s*</command-args>",
+        RegexOption.DOT_MATCHES_ALL,
+    )
+    private fun cleanInjected(text: String): String? {
+        val t = text.trim()
+        if (t.startsWith("<local-command-caveat>") || t.startsWith("<local-command-stdout>") ||
+            t.startsWith("<task-notification>")) return null
+        CMD_RE.find(t)?.let { m ->
+            val name = m.groupValues[1].trim()
+            val args = m.groupValues[2].trim()
+            return if (args.isEmpty()) name else "$name $args"
+        }
+        return text
     }
 
     /** Full user text (all text parts, newlines preserved) — skips tool_result-only messages. */

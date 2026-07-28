@@ -77,7 +77,17 @@ lines (⏹ Stopped / ↩ Reverted) hang their glyph (`.s-ic`, SVG or emoji) in t
 pinning re-asserts on rAF so empty-then-innerHTML blocks land fully at bottom. Editing chat.html
 markup? mirror it in the mockup fixture too.
 
-NEXT: Phase 3 — verify the ported UI in a runIde sandbox against real streaming (token meta from
+Sessions/resume: `SessionStore.readTranscript` now strips the CLI's injected bookkeeping so a
+resumed thread stays clean — `cleanInjected()` drops `<local-command-caveat>` (isMeta) /
+`<local-command-stdout>` / `<task-notification>` user messages and collapses a
+`<command-name>/x</command-name>…<command-args>y</command-args>` block to a compact `/x y`.
+
+NEXT (user's active focus): **session polish — many known issues in resume/history**. Resume
+replay is still lossy vs. live rendering (readTranscript only reproduces user text + assistant
+text + bare tool-name lines; no diffs/cards/thinking/IN-OUT/attachments/images, no ordering guarantees
+for interleaved sidechains, titles/summary heuristics rough). Audit `SessionStore.kt` +
+`renderTranscript()` together and decide how faithfully to rebuild each block on resume.
+Then Phase 3: verify the ported UI in a runIde sandbox against real streaming (token meta from
 message_delta.usage, undo placement, ask Other/multiSelect, fail dots) — the Ctrl+Alt+G gallery
 renders every transient state without driving the CLI. Then: editor-title accept/reject,
 @-symbol mentions, conversation-level rewind, worktrees, extensibility status view.
