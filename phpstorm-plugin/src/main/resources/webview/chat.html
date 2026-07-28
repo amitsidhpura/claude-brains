@@ -123,6 +123,7 @@
   const SVG_COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
+  const SVG_STOP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>';
   const IND = {
     rOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
     rOn:  SVG_CHECK,
@@ -802,7 +803,8 @@
       }
       case '__rewind': {
         const r = ev.result || {};
-        el('status', r.canRewind === false ? (r.error || 'Nothing to undo') : '↩ Reverted file changes');
+        if (r.canRewind === false) statusLine(r.error || 'Nothing to undo');
+        else statusLine('Reverted file changes', '↩');
         if (pendingUndo && pendingUndo.userEl) {
           const b = pendingUndo.userEl.querySelector('.undo');
           if (b) b.remove();
@@ -928,6 +930,18 @@
   const DONE_VERBS = ['Baked', 'Brewed', 'Cooked', 'Conjured', 'Simmered', 'Pondered', 'Cogitated',
     'Noodled', 'Percolated', 'Marinated', 'Ruminated', 'Concocted', 'Wrangled', 'Finagled',
     'Assembled', 'Crafted', 'Whipped up', 'Mulled', 'Churned', 'Distilled', 'Tinkered', 'Puttered'];
+  // Timeline status line with an optional leading glyph that hangs in the dot column
+  // (so icon + text align with .blk / .think / .retry). Text is set safely (textContent).
+  function statusLine(text, icon, cls) {
+    const d = el(cls || 'status');
+    if (icon) {
+      const s = document.createElement('span'); s.className = 's-ic';
+      if (icon.charAt(0) === '<') s.innerHTML = icon; else s.textContent = icon; // SVG vs emoji glyph
+      d.appendChild(s);
+    }
+    d.appendChild(document.createTextNode(text));
+    return d;
+  }
   function fmtDur(ms) {
     let s = Math.max(1, Math.round(ms / 1000));
     const h = Math.floor(s / 3600); s -= h * 3600;
@@ -955,7 +969,7 @@
     const outTok = reqTokens || (turnTokens + msgTokens);
     setBusy(false);
     if (ev.is_error) {
-      if (stopping) { el('status', '⏹ Stopped'); }
+      if (stopping) { statusLine('Stopped', SVG_STOP); }
       else {
         const msg = (typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error');
         const err = el('error', '');
@@ -1126,6 +1140,88 @@
     card.querySelector('.ok').onclick = function () { done(true); };
     card.querySelector('.no').onclick = function () { done(false); };
   }
+
+  /* ---------- dev gallery: renders every transient UI state in the live webview ----------
+     Trigger with Ctrl+Alt+G, or window.__gallery() from DevTools. Drives the real renderer
+     (renderPermission / statusLine / addRetryLine / el) so it exercises production code paths,
+     not static copies — the one exception is the working line, which is drawn statically
+     because a live one is owned/torn-down by the busy watchdog. */
+  function gallery() {
+    clearLogUI();
+    addUserMessage('Dev gallery — show every UI state.', []);
+
+    // assistant text block (markdown + code)
+    const b = el('blk', '');
+    b.innerHTML = renderMd('An assistant **text block** with `inline code`, a [link](#), a list:\n\n' +
+      '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```');
+
+    // collapsed thinking
+    const th = document.createElement('details');
+    th.className = 'think';
+    th.innerHTML = '<summary>Thought for 4s</summary><div class="body">Weighing a couple of approaches before writing the diff…</div>';
+    (curTurn || log).appendChild(th);
+
+    // tool line — success (with path)
+    const t1 = el('tool-line', '');
+    t1.innerHTML = '<b>Read</b><span class="t-desc path">src/components/App.tsx</span>';
+
+    // tool line — Bash with IN/OUT
+    const t2 = el('tool-line', '');
+    t2.innerHTML = '<b>Bash</b><span class="t-desc">Run the test suite</span>';
+    const io = document.createElement('div'); io.className = 'io';
+    io.innerHTML = '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>' +
+                   '<div class="io-row"><span class="io-k">OUT</span><span class="io-v"></span></div>';
+    io.querySelectorAll('.io-v')[0].textContent = 'npm test';
+    io.querySelectorAll('.io-v')[1].textContent = 'PASS  2 passed, 0 failed';
+    t2.after(io);
+
+    // tool line — failure (red dot)
+    const t3 = el('tool-line', ''); t3.classList.add('fail');
+    t3.innerHTML = '<b>Bash</b><span class="t-desc">Lint the project</span>';
+
+    // permission card — Edit diff
+    renderPermission({ tool: 'Edit', id: 'gallery-edit', input: JSON.stringify({
+      file_path: 'src/util/math.ts', old_string: 'export const rate = 0.1;', new_string: 'export const rate = 0.15;' }) });
+
+    // plan card
+    renderPermission({ tool: 'ExitPlanMode', id: 'gallery-plan', input: JSON.stringify({
+      plan: '1. Add a `sqrt()` method to `Calculator`.\n2. Throw on negative input.\n3. Add unit tests.' }) });
+
+    // AskUserQuestion — single-select + multiSelect
+    renderPermission({ tool: 'AskUserQuestion', id: 'gallery-ask', input: JSON.stringify({ questions: [
+      { header: 'Framework', question: 'Which framework should we use?', options: [
+        { label: 'React', description: 'Component model, huge ecosystem.' },
+        { label: 'Svelte', description: 'Compiler, minimal runtime.' } ] },
+      { header: 'Styling', question: 'Pick the styling approaches.', multiSelect: true, options: [
+        { label: 'Tailwind' }, { label: 'CSS Modules' }, { label: 'Vanilla CSS' } ] } ] }) });
+
+    // working line (static — a live one is owned by the watchdog)
+    const gen = el('generating', '');
+    gen.innerHTML = '<span class="spin">✳</span><span class="verb">Simmering…</span>' +
+      '<span class="meta">(<span>6s</span> · ' + SVG_DOWN + '<span>88</span> tokens)</span>';
+
+    // completion summary
+    const dn = el('done', '');
+    dn.innerHTML = '<span class="star">✻</span> Baked for 1m 53s · ' + SVG_DOWN + '1847 tokens';
+
+    // error + retry (retry needs lastUser)
+    lastUser = { text: 'Dev gallery — show every UI state.', images: [] };
+    const er = el('error', '');
+    er.innerHTML = SVG_ALERT + '<div></div>';
+    er.querySelector('div').textContent = 'Build failed — config/app.php was not found because the Write was rejected.';
+    addRetryLine();
+
+    // status lines
+    statusLine('Stopped', SVG_STOP);
+    statusLine('Reverted file changes', '↩');
+
+    awaitingUser = false; // clear the flag the permission/ask cards set, so real input isn't blocked
+    maybeScroll();
+  }
+  window.__gallery = gallery;
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.altKey && e.code === 'KeyG') { e.preventDefault(); gallery(); }
+  });
 </script>
 </body>
 </html>
