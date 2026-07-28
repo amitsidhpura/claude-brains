@@ -98,6 +98,23 @@ object SessionStore {
     }
 
     /**
+     * First index of a tail chunk of at most [maxBlocks] blocks ending at [endExclusive], aligned
+     * forward to a turn boundary (a `user` block) so a chunk never starts mid-turn — tool lines,
+     * cards and summaries stay with the user message they answer. Falls back to the unaligned cut
+     * if the window contains no user block at all (one giant turn).
+     */
+    fun alignedStart(items: List<JsonObject>, endExclusive: Int, maxBlocks: Int): Int {
+        val candidate = maxOf(0, endExclusive - maxBlocks)
+        if (candidate == 0) return 0
+        var i = candidate
+        while (i < endExclusive) {
+            if (items[i]["role"]?.jsonPrimitive?.content == "user") return i
+            i++
+        }
+        return candidate
+    }
+
+    /**
      * Context in use at the end of a session: the last assistant record's prompt size
      * (input + cache read + cache creation). Not a sum — every request re-sends the whole
      * conversation, so the newest request's prompt IS the current context size. Lets a resumed

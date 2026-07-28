@@ -61,13 +61,13 @@ img { max-width: 100%; height: auto; }
 .icon-btn svg { width: 19px; height: 19px; display: block; }
 
 /* ---------- log ---------- */
-/* BLOCK, not flex. content-visibility's contain-intrinsic-size is ignored while the element is a
-   flex item, so skipped turns would collapse to zero and the scrollbar would read ~6% of the real
-   document (see docs/limits.md). `#log > * + *` reproduces the old `gap: 18px` for every direct
-   child, including the status/summary lines that are appended outside a turn. */
-#log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px; }
-#log > * { margin-bottom: 18px; }
-#log > *:last-child { margin-bottom: 0; }
+/* Flex is fine again: contain-intrinsic-size is only ignored on the element that IS a flex item,
+   and containment lives on .turn-body (a block inside .turn), not on the flex item itself.
+   gap also beats the margin-rule alternative — a display:none #welcome generates no flex item,
+   so no phantom gap above the first turn, and no high-specificity `#log > *` rules to fight
+   #welcome's own margins (both were real regressions; see docs/limits.md). */
+#log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px;
+  display: flex; flex-direction: column; gap: 18px; }
 #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
 /* top fade: content vanishes as it scrolls under the header. The first ~18px is solid --bg so
@@ -125,7 +125,10 @@ img { max-width: 100%; height: auto; }
 .clip.open { max-height: none; }
 .clip:not(.open)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 58px;
   pointer-events: none; background: linear-gradient(to bottom, transparent, var(--clip-fade) 60%); }
-.msg-user.clip { --clip-fade: var(--user-bg); }
+/* position:sticky must survive .clip's position:relative (same specificity, declared later) —
+   without this, every clamped user message silently stops pinning. Sticky elements are positioned,
+   so the clamp button and fade still anchor to the message. */
+.msg-user.clip { --clip-fade: var(--user-bg); position: sticky; }
 .card .cmd.clip { --clip-fade: var(--code-bg); }
 .codeblock pre.clip { --clip-fade: #202226; }
 

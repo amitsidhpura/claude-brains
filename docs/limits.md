@@ -125,8 +125,13 @@ the 18px gaps survive:
 | block | `0 250px` | 268,134 | +26% |
 | block | `0 400px` | 418,134 | +96% |
 
-So adopting it is not additive: `#log` must become `display: block` with margins on `.turn`
-replacing `gap`. Layout drops 41 ms → 2 ms either way; the estimate only governs scrollbar honesty.
+REFINEMENT (2026-07-29, later): the restriction applies to the element that IS the flex item.
+Once containment moved to `.turn-body` (a block inside `.turn`, done for the stacking-context fix),
+`#log` could return to `display: flex; gap: 18px` with estimates fully respected — measured
+identical to block in height honesty and layout time. Flex `gap` is also strictly better here than
+the interim `#log > *` margin rules: a `display:none` #welcome generates no flex item (so no
+phantom first-turn gap), and there are no high-specificity `#log > *` rules to defeat #welcome's
+own margins — both of which were real regressions during the block detour.
 
 Turn heights here vary from a one-line "ok" to a 400-row diff, so no single average is right in
 both directions — an argument for `contain-intrinsic-size: auto <fallback>`, which lets the browser
@@ -156,6 +161,14 @@ the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
    The `auto` keyword should decay that error as turns are visited and remembered, but headless
    never marks a turn rendered, so that half is UNVERIFIED — check the scrollbar in a sandbox and
    tune the fallback there.
+   FOLLOW-UP 2026-07-29: windowed loading (below) shipped — initial frame is the newest ~250
+   blocks cut at a turn boundary (`SessionStore.alignedStart`, tested), 89–95% smaller on real
+   sessions (4.35→0.46 MB, 4.09→0.21 MB). Earlier chunks (~500 blocks) load automatically and
+   silently as the user scrolls within 600px of the top — no visible affordance; chunks are
+   near-instant since Kotlin holds the parsed list. Prepends are viewport-anchored (scrollTop shifted by exactly how far the previously
+   topmost element moved). Known trade-offs: DOM search only sees loaded blocks, and IMAGE_BUDGET
+   is still consumed in file order, so unshipped early blocks can starve visible tail images — flip
+   the budget walk when it bites.
 2. Stop inlining base64 images in the transcript frame; load on lightbox open. Halves image-heavy frames.
 3. Chunk the transcript push — currently one ~4 MB string escaped into a JS literal, shipped through
    `executeJavaScript` and `JSON.parse`d in one hit.

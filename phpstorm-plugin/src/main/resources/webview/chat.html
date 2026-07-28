@@ -148,6 +148,35 @@
   function atBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 40; }
   function updateScrollBtn() { if (scrollBtn) scrollBtn.classList.toggle('show', !atBottom()); }
   function scrollToBottom() { pinned = true; log.scrollTop = log.scrollHeight; updateScrollBtn(); }
+  /**
+   * Scroll to the bottom and keep re-asserting until the height stops changing. Off-screen turns
+   * report an ESTIMATED height (content-visibility + contain-intrinsic-size), so the document grows
+   * as the real ones resolve near the viewport and a single rAF lands short of the true bottom.
+   * Bails out the moment the user scrolls themselves, so it can never fight them.
+   */
+  function settleToBottom(maxFrames) {
+    let last = -1, stable = 0, n = 0, expected = -1;
+    (function step() {
+      if (expected >= 0 && Math.abs(log.scrollTop - expected) > 4) return; // user took over
+      // Target the last ELEMENT, not scrollHeight: with content-visibility, scrollHeight includes
+      // estimated heights for skipped turns, so a computed target lands short. scrollIntoView makes
+      // the browser resolve the real position of a real element.
+      if (log.lastElementChild) log.lastElementChild.scrollIntoView(false);
+      scrollToBottom();
+      expected = log.scrollTop;
+      const h = log.scrollHeight;
+      stable = (h === last) ? stable + 1 : 0;
+      last = h; n++;
+      if (stable < 2 && n < (maxFrames || 30)) requestAnimationFrame(step);
+    })();
+    // images and highlighting can land well after layout has settled, so re-check a few times
+    [120, 350, 800].forEach(function (ms) {
+      setTimeout(function () {
+        if (expected >= 0 && Math.abs(log.scrollTop - expected) > 4) return; // user took over
+        scrollToBottom(); expected = log.scrollTop;
+      }, ms);
+    });
+  }
   // Scroll now, then re-assert on the next frame — many blocks are appended empty via el() (which
   // scrolls) and filled with innerHTML right after, growing ~a line; the rAF lands on final height.
   let scrollRaf = 0;
@@ -179,7 +208,7 @@
     const p = (ref.textContent || '').trim();
     if (p) bridge({ kind: 'open', path: p });
   });
-  log.addEventListener('scroll', function () { pinned = atBottom(); updateScrollBtn(); });
+  log.addEventListener('scroll', function () { pinned = atBottom(); updateScrollBtn(); maybeLoadEarlier(); });
   if (scrollBtn) scrollBtn.onclick = function () { smoothToBottom(); input.focus(); };
 
   /* ---------- turn structure: user box + everything that answers it ---------- */
@@ -546,6 +575,7 @@
   function clearLogUI() {
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';
+    earlierRemaining = 0; earlierInFlight = false;  // never pull a previous session's chunks
     curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
     curTurn = null; workingEl = null; activeAsk = null;
     turnTokens = 0; msgTokens = 0;
@@ -690,7 +720,7 @@
     });
   }
 
-  function renderTranscript(items) {
+  function renderBlocks(items) {
     items.forEach(function (it) {
       switch (it.role) {
         case 'user':
@@ -751,9 +781,62 @@
         }
       }
     });
+  }
+
+  function renderTranscript(items, more) {
+    renderBlocks(items);
     if (items.length) { statusLine('Resumed', SVG_HISTORY); }
-    scrollToBottom();
-    requestAnimationFrame(scrollToBottom); // once more after late layout (images/highlighting settle)
+    updateLoadMore(more || 0);
+    // The tail must carry REAL heights before we can land on the true bottom: a turn still showing
+    // its contain-intrinsic-size placeholder resolves to a different height the moment it becomes
+    // visible, which moves the bottom out from under us. Un-skip the last few so the measurement
+    // is honest; the rest keep their estimates and stay cheap.
+    Array.prototype.slice.call(log.querySelectorAll('.turn-body')).slice(-8)
+      .forEach(function (b) { b.style.contentVisibility = 'visible'; });
+    settleToBottom(); // heights still resolve over several frames: images, highlighting, clamps
+    setTimeout(maybeLoadEarlier, 250);   // tail shorter than the viewport: auto-fill upward
+  }
+
+  /* Earlier history loads silently as the user nears the top (600px preload margin), from the
+   * existing scroll handler. No visible affordance — chunks are near-instant (Kotlin already holds
+   * the parsed list) and prepends are viewport-anchored, so there is nothing to indicate. */
+  let earlierRemaining = 0, earlierInFlight = false;
+  function requestEarlier() {
+    if (!earlierRemaining || earlierInFlight) return;
+    earlierInFlight = true;
+    bridge({ kind: 'more' });
+  }
+  function maybeLoadEarlier() {
+    if (log.scrollTop <= 600) requestEarlier();
+  }
+  function updateLoadMore(n) {
+    earlierRemaining = n; earlierInFlight = false;
+  }
+
+
+  /**
+   * Prepend an earlier chunk without moving what the user is looking at. Blocks are rendered
+   * through the normal path (which appends), then moved above the previously-topmost element;
+   * scrollTop is shifted by exactly how far that element moved, so the viewport stays put.
+   */
+  function renderEarlier(items, more) {
+    // anchor on the topmost VISIBLE content element — #welcome is present but hidden, and a
+    // hidden element's rect is all zeros, which would compute a zero shift and jump the viewport
+    let ref = log.firstElementChild;
+    while (ref && ref.id === 'welcome') ref = ref.nextElementSibling;
+    const savedTurn = curTurn, savedPinned = pinned;
+    pinned = false;                              // renderers must not auto-scroll to the bottom
+    curTurn = null;                              // a mid-turn fallback chunk must not append to the tail turn
+    const prevCount = log.childNodes.length;
+    renderBlocks(items);
+    const added = Array.prototype.slice.call(log.childNodes, prevCount);
+    const beforeTop = ref ? ref.getBoundingClientRect().top : 0;
+    added.forEach(function (n) { log.insertBefore(n, ref); });
+    if (ref) log.scrollTop += ref.getBoundingClientRect().top - beforeTop;
+    curTurn = savedTurn; pinned = savedPinned;   // live streaming keeps appending to the real tail
+    updateLoadMore(more || 0);
+    updateScrollBtn();
+    maybeLoadEarlier();   // still near the top (fast scroll / short chunk): chain the next one
   }
 
   /* ---------- attachments (composer chips) ---------- */
@@ -1128,7 +1211,8 @@
         }
         return;
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
-      case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || []);
+      case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);
+      case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
       case '__rewind_check': {
         const r = ev.result || {};
         const fc = r.filesChanged || [];

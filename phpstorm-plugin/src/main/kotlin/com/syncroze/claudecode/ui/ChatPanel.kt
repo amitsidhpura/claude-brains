@@ -90,11 +90,15 @@ class ChatPanel(project: Project, parent: Disposable) {
             "mode" -> msg["mode"]?.jsonPrimitive?.content?.let { session.setPermissionMode(it) }
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
             "stop" -> session.interrupt()
-            "new" -> { clearLog(); session.newConversation() }
+            "new" -> {
+                transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
+                clearLog(); session.newConversation()
+            }
             "resume" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
                 clearLog(); pushTranscript(id); session.resumeSession(id)
             }
             "open" -> msg["path"]?.jsonPrimitive?.content?.let { session.openFile(it) }
+            "more" -> pushEarlier()
             "history" -> pushSessions()
             "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
                 session.deleteSession(it); pushSessions()
@@ -107,11 +111,38 @@ class ChatPanel(project: Project, parent: Disposable) {
 
     private fun clearLog() = pushEvent("""{"type":"__clear"}""")
 
+    /** Full parsed transcript of the resumed session; only the tail is shipped up front. */
+    private var transcriptItems: List<JsonObject> = emptyList()
+    private var transcriptFrom = 0   // items before this index have not been sent yet
+
     private fun pushTranscript(id: String) {
+        // The parse is cheap (~0.1s even for a 177 MB file) and unavoidable — tool results patch
+        // earlier blocks, so the tail can't be read in isolation. What was slow is shipping and
+        // rendering all of it at once, so only the newest turns go now; the rest wait for "more".
+        transcriptItems = session.readTranscript(id)
+        transcriptFrom = com.syncroze.claudecode.session.SessionStore
+            .alignedStart(transcriptItems, transcriptItems.size, INITIAL_BLOCKS)
         val frame = buildJsonObject {
             put("type", "__transcript")
             put("context", session.contextTokens(id))   // seeds the context gauge
-            put("items", buildJsonArray { session.readTranscript(id).forEach { add(it) } })
+            put("more", transcriptFrom)                 // blocks still available above
+            put("items", buildJsonArray {
+                transcriptItems.subList(transcriptFrom, transcriptItems.size).forEach { add(it) }
+            })
+        }
+        pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+    }
+
+    private fun pushEarlier() {
+        val to = transcriptFrom
+        if (to <= 0) return
+        val from = com.syncroze.claudecode.session.SessionStore
+            .alignedStart(transcriptItems, to, MORE_BLOCKS)
+        transcriptFrom = from
+        val frame = buildJsonObject {
+            put("type", "__transcript_more")
+            put("more", from)
+            put("items", buildJsonArray { transcriptItems.subList(from, to).forEach { add(it) } })
         }
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))
     }
@@ -233,5 +264,10 @@ class ChatPanel(project: Project, parent: Disposable) {
                 browser.cefBrowser.url, 0,
             )
         }
+    }
+
+    private companion object {
+        const val INITIAL_BLOCKS = 250
+        const val MORE_BLOCKS = 500
     }
 }

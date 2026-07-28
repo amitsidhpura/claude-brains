@@ -89,6 +89,11 @@ input+cache_read+cache_creation, NOT a sum; orange ≥50%; click sends /compact 
 The window is not a number in the initialize payload: the 1M variants are tagged `[1m]`, on
 `resolvedModel` for default/opus but on `value` for fable — check both. Usage above the known
 window still promotes to 1M, so an untagged future model can't pin a wrong denominator.
+Long-session performance (see docs/limits.md for the measurements and the traps): off-screen
+`.turn-body`s skip layout/paint via `content-visibility` (2000 turns: 151ms→12ms initial, 84ms→13ms
+per reflow), and replay is WINDOWED — Kotlin parses the whole file but ships only the newest ~250
+blocks cut at a turn boundary (`alignedStart`), 89–95% smaller frames; earlier chunks load silently
+as you scroll within 600px of the top, prepended viewport-anchored so nothing jumps.
 Clickable file references (`.t-desc.path`, `.card-h code`) open in the editor via `kind:"open"`,
 line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
 ±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).
@@ -130,8 +135,19 @@ NEXT: **Phase 3 — finish sandbox verification.** A resumed session now renders
 `runIde` (confirmed 2026-07-28), which covers the parser rewrite, structuredPatch diffs, ask tab
 header, plan cards, Stopped lines, refusal states and summaries. Still unexercised, because a
 good-looking screenshot doesn't reach them:
-- a BIG session (5.7 MB → ~876 blocks) — the transcript ships as one `executeJavaScript` string,
-  so watch for a stall on resume
+- **the whole performance batch (2026-07-29) is UNVERIFIED in the IDE** — it was built and
+  measured entirely in headless Chrome, which has no compositor and never dynamically
+  renders/unrenders `content-visibility` subtrees. Check, in a restarted sandbox (these are
+  resource changes, so a restart is required):
+  · a BIG session opens fast and lands at the BOTTOM (three layers try to guarantee that: tail
+    pre-render, `scrollIntoView` on the last element, then a settle loop with late re-checks)
+  · scrolling up streams earlier history in silently, with no viewport jump
+  · a long (12+ line) user message still PINS while scrolling — that regressed once already when
+    `.clip`'s `position: relative` beat `.msg-user`'s `sticky` on equal specificity
+  · the scrollbar feels honest: `contain-intrinsic-size: auto 250px` is a guess and turns range
+    from one line to a 400-row diff. If the thumb jumps, tune that one number.
+  · "New conversation" from a windowed session doesn't pull the old session's chunks (guarded on
+    both sides, never seen live)
 - images past the 4 MB budget (falls back to name-only chips)
 - a multi-question ask card — replayed tab switching is wired but has never been clicked
 - thinking with real text: local phpstorm/testing sessions are 100% empty bodies, so
@@ -155,6 +171,9 @@ Known gaps deliberately left:
   Bash and AskUserQuestion are blank BY DESIGN (IN box / card carry the content).
 - API-error records (`isApiErrorMessage`, 14 locally — "session limit", "usage credits") replay as
   ordinary message text; live draws an `.error` block with an alert icon and a Retry line.
+- windowed replay: DOM search (browser find, any future find-in-conversation) only sees loaded
+  blocks; and `IMAGE_BUDGET` is still spent in FILE order, so images in early unshipped blocks can
+  starve the visible tail — flip the budget walk to run from the end when it bites.
 - replayed user turns have no undo button, and never will — rewind needs a live CLI + client uuid.
 Then: editor-title accept/reject, @-symbol mentions, conversation-level rewind, worktrees,
 extensibility status view.

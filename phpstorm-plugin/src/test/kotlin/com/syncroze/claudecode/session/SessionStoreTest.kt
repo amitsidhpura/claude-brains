@@ -197,6 +197,25 @@ class SessionStoreTest {
         assertEquals(0L, SessionStore.contextTokens(CWD, "never-existed"))
     }
 
+    /** Windowed replay must cut at turn boundaries, or tool results orphan from their message. */
+    @Test
+    fun `alignedStart lands on a user block and never cuts a turn in half`() {
+        fun block(role: String) = Json.parseToJsonElement("{\"role\":\"$role\"}").jsonObject
+        // 3 turns: u,a,t,t | u,t | u,a,a
+        val items = listOf("user", "assistant", "tool", "tool", "user", "tool", "user", "assistant", "assistant")
+            .map(::block)
+
+        // window of 4 from the end: candidate index 5 is mid-turn, must advance to the user at 6
+        assertEquals(6, SessionStore.alignedStart(items, items.size, 4))
+        // window big enough for everything: start at 0
+        assertEquals(0, SessionStore.alignedStart(items, items.size, 100))
+        // earlier chunk ending at 6: candidate 2 is mid-turn, advances to the user at 4
+        assertEquals(4, SessionStore.alignedStart(items, 6, 4))
+        // no user block inside the window: fall back to the unaligned cut rather than sending nothing
+        val oneTurn = listOf("user", "tool", "tool", "tool", "tool", "tool").map(::block)
+        assertEquals(2, SessionStore.alignedStart(oneTurn, oneTurn.size, 4))
+    }
+
     /** Deletion is irreversible, so it must take the sidecar with it and refuse anything odd. */
     @Test
     fun `delete removes the transcript and its tool-results sidecar`() {
