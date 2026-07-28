@@ -70,12 +70,13 @@ img { max-width: 100%; height: auto; }
   pointer-events: none; background: linear-gradient(to bottom, var(--bg) 0, var(--bg) 18px, transparent 48px); }
 
 /* scroll-to-bottom button — floats just above the composer, shown only when scrolled up */
+/* floats just above the composer, so it wears the same blue user-input surface */
 #scrollBtn { position: absolute; left: 50%; transform: translateX(-50%); bottom: 110px; z-index: 15;
-  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-strong);
-  background: var(--raised); color: var(--fg); cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.45);
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--user-border);
+  background: var(--user-bg); color: var(--user-muted); cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.45);
   display: none; align-items: center; justify-content: center; padding: 0; }
 #scrollBtn.show { display: inline-flex; }
-#scrollBtn:hover { background: var(--raised-hover); border-color: var(--accent); }
+#scrollBtn:hover { background: var(--user-raised-hover); color: var(--fg); border-color: var(--accent); }
 #scrollBtn svg { width: 16px; height: 16px; display: block; }
 
 /* welcome / empty state — centered in the log until the first message */
@@ -116,6 +117,7 @@ img { max-width: 100%; height: auto; }
 .think { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px; }
 .think::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
 .think summary { cursor: pointer; user-select: none; list-style: none; display: inline-flex; align-items: center; gap: 3px; }
+.think.no-body summary { cursor: default; }   /* nothing streamed: a label, not a control */
 .think summary::-webkit-details-marker { display: none; }
 .think summary .chev { width: 13px; height: 13px; transition: transform .15s ease; }
 .think[open] summary .chev { transform: rotate(90deg); }   /* chevron-right → points down */
@@ -153,7 +155,9 @@ img { max-width: 100%; height: auto; }
   overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 .io-row { display: flex; gap: 10px; padding: 6px 10px; }
 .io-row + .io-row { border-top: 1px solid var(--border); }
-.io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 26px; }
+/* 22px is the floor: "OUT" measures 21.11px here, and anything narrower either overflows the
+   label into the gap or (below ~18px) breaks alignment between the IN and OUT rows. */
+.io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 22px; }
 .io-v { white-space: pre-wrap; word-break: break-all; flex: 1; max-height: 200px; overflow-y: auto; }
 
 /* code block */

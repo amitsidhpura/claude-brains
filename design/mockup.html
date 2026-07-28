@@ -39,6 +39,10 @@
   <button onclick="tg('slashMenu', event)">slash</button>
   <button onclick="event.stopPropagation(); document.getElementById('send').classList.toggle('stop')">stop</button>
   <span class="sep"></span>
+  <!-- states that can't coexist with a populated log / history list -->
+  <button onclick="tgWelcome()">welcome</button>
+  <button onclick="tgState('histEmpty', 'histFull')">no history</button>
+  <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>
   <button class="wpreset" data-w="360">360</button>
   <button class="wpreset" data-w="420">420</button>
@@ -53,7 +57,7 @@
     <span class="title">Create a new test.txt file</span>
     <span class="actions">
       <button class="icon-btn" title="Past conversations" onclick="tgHist(event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
-      <button class="icon-btn" title="New conversation"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
+      <button class="icon-btn" title="New conversation" onclick="newConversation()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
     </span>
   </div>
 
@@ -67,17 +71,34 @@
 
   <div id="histPanel">
     <div class="hist-h">Past conversations</div>
-    <div class="hist-item"><div class="t">Create a new test.txt file</div><div class="d">Today, 14:32</div></div>
-    <div class="hist-item"><div class="t">Fix payment gateway retry logic</div><div class="d">Yesterday, 18:05</div></div>
-    <div class="hist-item"><div class="t">Refactor SessionStore JSONL parsing</div><div class="d">2 days ago</div></div>
-    <div class="hist-item"><div class="t">Add dark-mode toggle to settings page and persist the choice</div><div class="d">Jul 21</div></div>
+    <!-- chat.html wraps the rows in .hist-list and swaps in .hist-empty when there are none -->
+    <div id="histFull" class="hist-list">
+      <div class="hist-item"><div class="t">Create a new test.txt file</div><div class="d">Today, 14:32</div></div>
+      <div class="hist-item"><div class="t">Fix payment gateway retry logic</div><div class="d">Yesterday, 18:05</div></div>
+      <div class="hist-item"><div class="t">Refactor SessionStore JSONL parsing</div><div class="d">2 days ago</div></div>
+      <div class="hist-item"><div class="t">Add dark-mode toggle to settings page and persist the choice</div><div class="d">Jul 21</div></div>
+    </div>
+    <div id="histEmpty" class="hist-list" hidden>
+      <div class="hist-empty">No past conversations for this project.</div>
+    </div>
   </div>
 
   <div id="log">
+    <!-- first-run state: shown until the first turn arrives (devbar → welcome) -->
+    <div id="welcome" style="display:none">
+      <div class="w-logo"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="#d97757" d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z"/></svg></div>
+      <div class="w-title">Claude Code</div>
+      <div class="w-sub">Ask about your project, edit files, run commands.<br>
+        Type <kbd>/</kbd> for commands, <kbd>@</kbd> to reference files, or paste an image.</div>
+    </div>
     <div class="turn">
       <div class="msg-user">Print some text with inline code</div>
 
       <details class="think"><summary>Thought for 6s<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">The user wants a PHP example with inline code…</div></details>
+
+      <!-- redacted thinking: nothing streamed, so no chevron and nothing to expand. A plain div
+           (not <details>) with a <summary> inside keeps the styling but can't be toggled. -->
+      <div class="think no-body"><summary>Thought for 1s</summary></div>
 
       <div class="blk">
         <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
@@ -268,11 +289,120 @@
       <!-- status line: leading glyph hangs in the dot column, text at the shared 22px indent. -->
       <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg></span>Stopped</div>
     </div>
+
+    <!-- ================================================================
+         RESUMED SESSION — everything below is REPLAYED from the session
+         JSONL by renderTranscript()/replayCard()/replayAsk() in chat.html.
+         Same classes as live, but every card is resolved and inert: no
+         buttons, no hover, no expanding. Only the ask tabs stay clickable,
+         matching a live card that has already been answered.
+         ================================================================ -->
+    <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>Resumed</div>
+
+    <div class="turn">
+      <div class="msg-user">Add a Greeter class and wire it up</div>
+
+      <!-- replayed thinking: duration is record-to-record wall time, not a live timer -->
+      <details class="think"><summary>Thought for 8s<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">The user wants a small class plus a call site…</div></details>
+
+      <!-- tool lines: path desc, query desc (ToolSearch/WebSearch/WebFetch), and a failure -->
+      <div class="tool-line"><b>Read</b><span class="t-desc path">src/Greeter.php</span></div>
+      <div class="tool-line"><b>ToolSearch</b><span class="t-desc">select:ExitPlanMode</span></div>
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">Run the test suite</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">vendor/bin/phpunit</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">PHPUnit 11.2.0 — 1 failed, 3 passed</span></div>
+      </div>
+
+      <!-- replayed plan card: approved -->
+      <div class="card warn">
+        <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
+        <div class="blk"><p>Add <code>src/Greeter.php</code> with a <code>greet(string $name)</code> method, then call it from <code>index.php</code>.</p></div>
+        <div class="card-b"><span class="ok-t">✓ Approved</span></div>
+      </div>
+
+      <!-- replayed plan card: refused (user chose Keep planning) -->
+      <div class="card warn">
+        <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
+        <div class="blk"><p>Rewrite the whole bootstrap sequence and swap the autoloader.</p></div>
+        <div class="card-b"><span class="no-t">✗ Kept planning</span></div>
+      </div>
+
+      <!-- replayed edit: applied. "Applied", not "Accepted" — the transcript can't tell a
+           manual approval from an auto mode. Diff rows come from structuredPatch. -->
+      <div class="card warn">
+        <div class="card-h"><b>Edit</b> on <code>src/Greeter.php</code></div>
+        <div class="diff"><span class="ctx"><span class="ln">7</span>  final class Greeter</span>
+<span class="del"><span class="ln">8</span>- public function greet() {</span>
+<span class="add"><span class="ln">8</span>+ public function greet(string $name): string {</span>
+<span class="add"><span class="ln">9</span>+     return "Hello, {$name}!";</span></div>
+        <div class="card-b"><span class="ok-t">✓ Applied</span></div>
+      </div>
+
+      <!-- replayed edit: permission was refused (toolDenialKind in the JSONL) -->
+      <div class="card warn">
+        <div class="card-h"><b>Write</b> on <code>config/app.php</code></div>
+        <div class="diff"><span class="add"><span class="ln">1</span>+ &lt;?php return ['debug' =&gt; true];</span></div>
+        <div class="card-b"><span class="no-t">✗ Rejected</span></div>
+      </div>
+
+      <!-- replayed question card: answered. Tabs still switch; options are a record, not a control. -->
+      <div class="ask ask-done">
+        <div class="ask-h"><div class="ask-tabs">
+          <button class="ask-tab active" data-q="0">Naming</button>
+          <button class="ask-tab" data-q="1">Depth</button>
+        </div></div>
+        <div class="ask-panel" data-q="0">
+          <div class="ask-q">What should the class be called?</div>
+          <div class="ask-list">
+            <div class="ask-opt checked"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="q-body"><span class="q-t">Greeter</span><span class="q-d">Short and obvious; matches the file name.</span></span></div>
+            <div class="ask-opt"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">GreetingService</span><span class="q-d">Verbose, but consistent with the other services.</span></span></div>
+            <div class="ask-opt ask-opt-other"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">Other</span></span></div>
+            <div class="ask-other" hidden><input type="text" disabled></div>
+          </div>
+        </div>
+        <div class="ask-panel" data-q="1" hidden>
+          <div class="ask-q">How much should I explain while working?</div>
+          <div class="ask-list">
+            <!-- multiSelect question replays with checkbox glyphs, not radios -->
+            <div class="ask-opt checked"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"/><path d="m9 11 3 3L22 4"/></svg></span><span class="q-body"><span class="q-t">Terse</span><span class="q-d">Report the result in a line or two.</span></span></div>
+            <div class="ask-opt"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span><span class="q-body"><span class="q-t">Narrate the mechanics</span><span class="q-d">Walk through what each step is doing.</span></span></div>
+            <div class="ask-opt ask-opt-other checked"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"/><path d="m9 11 3 3L22 4"/></svg></span><span class="q-body"><span class="q-t">Other</span></span></div>
+            <!-- free-text answer: live shows the typed value in the (now disabled) field -->
+            <div class="ask-other"><input type="text" value="Only when something surprising happens" disabled></div>
+          </div>
+        </div>
+        <div class="ask-b"><span class="ok-t">✓ Answered</span></div>
+      </div>
+
+      <!-- replayed question card: interrupted before an answer was sent -->
+      <div class="ask ask-done">
+        <div class="ask-h"><div class="ask-tabs">
+          <button class="ask-tab active" data-q="0">Next step</button>
+        </div></div>
+        <div class="ask-panel" data-q="0">
+          <div class="ask-q">What should we do with this scratch project next?</div>
+          <div class="ask-list">
+            <div class="ask-opt"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">Keep testing features</span><span class="q-d">Stay in dummy-test mode a while longer.</span></span></div>
+            <div class="ask-opt"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">Clean up and stop</span><span class="q-d">Remove the scratch files and finish.</span></span></div>
+          </div>
+        </div>
+        <div class="ask-b"><span class="no-t">✗ Cancelled</span></div>
+      </div>
+
+      <!-- replayed interrupt: the JSONL says interruptedByShutdown, so no summary follows -->
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg></span>Stopped</div>
+
+      <div class="done"><span class="star">✻</span> Distilled for 27s · <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>608 tokens</div>
+
+      <!-- CLI process died: the one status line that renders in the error tone -->
+      <div class="status err"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>claude process exited (1)</div>
+    </div>
   </div>
 
   <div id="fade"></div>
   <div id="fade-top"></div>
-  <button id="scrollBtn" class="show" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg></button>
 
   <div id="composer">
     <div id="inputcard">
@@ -452,10 +582,31 @@
     var atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 40;
     logEl.style.paddingBottom = (h + 12) + 'px';
     fadeEl.style.height = (h + 18) + 'px';
+    var sb = document.getElementById('scrollBtn');
+    if (sb) sb.style.bottom = (h + 20) + 'px';   // float just above the composer, as chat.html does
     if (atBottom) logEl.scrollTop = logEl.scrollHeight;   // stay pinned while typing
     syncGutter();
   }).observe(composerEl);
   new ResizeObserver(syncGutter).observe(logEl);
+
+  // scroll-to-bottom button — mirrors chat.html: shown only when scrolled up, and clicking it
+  // glides down with a manual easeOutCubic (native smooth-scroll is unreliable in some CEF builds).
+  var scrollBtn = document.getElementById('scrollBtn');
+  function atBottom() { return logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 40; }
+  function updateScrollBtn() { scrollBtn.classList.toggle('show', !atBottom()); }
+  function smoothToBottom() {
+    var start = logEl.scrollTop, t0 = performance.now(), dur = 320;
+    (function step(now) {
+      var p = Math.min(1, (now - t0) / dur);
+      var target = logEl.scrollHeight - logEl.clientHeight;
+      logEl.scrollTop = start + (target - start) * (1 - Math.pow(1 - p, 3));
+      if (p < 1) requestAnimationFrame(step);
+      else { logEl.scrollTop = logEl.scrollHeight; updateScrollBtn(); }
+    })(t0);
+  }
+  logEl.addEventListener('scroll', updateScrollBtn);
+  scrollBtn.onclick = function () { smoothToBottom(); document.getElementById('input').focus(); };
+  updateScrollBtn();
   syncGutter();
 
   inp.addEventListener('input', function () {
@@ -615,7 +766,35 @@
     cOff: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>',
     cOn:  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"/><path d="m9 11 3 3L22 4"/></svg>'
   };
-  document.querySelectorAll('.ask').forEach(function (ask) {
+  // Mockup-only: swap between two states that can never be on screen at the same time.
+  function tgState(showId, hideId) {
+    var a = document.getElementById(showId), b = document.getElementById(hideId);
+    var showing = !a.hidden;
+    a.hidden = showing; b.hidden = !showing;
+  }
+
+  // Welcome is the empty-log state: it lives INSIDE #log so its `margin:auto` centres it, and
+  // chat.html shows it only while the log has no turns. Toggling means hiding the thread, not
+  // stacking a banner above it. Uses display (not [hidden]) — #welcome's own display:flex wins
+  // on specificity, so the hidden attribute is silently ignored.
+  function setWelcome(on) {
+    var log = document.getElementById('log'), w = document.getElementById('welcome');
+    w.style.display = on ? '' : 'none';
+    Array.prototype.forEach.call(log.children, function (c) {
+      if (c.id !== 'welcome') c.style.display = on ? 'none' : '';
+    });
+  }
+  function tgWelcome() {
+    setWelcome(document.getElementById('welcome').style.display === 'none');
+  }
+  // "New conversation" always lands on the empty state — chat.html's clearLogUI() drops every
+  // log child except #welcome and restores it. Here the turns are hidden, not removed, so the
+  // devbar toggle can bring the thread back.
+  function newConversation() { setWelcome(true); }
+
+  // Live cards only. Replayed (.ask-done) cards have no <input> to wire — their options are a
+  // record of what was chosen, so everything below would throw on them.
+  document.querySelectorAll('.ask:not(.ask-done)').forEach(function (ask) {
     var tabs = ask.querySelectorAll('.ask-tab');
     var panels = ask.querySelectorAll('.ask-panel');
     var go = ask.querySelector('.ask-go');
@@ -661,6 +840,18 @@
       });
     });
     refresh();
+  });
+
+  // Replayed cards: tabs stay navigable (as they do live once answered), nothing else does.
+  document.querySelectorAll('.ask-done').forEach(function (ask) {
+    var tabs = ask.querySelectorAll('.ask-tab');
+    var panels = ask.querySelectorAll('.ask-panel');
+    tabs.forEach(function (tab, idx) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
+        panels.forEach(function (p, n) { p.hidden = n !== idx; });
+      });
+    });
   });
 </script>
 </body>

@@ -39,7 +39,7 @@
 
   <div id="fade"></div>
   <div id="fade-top"></div>
-  <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg></button>
 
   <div id="composer">
     <div id="inputcard">
@@ -126,6 +126,8 @@
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
   const SVG_STOP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>';
+  // same glyph as the top-bar history button — a replayed thread is history
+  const SVG_HISTORY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
   const SVG_CHEVRON = '<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'; // chevron-right; CSS rotates it down when open
   const IND = {
     rOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
@@ -694,7 +696,7 @@
         }
       }
     });
-    if (items.length) { el('status', '— resumed —'); }
+    if (items.length) { statusLine('Resumed', SVG_HISTORY); }
     scrollToBottom();
     requestAnimationFrame(scrollToBottom); // once more after late layout (images/highlighting settle)
   }
@@ -1071,7 +1073,8 @@
         return;
       }
       case '__clear':            return clearLogUI();
-      case '__exit':             setBusy(false); return el('status err', 'claude process exited (' + ev.code + ')');
+      case '__exit':             setBusy(false);
+        return statusLine('claude process exited (' + ev.code + ')', SVG_ALERT, 'status err');
     }
   };
 
@@ -1079,10 +1082,15 @@
     if (!curThink) return;
     if (thinkTimer) { clearInterval(thinkTimer); thinkTimer = null; }
     const secs = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
-    const det = document.createElement('details');
-    det.className = 'think';
-    det.innerHTML = '<summary>Thought for ' + secs + 's' + SVG_CHEVRON + '</summary><div class="body"></div>';
-    det.querySelector('.body').textContent = curThinkRaw;
+    // Thinking can finish with nothing to show (the model streams a redacted block). Render the
+    // line as a plain div rather than <details>, so there is no chevron and nothing to expand —
+    // a <summary> outside <details> keeps the same styling but can't be toggled or focused.
+    const empty = !curThinkRaw.trim();
+    const det = document.createElement(empty ? 'div' : 'details');
+    det.className = empty ? 'think no-body' : 'think';
+    det.innerHTML = '<summary>Thought for ' + secs + 's' + (empty ? '' : SVG_CHEVRON) + '</summary>' +
+      (empty ? '' : '<div class="body"></div>');
+    if (!empty) det.querySelector('.body').textContent = curThinkRaw;
     curThink.replaceWith(det);
     curThink = null; curThinkRaw = '';
   }
