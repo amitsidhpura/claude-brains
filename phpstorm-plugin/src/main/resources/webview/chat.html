@@ -146,7 +146,11 @@
     if (welcome) welcome.style.display = 'none';
     const d = document.createElement('div');
     d.className = cls; if (text != null) d.textContent = text;
-    (curTurn || log).appendChild(d); maybeScroll(); return d;
+    const parent = curTurn || log;
+    // keep the working spinner pinned to the very bottom — new content goes above it
+    if (workingEl && workingEl.parentNode === parent) parent.insertBefore(d, workingEl);
+    else parent.appendChild(d);
+    maybeScroll(); return d;
   }
   function newTurn() {
     if (welcome) welcome.style.display = 'none';
@@ -163,14 +167,17 @@
     'Reticulating','Brewing','Churning','Mulling','Musing','Schlepping','Manifesting','Transmuting',
     'Honking','Booping','Concocting','Finagling','Moseying','Shimmying','Tinkering','Whirring','Germinating'];
   let workingEl = null, workTimers = [], workStart = 0, turnTokens = 0, msgTokens = 0;
+  let awaitingUser = false; // a permission/plan/question card is waiting on the user
   function showWorking() {
     if (workingEl) return;
     workingEl = el('generating', '');
-    workStart = Date.now();
+    if (!workStart) workStart = Date.now(); // cumulative across gaps within a turn
     workingEl.innerHTML = '<span class="spin">✳</span><span class="verb"></span>' +
-      '<span class="meta">(<span class="w-el">0s</span> · ' + SVG_DOWN + '<span class="w-tok">0</span> tokens)</span>';
+      '<span class="meta">(<span class="w-el">0s</span> · ' + SVG_DOWN + '<span class="w-tok">' +
+      (turnTokens + msgTokens) + '</span> tokens)</span>';
     const spin = workingEl.querySelector('.spin'), verb = workingEl.querySelector('.verb');
     const wEl = workingEl.querySelector('.w-el');
+    wEl.textContent = Math.round((Date.now() - workStart) / 1000) + 's'; // show real elapsed at once
     let fi = 0, vi = Math.floor(Math.random() * VERBS.length);
     verb.textContent = VERBS[vi] + '…';
     workTimers.push(setInterval(function () { fi = (fi + 1) % FRAMES.length; spin.textContent = FRAMES[fi]; }, 175));
@@ -186,6 +193,16 @@
     workTimers.forEach(clearInterval); workTimers = [];
     if (workingEl) { workingEl.remove(); workingEl = null; }
   }
+  // The working line is shown for the WHOLE turn (like VS Code / the reference plugin): visible
+  // whenever Claude is busy, except while a card is waiting on the user. It's pinned to the
+  // bottom by el(), so it fills every gap (tool cycles, background subagents, model waits)
+  // regardless of which stream events fire. `busy` is set true on send and false only on `result`.
+  setInterval(function () {
+    // Show the time/token meter for the whole turn — except while a thinking block is live
+    // (that line shows its own running token count, so two indicators would be redundant).
+    if (busy && !awaitingUser && !curThink) { if (!workingEl) showWorking(); }
+    else if (workingEl) hideWorking();
+  }, 300);
 
   /* ---------- tiny offline syntax highlighter ---------- */
   const KW = new Set((
@@ -549,7 +566,7 @@
     busy = b;
     send.title = b ? 'Stop' : 'Send';
     send.classList.toggle('stop', b);
-    if (b) showWorking(); else hideWorking();
+    if (b) showWorking(); else { hideWorking(); workStart = 0; awaitingUser = false; }
   }
 
   let lastUser = null;                 // { text, images } — for Retry
@@ -826,7 +843,6 @@
       case 'content_block_delta': {
         const d = e.delta || {};
         if (d.type === 'text_delta') {
-          hideWorking();
           if (!curBubble) { curBubble = el('blk', ''); }
           curRaw += d.text; curBubble.innerHTML = renderMd(curRaw); maybeScroll();
         } else if (d.type === 'thinking_delta' && curThink) {
@@ -941,11 +957,12 @@
   let activeAsk = null; // { card, ev, cancel }
   function cancelAsk() {
     if (!activeAsk) return;
-    const a = activeAsk; activeAsk = null;
+    const a = activeAsk; activeAsk = null; awaitingUser = false;
     a.card.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
     a.card.querySelector('.ask-b').innerHTML = '<span class="no-t">✗ Cancelled</span>';
     a.card.querySelector('.ask-foot').remove();
     window.respondPermission(a.ev.id, false);
+    if (busy) showWorking(); // Claude resumes processing
   }
   function renderAsk(ev, inp) {
     const questions = inp.questions || [];
@@ -1029,8 +1046,9 @@
       card.querySelectorAll('input').forEach(function (i2) { i2.disabled = true; });
       card.querySelector('.ask-b').innerHTML = '<span class="ok-t">✓ Answered</span>';
       const foot = card.querySelector('.ask-foot'); if (foot) foot.remove();
-      activeAsk = null;
+      activeAsk = null; awaitingUser = false;
       bridge({ kind: 'answer', id: ev.id, answers: JSON.stringify(answers) });
+      if (busy) showWorking(); // Claude resumes processing
     };
     card.querySelector('.ask-b .no').onclick = cancelAsk;
     refresh();
@@ -1038,6 +1056,7 @@
   }
 
   function renderPermission(ev) {
+    hideWorking(); awaitingUser = true; // Claude is now waiting on the user, not processing
     let inp = {}; try { inp = JSON.parse(ev.input); } catch (_) {}
     if (ev.tool === 'AskUserQuestion' && inp.questions) return renderAsk(ev, inp);
     const isPlan = ev.tool === 'ExitPlanMode' || inp.plan !== undefined;
@@ -1062,7 +1081,9 @@
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + '</span>'
         : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + '</span>';
+      awaitingUser = false;
       window.respondPermission(ev.id, allow);
+      if (busy) showWorking(); // Claude resumes processing
     };
     card.querySelector('.ok').onclick = function () { done(true); };
     card.querySelector('.no').onclick = function () { done(false); };

@@ -8,3 +8,6 @@ phpstorm-plugin/.gradle/
 phpstorm-plugin/build/
 phpstorm-plugin/.intellijPlatform/
 phpstorm-plugin/gradle/wrapper/gradle-wrapper.jar
+
+# Third-party reference clones (not ours)
+/reference/
