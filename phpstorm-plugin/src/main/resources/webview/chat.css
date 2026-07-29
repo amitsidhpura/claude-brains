@@ -114,7 +114,7 @@ img { max-width: 100%; height: auto; }
    content-visibility applies paint containment while a turn sits at the viewport edge, which shaves
    an OUTWARD ring into a "cut" half-rectangle (the sticky user box and clamped overflow clip too).
    An inset ring stays within the element's own box, so nothing can clip it — a full ring on any
-   focusable element (thinking summary, ask tabs, card buttons, links, undo, inputs), live and
+   focusable element (thinking summary, ask tabs, card buttons, links, inputs), live and
    resumed alike. Reset first so a plain mouse :focus shows nothing; :focus-visible (keyboard) gets
    the accent ring, rounded to each element's own border-radius. */
 .turn :focus { outline: none; }
@@ -158,11 +158,6 @@ img { max-width: 100%; height: auto; }
   color: var(--user-muted); }
 .clamp-more:hover { background: var(--user-raised-hover); color: var(--fg); border-color: var(--accent); }
 .clamp-more svg { width: 13px; height: 13px; display: block; }
-.msg-user.has-undo { padding-right: 34px; }
-.msg-user .undo { position: absolute; top: 6px; right: 7px; background: transparent; border: 0; color: var(--muted);
-  cursor: pointer; padding: 3px; border-radius: var(--radius); display: inline-flex; align-items: center; justify-content: center; }
-.msg-user .undo:hover { color: var(--fg); }
-.msg-user .undo svg { width: 16px; height: 16px; display: block; }
 
 /* assistant block: plain text with small dot */
 .blk { position: relative; padding-left: 22px; }
@@ -387,14 +382,12 @@ img { max-width: 100%; height: auto; }
 .retry a:hover { color: var(--fg); }
 .retry svg { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px; }
 
-/* status lines (⏹ Stopped, ↩ Reverted, …): glyph in the dot column, text at the shared indent */
+/* status lines (⏹ Stopped, — resumed —, …): glyph in the dot column, text at the shared indent */
 .status { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px; }
 .status .s-ic { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px;
   display: inline-flex; align-items: center; justify-content: center; }
 .status .s-ic svg { width: 12px; height: 12px; display: block; }
 .status.err { color: var(--red); }
-.status .undo { color: var(--accent); text-decoration: none; cursor: pointer; }
-.status .undo:hover { text-decoration: underline; }
 .ok-t { color: var(--green); font-size: 13px; }
 .no-t { color: var(--red); font-size: 13px; }
 .msg { max-width: 100%; min-width: 0; word-wrap: break-word; overflow-wrap: anywhere; }

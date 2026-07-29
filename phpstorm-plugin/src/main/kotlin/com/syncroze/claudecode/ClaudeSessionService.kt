@@ -150,12 +150,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     fun sendUserText(text: String) = cli?.sendUserText(text)
 
-    /** Send a user turn with attachments (images / pdf / text) and an id (for rewind). */
-    fun sendUser(text: String, attachments: List<com.syncroze.claudecode.cli.Attachment>, id: String?) =
-        cli?.sendUserMessage(text, attachments, id)
-
-    /** Check (dryRun) or revert file edits from the turn identified by [id]. */
-    fun rewind(id: String, dryRun: Boolean) = cli?.rewindFiles(id, dryRun)
+    /** Send a user turn with attachments (images / pdf / text). */
+    fun sendUser(text: String, attachments: List<com.syncroze.claudecode.cli.Attachment>) =
+        cli?.sendUserMessage(text, attachments)
 
     fun respondPermission(requestId: String, allow: Boolean) {
         val input = pendingPermissions.remove(requestId) ?: JsonObject(emptyMap())

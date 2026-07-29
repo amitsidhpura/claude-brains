@@ -268,7 +268,6 @@ object SessionStore {
         if (!f.isFile) return emptyList()
         val out = ArrayList<Item>()
         val byToolId = HashMap<String, Item>()
-        var imageBytes = 0
 
         // Per-request accounting for the trailing "✻ … for Ns · ↓ N tokens" summary. A request runs
         // from a user turn to the next one; `prevTs` also gives thinking blocks an approximate
@@ -334,19 +333,11 @@ object SessionStore {
                             if (text == null && atts.isEmpty()) continue
                             val item = Item("user")
                             item.text = text ?: ""
-                            for (att in atts) {
-                                val data = att["data"]?.jsonPrimitive?.content ?: continue
-                                if (imageBytes + data.length > IMAGE_BUDGET) {
-                                    // past the budget: keep the chip (kind + name) but drop the bytes
-                                    item.images.add(buildJsonObject {
-                                        put("kind", att["kind"]?.jsonPrimitive?.content ?: "image")
-                                        put("name", att["name"]?.jsonPrimitive?.content ?: "file")
-                                    })
-                                } else {
-                                    imageBytes += data.length
-                                    item.images.add(att)
-                                }
-                            }
+                            // Attach everything here; the budget is applied afterwards walking
+                            // from the NEWEST turn back (see trimAttachments) so the visible tail
+                            // wins. Spending it in file order let early turns — which windowed
+                            // replay may never even ship — starve the images actually on screen.
+                            atts.forEach { att -> if (att["data"] != null) item.images.add(att) }
                             flushSummary() // close the previous request before the next turn opens
                             out.add(item)
                             reqStart = ts
@@ -357,15 +348,20 @@ object SessionStore {
                             obj["message"]?.jsonObject?.get("usage")?.jsonObject
                                 ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull()
                                 ?.let { reqTokens += it }
+                            // an API error ("session limit", "usage credits") is persisted as an
+                            // ordinary assistant record + `isApiErrorMessage`; live draws it as an
+                            // `.error` block, so replay must not render it as prose
+                            val role = if (obj["isApiErrorMessage"]?.jsonPrimitive?.content == "true")
+                                "error" else "assistant"
                             val content = obj["message"]?.jsonObject?.get("content")
                             if (content is JsonPrimitive) {
-                                out.add(Item("assistant").apply { text = content.content })
+                                out.add(Item(role).apply { text = content.content })
                             } else if (content is JsonArray) {
                                 for (block in content) {
                                     val b = block.jsonObject
                                     when (b["type"]?.jsonPrimitive?.content) {
                                         "text" -> b["text"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-                                            ?.let { out.add(Item("assistant").apply { text = it }) }
+                                            ?.let { out.add(Item(role).apply { text = it }) }
                                         // emit even when the body is blank — the CLI frequently
                                         // persists only a signature; the block replays as a
                                         // `think no-body` "Thought for Ns" line, matching live
@@ -383,7 +379,35 @@ object SessionStore {
             }
             flushSummary() // the last request has no following user turn to close it
         }
+        trimAttachments(out)
         return out.map { it.toJson() }
+    }
+
+    /**
+     * Apply [IMAGE_BUDGET] walking from the newest block backwards: attachments near the end of the
+     * transcript keep their bytes, older ones degrade to name-only chips. The whole transcript ships
+     * as one `executeJavaScript` string and windowed replay sends only the tail first, so the images
+     * a user actually sees must win the budget — spending it in file order gave it to the oldest.
+     */
+    private fun trimAttachments(items: List<Item>) {
+        var used = 0L
+        for (item in items.asReversed()) {
+            if (item.images.isEmpty()) continue
+            val kept = ArrayList<JsonObject>(item.images.size)
+            for (att in item.images) {
+                val data = att["data"]?.jsonPrimitive?.content
+                if (data != null && used + data.length <= IMAGE_BUDGET) {
+                    used += data.length
+                    kept.add(att)
+                } else {
+                    kept.add(buildJsonObject {   // past the budget: keep the chip, drop the bytes
+                        put("kind", att["kind"]?.jsonPrimitive?.content ?: "image")
+                        put("name", att["name"]?.jsonPrimitive?.content ?: "file")
+                    })
+                }
+            }
+            item.images.clear(); item.images.addAll(kept)
+        }
     }
 
     /** Build the block for a tool_use, indexing it so its result can be attached later. */

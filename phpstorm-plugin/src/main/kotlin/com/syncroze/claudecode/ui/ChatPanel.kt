@@ -68,7 +68,6 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         when (msg["kind"]?.jsonPrimitive?.content) {
             "user" -> {
                 val text = msg["text"]?.jsonPrimitive?.content ?: ""
-                val id = msg["id"]?.jsonPrimitive?.content
                 val attachments = (msg["images"] as? JsonArray)?.mapNotNull { e ->
                     val o = e.jsonObject
                     val data = o["data"]?.jsonPrimitive?.content ?: return@mapNotNull null
@@ -77,15 +76,12 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     val name = o["name"]?.jsonPrimitive?.content ?: "file"
                     com.syncroze.claudecode.cli.Attachment(kind, mt, data, name)
                 } ?: emptyList()
-                session.sendUser(text, attachments, id)
+                session.sendUser(text, attachments)
             }
             "download" -> {
                 val data = msg["data"]?.jsonPrimitive?.content ?: return
                 val name = msg["name"]?.jsonPrimitive?.content ?: "file"
                 saveAttachment(name, data)
-            }
-            "rewind" -> msg["id"]?.jsonPrimitive?.content?.let {
-                session.rewind(it, msg["dry"]?.jsonPrimitive?.content == "true")
             }
             "perm" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return

@@ -22,10 +22,9 @@ redistribute Anthropic's extension.js / webview / claude.exe.**
   IDE tools implemented in `IdeTools.kt` (openFile/openDiff/getDiagnostics/selection/etc.).
 - **CLI** (`cli/ClaudeCli.kt`): spawns `claude --input-format stream-json --output-format
   stream-json --include-partial-messages --verbose --permission-prompt-tool stdio
-  --permission-mode <mode>` with env `CLAUDE_CODE_SSE_PORT=<port>` and
-  `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`. Routes control protocol
-  (`can_use_tool`, `initialize`, `set_model`, `set_permission_mode`, `interrupt`,
-  `rewind_files`) separately from conversation events.
+  --permission-mode <mode>` with env `CLAUDE_CODE_SSE_PORT=<port>`. Routes control protocol
+  (`can_use_tool`, `initialize`, `set_model`, `set_permission_mode`, `interrupt`)
+  separately from conversation events.
 - **UI** (`ui/ChatPanel.kt` + `resources/webview/chat.html`): JCEF panel in a right-anchored
   tool window. Single JS<->Kotlin channel: `window.__bridge(json)` up, `window.onClaudeEvent(line)` down.
 - **Sessions** (`session/SessionStore.kt`): reads `~/.claude/projects/<enc-cwd>/*.jsonl`
@@ -38,9 +37,10 @@ redistribute Anthropic's extension.js / webview / claude.exe.**
   `updatedInput={questions, answers:{"<question>": "<label(s)>"}}` — plain allow returns
   "user did not answer".
 - Permission gate ONLY works with `--permission-prompt-tool stdio`.
-- `rewind_files` requires `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo, and a
-  client-supplied `uuid` on sent user messages; success response is `{canRewind, skippedLinks}`
-  (no filesChanged) — use dry_run first to decide whether to show Undo.
+- Per-turn file rewind was REMOVED (2026-07-30). If it ever returns: `rewind_files` needs
+  `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo and a client-supplied `uuid` on sent
+  user messages; success is `{canRewind, skippedLinks}` (no filesChanged), so dry_run first.
+  Dropping the env var also stops the CLI writing file-history snapshots into every transcript.
 - Tool inputs stream via `input_json_delta`; tool results arrive as `user` events with
   `tool_result` blocks (used for Bash IN/OUT boxes).
 
@@ -79,7 +79,7 @@ zip in `build/distributions/`.
 DONE: bridge+tools, streaming chat, permission cards with diffs, plan card, AskUserQuestion,
 mode switcher (Manual/Edit automatically/Plan/Auto), model selector (persisted), slash-command
 menu with descriptions, @-file-mentions, image paste/drop, markdown+syntax highlight, thinking,
-stop/interrupt, retry, per-turn file rewind (dry-run gated), sessions (new/history/resume+replay),
+stop/interrupt, retry, sessions (new/history/resume+replay),
 Ctrl+N, VS Code-style document UI (user boxes, dot blocks, tool lines with IN/OUT, composer,
 mode/model popups, top+bottom scroll fades), tool-window icon (grey/white on selection), per-request
 completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resume aware),
@@ -103,11 +103,11 @@ usage/tokens display, auto-include selection / Alt+K, voice input.
 
 UI: chat.html is fully ported to the mockup design (Phase 1 chrome + Phase 2 renderer, see
 docs/port-plan.md). Styles live ONLY in webview/chat.css (spliced at `<!--CSS-->`; mockup links
-the same file). Turn model: `.turn` > sticky `.msg-user` (in-box undo) + `.blk` dot blocks +
+the same file). Turn model: `.turn` > sticky `.msg-user` + `.blk` dot blocks +
 `.tool-line` (green/red dot) with `.io` IN/OUT + canon `.card`/`.ask` cards (plan card shares the
 `--warn` feedback surface). Live thinking (chevron collapse, live Ns timer, hide-0s) + flower-spinner
 working line (live chars/4 token estimate; hide-0) + `.done` completion summary at request end. Status
-lines (⏹ Stopped / ↩ Reverted) hang their glyph (`.s-ic`, SVG or emoji) in the 22px dot column via
+lines (⏹ Stopped) hang their glyph (`.s-ic`, SVG or emoji) in the 22px dot column via
 `statusLine()`; timeline lines are 13px. Diff gutter line numbers come from `ChatPanel.editLineStart`
 (finds old_string in the file, reading FRESH from disk since the CLI edits out-of-band). Auto-scroll
 pinning re-asserts on rAF so empty-then-innerHTML blocks land fully at bottom. Editing chat.html
@@ -152,7 +152,7 @@ good-looking screenshot doesn't reach them:
 - a multi-question ask card — replayed tab switching is wired but has never been clicked
 - thinking with real text: local phpstorm/testing sessions are 100% empty bodies, so
   `syncroze-core` is the only place collapsed thinking and durations appear at all
-- live path: token meta from `message_delta.usage`, undo placement, ask Other/multiSelect, fail dots
+- live path: token meta from `message_delta.usage`, ask Other/multiSelect, fail dots
 Ctrl+Alt+G renders every transient state without driving the CLI; `./gradlew probe` dumps the
 replay blocks for any session, which is the fastest way to split a parser bug from a renderer bug.
 Replay also reconstructs, from fields the parser previously ignored: plan cards (`ExitPlanMode`
@@ -174,6 +174,5 @@ Known gaps deliberately left:
 - windowed replay: DOM search (browser find, any future find-in-conversation) only sees loaded
   blocks; and `IMAGE_BUDGET` is still spent in FILE order, so images in early unshipped blocks can
   starve the visible tail — flip the budget walk to run from the end when it bites.
-- replayed user turns have no undo button, and never will — rewind needs a live CLI + client uuid.
-Then: editor-title accept/reject, @-symbol mentions, conversation-level rewind, worktrees,
+Then: editor-title accept/reject, @-symbol mentions, worktrees,
 extensibility status view.

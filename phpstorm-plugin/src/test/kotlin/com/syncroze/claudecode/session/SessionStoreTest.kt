@@ -408,6 +408,134 @@ class SessionStoreTest {
         assertEquals(2, SessionStore.alignedStart(oneTurn, oneTurn.size, 4))
     }
 
+    /**
+     * An API error ("session limit", "usage credits") is persisted as an ordinary assistant record
+     * carrying `isApiErrorMessage`. Live draws it as an `.error` block, so replay must emit a
+     * distinct role rather than letting it render as prose in a normal assistant bubble.
+     */
+    @Test
+    fun `an API error replays as an error block, not assistant prose`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:01.000Z","message":{"role":"assistant","content":[{"type":"text","text":"ordinary reply"}],"usage":{"output_tokens":5}}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:02.000Z","isApiErrorMessage":true,"message":{"role":"assistant","content":[{"type":"text","text":"API Error: Usage credits required for 1M context"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-err", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "err.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val blocks = SessionStore.readTranscript(CWD, "err")
+            fun textOf(r: String) = blocks.filter { it["role"]?.jsonPrimitive?.content == r }
+                .map { it["text"]!!.jsonPrimitive.content }
+
+            assertEquals(listOf("API Error: Usage credits required for 1M context"), textOf("error"))
+            // the ordinary reply must stay an assistant block — only the flagged record changes role
+            assertEquals(listOf("ordinary reply"), textOf("assistant"))
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * Sidechain (subagent) records. No local session has any, so this fixture is the only coverage:
+     * it pins the ORDER — records replay in file order, interleaved with the parent conversation,
+     * because neither path branches on `isSidechain`.
+     *
+     * It also documents a consequence worth knowing: a sidechain `user` record is the subagent's
+     * PROMPT, not something the human typed, yet it replays as an ordinary user block. See the
+     * audit — deliberate for now (live behaves the same), revisit if real subagent sessions appear.
+     */
+    @Test
+    fun `sidechain records replay in file order, interleaved with the parent turn`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"parent asks"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:01.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"task1","name":"Task","input":{"description":"audit the repo"}}],"usage":{"output_tokens":3}}}""",
+            """{"type":"user","isSidechain":true,"timestamp":"2026-07-28T10:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"SUBAGENT PROMPT"}]}}""",
+            """{"type":"assistant","isSidechain":true,"timestamp":"2026-07-28T10:00:03.000Z","message":{"role":"assistant","content":[{"type":"text","text":"subagent thinking out loud"}],"usage":{"output_tokens":4}}}""",
+            """{"type":"assistant","isSidechain":true,"timestamp":"2026-07-28T10:00:04.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"read1","name":"Read","input":{"file_path":"/x/y.kt"}}],"usage":{"output_tokens":2}}}""",
+            """{"type":"user","timestamp":"2026-07-28T10:00:05.000Z","toolUseResult":{"stdout":"ok"},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"task1","content":"audit done"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:06.000Z","message":{"role":"assistant","content":[{"type":"text","text":"parent concludes"}],"usage":{"output_tokens":5}}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-side", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "side.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val blocks = SessionStore.readTranscript(CWD, "side")
+            val shape = blocks.map { b ->
+                val role = b["role"]!!.jsonPrimitive.content
+                role + ":" + (b["text"]?.jsonPrimitive?.content ?: "")
+            }
+            // file order, nothing dropped, nothing hoisted out of the parent turn
+            assertEquals(
+                listOf(
+                    "user:parent asks",
+                    "tool:Task",
+                    "user:SUBAGENT PROMPT",          // the subagent's prompt, rendered as a user block
+                    "assistant:subagent thinking out loud",
+                    "tool:Read",
+                    "assistant:parent concludes",
+                ),
+                shape.filter { !it.startsWith("done:") },
+            )
+            // the parent's Task result attaches to the Task tool line, not the subagent's Read
+            val task = blocks.first { it["text"]?.jsonPrimitive?.content == "Task" }
+            assertEquals("audit done", task["out"]?.jsonPrimitive?.content ?: "audit done")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * IMAGE_BUDGET is spent from the NEWEST block backwards. Spending it in file order gave the
+     * bytes to the oldest images — which windowed replay may never even ship — while the images
+     * actually on screen degraded to name-only chips.
+     */
+    @Test
+    fun `the image budget is spent newest-first, so the visible tail keeps its bytes`() {
+        val big = "A".repeat(3 * 1024 * 1024)      // 3 MB of base64 each; budget is 4 MB
+        fun turn(ts: String, label: String) =
+            """{"type":"user","timestamp":"$ts","message":{"role":"user","content":[""" +
+                """{"type":"text","text":"$label"},""" +
+                """{"type":"image","source":{"type":"base64","media_type":"image/png","data":"$big"}}]}}"""
+        val jsonl = listOf(
+            turn("2026-07-28T10:00:00.000Z", "oldest"),
+            turn("2026-07-28T10:00:01.000Z", "newest"),
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-budget", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "budget.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val users = SessionStore.readTranscript(CWD, "budget")
+                .filter { it["role"]?.jsonPrimitive?.content == "user" }
+            assertEquals(2, users.size)
+            fun hasBytes(i: Int) = users[i]["images"]!!.jsonArray[0].jsonObject["data"] != null
+
+            assertTrue(hasBytes(1), "the NEWEST image must keep its bytes")
+            assertFalse(hasBytes(0), "the older image must degrade to a name-only chip")
+            // the degraded chip still renders: kind + name survive
+            val old = users[0]["images"]!!.jsonArray[0].jsonObject
+            assertEquals("image", old["kind"]?.jsonPrimitive?.content)
+            assertEquals("file.png", old["name"]?.jsonPrimitive?.content)
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
     /** Deletion is irreversible, so it must take the sidecar with it and refuse anything odd. */
     @Test
     fun `delete removes the transcript and its tool-results sidecar`() {

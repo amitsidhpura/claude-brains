@@ -100,7 +100,7 @@ Same-content blocks that render differently between the streaming path and the r
       outline:none }` + `.turn :focus-visible { outline: 2px solid var(--accent); outline-offset:
       -2px }`, plus `.ask-opt:has(input:focus-visible)` to surface the transparent radio/checkbox's
       focus on the visible row. An inset ring can't exceed the element box, so no containment / sticky
-      box / clamped overflow can clip it — full ring on summary, ask tabs, card buttons, links, undo,
+      box / clamped overflow can clip it — full ring on summary, ask tabs, card buttons, links,
       inputs, live and resumed alike. Verified in the mockup (all focusables resolve to offset -2px
       accent) incl. a forced `contain:paint` turn-body → full ring. **Still to verify in a real
       `runIde` sandbox** (focus-ring painting is engine-specific; the inset approach is engine-agnostic
@@ -124,15 +124,46 @@ Mostly deliberate; listed so nothing is silently forgotten.
       budget → name-only chips.
 
 ### Lossy — gone on resume, worth knowing
-- [ ] Undo buttons (never replayable — needs live CLI + client uuid) and "↩ Reverted file changes"
-      status lines: a session where you reverted shows no trace.
-- [ ] API-error records replay as plain assistant text — no `.error` block, no Retry line (~14 local).
-- [ ] Retry lines: `lastUser` isn't seeded from a transcript, so a resumed failed last turn can't be
-      retried from the UI.
+- [~] ~~Undo buttons and "↩ Reverted file changes" status lines~~ — MOOT 2026-07-30: the revert
+      feature was removed outright (UI, control protocol, `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING`,
+      and the per-turn `uuid`). Nothing to lose on resume any more.
+- [x] API-error records replayed as plain assistant text — no `.error` block, no Retry line.
+      **Fixed 2026-07-30** — a record flagged `isApiErrorMessage` now emits role `error` instead of
+      `assistant` (`SessionStore.readTranscript`), rendered by a `case 'error'` in `renderBlocks`
+      that builds the same `SVG_ALERT + <div>` markup as live's `onResult`. Verified: the replayed
+      block is byte-identical to the live one in Chromium (same colour/border/bg, 38px both); Kotlin
+      test `an API error replays as an error block, not assistant prose` — which also asserts the
+      ordinary reply in the same transcript STAYS an assistant block — mutation-checked; and run
+      over the real transcripts (2 local sessions carry the flag, both reconstruct).
+      · **No Retry line, deliberately** — `addRetryLine()` needs `lastUser`, which a replay never
+        seeds, so it no-ops. That is the next item; until it lands a resumed failed turn genuinely
+        cannot be retried.
+- [x] Retry lines: `lastUser` wasn't seeded from a transcript, so a resumed failed last turn couldn't
+      be retried. **Fixed 2026-07-30** — `renderBlocks` seeds `lastUser` from every replayed user
+      block, and a transcript that ENDS on an `error` block gets `addRetryLine()`. Only the last
+      block qualifies: an error mid-transcript was already recovered from, so its Retry would resend
+      a later message. Attachments trimmed past `IMAGE_BUDGET` carry no bytes and are dropped by
+      ChatPanel on resend, so a retry after a trim sends the text plus whatever survived.
 - [~] Thinking durations are record-gap approximations; live times the stream.
-- [ ] DOM/browser find only sees loaded blocks; `IMAGE_BUDGET` spends in file order (early unshipped
-      images can starve the visible tail).
-- [ ] Sidechain/subagent record ordering untested (no local fixtures).
+- [x] `IMAGE_BUDGET` spent in file order (early unshipped images starved the visible tail).
+      **Fixed 2026-07-30** — attachments are attached whole during the parse and trimmed afterwards
+      by `trimAttachments()`, walking NEWEST-first; over-budget ones degrade to name-only chips as
+      before. Test `the image budget is spent newest-first…` (two 3 MB images, 4 MB budget → newest
+      keeps bytes, oldest degrades but keeps kind+name), mutation-checked. Note the parse now holds
+      all attachment bytes transiently before trimming; real sessions carry ~2.4 MB of images at
+      most, so the spike is bounded in practice.
+- [~] DOM/browser find only sees loaded blocks — inherent to windowed replay, documented in
+      `docs/limits.md`. No action: the alternative is shipping the whole transcript again.
+- [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
+      neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
+      with the parent turn; the parent's Task result still attaches to the Task tool line, not to a
+      subagent tool. Pinned by `sidechain records replay in file order, interleaved with the parent
+      turn` (synthetic fixture — still no real session has any).
+      · **Finding, left deliberate:** a sidechain `user` record is the SUBAGENT'S PROMPT, yet it
+        replays as an ordinary blue user block, so a resumed session appears to contain a message
+        the human never typed. Live behaves the same way (it renders stream events in arrival
+        order), so this is consistent rather than a resume bug — revisit if real subagent sessions
+        show it is confusing in practice.
 
 ---
 
@@ -141,29 +172,34 @@ Mostly deliberate; listed so nothing is silently forgotten.
 ### In the mockup but NOT in the plugin (fixture ahead of / diverged from reality)
 - [x] **1. Attach menu had a third item, "Browse the web"** — removed from the mockup 2026-07-29 (user
       didn't want it); the mockup now matches the plugin's two items (*Upload from computer* + *Add context*).
-- [ ] **2. Working line shows "· thought for 4s"** (`mockup.html:285`); `updateWorkTokens()` never emits
-      that segment — plugin meta is only `(Ns · ↓ N tokens)`.
-- [ ] **3. Auto-mode description differs.** Mockup: "Claude will automatically choose the best permission
-      mode for each task"; plugin: "Claude will approve actions automatically — no prompts".
-- [ ] **4. Composer placeholder differs.** Mockup: "ctrl esc to focus or unfocus Claude" (promises a
-      Ctrl+Esc focus shortcut that is ⬜ unimplemented); plugin: "Ask Claude…  (Ctrl+Enter to send,
-      Enter for newline)".
-- [ ] **5. Model chip label.** Mockup strips parens → "Default"; plugin `chipName()` renders
-      "Default (Opus 4.8)".
+- [x] **2. Working line shows "· thought for 4s"**; `updateWorkTokens()` never emits that segment.
+      **Fixed 2026-07-30** — segment dropped; mockup meta now reads `(6s · ↓ 88 tokens)`.
+- [x] **3. Auto-mode description differs.** **Fixed 2026-07-30** — mockup adopts the plugin's
+      "Claude will approve actions automatically — no prompts".
+- [x] **4. Composer placeholder differs.** Mockup promised an unimplemented Ctrl+Esc shortcut.
+      **Fixed 2026-07-30** — now the plugin's "Ask Claude…  (Ctrl+Enter to send, Enter for newline)".
+- [x] **5. Model chip label.** **Fixed 2026-07-30** — mockup shows "Default (Opus 4.8)", matching
+      `chipName()`'s Default-resolves-to-a-real-model form.
 - [~] Devbar, resizable frame/grip, static menus, `ph-img` placeholder thumbs, caption-only lightbox —
       fixture-only scaffolding, by design.
 
 ### In the plugin but NOT in the mockup (states the fixture never shows)
-- [ ] **1. Clamped blocks** — no `.clip`/`.clamp-more` "Show more" example (no 12+-line user message,
-      no 16+-line code block), despite this state having regressed sticky-pinning once.
-- [ ] **2. "↩ Reverted file changes"** status line (emoji-glyph `s-ic` path) — gallery covers it, mockup doesn't.
-- [ ] **3. @-mention popup** (`#mention` / `.mi`) — absent from the fixture.
-- [ ] **4. Name-only image chip** in a user box (past-budget replay state).
-- [ ] **5. Multiple OUT rows** on one Bash io box; **"Thought"-without-duration** replay variant.
+- [x] **1. Clamped blocks** — **Fixed 2026-07-30**: a 12+-line `.msg-user.clip` with the bottom-border
+      tab. Verified clamped (234px, not full height) and still `position: sticky` — the exact pairing
+      that regressed before (`.clip`'s `position: relative` beat `.msg-user`'s sticky).
+- [~] ~~**2. "↩ Reverted file changes"** status line~~ — MOOT 2026-07-30, revert feature removed.
+      The emoji-glyph `s-ic` path now has no live user (⏹ Stopped and Resumed both use SVGs).
+- [x] **3. @-mention popup** — **Fixed 2026-07-30**: static `#mention` with four `.mi` rows (first
+      `.sel`), hidden by default and toggled from the devbar, positioned above the composer the way
+      `openMenu()` places it.
+- [x] **4. Name-only image chip** — **Fixed 2026-07-30**: an `.att` with neither thumb nor size,
+      showing the derived `file.jpg`, i.e. a replayed image past `IMAGE_BUDGET`.
+- [x] **5. Multiple OUT rows** on one Bash io box (3-row box: IN + two OUTs, the live-only shape from
+      Audit 1 #5) and **"Thought"-without-duration** — both added 2026-07-30.
 
 ### Orphan
-- [ ] **Dead CSS:** `.status .undo` (`chat.css:384–385`) is referenced by neither the plugin JS nor the
-      mockup — leftover from an earlier undo-placement design.
+- [x] **Dead CSS:** `.status .undo` — resolved 2026-07-30, deleted along with the rest of the
+      revert feature.
 
 ---
 
@@ -179,14 +215,18 @@ Not renderer-parity, but the live threads to resume:
   `document` blocks** in stream-json input (PDF/text). Both mirror the official extension, so low
   risk, but they're the only live-only unknowns. Same for the **inset focus-ring** (Audit 1 #8) —
   JCEF paints focus rings its own way.
-- **Code block with no language label** (discussed, not started). A bare ``` fence renders an empty
-  header strip + copy button. Options: **A** default label `esc(lang||'text')` (1 line); **B** keep
-  as-is; **C** drop the header for plain blocks and float copy top-right on hover (VS Code style).
-  Leaning A or C.
-- **MCP / untested tool lines (Playwright etc.)** (discussed, not started). They render the raw
-  `mcp__<server>__<tool>` name and a description only when the input has `url`/`query`/`path`/… — so
-  `browser_navigate` shows its url but `browser_click`/`browser_take_screenshot` show a blank desc.
-  Options: **A** strip the `mcp__<server>__` prefix in the name path (shared live+replay — biggest,
-  cheapest win); **B** add more desc keys (`selector`/`filename`/…); **C** both. Leaning A (+ a few B keys).
-- Remaining Audit 3 mockup-coverage gaps above (clamped-block example, reverted-status line,
-  @-mention popup, name-only chip, multi-OUT/no-duration-thinking) and the orphan `.status .undo` CSS.
+- [x] **Code block with no language label** — **Done 2026-07-30** (option A, label `code`). Also fixed
+  the fence regex while there: `(\w*)` matched word chars only, so `” ```c++ ”` parsed as lang "c" with
+  "++" left in the code body; now `([^\s`]*)`. ACCEPTED (user, 2026-07-30): an EMPTY fence still
+  renders a 48px block — header "code" + a copy button that copies nothing. No action intended.
+- [x] **MCP tool line NAMES** — **Done 2026-07-30**: one `toolLabel()` rule for every tool — drop an
+  `mcp_`/`mcp__` prefix, then Pascal-case on underscore runs. `mcp__playwright__browser_click` →
+  `PlaywrightBrowserClick` (server kept for provenance). Applied at all four DISPLAY sites (live and
+  replayed tool lines, replayed and permission cards); `openTool.name`/`ev.tool` comparisons keep the
+  raw id. Built-ins pass through untouched. Mockup has fixtures.
+  OPEN: **desc keys** (option B) — `browser_click`/`browser_take_screenshot` still show a blank
+  description. Needs `selector`/`filename`/`element`/`ref` added on BOTH sides (`chat.html` live +
+  `SessionStore.kt` replay — the duplicated chain in `docs/limits.md`), or they diverge.
+- [x] Audit 3 mockup-coverage gaps — all closed 2026-07-30 (clamped block, @-mention popup, name-only
+  chip, multi-OUT, no-duration thinking; reverted-status line and `.status .undo` moot with the
+  revert removal).

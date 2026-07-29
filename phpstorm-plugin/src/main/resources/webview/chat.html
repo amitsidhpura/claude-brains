@@ -122,7 +122,6 @@
   const SVG_CIRCLE_X = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
   const SVG_STEP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.029 4.285A2 2 0 0 0 7 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/><path d="M3 4v16"/></svg>';
   const SVG_RETRY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
-  const SVG_UNDO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>';
   const SVG_COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
@@ -214,7 +213,6 @@
 
   /* ---------- turn structure: user box + everything that answers it ---------- */
   let curTurn = null;                // .turn container for the current exchange
-  const turnRecs = {};               // turnId -> { userEl }
 
   function el(cls, text) {
     if (welcome) welcome.style.display = 'none';
@@ -333,8 +331,11 @@
   function renderMd(srcRaw) {
     let src = esc(srcRaw);                              // escape everything first
     const blocks = [];
-    src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {   // fenced code
-      blocks.push('<div class="codeblock"><div class="cb-h"><span>' + esc(lang) +
+    // [^\s`]* not \w*: a language can carry punctuation, and \w* left the remainder in the body
+    // (```c++ parsed as lang "c" + body "++\n…"). Unlabelled fences read as "code" so the header
+    // is never an empty strip with a lone copy button.
+    src = src.replace(/```([^\s`]*)\n?([\s\S]*?)```/g, (m, lang, code) => {   // fenced code
+      blocks.push('<div class="codeblock"><div class="cb-h"><span>' + esc(lang || 'code') +
         '</span><button class="copy" title="Copy">' + SVG_COPY + '</button></div><pre>' +
         highlight(code.replace(/\n$/, '')) + '</pre></div>');
       return ' B' + (blocks.length - 1) + ' ';
@@ -649,7 +650,7 @@
     const body = replayDiff(it);
     if (!body) return;
     const card = el('card warn', '');
-    card.innerHTML = '<div class="card-h"><b>' + esc(it.text) + '</b>' +
+    card.innerHTML = '<div class="card-h"><b>' + esc(toolLabel(it.text)) + '</b>' +
       (it.file ? ' on <code>' + esc(it.file) + '</code>' : '') + '</div>' + body +
       '<div class="card-b">' + (it.denied
         ? '<span class="no-t">✗ Rejected</span>'
@@ -726,9 +727,22 @@
       switch (it.role) {
         case 'user':
           addUserMessage(it.text || '', it.images || []);
+          // seed Retry: without this a resumed failed turn had no way back. Replayed attachments
+          // past IMAGE_BUDGET carry no data and are dropped by ChatPanel on resend, so a retry
+          // after a budget trim sends the text and whatever bytes survived.
+          lastUser = { text: it.text || '', images: it.images || [] };
           break;
         case 'assistant': {
           const b = el('blk', ''); b.innerHTML = renderMd(it.text); clampCode(b);
+          break;
+        }
+        // API errors are persisted as assistant records flagged isApiErrorMessage; live draws the
+        // same `.error` block from `onResult`. No Retry line: that needs `lastUser`, which a replay
+        // never seeds — a resumed failed turn genuinely can't be retried.
+        case 'error': {
+          const e = el('error', '');
+          e.innerHTML = SVG_ALERT + '<div></div>';
+          e.querySelector('div').textContent = it.text;
           break;
         }
         case 'status':
@@ -759,7 +773,7 @@
           break;
         case 'tool': {
           const t = el('tool-line', '');
-          t.innerHTML = '<b>' + esc(it.text) + '</b><span class="t-desc"></span>';
+          t.innerHTML = '<b>' + esc(toolLabel(it.text)) + '</b><span class="t-desc"></span>';
           if (it.isError) t.classList.add('fail');
           if (it.desc) {
             const d = t.querySelector('.t-desc');
@@ -786,6 +800,11 @@
 
   function renderTranscript(items, more) {
     renderBlocks(items);
+    // A session that ended on an API error is retryable now that lastUser is seeded. Only the
+    // LAST block qualifies: an error mid-transcript was already recovered from, and its Retry
+    // would resend a later message.
+    const tail = items[items.length - 1];
+    if (tail && tail.role === 'error') addRetryLine();
     if (items.length) { statusLine('Resumed', SVG_HISTORY); }
     updateLoadMore(more || 0);
     // The tail must carry REAL heights before we can land on the true bottom: a turn still showing
@@ -1026,18 +1045,15 @@
 
   let lastUser = null;                 // { text, images } — for Retry
   let history = [], histIdx = 0, histDraft = ''; // sent-message history for ↑/↓ recall
-  let turnId = null, turnHadEdit = false; // for Rewind
   function uuid() { try { return crypto.randomUUID(); } catch (_) { return 'id-' + Math.random().toString(16).slice(2); } }
 
   function sendTurn(t, imgs) {
-    const userEl = addUserMessage(t, imgs);
+    addUserMessage(t, imgs);
     lastUser = { text: t, images: imgs };
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
-    turnId = uuid(); turnHadEdit = false;
-    turnRecs[turnId] = { userEl: userEl };
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0;
-    bridge({ kind: 'user', id: turnId, text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
+    bridge({ kind: 'user', text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
     stopping = false;
     setBusy(true);
     smoothToBottom();
@@ -1231,7 +1247,6 @@
   let curBubble = null, curRaw = '';
   let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0, thinkTimer = null;
   let openTool = null;        // tool block currently streaming its input
-  let pendingUndo = null;     // turn rec awaiting a __rewind result
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
   let reqTokens = 0;          // output tokens summed across every result turn in one user request
   const toolsById = {};       // tool_use id -> {el, name, io} for OUT boxes
@@ -1268,39 +1283,6 @@
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
-      case '__rewind_check': {
-        const r = ev.result || {};
-        const fc = r.filesChanged || [];
-        const changed = fc.length > 0 || r.insertions > 0 || r.deletions > 0;
-        const rec = turnRecs[ev.id];
-        if (r.canRewind && changed && rec && rec.userEl && !rec.userEl.querySelector('.undo')) {
-          const n = fc.length;
-          rec.userEl.classList.add('has-undo');
-          const btn = document.createElement('button');
-          btn.className = 'undo';
-          btn.title = n ? ('Undo ' + n + ' file change' + (n !== 1 ? 's' : '') + ' from this turn') : 'Undo file changes from this turn';
-          btn.innerHTML = SVG_UNDO;
-          btn.onclick = function () {
-            btn.disabled = true;
-            pendingUndo = rec;
-            bridge({ kind: 'rewind', id: ev.id, dry: 'false' });
-          };
-          rec.userEl.appendChild(btn);
-        }
-        return;
-      }
-      case '__rewind': {
-        const r = ev.result || {};
-        if (r.canRewind === false) statusLine(r.error || 'Nothing to undo');
-        else statusLine('Reverted file changes', '↩');
-        if (pendingUndo && pendingUndo.userEl) {
-          const b = pendingUndo.userEl.querySelector('.undo');
-          if (b) b.remove();
-          pendingUndo.userEl.classList.remove('has-undo');
-          pendingUndo = null;
-        }
-        return;
-      }
       case '__clear':            return clearLogUI();
       case '__exit':             setBusy(false);
         return statusLine('claude process exited (' + ev.code + ')', SVG_ALERT, 'status err');
@@ -1338,11 +1320,10 @@
         const cb = e.content_block || {};
         if (cb.type === 'tool_use') {
           const t = el('tool-line', '');
-          t.innerHTML = '<b>' + esc(cb.name || 'tool') + '</b><span class="t-desc"></span>';
+          t.innerHTML = '<b>' + esc(toolLabel(cb.name)) + '</b><span class="t-desc"></span>';
           openTool = { el: t, name: cb.name || 'tool', json: '' };
           if (cb.id) toolsById[cb.id] = openTool;
           curBubble = null; // text after a tool starts a fresh block
-          if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'].indexOf(cb.name) >= 0) turnHadEdit = true;
         } else if (cb.type === 'thinking') {
           curThink = el('think-live', '');
           curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
@@ -1533,6 +1514,23 @@
     sendTurn('/compact', []);
   };
 
+  /**
+   * Display name for any tool: drop an `mcp_`/`mcp__` prefix, then Pascal-case what remains,
+   * splitting on runs of underscores. One rule for every tool rather than a special case —
+   * `mcp__playwright__browser_click` reads as `PlaywrightBrowserClick`, keeping the server for
+   * provenance, while names that are already Pascal-case (Read, ExitPlanMode) pass through
+   * untouched because only the first letter of each segment is forced up.
+   * DISPLAY only: `openTool.name` / `ev.tool` comparisons keep the raw id.
+   */
+  function toolLabel(name) {
+    const raw = String(name || 'tool');
+    return raw.replace(/^mcp_+/, '')
+      .split(/_+/).filter(Boolean)
+      .map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); })
+      .join('') || raw;
+  }
+
+
   function fmtSize(b) {
     b = Number(b) || 0;
     if (!b) return '';
@@ -1589,7 +1587,6 @@
     } else {
       const done = el('done', '');
       done.innerHTML = doneHtml(durMs, outTok);   // time always; token segment only when non-zero
-      if (turnHadEdit && turnId) bridge({ kind: 'rewind', id: turnId, dry: 'true' }); // check for undo
     }
     stopping = false;
   }
@@ -1767,7 +1764,7 @@
     } else {
       card.className = 'card warn';
       card.innerHTML =
-        '<div class="card-h">Claude wants to run <b>' + esc(ev.tool) + '</b>' +
+        '<div class="card-h">Claude wants to run <b>' + esc(toolLabel(ev.tool)) + '</b>' +
           (file ? ' on <code>' + esc(file) + '</code>' : '') + '</div>' +
         previewHtml(ev.tool, inp, ev.lineStart) +
         cardBtns('Accept', SVG_CHECK, 'Reject', SVG_CIRCLE_X);
@@ -1858,7 +1855,6 @@
 
     // status lines
     statusLine('Stopped', SVG_STOP);
-    statusLine('Reverted file changes', '↩');
 
     // ---- replayed transcript blocks (the resume path, drawn by renderTranscript itself) ----
     renderTranscript([

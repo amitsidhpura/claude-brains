@@ -77,7 +77,6 @@ class ClaudeCli(
         pb.environment().apply {
             put("CLAUDE_CODE_SSE_PORT", ssePort.toString())
             put("CLAUDE_CODE_ENTRYPOINT", "phpstorm-syncroze")
-            put("CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING", "1") // enables rewind_files
             gitBashPath()?.let { put("CLAUDE_CODE_GIT_BASH_PATH", it) }
         }
 
@@ -136,14 +135,6 @@ class ClaudeCli(
         when {
             reqId == INIT_REQ_ID ->
                 resp["response"]?.jsonObject?.let { onInit(it.toString()) } // { commands, models, account, ... }
-            reqId?.startsWith("rewinddry-") == true && result != null ->
-                onEvent(json.encodeToString(JsonObject.serializer(), buildJsonObject {
-                    put("type", "__rewind_check"); put("id", reqId.removePrefix("rewinddry-")); put("result", result)
-                }))
-            reqId?.startsWith("rewind-") == true && result != null ->
-                onEvent(json.encodeToString(JsonObject.serializer(), buildJsonObject {
-                    put("type", "__rewind"); put("result", result)
-                }))
         }
     }
 
@@ -204,23 +195,6 @@ class ClaudeCli(
         put("model", model)
     })
 
-    /**
-     * Check (dryRun=true) or perform (dryRun=false) reverting file edits since [userMessageId].
-     * Dry-run result arrives as `__rewind_check`, actual as `__rewind`.
-     */
-    fun rewindFiles(userMessageId: String, dryRun: Boolean) {
-        val prefix = if (dryRun) "rewinddry-" else "rewind-"
-        val line = json.encodeToString(JsonObject.serializer(), buildJsonObject {
-            put("type", "control_request")
-            put("request_id", "$prefix$userMessageId")
-            put("request", buildJsonObject {
-                put("subtype", "rewind_files")
-                put("user_message_id", userMessageId)
-                put("dry_run", dryRun)
-            })
-        })
-        writeLine(line)
-    }
 
     private fun sendControlRequest(request: JsonObject) {
         val line = json.encodeToString(JsonObject.serializer(), buildJsonObject {
@@ -232,13 +206,12 @@ class ClaudeCli(
     }
 
     /** Send a text-only user turn. */
-    fun sendUserText(text: String) = sendUserMessage(text, emptyList(), null)
+    fun sendUserText(text: String) = sendUserMessage(text, emptyList())
 
-    /** Send a user turn with optional attachments and an optional message id (for rewind). */
-    fun sendUserMessage(text: String, attachments: List<Attachment>, messageId: String? = null) {
+    /** Send a user turn with optional attachments. */
+    fun sendUserMessage(text: String, attachments: List<Attachment>) {
         val line = json.encodeToString(JsonObject.serializer(), buildJsonObject {
             put("type", "user")
-            messageId?.let { put("uuid", it) }
             put("message", buildJsonObject {
                 put("role", "user")
                 put("content", buildJsonArray {

@@ -86,8 +86,8 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [x] ✅ Resume **replays prior turns into the UI** (parses the JSONL: user/assistant text + tool chips)
 - [ ] ⬜ **Reopen closed session** (Ctrl+Shift+T)
 - [ ] ⬜ Multiple conversation **tabs** (`new_conversation_tab`, `rename_tab`)
-- [x] ✅ **Rewind / undo file changes** per turn (`rewind_files`; checkpointing enabled; git-backed)
-- [ ] ⬜ Rewind the *conversation* too (resume-at a message; currently only file edits revert)
+- [ ] ⬜ ~~Rewind / undo file changes per turn~~ — REMOVED 2026-07-30 (feature dropped)
+- [ ] ⬜ Rewind the *conversation* (resume-at a message) — not started; file rewind was removed
 - [x] 🟡 Ctrl+N new conversation shortcut (Ctrl+Shift+T reopen-closed still ⬜)
 
 ## 9. Model & usage
@@ -162,7 +162,7 @@ Work order suggestion in **§ Milestones** at the bottom.
 1. **M1 – Edit loop** (highest value): §3 diffs + accept/reject, §2 `openDiff`/`getDiagnostics`,
    §1 stop/interrupt, autosave. → makes it a real coding agent.
 2. **M2 – Chat polish**: §1 markdown/code/thinking/errors, §6 @-mentions + selection + images.
-3. **M3 – Sessions**: §8 new/resume/tabs/rewind.
+3. **M3 – Sessions**: §8 new/resume/tabs.
 4. **M4 – Modes & permissions**: §4 permission prompts + modes, §5 plan mode.
 5. **M5 – Config & UX**: §13 settings page + parity, §12 window placement, §10 auth/login.
 6. **M6 – Extensibility**: §11 plugins/MCP/skills/hooks/subagents, §7 slash commands.
