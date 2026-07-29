@@ -325,17 +325,21 @@ object SessionStore {
                             }
                             if (obj["isMeta"]?.jsonPrimitive?.content == "true") continue // caveat wrapper
                             val text = userTextFull(obj)?.let { cleanInjected(it) }?.takeIf { it.isNotBlank() }
-                            val imgs = imagesOf(content)
-                            if (text == null && imgs.isEmpty()) continue
+                            val atts = attachmentsOf(content)
+                            if (text == null && atts.isEmpty()) continue
                             val item = Item("user")
                             item.text = text ?: ""
-                            for (img in imgs) {
-                                val data = img["data"]?.jsonPrimitive?.content ?: continue
+                            for (att in atts) {
+                                val data = att["data"]?.jsonPrimitive?.content ?: continue
                                 if (imageBytes + data.length > IMAGE_BUDGET) {
-                                    item.images.add(buildJsonObject { put("name", img["name"]?.jsonPrimitive?.content ?: "image.png") })
+                                    // past the budget: keep the chip (kind + name) but drop the bytes
+                                    item.images.add(buildJsonObject {
+                                        put("kind", att["kind"]?.jsonPrimitive?.content ?: "image")
+                                        put("name", att["name"]?.jsonPrimitive?.content ?: "file")
+                                    })
                                 } else {
                                     imageBytes += data.length
-                                    item.images.add(img)
+                                    item.images.add(att)
                                 }
                             }
                             flushSummary() // close the previous request before the next turn opens
@@ -451,19 +455,36 @@ object SessionStore {
         else -> ""
     }
 
-    /** Image blocks attached to a user message, as {media_type, data, name}. */
-    private fun imagesOf(content: JsonElement?): List<JsonObject> {
+    /**
+     * Image + document attachments on a user message, as {kind, media_type, data, name}. Images stay
+     * base64; a text document's raw text is re-base64'd so the chip's download path is uniform with
+     * images/pdf. Documents carry a `title` (the CLI stores the real filename), so — unlike images —
+     * replayed PDFs/text files show their actual name.
+     */
+    private fun attachmentsOf(content: JsonElement?): List<JsonObject> {
         if (content !is JsonArray) return emptyList()
         return content.mapNotNull { p ->
             val b = p.jsonObject
-            if (b["type"]?.jsonPrimitive?.content != "image") return@mapNotNull null
             val src = b["source"]?.jsonObject ?: return@mapNotNull null
-            val data = src["data"]?.jsonPrimitive?.content ?: return@mapNotNull null
-            val mt = src["media_type"]?.jsonPrimitive?.content ?: "image/png"
-            buildJsonObject {
-                put("media_type", mt)
-                put("data", data)
-                put("name", imageName(mt))
+            when (b["type"]?.jsonPrimitive?.content) {
+                "image" -> {
+                    val data = src["data"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    val mt = src["media_type"]?.jsonPrimitive?.content ?: "image/png"
+                    buildJsonObject { put("kind", "image"); put("media_type", mt); put("data", data); put("name", imageName(mt)) }
+                }
+                "document" -> {
+                    val title = b["title"]?.jsonPrimitive?.content
+                    if (src["type"]?.jsonPrimitive?.content == "text") {
+                        val raw = src["data"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        val data = java.util.Base64.getEncoder().encodeToString(raw.toByteArray(Charsets.UTF_8))
+                        buildJsonObject { put("kind", "text"); put("media_type", "text/plain"); put("data", data); put("name", title ?: "file.txt") }
+                    } else {
+                        val data = src["data"]?.jsonPrimitive?.content ?: return@mapNotNull null   // base64 pdf
+                        val mt = src["media_type"]?.jsonPrimitive?.content ?: "application/pdf"
+                        buildJsonObject { put("kind", "pdf"); put("media_type", mt); put("data", data); put("name", title ?: "file.pdf") }
+                    }
+                }
+                else -> null
             }
         }
     }

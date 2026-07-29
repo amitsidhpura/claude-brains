@@ -65,9 +65,12 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [ ] ⬜ @-mention symbols; Alt+K to mention current file
 - [ ] ⬜ "Add context" picker
 - [ ] ⬜ Auto-include current **selection** on ask
-- [x] ✅ **Image / screenshot** attachments (base64 image content blocks)
-- [x] ✅ Paste image from clipboard (thumbnail chip, removable, sent with the turn)
-- [x] 🟡 Drag-and-drop images into chat (files: images only for now)
+- [x] ✅ **File attachments** — images (base64 `image` blocks) **+ PDF / text / code** (`document`
+  blocks: PDF base64, text/code decoded-text; reference-matched extension allowlist so `.php/.py/.js/…`
+  with empty MIME still classify). Image chips preview in the lightbox; other chips download via the
+  IDE's native save dialog. Documents carry a `title`, so replayed PDFs/text keep their real filename.
+- [x] ✅ Paste from clipboard (images reliably; other files when the OS/JCEF exposes them as files)
+- [x] ✅ Drag-and-drop any supported file into chat (unsupported binaries skipped)
 
 ## 7. Slash commands
 - [x] ✅ **Slash-command autocomplete menu** (type `/`, keyboard nav, click/Enter to insert)

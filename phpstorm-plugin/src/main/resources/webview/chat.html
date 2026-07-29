@@ -95,7 +95,7 @@
         <div id="slashList"></div>
       </div>
     </div>
-    <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
+    <input id="fileInput" type="file" multiple style="display:none">
   </div>
 </div>
 <div id="mention"></div>
@@ -133,6 +133,7 @@
   // same glyph as the top-bar history button — a replayed thread is history
   const SVG_HISTORY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
   const SVG_CHEVRON = '<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'; // chevron-right; CSS rotates it down when open
+  const SVG_FILE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>'; // non-image attachment chip
   const IND = {
     rOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
     rOn:  SVG_CHECK,
@@ -840,12 +841,59 @@
   }
 
   /* ---------- attachments (composer chips) ---------- */
-  let pending = []; // { media_type, data(base64), name, w, h }
+  let pending = []; // { kind:'image'|'pdf'|'text', media_type, data(base64), name, w, h }
+
+  // File categorisation, ported from the reference webview (sit / ait / ybe / wbe / cit). Images send
+  // as base64 image blocks; PDFs and any text/code file send as `document` blocks. Code files carry an
+  // empty MIME in the browser, so the extension allowlist is what lets .php/.py/.js/… through.
+  const IMG_MIME = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const TEXT_MIME = ['application/json', 'application/xml', 'application/javascript', 'application/typescript',
+    'application/x-javascript', 'application/x-typescript', 'application/x-yaml', 'application/yaml',
+    'application/x-sh', 'application/x-shellscript', 'application/sql', 'application/graphql', 'application/toml', 'application/x-toml'];
+  const TEXT_EXT = new Set(('json yaml yml toml ini cfg conf config env properties js jsx ts tsx mjs cjs mts cts ' +
+    'py pyw rb go rs java kt kts scala c h cpp hpp cc cxx cs fs fsx swift php pl pm lua r jl ex exs erl hrl clj ' +
+    'cljs cljc elm hs ml mli v sv vhd vhdl asm s html htm xhtml xml svg css scss sass less vue svelte astro sh ' +
+    'bash zsh fish ps1 psm1 psd1 bat cmd csv tsv sql graphql gql prisma md mdx markdown rst txt text rtf tex ' +
+    'latex org adoc asciidoc makefile cmake gradle dockerfile containerfile vagrantfile rakefile gemfile podfile ' +
+    'fastfile brewfile procfile lock sum log diff patch gitignore gitattributes editorconfig prettierrc eslintrc ' +
+    'babelrc npmrc nvmrc yarnrc').split(' '));
+  const NAME_TEXT = ['license', 'readme', 'changelog', 'authors', 'contributors', 'copying'];
+  function isTextFile(mime, name) {
+    if (mime.indexOf('text/') === 0) return true;
+    if (TEXT_MIME.indexOf(mime) >= 0) return true;
+    const low = (name || '').toLowerCase();
+    return TEXT_EXT.has(low.split('.').pop()) || TEXT_EXT.has(low) || NAME_TEXT.indexOf(low) >= 0;
+  }
+  function fileKind(file) {
+    const mime = (file.type || '').toLowerCase();
+    if (IMG_MIME.indexOf(mime) >= 0) return 'image';
+    if (mime === 'application/pdf') return 'pdf';
+    if (isTextFile(mime, file.name || '')) return 'text';
+    return null; // unsupported binary — skipped
+  }
+  // non-image attachments download via a native save dialog on the Kotlin side; images open the lightbox
+  function downloadAtt(p) {
+    if (p.data) bridge({ kind: 'download', name: p.name || 'file', media_type: p.media_type, data: p.data });
+  }
+  // chip size label: byte count straight from the base64 length (the base64 IS the file's bytes).
+  // fmtSize() (shared with the history panel) renders it as B / KB / MB — B below 1 KB so a tiny file
+  // reads "17 B", not a misleading "0 KB"; MB at 1024 KB. Binary thresholds throughout.
+  function b64Bytes(b64) {
+    if (!b64) return 0;
+    let pad = 0;
+    if (b64.charCodeAt(b64.length - 1) === 61) pad++;   // '='
+    if (b64.charCodeAt(b64.length - 2) === 61) pad++;
+    return Math.floor(b64.length * 3 / 4) - pad;
+  }
+
   function attChipHtml(p, withRm, i) {
-    // replayed chips past the transcript image budget carry a name but no data — skip the thumb
-    return (p.data ? '<span class="thumb"><img src="data:' + p.media_type + ';base64,' + p.data + '"></span>' : '') +
-      esc(p.name || 'image.png') +
-      (p.w ? '<span class="meta">' + p.w + '×' + p.h + '</span>' : '') +
+    // image → thumbnail (or, past the transcript budget, nothing); any other file → a file icon
+    const lead = p.kind === 'image'
+      ? (p.data ? '<span class="thumb"><img src="data:' + p.media_type + ';base64,' + p.data + '"></span>' : '')
+      : SVG_FILE;
+    return lead +
+      esc(p.name || 'file') +
+      (p.data ? '<span class="meta">' + fmtSize(b64Bytes(p.data)) + '</span>' : '') +
       (withRm ? '<button class="rm" title="Remove" data-i="' + i + '">' + SVG_X + '</button>' : '');
   }
   function renderAttachments() {
@@ -861,33 +909,37 @@
       b.onclick = function () { pending.splice(+b.dataset.i, 1); renderAttachments(); };
     });
   }
-  function addImageFile(file) {
+  function addFile(file) {
+    const kind = fileKind(file);
+    if (!kind) { console.warn('Unsupported file skipped:', file.name); return; }
     const reader = new FileReader();
     reader.onload = function () {
       const url = String(reader.result);      // data:<mt>;base64,<data>
-      const comma = url.indexOf(',');
-      const mt = (url.slice(5, url.indexOf(';')) || 'image/png');
-      const item = { media_type: mt, data: url.slice(comma + 1), name: file.name || 'image.png', w: 0, h: 0 };
-      pending.push(item);
+      const data = url.slice(url.indexOf(',') + 1);
+      // images keep their real type; pdf/text are normalised (a code file's browser MIME is empty)
+      const mt = kind === 'pdf' ? 'application/pdf'
+        : kind === 'text' ? 'text/plain'
+        : (url.slice(5, url.indexOf(';')) || 'image/png');
+      pending.push({ kind: kind, media_type: mt, data: data, name: file.name || 'file' });
       renderAttachments();
-      const probe = new Image();
-      probe.onload = function () { item.w = probe.naturalWidth; item.h = probe.naturalHeight; renderAttachments(); };
-      probe.src = url;
     };
     reader.readAsDataURL(file);
   }
   input.addEventListener('paste', function (e) {
     const items = (e.clipboardData && e.clipboardData.items) || [];
+    let took = false;
     for (const it of items) {
-      if (it.kind === 'file' && it.type.indexOf('image/') === 0) {
-        const f = it.getAsFile(); if (f) { addImageFile(f); e.preventDefault(); }
+      if (it.kind === 'file') {
+        const f = it.getAsFile();
+        if (f && fileKind(f)) { addFile(f); took = true; }
       }
     }
+    if (took) e.preventDefault();   // otherwise let a normal text paste through
   });
   ['dragover', 'drop'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
   document.addEventListener('drop', function (e) {
     const fs = (e.dataTransfer && e.dataTransfer.files) || [];
-    for (const f of fs) if (f.type.indexOf('image/') === 0) addImageFile(f);
+    for (const f of fs) addFile(f);   // addFile categorises and skips unsupported
   });
   const fileInput = document.getElementById('fileInput');
   document.getElementById('attachBtn').onclick = function (e) { tg('attachMenu', e); };
@@ -904,7 +956,7 @@
     });
   });
   fileInput.onchange = function () {
-    Array.from(fileInput.files).forEach(function (f) { if (f.type.indexOf('image/') === 0) addImageFile(f); });
+    Array.from(fileInput.files).forEach(function (f) { addFile(f); });
     fileInput.value = '';
   };
   document.getElementById('slashBtn').onclick = function (e) { tg('slashMenu', e); };
@@ -950,23 +1002,10 @@
         const chip = document.createElement('span');
         chip.className = p.data ? 'att click' : 'att';
         chip.innerHTML = attChipHtml(p, false, 0);
-        if (p.data) chip.onclick = function () { openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'image.png'); };
-        // Replayed chips carry no dimensions (w/h are client-only, never sent to the CLI), so derive
-        // them from the bytes we DO have — the same probe addImageFile runs live. Live chips already
-        // have p.w, so this is skipped for them (except the rare paste-then-send-before-decode race,
-        // where it just adds the meta that was missing). attChipHtml order is thumb, name, meta — with
-        // no meta and no rm button on a replayed chip, appending the span lands it in the right place.
-        if (p.data && !p.w) {
-          const probe = new Image();
-          probe.onload = function () {
-            if (!probe.naturalWidth) return;
-            const meta = document.createElement('span');
-            meta.className = 'meta';
-            meta.textContent = probe.naturalWidth + '×' + probe.naturalHeight;
-            chip.appendChild(meta);
-          };
-          probe.src = 'data:' + p.media_type + ';base64,' + p.data;
-        }
+        if (p.data) chip.onclick = function () {
+          if (p.kind === 'image') openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'file');
+          else downloadAtt(p);   // pdf / text / code → native save dialog
+        };
         atts.appendChild(chip);
       });
       d.appendChild(atts);
@@ -998,7 +1037,7 @@
     turnId = uuid(); turnHadEdit = false;
     turnRecs[turnId] = { userEl: userEl };
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0;
-    bridge({ kind: 'user', id: turnId, text: t, images: imgs.map(function (p) { return { media_type: p.media_type, data: p.data }; }) });
+    bridge({ kind: 'user', id: turnId, text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
     stopping = false;
     setBusy(true);
     smoothToBottom();

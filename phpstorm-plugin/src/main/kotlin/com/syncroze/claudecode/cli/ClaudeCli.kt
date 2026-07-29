@@ -11,7 +11,14 @@ import kotlinx.serialization.json.put
 import java.io.File
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 import kotlin.concurrent.thread
+
+/**
+ * A user-message attachment. [kind] is "image" | "pdf" | "text"; [data] is base64 (images/pdf) or,
+ * for text, still base64 as received from the webview — decoded to raw text when the block is built.
+ */
+data class Attachment(val kind: String, val mediaType: String, val data: String, val name: String)
 
 /**
  * Spawns and drives the official `claude` CLI in streaming mode.
@@ -227,8 +234,8 @@ class ClaudeCli(
     /** Send a text-only user turn. */
     fun sendUserText(text: String) = sendUserMessage(text, emptyList(), null)
 
-    /** Send a user turn with optional images and an optional message id (for rewind). */
-    fun sendUserMessage(text: String, images: List<Pair<String, String>>, messageId: String? = null) {
+    /** Send a user turn with optional attachments and an optional message id (for rewind). */
+    fun sendUserMessage(text: String, attachments: List<Attachment>, messageId: String? = null) {
         val line = json.encodeToString(JsonObject.serializer(), buildJsonObject {
             put("type", "user")
             messageId?.let { put("uuid", it) }
@@ -238,21 +245,39 @@ class ClaudeCli(
                     if (text.isNotBlank()) {
                         add(buildJsonObject { put("type", "text"); put("text", text) })
                     }
-                    images.forEach { (mediaType, data) ->
-                        add(buildJsonObject {
-                            put("type", "image")
-                            put("source", buildJsonObject {
-                                put("type", "base64")
-                                put("media_type", mediaType)
-                                put("data", data)
+                    // images -> image blocks; pdf/text -> document blocks (matching the VS Code extension)
+                    attachments.forEach { att ->
+                        when (att.kind) {
+                            "pdf" -> add(buildJsonObject {
+                                put("type", "document")
+                                put("source", buildJsonObject {
+                                    put("type", "base64"); put("media_type", "application/pdf"); put("data", att.data)
+                                })
+                                if (att.name.isNotBlank()) put("title", att.name)
                             })
-                        })
+                            "text" -> add(buildJsonObject {
+                                put("type", "document")
+                                put("source", buildJsonObject {
+                                    put("type", "text"); put("media_type", "text/plain"); put("data", decodeBase64Text(att.data))
+                                })
+                                if (att.name.isNotBlank()) put("title", att.name)
+                            })
+                            else -> add(buildJsonObject {   // "image"
+                                put("type", "image")
+                                put("source", buildJsonObject {
+                                    put("type", "base64"); put("media_type", att.mediaType); put("data", att.data)
+                                })
+                            })
+                        }
                     }
                 })
             })
         })
         writeLine(line)
     }
+
+    private fun decodeBase64Text(b64: String): String =
+        runCatching { String(Base64.getDecoder().decode(b64), Charsets.UTF_8) }.getOrDefault("")
 
     private fun writeLine(line: String) {
         val w = stdin ?: return

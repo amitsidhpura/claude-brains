@@ -231,6 +231,42 @@ class SessionStoreTest {
         assertEquals("file.png", nameFor("bogus"), "an odd media_type falls back to .png")
     }
 
+    /**
+     * PDF and text/code files replay as `document` attachments (not images). Documents carry a
+     * `title`, so — unlike images — the real filename survives; a text document's raw text is
+     * re-base64'd so the chip's download path is uniform with images/pdf.
+     */
+    @Test
+    fun `replays pdf and text document attachments with their titles`() {
+        val jsonl =
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[""" +
+            """{"type":"text","text":"see files"},""" +
+            """{"type":"document","source":{"type":"base64","media_type":"application/pdf","data":"UERG"},"title":"report.pdf"},""" +
+            """{"type":"document","source":{"type":"text","media_type":"text/plain","data":"hello world"},"title":"notes.md"}]}}"""
+
+        val tmpHome = File.createTempFile("claude-home-doc", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "doc.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val atts = SessionStore.readTranscript(CWD, "doc")
+                .first { it["role"]?.jsonPrimitive?.content == "user" }["images"]!!.jsonArray.map { it.jsonObject }
+            assertEquals(2, atts.size, "both documents should replay")
+            val pdf = atts.first { it["kind"]?.jsonPrimitive?.content == "pdf" }
+            assertEquals("report.pdf", pdf["name"]!!.jsonPrimitive.content, "pdf keeps its title")
+            assertEquals("UERG", pdf["data"]!!.jsonPrimitive.content, "pdf keeps its base64 bytes")
+            val txt = atts.first { it["kind"]?.jsonPrimitive?.content == "text" }
+            assertEquals("notes.md", txt["name"]!!.jsonPrimitive.content, "text doc keeps its title")
+            val decoded = String(java.util.Base64.getDecoder().decode(txt["data"]!!.jsonPrimitive.content))
+            assertEquals("hello world", decoded, "text doc data round-trips to its raw content")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     @Test
     fun `thinking text is replayed with an approximate duration`() {
         // pick a bodied block: empty-body thinking is now emitted too (it replays as a no-body line)

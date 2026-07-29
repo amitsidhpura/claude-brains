@@ -2,6 +2,8 @@ package com.syncroze.claudecode.ui
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileChooser.FileChooserFactory
+import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefBrowser
@@ -31,7 +33,7 @@ import javax.swing.JComponent
  * Kotlin -> JS: `window.onClaudeEvent(rawStreamJsonLine)` — including synthetic
  * `{type:"permission_request"}` frames for tool approvals.
  */
-class ChatPanel(project: Project, parent: Disposable) {
+class ChatPanel(private val project: Project, parent: Disposable) {
 
     private val browser = JBCefBrowser()
     private val jsToKotlin = JBCefJSQuery.create(browser as JBCefBrowserBase)
@@ -67,13 +69,20 @@ class ChatPanel(project: Project, parent: Disposable) {
             "user" -> {
                 val text = msg["text"]?.jsonPrimitive?.content ?: ""
                 val id = msg["id"]?.jsonPrimitive?.content
-                val images = (msg["images"] as? JsonArray)?.mapNotNull { e ->
+                val attachments = (msg["images"] as? JsonArray)?.mapNotNull { e ->
                     val o = e.jsonObject
-                    val mt = o["media_type"]?.jsonPrimitive?.content
-                    val data = o["data"]?.jsonPrimitive?.content
-                    if (mt != null && data != null) mt to data else null
+                    val data = o["data"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    val mt = o["media_type"]?.jsonPrimitive?.content ?: "application/octet-stream"
+                    val kind = o["kind"]?.jsonPrimitive?.content ?: "image"
+                    val name = o["name"]?.jsonPrimitive?.content ?: "file"
+                    com.syncroze.claudecode.cli.Attachment(kind, mt, data, name)
                 } ?: emptyList()
-                session.sendUser(text, images, id)
+                session.sendUser(text, attachments, id)
+            }
+            "download" -> {
+                val data = msg["data"]?.jsonPrimitive?.content ?: return
+                val name = msg["name"]?.jsonPrimitive?.content ?: "file"
+                saveAttachment(name, data)
             }
             "rewind" -> msg["id"]?.jsonPrimitive?.content?.let {
                 session.rewind(it, msg["dry"]?.jsonPrimitive?.content == "true")
@@ -200,6 +209,21 @@ class ChatPanel(project: Project, parent: Disposable) {
         } else null
         unsaved ?: java.io.File(path).readText()
     }.getOrNull()
+
+    /**
+     * Save a downloaded attachment to disk. JCEF registers no CefDownloadHandler, so a JS
+     * `<a download>` no-ops — instead the page routes the bytes here and we show the IDE's native
+     * save dialog. Runs on the EDT; base64 is the standard data-URL alphabet.
+     */
+    private fun saveAttachment(name: String, base64: String) {
+        val bytes = runCatching { java.util.Base64.getDecoder().decode(base64) }.getOrNull() ?: return
+        ApplicationManager.getApplication().invokeLater {
+            val descriptor = FileSaverDescriptor("Save Attachment", "Save the attached file to disk")
+            val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
+            val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, name)
+            if (wrapper != null) runCatching { wrapper.file.writeBytes(bytes) }
+        }
+    }
 
     private fun loadUi() {
         // loadHTML has no base URL, so a <link> can't resolve — splice the shared
