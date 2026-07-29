@@ -105,7 +105,7 @@ img { max-width: 100%; height: auto; }
    size is only a scrollbar placeholder; `auto` lets the browser remember a turn's real height once
    it has been rendered, which matters because turns range from one line to a 400-row diff. */
 .turn { display: block; }
-.turn > * + * { margin-top: 18px; }   /* also spaces mockup turns, which have no .turn-body */
+.turn > * + * { margin-top: 18px; }   /* spaces .msg-user from the .turn-body that follows it */
 /* The skipped subtree is .turn-body, NOT .turn: content-visibility creates a stacking context,
    and .msg-user (z 6) has to stay outside it or #fade-top (z 5) paints over the pinned message. */
 .turn-body { display: flex; flex-direction: column; gap: 18px;
