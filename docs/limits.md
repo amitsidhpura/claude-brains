@@ -30,8 +30,8 @@ and removes the affordance entirely when the content fits, so short blocks get n
 |---|---|
 | Bash IN/OUT `.io-v` | 200px |
 | diffs `.diff` | 240px |
-| history list `.hist-list` | 340px |
-| slash-command menu `#slashList` | 320px |
+| history list `.hist-list` | 270px (5 × 54px rows) |
+| slash-command menu `#slashList` | 274px (5 × 54px rows + 4px pad) |
 | composer textarea `#input` | 200px (~10 lines) |
 
 ## Truncated (data is dropped)
