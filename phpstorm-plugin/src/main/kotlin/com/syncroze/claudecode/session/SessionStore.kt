@@ -428,6 +428,11 @@ object SessionStore {
                     ?: inp?.get("pattern")?.jsonPrimitive?.content
                     ?: inp?.get("query")?.jsonPrimitive?.content
                     ?: inp?.get("url")?.jsonPrimitive?.content
+                    // MCP (Playwright): `element` is the schema's own human-readable description;
+                    // `target` is the machine ref, so it comes last
+                    ?: inp?.get("element")?.jsonPrimitive?.content
+                    ?: inp?.get("filename")?.jsonPrimitive?.content
+                    ?: inp?.get("target")?.jsonPrimitive?.content
                 if (d != null) { desc = d.take(140); isPath = (d == path) }
                 file = path
                 if (name == "Bash") cmd = inp?.get("command")?.jsonPrimitive?.content?.take(2000)

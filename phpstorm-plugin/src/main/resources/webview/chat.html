@@ -1369,8 +1369,11 @@
           try {
             const inp = JSON.parse(openTool.json || '{}');
             // query/url cover ToolSearch, WebSearch and WebFetch, which carry no description
+            // element/filename/target are MCP (Playwright): `element` is the schema's own
+            // "human-readable element description", so it reads best; `target` is the machine
+            // ref ("exact target element reference from the page snapshot") and is last resort.
             const desc = inp.description || inp.file_path || inp.path || inp.pattern ||
-              inp.query || inp.url || '';
+              inp.query || inp.url || inp.element || inp.filename || inp.target || '';
             if (desc) {
               const dEl = openTool.el.querySelector('.t-desc');
               dEl.textContent = String(desc).slice(0, 140);

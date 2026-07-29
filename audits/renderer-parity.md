@@ -102,9 +102,8 @@ Same-content blocks that render differently between the streaming path and the r
       focus on the visible row. An inset ring can't exceed the element box, so no containment / sticky
       box / clamped overflow can clip it — full ring on summary, ask tabs, card buttons, links,
       inputs, live and resumed alike. Verified in the mockup (all focusables resolve to offset -2px
-      accent) incl. a forced `contain:paint` turn-body → full ring. **Still to verify in a real
-      `runIde` sandbox** (focus-ring painting is engine-specific; the inset approach is engine-agnostic
-      by construction). CSS-only change — a `runIde` restart picks it up.
+      accent) incl. a forced `contain:paint` turn-body → full ring. **Verified in a real `runIde`
+      sandbox 2026-07-30** (user) — the inset approach holds in JCEF as designed.
 
 ---
 
@@ -210,11 +209,9 @@ Not renderer-parity, but the live threads to resume:
 - **Session title fix (just landed, this commit):** `titleOf()` now skips `isMeta`/caveat first
   messages and runs `cleanInjected()`, so a session no longer titles as `<local-command-caveat>…`.
   Test: `title falls through a local-command-caveat to the first real message`.
-- **File-attachments — needs a real `runIde` pass (can't verify in Chromium):**
-  (1) the native **save dialog** actually opens and writes on download, and (2) the CLI **accepts
-  `document` blocks** in stream-json input (PDF/text). Both mirror the official extension, so low
-  risk, but they're the only live-only unknowns. Same for the **inset focus-ring** (Audit 1 #8) —
-  JCEF paints focus rings its own way.
+- [x] **File-attachments — verified in `runIde` 2026-07-30** (user): the native save dialog opens
+  and writes on download, and the CLI accepts `document` blocks in stream-json input (PDF/text).
+  The inset focus ring (Audit 1 #8) was confirmed in the same pass.
 - [x] **Code block with no language label** — **Done 2026-07-30** (option A, label `code`). Also fixed
   the fence regex while there: `(\w*)` matched word chars only, so `” ```c++ ”` parsed as lang "c" with
   "++" left in the code body; now `([^\s`]*)`. ACCEPTED (user, 2026-07-30): an EMPTY fence still
@@ -224,9 +221,14 @@ Not renderer-parity, but the live threads to resume:
   `PlaywrightBrowserClick` (server kept for provenance). Applied at all four DISPLAY sites (live and
   replayed tool lines, replayed and permission cards); `openTool.name`/`ev.tool` comparisons keep the
   raw id. Built-ins pass through untouched. Mockup has fixtures.
-  OPEN: **desc keys** (option B) — `browser_click`/`browser_take_screenshot` still show a blank
-  description. Needs `selector`/`filename`/`element`/`ref` added on BOTH sides (`chat.html` live +
-  `SessionStore.kt` replay — the duplicated chain in `docs/limits.md`), or they diverge.
+  · **desc keys (option B) — Done 2026-07-30.** Chain extended on BOTH sides to
+  `… query → url → element → filename → target`, verified identical key-for-key by comparing the
+  two implementations. Settled against the REAL Playwright schemas (the server became available
+  in-session), which corrected the guesses recorded here: there is no `selector` and no `ref` —
+  both are `target`. `element` is the schema's own "human-readable element description" so it reads
+  best; `target` ("exact target element reference from the page snapshot") is the last resort.
+  Test `MCP tool lines describe themselves with element, filename, then target` covers all four
+  precedences, incl. `url` still winning for `browser_navigate`.
 - [x] Audit 3 mockup-coverage gaps — all closed 2026-07-30 (clamped block, @-mention popup, name-only
   chip, multi-OUT, no-duration thinking; reverted-status line and `.status .undo` moot with the
   revert removal).

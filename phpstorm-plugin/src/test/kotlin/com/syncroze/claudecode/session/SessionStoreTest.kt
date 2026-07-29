@@ -536,6 +536,45 @@ class SessionStoreTest {
         }
     }
 
+    /**
+     * MCP tools carry none of the built-in description keys. Playwright's schema calls `element`
+     * a "human-readable element description", so it reads best; `filename` covers screenshots and
+     * `target` (the machine "element reference from the page snapshot") is the last resort.
+     * The same chain lives in chat.html for the live path — they must not drift.
+     */
+    @Test
+    fun `MCP tool lines describe themselves with element, filename, then target`() {
+        fun call(id: String, name: String, input: String) =
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:0${id}.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"t$id","name":"$name","input":$input}],"usage":{"output_tokens":1}}}"""
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"drive the browser"}]}}""",
+            call("1", "mcp__playwright__browser_click", """{"element":"the Submit button","target":"e42"}"""),
+            call("2", "mcp__playwright__browser_take_screenshot", """{"filename":"login.png","target":"e7"}"""),
+            call("3", "mcp__playwright__browser_select_option", """{"target":"e13","values":["uk"]}"""),
+            call("4", "mcp__playwright__browser_navigate", """{"url":"https://example.com"}"""),
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-mcp", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "mcp.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val descs = SessionStore.readTranscript(CWD, "mcp")
+                .filter { it["role"]?.jsonPrimitive?.content == "tool" }
+                .associate { it["text"]!!.jsonPrimitive.content to it["desc"]?.jsonPrimitive?.content }
+
+            assertEquals("the Submit button", descs["mcp__playwright__browser_click"])   // element wins over target
+            assertEquals("login.png", descs["mcp__playwright__browser_take_screenshot"]) // filename when no element
+            assertEquals("e13", descs["mcp__playwright__browser_select_option"])         // target as last resort
+            assertEquals("https://example.com", descs["mcp__playwright__browser_navigate"]) // url still wins
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
     /** Deletion is irreversible, so it must take the sidecar with it and refuse anything odd. */
     @Test
     fun `delete removes the transcript and its tool-results sidecar`() {
