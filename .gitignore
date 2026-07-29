@@ -13,3 +13,6 @@ phpstorm-plugin/.intellijPlatform/
 
 # Third-party reference clones (not ours)
 /reference/
+
+# Playwright MCP browser-session artifacts (snapshots/console logs from design checks)
+/.playwright-mcp/

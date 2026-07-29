@@ -15,7 +15,7 @@
   --green: #4ec26b;       /* tool dot */
   --blue: #4daafc;        /* links */
   --amber: #d7a35f;       /* inline code */
-  --code-bg: #141414;     /* dark code surfaces: IN/OUT, diff, cmd, codeblock header */
+  --code-bg: #141414;     /* dark code surfaces: IN/OUT, diff, cmd, codeblock body */
   --red: #f2827f;
   --raised: #2a2d33;      /* chips, inline code, small raised surfaces */
   --raised-hover: #31343a;
@@ -98,7 +98,7 @@ img { max-width: 100%; height: auto; }
 .w-title { font-size: 17px; font-weight: 600; color: var(--fg); }
 .w-sub { font-size: 13px; line-height: 1.65; color: var(--muted); }
 .w-sub kbd { font: 12px ui-monospace, Consolas, monospace; color: var(--fg);
-  background: var(--raised); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
+  background: var(--raised); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; }
 
 /* a turn = one user message + the assistant content that answers it */
 /* Off-screen turns skip layout and paint entirely: 2000 turns went 132ms -> 4ms. The intrinsic
@@ -142,7 +142,7 @@ img { max-width: 100%; height: auto; }
    so the clamp button and fade still anchor to the message. */
 .msg-user.clip { --clip-fade: var(--user-bg); position: sticky; }
 .card .cmd.clip { --clip-fade: var(--code-bg); }
-.codeblock pre.clip { --clip-fade: #202226; }
+.codeblock pre.clip { --clip-fade: var(--code-bg); }
 
 /* A tab straddling the block's bottom edge: bottom:0 puts it against the inner edge of the
    container's border, and dropping its own bottom border lets the two merge into one line.
@@ -168,7 +168,7 @@ img { max-width: 100%; height: auto; }
 .blk li { margin: .2em 0; }
 .blk a { color: var(--blue); text-decoration: none; }
 .blk a:hover { text-decoration: underline; }
-.blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 4px;
+.blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;
   font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 
 /* thinking */
@@ -223,8 +223,8 @@ img { max-width: 100%; height: auto; }
 .io-v { white-space: pre-wrap; word-break: break-all; flex: 1; max-height: 200px; overflow-y: auto; }
 
 /* code block */
-.codeblock { margin: .5em 0 0; background: #202226; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: var(--code-bg); color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+.codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: #202226; color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
 .codeblock .cb-h button { background: transparent; border: 0; color: var(--muted); border-radius: var(--radius); padding: 2px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; }
 .codeblock .cb-h button:hover { color: var(--fg); }
 .codeblock .cb-h button svg { width: 14px; height: 14px; display: block; }
@@ -307,7 +307,7 @@ img { max-width: 100%; height: auto; }
 .hist-item:hover { background: var(--hover); }
 /* delete: hidden until hover, overlaid so the title keeps its full width (no layout shift) */
 .hist-del { position: absolute; top: 50%; right: 9px; transform: translateY(-50%); display: none;
-  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; }
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 3px; }
 .hist-item:hover .hist-del { display: block; }
 .hist-del:hover { color: var(--red); }
 .hist-del svg { width: 15px; height: 15px; display: block; }
@@ -317,7 +317,7 @@ img { max-width: 100%; height: auto; }
 .hist-item.arm .hist-confirm { display: flex; }
 .hist-item.arm { cursor: default; background: var(--warn-bg); }
 .hist-confirm span { flex: 1; }
-.hist-confirm button { border: 0; border-radius: 4px; padding: 3px 8px; font: inherit; font-size: 12px;
+.hist-confirm button { border: 0; border-radius: 3px; padding: 3px 8px; font: inherit; font-size: 12px;
   cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .hist-confirm button svg { width: 13px; height: 13px; }
 .hist-confirm .yes { background: var(--danger); color: #fff; }
@@ -340,7 +340,7 @@ img { max-width: 100%; height: auto; }
 .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--user-raised);
   border: 1px solid var(--user-border); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
 .att .rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
-  background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 4px;
+  background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 3px;
   box-shadow: -6px 0 6px var(--user-raised); }
 .att .rm:hover { color: var(--fg); }
 .att .rm svg { width: 12px; height: 12px; display: block; }
@@ -390,8 +390,6 @@ img { max-width: 100%; height: auto; }
 .status.err { color: var(--red); }
 .ok-t { color: var(--green); font-size: 13px; }
 .no-t { color: var(--red); font-size: 13px; }
-.msg { max-width: 100%; min-width: 0; word-wrap: break-word; overflow-wrap: anywhere; }
-
 /* in-message attachment thumbnails */
 .att .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
