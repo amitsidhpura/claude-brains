@@ -71,13 +71,13 @@ Same-content blocks that render differently between the streaming path and the r
         to `file.png` for an odd/absent type. Base stays generic ("file") because the real filename is
         never sent to the CLI (`sendTurn` ships only `{media_type, data}`), so it isn't in the transcript.
         Test `replayed image name takes its extension from the media_type` (jpeg/png/webp/svg+xml/bogus).
-      · **Dimensions** (`chat.html`, `addUserMessage`) — a chip with data but no `w` is probed with the
-        same `new Image()` trick `addImageFile` uses live, and the `w×h` meta is appended on load.
-        Live chips already carry `w` → probe skipped (verified: no duplicate meta; real name untouched).
-        The one live effect is the rare paste-then-send-before-decode race, where it now *adds* the
-        previously-missing meta (improvement, not regression).
-      · **Not fixed (can't be):** the real original filename — never transmitted, so `file.<ext>` is as
-        honest as the transcript allows.
+      · **Size** (`chat.html`) — the chip meta shows the file **size** via the shared `fmtSize()`
+        (B / KB / MB, binary thresholds: B under 1 KB so a tiny file reads "17 B" not "0 KB"; MB at
+        1024 KB), computed from the base64 byte count, for every attachment with data (image + pdf +
+        text). Superseded the first attempt (an image-only `w×h` dimensions probe) per the user's
+        preference — size is uniform across all file types and needs no async probe. Verified in Chromium.
+      · **Not fixed (can't be):** the real original *image* filename — never transmitted, so `file.<ext>`
+        is as honest as the transcript allows. (PDF/text keep their real name via the `document` title.)
 - [~] **7. Random completion verb.** Both paths pick a random `DONE_VERBS` entry, so the same session
       says "Baked" live and "Distilled" on resume. Cosmetic, by design.
 - [x] **8. Focus ring "cut" live, "full" resumed** (discovered 2026-07-29 while reviewing #4). The
@@ -139,8 +139,8 @@ Mostly deliberate; listed so nothing is silently forgotten.
 ## Audit 3 — Mockup vs plugin coverage
 
 ### In the mockup but NOT in the plugin (fixture ahead of / diverged from reality)
-- [ ] **1. Attach menu has a third item, "Browse the web"** (`mockup.html:491`); the plugin menu has
-      only *Upload from computer* + *Add context*.
+- [x] **1. Attach menu had a third item, "Browse the web"** — removed from the mockup 2026-07-29 (user
+      didn't want it); the mockup now matches the plugin's two items (*Upload from computer* + *Add context*).
 - [ ] **2. Working line shows "· thought for 4s"** (`mockup.html:285`); `updateWorkTokens()` never emits
       that segment — plugin meta is only `(Ns · ↓ N tokens)`.
 - [ ] **3. Auto-mode description differs.** Mockup: "Claude will automatically choose the best permission
