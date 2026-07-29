@@ -623,19 +623,95 @@
     return rows;
   }
 
+  /* ---------- shared block builders ----------
+     Live and replay draw the same structures through these, so the two paths cannot drift —
+     several renderer-parity findings were exactly that drift. */
+  // one IN/OUT row; kind is "IN" | "OUT", text set safely
+  function ioRow(kind, text) {
+    const row = document.createElement('div'); row.className = 'io-row';
+    row.innerHTML = '<span class="io-k"></span><span class="io-v"></span>';
+    row.querySelector('.io-k').textContent = kind;
+    row.querySelector('.io-v').textContent = text;
+    return row;
+  }
+  function ioBox(rows) {
+    const io = document.createElement('div'); io.className = 'io';
+    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1])); });
+    return io;
+  }
+  // timeline tool line: bold label + (empty) description span, appended to the current turn
+  function toolLine(name) {
+    const t = el('tool-line', '');
+    t.innerHTML = '<b>' + esc(toolLabel(name)) + '</b><span class="t-desc"></span>';
+    return t;
+  }
+  // API/stream error block, appended to the current turn
+  function errorBlock(text) {
+    const e = el('error', '');
+    e.innerHTML = SVG_ALERT + '<div></div>';
+    e.querySelector('div').textContent = text;
+    return e;
+  }
+  // Finished thinking block: an empty body (the CLI often persists only a signature) renders as a
+  // non-expandable `think no-body` line, a real one as a collapsible <details>. secs 0 hides the
+  // duration ("Thought", not "Thought for 0s").
+  function thinkBlock(text, secs) {
+    const empty = !(text || '').trim();
+    const det = document.createElement(empty ? 'div' : 'details');
+    det.className = empty ? 'think no-body' : 'think';
+    det.innerHTML = '<summary>Thought' + (secs ? ' for ' + secs + 's' : '') +
+      (empty ? '' : SVG_CHEVRON) + '</summary>' + (empty ? '' : '<div class="body"></div>');
+    if (!empty) det.querySelector('.body').textContent = text;
+    return det;
+  }
+  // plan-card body (header + markdown); the footer — live buttons or replayed outcome — is the caller's
+  function planCardHtml(planMd) {
+    return '<div class="card-h"><b>Ready to code?</b> Here is my plan:</div>' +
+      '<div class="blk">' + renderMd(planMd) + '</div>';
+  }
+  // Write preview: whole file as additions, capped like every other diff
+  function writeDiffHtml(content, startLine) {
+    const lines = String(content).split('\n');
+    const shown = lines.slice(0, MAX_DIFF_ROWS);
+    let rows = diffLines('+ ', 'add', shown.join('\n'), startLine);
+    if (lines.length > shown.length) rows += diffRow('ctx', '  ', null, '… diff truncated');
+    return '<div class="diff">' + rows + '</div>';
+  }
+  // ask-card tab header + the tab-switch wiring, shared verbatim by live and replayed cards
+  function askTabsHtml(qs) {
+    let h = '<div class="ask-h"><div class="ask-tabs">';
+    qs.forEach(function (q, i) {
+      h += '<button class="ask-tab' + (i === 0 ? ' active' : '') + '" data-q="' + i + '">' +
+        esc(q.header || ('Q' + (i + 1))) + '</button>';
+    });
+    return h + '</div></div>';
+  }
+  function wireAskTabs(card) {
+    const tabs = card.querySelectorAll('.ask-tab');
+    const panels = card.querySelectorAll('.ask-panel');
+    function selectTab(idx) {
+      tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
+      panels.forEach(function (p, n) { p.hidden = n !== idx; });
+    }
+    tabs.forEach(function (tab, idx) { tab.addEventListener('click', function () { selectTab(idx); }); });
+    return { panels: panels, selectTab: selectTab };
+  }
+  // resolve a live ask card into its non-interactive record state (matches the replayed twin)
+  function resolveAsk(card, resultHtml) {
+    card.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
+    card.classList.add('ask-done');   // hover/cursor off
+    card.querySelector('.ask-b').innerHTML = resultHtml;
+    const foot = card.querySelector('.ask-foot'); if (foot) foot.remove();
+    activeAsk = null; awaitingUser = false;
+  }
+
   // The diff/preview body for a replayed edit, or '' when the tool has nothing to show.
   function replayDiff(it) {
     if (it.patch && it.patch.length) return '<div class="diff">' + patchRows(it.patch) + '</div>';
     if (it.oldStr != null || it.newStr != null) {
       return '<div class="diff">' + renderEditDiff(it.oldStr || '', it.newStr || '') + '</div>';
     }
-    if (it.content != null) {
-      const lines = String(it.content).split('\n');
-      const shown = lines.slice(0, MAX_DIFF_ROWS);
-      let rows = diffLines('+ ', 'add', shown.join('\n'), 1);
-      if (lines.length > shown.length) rows += diffRow('ctx', '  ', null, '… diff truncated');
-      return '<div class="diff">' + rows + '</div>';
-    }
+    if (it.content != null) return writeDiffHtml(it.content, 1);
     return '';
   }
 
@@ -646,9 +722,7 @@
     // ExitPlanMode replays as the plan card, same surface and wording as the live one
     if (it.plan) {
       const plan = el('card warn', '');
-      plan.innerHTML =
-        '<div class="card-h"><b>Ready to code?</b> Here is my plan:</div>' +
-        '<div class="blk">' + renderMd(it.plan) + '</div>' +
+      plan.innerHTML = planCardHtml(it.plan) +
         '<div class="card-b">' + (it.denied
           ? '<span class="no-t">✗ Kept planning</span>'
           : '<span class="ok-t">✓ Approved</span>') + '</div>';
@@ -672,12 +746,7 @@
     const card = el('ask ask-done', '');
     // Mirror renderAsk's structure exactly — tab header + one panel per question — so a resumed
     // card is indistinguishable from a live one that has just been answered.
-    let html = '<div class="ask-h"><div class="ask-tabs">';
-    qs.forEach(function (q, i) {
-      html += '<button class="ask-tab' + (i === 0 ? ' active' : '') + '" data-q="' + i + '">' +
-        esc(q.header || ('Q' + (i + 1))) + '</button>';
-    });
-    html += '</div></div>';
+    let html = askTabsHtml(qs);
     const freeText = []; // per-question "Other" text, assigned after innerHTML (esc() leaves quotes)
     qs.forEach(function (q, i) {
       // answers arrive as one string (multi-select is comma-joined); prefer an exact label
@@ -719,14 +788,7 @@
       if (freeText[i]) p.querySelector('.ask-other input').value = freeText[i];
     });
     // tabs stay navigable, exactly as they do on a live card after it has been answered
-    const tabs = card.querySelectorAll('.ask-tab');
-    const panels = card.querySelectorAll('.ask-panel');
-    tabs.forEach(function (tab, idx) {
-      tab.addEventListener('click', function () {
-        tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
-        panels.forEach(function (p, n) { p.hidden = n !== idx; });
-      });
-    });
+    wireAskTabs(card);
   }
 
   function renderBlocks(items) {
@@ -746,12 +808,9 @@
         // API errors are persisted as assistant records flagged isApiErrorMessage; live draws the
         // same `.error` block from `onResult`. No Retry line: that needs `lastUser`, which a replay
         // never seeds — a resumed failed turn genuinely can't be retried.
-        case 'error': {
-          const e = el('error', '');
-          e.innerHTML = SVG_ALERT + '<div></div>';
-          e.querySelector('div').textContent = it.text;
+        case 'error':
+          errorBlock(it.text);
           break;
-        }
         case 'status':
           statusLine(it.text, it.icon === 'stop' ? SVG_STOP : null);
           break;
@@ -761,26 +820,17 @@
           break;
         }
         case 'thinking': {
-          // Match a finished live block exactly (finishThinking): an empty body (the CLI often
-          // persists only a signature) replays as a non-expandable `think no-body` line, a real body
-          // as a collapsible <details>. durMs is record-to-record wall time — an approximation of the
-          // live timer — clamped to the same 1s floor live uses, and shown only when a gap exists.
+          // durMs is record-to-record wall time — an approximation of the live timer — clamped to
+          // the same 1s floor live uses, and shown only when a gap exists.
           const secs = it.durMs ? Math.max(1, Math.round(it.durMs / 1000)) : 0;
-          const empty = !(it.text || '').trim();
-          const det = document.createElement(empty ? 'div' : 'details');
-          det.className = empty ? 'think no-body' : 'think';
-          det.innerHTML = '<summary>Thought' + (secs ? ' for ' + secs + 's' : '') +
-            (empty ? '' : SVG_CHEVRON) + '</summary>' + (empty ? '' : '<div class="body"></div>');
-          if (!empty) det.querySelector('.body').textContent = it.text;
-          (curTurn || log).appendChild(det);
+          (curTurn || log).appendChild(thinkBlock(it.text || '', secs));
           break;
         }
         case 'ask':
           replayAsk(it);
           break;
         case 'tool': {
-          const t = el('tool-line', '');
-          t.innerHTML = '<b>' + esc(toolLabel(it.text)) + '</b><span class="t-desc"></span>';
+          const t = toolLine(it.text);
           if (it.isError) t.classList.add('fail');
           if (it.desc) {
             const d = t.querySelector('.t-desc');
@@ -788,15 +838,10 @@
             if (it.isPath) d.classList.add('path');
           }
           if (it.cmd || it.out) {
-            const io = document.createElement('div'); io.className = 'io';
-            io.innerHTML =
-              (it.cmd ? '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>' : '') +
-              (it.out ? '<div class="io-row"><span class="io-k">OUT</span><span class="io-v"></span></div>' : '');
-            const vs = io.querySelectorAll('.io-v');
-            let i = 0;
-            if (it.cmd) vs[i++].textContent = it.cmd;
-            if (it.out) vs[i].textContent = it.out;
-            t.after(io);
+            const rows = [];
+            if (it.cmd) rows.push(['IN', it.cmd]);
+            if (it.out) rows.push(['OUT', it.out]);
+            t.after(ioBox(rows));
           }
           replayCard(it);
           break;
@@ -1313,16 +1358,7 @@
     if (!curThink) return;
     if (thinkTimer) { clearInterval(thinkTimer); thinkTimer = null; }
     const secs = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
-    // Thinking can finish with nothing to show (the model streams a redacted block). Render the
-    // line as a plain div rather than <details>, so there is no chevron and nothing to expand —
-    // a <summary> outside <details> keeps the same styling but can't be toggled or focused.
-    const empty = !curThinkRaw.trim();
-    const det = document.createElement(empty ? 'div' : 'details');
-    det.className = empty ? 'think no-body' : 'think';
-    det.innerHTML = '<summary>Thought for ' + secs + 's' + (empty ? '' : SVG_CHEVRON) + '</summary>' +
-      (empty ? '' : '<div class="body"></div>');
-    if (!empty) det.querySelector('.body').textContent = curThinkRaw;
-    curThink.replaceWith(det);
+    curThink.replaceWith(thinkBlock(curThinkRaw, secs));
     curThink = null; curThinkRaw = ''; thinkTok = null;
   }
 
@@ -1340,8 +1376,7 @@
       case 'content_block_start': {
         const cb = e.content_block || {};
         if (cb.type === 'tool_use') {
-          const t = el('tool-line', '');
-          t.innerHTML = '<b>' + esc(toolLabel(cb.name)) + '</b><span class="t-desc"></span>';
+          const t = toolLine(cb.name);
           openTool = { el: t, name: cb.name || 'tool', json: '' };
           if (cb.id) toolsById[cb.id] = openTool;
           flushMd();
@@ -1402,9 +1437,7 @@
               if (desc === inp.file_path || desc === inp.path) dEl.classList.add('path');
             }
             if (openTool.name === 'Bash' && inp.command) {
-              const io = document.createElement('div'); io.className = 'io';
-              io.innerHTML = '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>';
-              io.querySelector('.io-v').textContent = String(inp.command).slice(0, 2000);
+              const io = ioBox([['IN', String(inp.command).slice(0, 2000)]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
           } catch (_) {}
@@ -1438,11 +1471,8 @@
       else if (Array.isArray(b.content)) txt = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
       txt = (txt || '').trim();
       if (!txt) return;
-      const row = document.createElement('div'); row.className = 'io-row';
-      row.innerHTML = '<span class="io-k">OUT</span><span class="io-v"></span>';
-      row.querySelector('.io-v').textContent = txt.slice(0, 2000);
-      if (!t.io) { t.io = document.createElement('div'); t.io.className = 'io'; t.el.after(t.io); }
-      t.io.appendChild(row);
+      if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
+      t.io.appendChild(ioRow('OUT', txt.slice(0, 2000)));
       maybeScroll();
     });
   }
@@ -1605,10 +1635,7 @@
     if (ev.is_error) {
       if (stopping) { statusLine('Stopped', SVG_STOP); }
       else {
-        const msg = (typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error');
-        const err = el('error', '');
-        err.innerHTML = SVG_ALERT + '<div></div>';
-        err.querySelector('div').textContent = msg;
+        errorBlock((typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error'));
         addRetryLine();
       }
     } else {
@@ -1659,12 +1686,7 @@
       return '<div class="diff">' + renderEditDiff(inp.old_string || '', inp.new_string || '', lineStart) + '</div>';
     }
     if (inp.content !== undefined) {
-      // same cap + marker as replayDiff's content path
-      const lines = String(inp.content).split('\n');
-      const shown = lines.slice(0, MAX_DIFF_ROWS);
-      let rows = diffLines('+ ', 'add', shown.join('\n'), (typeof lineStart === 'number' ? lineStart : 1));
-      if (lines.length > shown.length) rows += diffRow('ctx', '  ', null, '… diff truncated');
-      return '<div class="diff">' + rows + '</div>';
+      return writeDiffHtml(inp.content, (typeof lineStart === 'number' ? lineStart : 1));
     }
     const cmd = inp.command || inp.description;
     if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd)).slice(0, 4000) + '</pre>';
@@ -1675,11 +1697,8 @@
   let activeAsk = null; // { card, ev, cancel }
   function cancelAsk() {
     if (!activeAsk) return;
-    const a = activeAsk; activeAsk = null; awaitingUser = false;
-    a.card.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
-    a.card.classList.add('ask-done');   // hover/cursor off — a resolved card matches its replayed twin
-    a.card.querySelector('.ask-b').innerHTML = '<span class="no-t">✗ Cancelled</span>';
-    a.card.querySelector('.ask-foot').remove();
+    const a = activeAsk;
+    resolveAsk(a.card, '<span class="no-t">✗ Cancelled</span>');
     window.respondPermission(a.ev.id, false);
     if (busy) showWorking(); // Claude resumes processing
   }
@@ -1687,11 +1706,7 @@
     const questions = inp.questions || [];
     const card = document.createElement('div');
     card.className = 'ask';
-    let html = '<div class="ask-h"><div class="ask-tabs">';
-    questions.forEach(function (q, i) {
-      html += '<button class="ask-tab' + (i === 0 ? ' active' : '') + '" data-q="' + i + '">' + esc(q.header || ('Q' + (i + 1))) + '</button>';
-    });
-    html += '</div></div>';
+    let html = askTabsHtml(questions);
     questions.forEach(function (q, i) {
       html += '<div class="ask-panel" data-q="' + i + '"' + (i === 0 ? '' : ' hidden') + '>';
       html += '<div class="ask-q">' + esc(q.question) + '</div><div class="ask-list">';
@@ -1712,8 +1727,8 @@
     card.innerHTML = html;
     (curTurn || log).appendChild(card); maybeScroll();
 
-    const tabs = card.querySelectorAll('.ask-tab');
-    const panels = card.querySelectorAll('.ask-panel');
+    const wired = wireAskTabs(card);
+    const panels = wired.panels, selectTab = wired.selectTab;
     const go = card.querySelector('.ask-go');
     function refresh() {
       card.querySelectorAll('.ask-opt').forEach(function (opt) {
@@ -1732,11 +1747,6 @@
       });
       go.disabled = !allAnswered;
     }
-    function selectTab(idx) {
-      tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
-      panels.forEach(function (p, n) { p.hidden = n !== idx; });
-    }
-    tabs.forEach(function (tab, idx) { tab.addEventListener('click', function () { selectTab(idx); }); });
     card.querySelectorAll('.ask-opt input').forEach(function (i) {
       i.addEventListener('change', function () {
         refresh();
@@ -1762,11 +1772,7 @@
         });
         answers[q.question] = labels.filter(Boolean).join(', ');
       });
-      card.querySelectorAll('input').forEach(function (i2) { i2.disabled = true; });
-      card.classList.add('ask-done');   // hover/cursor off — a resolved card matches its replayed twin
-      card.querySelector('.ask-b').innerHTML = '<span class="ok-t">✓ Answered</span>';
-      const foot = card.querySelector('.ask-foot'); if (foot) foot.remove();
-      activeAsk = null; awaitingUser = false;
+      resolveAsk(card, '<span class="ok-t">✓ Answered</span>');
       bridge({ kind: 'answer', id: ev.id, answers: JSON.stringify(answers) });
       if (busy) showWorking(); // Claude resumes processing
     };
@@ -1784,9 +1790,7 @@
     const card = document.createElement('div');
     if (isPlan) {
       card.className = 'card warn'; // same feedback surface as permission / ask cards
-      card.innerHTML =
-        '<div class="card-h"><b>Ready to code?</b> Here is my plan:</div>' +
-        '<div class="blk">' + renderMd(inp.plan || '') + '</div>' +
+      card.innerHTML = planCardHtml(inp.plan || '') +
         cardBtns('Approve &amp; implement', SVG_CHECK, 'Keep planning', SVG_STEP);
     } else {
       card.className = 'card warn';
@@ -1825,10 +1829,7 @@
       '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```');
 
     // collapsed thinking
-    const th = document.createElement('details');
-    th.className = 'think';
-    th.innerHTML = '<summary>Thought for 4s' + SVG_CHEVRON + '</summary><div class="body">Weighing a couple of approaches before writing the diff…</div>';
-    (curTurn || log).appendChild(th);
+    (curTurn || log).appendChild(thinkBlock('Weighing a couple of approaches before writing the diff…', 4));
 
     // tool line — success (with path)
     const t1 = el('tool-line', '');
@@ -1837,12 +1838,7 @@
     // tool line — Bash with IN/OUT
     const t2 = el('tool-line', '');
     t2.innerHTML = '<b>Bash</b><span class="t-desc">Run the test suite</span>';
-    const io = document.createElement('div'); io.className = 'io';
-    io.innerHTML = '<div class="io-row"><span class="io-k">IN</span><span class="io-v"></span></div>' +
-                   '<div class="io-row"><span class="io-k">OUT</span><span class="io-v"></span></div>';
-    io.querySelectorAll('.io-v')[0].textContent = 'npm test';
-    io.querySelectorAll('.io-v')[1].textContent = 'PASS  2 passed, 0 failed';
-    t2.after(io);
+    t2.after(ioBox([['IN', 'npm test'], ['OUT', 'PASS  2 passed, 0 failed']]));
 
     // tool line — failure (red dot)
     const t3 = el('tool-line', ''); t3.classList.add('fail');
@@ -1875,9 +1871,7 @@
 
     // error + retry (retry needs lastUser)
     lastUser = { text: 'Dev gallery — show every UI state.', images: [] };
-    const er = el('error', '');
-    er.innerHTML = SVG_ALERT + '<div></div>';
-    er.querySelector('div').textContent = 'Build failed — config/app.php was not found because the Write was rejected.';
+    errorBlock('Build failed — config/app.php was not found because the Write was rejected.');
     addRetryLine();
 
     // status lines
