@@ -277,9 +277,11 @@ object SessionStore {
         fun flushSummary() {
             val s = reqStart
             val e = reqLast
-            // no tokens means nothing was actually produced (usage absent / empty turn) —
-            // a "for 0s · ↓ 0 tokens" line is noise, so skip it rather than render an empty stat
-            if (reqWork && s != null && e != null && reqTokens > 0) {
+            // A finished request always took time, so emit the summary whenever real work happened
+            // (reqWork = an assistant record appeared). The renderer omits the "↓ N tokens" segment
+            // when it is 0, so there is no noisy "↓ 0 tokens" — but the "for Ns" time still shows.
+            // A truly empty turn (no assistant record) has reqWork == false and is skipped here.
+            if (reqWork && s != null && e != null) {
                 out.add(Item("done").apply {
                     durMs = java.time.Duration.between(s, e).toMillis().coerceAtLeast(0)
                     tokens = reqTokens
@@ -355,8 +357,13 @@ object SessionStore {
                                     when (b["type"]?.jsonPrimitive?.content) {
                                         "text" -> b["text"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
                                             ?.let { out.add(Item("assistant").apply { text = it }) }
-                                        "thinking" -> b["thinking"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-                                            ?.let { out.add(Item("thinking").apply { text = it; durMs = sincePrev }) }
+                                        // emit even when the body is blank — the CLI frequently
+                                        // persists only a signature; the block replays as a
+                                        // `think no-body` "Thought for Ns" line, matching live
+                                        "thinking" -> out.add(Item("thinking").apply {
+                                            text = b["thinking"]?.jsonPrimitive?.content ?: ""
+                                            durMs = sincePrev
+                                        })
                                         "tool_use" -> out.add(toolItem(b, byToolId))
                                     }
                                 }
@@ -424,10 +431,13 @@ object SessionStore {
             ?.let { item.patch = it }
 
         if (item.text == "Bash") {
+            // Match the live path (onUserEvent): show the tool_result block's content — the
+            // model-facing result text — so a resumed OUT box reads identically. stdout/stderr are
+            // only a fallback for the rare record whose content block is empty.
+            val fromBlock = resultText(block["content"]).takeIf { it.isNotBlank() }
             val stdout = res?.get("stdout")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val stderr = res?.get("stderr")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-            val fromBlock = resultText(block["content"])
-            val txt = listOfNotNull(stdout, stderr).joinToString("\n").ifBlank { fromBlock }
+            val txt = fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n")
             item.out = txt.trim().takeIf { it.isNotBlank() }?.take(2000)
         }
     }
@@ -449,12 +459,26 @@ object SessionStore {
             if (b["type"]?.jsonPrimitive?.content != "image") return@mapNotNull null
             val src = b["source"]?.jsonObject ?: return@mapNotNull null
             val data = src["data"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val mt = src["media_type"]?.jsonPrimitive?.content ?: "image/png"
             buildJsonObject {
-                put("media_type", src["media_type"]?.jsonPrimitive?.content ?: "image/png")
+                put("media_type", mt)
                 put("data", data)
-                put("name", "image.png")
+                put("name", imageName(mt))
             }
         }
+    }
+
+    // The real filename is never sent to the CLI (sendTurn ships only media_type + data), so it can't
+    // be recovered on replay — but the media_type can, so at least the extension is honest: a pasted
+    // JPEG reads "file.jpg", not a misleading "image.png". Base stays generic ("file").
+    private fun imageName(mediaType: String): String {
+        val sub = mediaType.substringAfter('/', "").substringBefore('+').lowercase()
+        val ext = when (sub) {
+            "jpeg" -> "jpg"   // canonical subtype is jpeg; files are .jpg
+            "" -> "png"       // media_type malformed/absent
+            else -> sub       // png, gif, webp, bmp, avif, svg (from svg+xml), …
+        }
+        return "file.$ext"
     }
 
     // The CLI injects bookkeeping as user messages: slash-command wrappers and background-task

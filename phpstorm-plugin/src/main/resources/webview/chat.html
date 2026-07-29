@@ -735,21 +735,21 @@
           break;
         case 'done': {
           const d = el('done', '');
-          d.innerHTML = '<span class="star">✻</span> ' +
-            DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)] +
-            ' for ' + fmtDur(it.durMs || 0) +
-            ' · ' + SVG_DOWN + fmtTok(it.tokens || 0) + ' tokens';
+          d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0);
           break;
         }
         case 'thinking': {
-          // collapsed like a finished live turn; durMs is record-to-record wall time, so it is
-          // an approximation of the live timer and is omitted when unavailable
-          const det = document.createElement('details');
-          det.className = 'think';
-          const secs = it.durMs ? Math.round(it.durMs / 1000) : 0;
+          // Match a finished live block exactly (finishThinking): an empty body (the CLI often
+          // persists only a signature) replays as a non-expandable `think no-body` line, a real body
+          // as a collapsible <details>. durMs is record-to-record wall time — an approximation of the
+          // live timer — clamped to the same 1s floor live uses, and shown only when a gap exists.
+          const secs = it.durMs ? Math.max(1, Math.round(it.durMs / 1000)) : 0;
+          const empty = !(it.text || '').trim();
+          const det = document.createElement(empty ? 'div' : 'details');
+          det.className = empty ? 'think no-body' : 'think';
           det.innerHTML = '<summary>Thought' + (secs ? ' for ' + secs + 's' : '') +
-            SVG_CHEVRON + '</summary><div class="body"></div>';
-          det.querySelector('.body').textContent = it.text;
+            (empty ? '' : SVG_CHEVRON) + '</summary>' + (empty ? '' : '<div class="body"></div>');
+          if (!empty) det.querySelector('.body').textContent = it.text;
           (curTurn || log).appendChild(det);
           break;
         }
@@ -951,6 +951,22 @@
         chip.className = p.data ? 'att click' : 'att';
         chip.innerHTML = attChipHtml(p, false, 0);
         if (p.data) chip.onclick = function () { openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'image.png'); };
+        // Replayed chips carry no dimensions (w/h are client-only, never sent to the CLI), so derive
+        // them from the bytes we DO have — the same probe addImageFile runs live. Live chips already
+        // have p.w, so this is skipped for them (except the rare paste-then-send-before-decode race,
+        // where it just adds the meta that was missing). attChipHtml order is thumb, name, meta — with
+        // no meta and no rm button on a replayed chip, appending the span lands it in the right place.
+        if (p.data && !p.w) {
+          const probe = new Image();
+          probe.onload = function () {
+            if (!probe.naturalWidth) return;
+            const meta = document.createElement('span');
+            meta.className = 'meta';
+            meta.textContent = probe.naturalWidth + '×' + probe.naturalHeight;
+            chip.appendChild(meta);
+          };
+          probe.src = 'data:' + p.media_type + ';base64,' + p.data;
+        }
         atts.appendChild(chip);
       });
       d.appendChild(atts);
@@ -1388,6 +1404,15 @@
   const DONE_VERBS = ['Baked', 'Brewed', 'Cooked', 'Conjured', 'Simmered', 'Pondered', 'Cogitated',
     'Noodled', 'Percolated', 'Marinated', 'Ruminated', 'Concocted', 'Wrangled', 'Finagled',
     'Assembled', 'Crafted', 'Whipped up', 'Mulled', 'Churned', 'Distilled', 'Tinkered', 'Puttered'];
+  // The completion summary line. The time always shows (a finished request always took some); the
+  // token segment is appended only when non-zero, so a 0-token request reads "✻ Baked for 2s" rather
+  // than a noisy "↓ 0 tokens". Live and replay share this so a request renders the same either way.
+  function doneHtml(durMs, tokens) {
+    let s = '<span class="star">✻</span> ' +
+      DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)] + ' for ' + fmtDur(durMs || 0);
+    if (tokens > 0) s += ' · ' + SVG_DOWN + fmtTok(tokens) + ' tokens';
+    return s;
+  }
   // Timeline status line with an optional leading glyph that hangs in the dot column
   // (so icon + text align with .blk / .think / .retry). Text is set safely (textContent).
   function statusLine(text, icon, cls) {
@@ -1523,10 +1548,8 @@
         addRetryLine();
       }
     } else {
-      const verb = DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)];
       const done = el('done', '');
-      done.innerHTML = '<span class="star">✻</span> ' + verb + ' for ' + fmtDur(durMs) +
-        ' · ' + SVG_DOWN + fmtTok(outTok) + ' tokens';
+      done.innerHTML = doneHtml(durMs, outTok);   // time always; token segment only when non-zero
       if (turnHadEdit && turnId) bridge({ kind: 'rewind', id: turnId, dry: 'true' }); // check for undo
     }
     stopping = false;
@@ -1556,19 +1579,30 @@
     while (p < O.length && p < N.length && O[p] === N[p]) p++;
     let s = 0;
     while (s < O.length - p && s < N.length - p && O[O.length - 1 - s] === N[N.length - 1 - s]) s++;
-    let rows = '';
-    for (let i = 0; i < p; i++) rows += diffRow('ctx', '  ', at(i), O[i]);            // common prefix
-    for (let i = p; i < O.length - s; i++) rows += diffRow('del', '- ', at(i), O[i]); // removed
-    for (let i = p; i < N.length - s; i++) rows += diffRow('add', '+ ', at(i), N[i]); // added
+    // Same MAX_DIFF_ROWS cap as replayed structuredPatch diffs: whole files land here live, and
+    // an uncapped multi-thousand-row diff is exactly the layout cost the perf work exists to avoid.
+    let rows = '', n = 0;
+    const emit = function (cls, prefix, ln, text) { if (n++ < MAX_DIFF_ROWS) rows += diffRow(cls, prefix, ln, text); };
+    for (let i = 0; i < p; i++) emit('ctx', '  ', at(i), O[i]);            // common prefix
+    for (let i = p; i < O.length - s; i++) emit('del', '- ', at(i), O[i]); // removed
+    for (let i = p; i < N.length - s; i++) emit('add', '+ ', at(i), N[i]); // added
     const added = (N.length - s) - p;
-    for (let i = 0; i < s; i++) rows += diffRow('ctx', '  ', at(p + added + i), N[N.length - s + i]); // common suffix
+    for (let i = 0; i < s; i++) emit('ctx', '  ', at(p + added + i), N[N.length - s + i]); // common suffix
+    if (n > MAX_DIFF_ROWS) rows += diffRow('ctx', '  ', null, '… diff truncated');
     return rows;
   }
   function previewHtml(tool, inp, lineStart) {
     if (inp.old_string !== undefined || inp.new_string !== undefined) {
       return '<div class="diff">' + renderEditDiff(inp.old_string || '', inp.new_string || '', lineStart) + '</div>';
     }
-    if (inp.content !== undefined) return '<div class="diff">' + diffLines('+ ', 'add', inp.content, (typeof lineStart === 'number' ? lineStart : 1)) + '</div>';
+    if (inp.content !== undefined) {
+      // same cap + marker as replayDiff's content path
+      const lines = String(inp.content).split('\n');
+      const shown = lines.slice(0, MAX_DIFF_ROWS);
+      let rows = diffLines('+ ', 'add', shown.join('\n'), (typeof lineStart === 'number' ? lineStart : 1));
+      if (lines.length > shown.length) rows += diffRow('ctx', '  ', null, '… diff truncated');
+      return '<div class="diff">' + rows + '</div>';
+    }
     const cmd = inp.command || inp.description;
     if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd)).slice(0, 4000) + '</pre>';
     return '';
@@ -1580,6 +1614,7 @@
     if (!activeAsk) return;
     const a = activeAsk; activeAsk = null; awaitingUser = false;
     a.card.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
+    a.card.classList.add('ask-done');   // hover/cursor off — a resolved card matches its replayed twin
     a.card.querySelector('.ask-b').innerHTML = '<span class="no-t">✗ Cancelled</span>';
     a.card.querySelector('.ask-foot').remove();
     window.respondPermission(a.ev.id, false);
@@ -1665,6 +1700,7 @@
         answers[q.question] = labels.filter(Boolean).join(', ');
       });
       card.querySelectorAll('input').forEach(function (i2) { i2.disabled = true; });
+      card.classList.add('ask-done');   // hover/cursor off — a resolved card matches its replayed twin
       card.querySelector('.ask-b').innerHTML = '<span class="ok-t">✓ Answered</span>';
       const foot = card.querySelector('.ask-foot'); if (foot) foot.remove();
       activeAsk = null; awaitingUser = false;

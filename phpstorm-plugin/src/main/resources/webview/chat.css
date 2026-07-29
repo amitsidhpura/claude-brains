@@ -110,6 +110,18 @@ img { max-width: 100%; height: auto; }
    and .msg-user (z 6) has to stay outside it or #fade-top (z 5) paints over the pinned message. */
 .turn-body { display: flex; flex-direction: column; gap: 18px;
   content-visibility: auto; contain-intrinsic-size: auto 250px; }
+/* Focus rings inside a turn are drawn INSET (negative outline-offset). The turn-body's
+   content-visibility applies paint containment while a turn sits at the viewport edge, which shaves
+   an OUTWARD ring into a "cut" half-rectangle (the sticky user box and clamped overflow clip too).
+   An inset ring stays within the element's own box, so nothing can clip it — a full ring on any
+   focusable element (thinking summary, ask tabs, card buttons, links, undo, inputs), live and
+   resumed alike. Reset first so a plain mouse :focus shows nothing; :focus-visible (keyboard) gets
+   the accent ring, rounded to each element's own border-radius. */
+.turn :focus { outline: none; }
+.turn :focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* the radio/checkbox is a transparent overlay (opacity:0, inset:0), so its own ring is invisible —
+   surface keyboard focus on the visible option row instead */
+.ask-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* user message: full-width bordered box, sticks to the top of its turn while you scroll */
 .msg-user { position: sticky; top: 0; z-index: 6;

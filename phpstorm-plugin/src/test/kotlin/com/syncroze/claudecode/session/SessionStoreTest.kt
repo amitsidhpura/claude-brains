@@ -84,6 +84,8 @@ class SessionStoreTest {
             role("user").none { it["text"]?.jsonPrimitive?.content?.contains("interrupted") == true },
             "the interrupt leaked through as a user message",
         )
+        // a request cut short by an interrupt gets the Stopped line and NO completion summary
+        assertTrue(role("done").isEmpty(), "an interrupted request should not be summarised")
     }
 
     @Test
@@ -106,6 +108,36 @@ class SessionStoreTest {
         assertNotNull(bash["out"], "Bash OUT missing")
     }
 
+    /**
+     * Bash OUT provenance: the live path shows the tool_result block's content (the model-facing
+     * result). Replay must use the same source so a resumed OUT box reads identically — the raw
+     * stdout/stderr fields are only a fallback when the content block is empty.
+     */
+    @Test
+    fun `Bash OUT prefers the tool_result content over raw stdout and stderr`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"run it"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:01.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"bash1","name":"Bash","input":{"command":"echo hi"}}]}}""",
+            """{"type":"user","timestamp":"2026-07-28T10:00:02.000Z","toolUseResult":{"stdout":"RAW-STDOUT","stderr":"RAW-STDERR"},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"bash1","content":"MODEL-FACING-OUTPUT"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-bash", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "bash.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val bash = SessionStore.readTranscript(CWD, "bash")
+                .first { it["role"]?.jsonPrimitive?.content == "tool" && it["text"]?.jsonPrimitive?.content == "Bash" }
+            assertEquals("MODEL-FACING-OUTPUT", bash["out"]!!.jsonPrimitive.content,
+                "replay should show the tool_result content live shows, not raw stdout/stderr")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     /** Diffs come from toolUseResult.structuredPatch — real hunks, not a prefix/suffix guess. */
     @Test
     fun `Edit replays from the structured patch`() {
@@ -123,21 +155,119 @@ class SessionStoreTest {
         assertTrue(answered!!["questions"]!!.jsonArray.isNotEmpty())
     }
 
-    /** Summaries are skipped when a request produced nothing, so no "for 0s · ↓ 0 tokens". */
+    /**
+     * A completed request reports its elapsed time even when it produced 0 output tokens: the
+     * renderer keeps "for Ns" and only drops the "↓ N tokens" segment. Built on a purpose-made
+     * transcript because the shared fixture ends on an interrupt, which suppresses the summary
+     * entirely (see `interrupt becomes a stopped status line`).
+     */
     @Test
-    fun `request summaries always report real work`() {
-        role("done").forEach {
-            assertTrue(it["tokens"]!!.jsonPrimitive.long > 0, "zero-token summary: $it")
-            assertTrue(it["durMs"]!!.jsonPrimitive.long >= 0)
+    fun `a zero-token request still summarises its elapsed time`() {
+        // request A produces 50 tokens; request B carries no usage at all (0 tokens) but real time
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"first"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"one"}],"usage":{"output_tokens":50}}}""",
+            """{"type":"user","timestamp":"2026-07-28T10:00:05.000Z","message":{"role":"user","content":[{"type":"text","text":"second"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:07.000Z","message":{"role":"assistant","content":[{"type":"text","text":"two"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-zero", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "zero.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val dones = SessionStore.readTranscript(CWD, "zero")
+                .filter { it["role"]?.jsonPrimitive?.content == "done" }
+            assertEquals(2, dones.size, "one summary per completed request")
+            dones.forEach {
+                assertTrue(it["durMs"]!!.jsonPrimitive.long > 0, "summary lost its elapsed time: $it")
+            }
+            assertTrue(
+                dones.any { it["tokens"]!!.jsonPrimitive.long == 0L },
+                "the zero-token request was dropped instead of summarising its time",
+            )
+            assertTrue(
+                dones.any { it["tokens"]!!.jsonPrimitive.long == 50L },
+                "the token count was lost",
+            )
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
         }
+    }
+
+    /**
+     * The real filename is never sent to the CLI, so a replayed image chip can't recover it — but the
+     * media_type is in the transcript, so the extension is honest (`file.jpg` for a JPEG, not a
+     * misleading `image.png`). Base stays generic ("file").
+     */
+    @Test
+    fun `replayed image name takes its extension from the media_type`() {
+        fun nameFor(mediaType: String): String {
+            val jsonl =
+                """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[""" +
+                """{"type":"text","text":"look"},""" +
+                """{"type":"image","source":{"type":"base64","media_type":"$mediaType","data":"AAAA"}}]}}"""
+            val tmpHome = File.createTempFile("claude-home-img", "").let { it.delete(); it.mkdirs(); it }
+            try {
+                val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+                dir.mkdirs()
+                File(dir, "img.jsonl").writeText(jsonl)
+                SessionStore.claudeHome = tmpHome
+                val user = SessionStore.readTranscript(CWD, "img")
+                    .first { it["role"]?.jsonPrimitive?.content == "user" }
+                return user["images"]!!.jsonArray[0].jsonObject["name"]!!.jsonPrimitive.content
+            } finally {
+                SessionStore.claudeHome = home
+                tmpHome.deleteRecursively()
+            }
+        }
+        assertEquals("file.jpg", nameFor("image/jpeg"), "jpeg should map to .jpg")
+        assertEquals("file.png", nameFor("image/png"))
+        assertEquals("file.webp", nameFor("image/webp"))
+        assertEquals("file.svg", nameFor("image/svg+xml"), "svg+xml should map to .svg")
+        assertEquals("file.png", nameFor("bogus"), "an odd media_type falls back to .png")
     }
 
     @Test
     fun `thinking text is replayed with an approximate duration`() {
-        val think = role("thinking")
-        assertTrue(think.isNotEmpty(), "thinking block was dropped")
-        assertTrue(think[0]["text"]!!.jsonPrimitive.content.isNotBlank())
-        assertNotNull(think[0]["durMs"], "no duration derived from record timestamps")
+        // pick a bodied block: empty-body thinking is now emitted too (it replays as a no-body line)
+        val bodied = role("thinking").firstOrNull { it["text"]!!.jsonPrimitive.content.isNotBlank() }
+        assertNotNull(bodied, "bodied thinking block was dropped")
+        assertNotNull(bodied!!["durMs"], "no duration derived from record timestamps")
+    }
+
+    /**
+     * A thinking block whose body was not persisted (only a signature, ~2/3 of stored blocks) still
+     * replays instead of vanishing — the renderer draws it as a contentless `think no-body` line, as
+     * the live path does for a redacted block. The parser must emit the item with a blank body and
+     * its approximate duration rather than dropping it.
+     */
+    @Test
+    fun `empty-body thinking is still emitted so it can replay as a no-body line`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}""",
+            """{"type":"assistant","timestamp":"2026-07-28T10:00:03.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"","signature":"sig"}],"usage":{"output_tokens":10}}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-think", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "think.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val think = SessionStore.readTranscript(CWD, "think")
+                .filter { it["role"]?.jsonPrimitive?.content == "thinking" }
+            assertEquals(1, think.size, "empty-body thinking block was dropped")
+            assertTrue(think[0]["text"]!!.jsonPrimitive.content.isBlank(), "expected a blank body")
+            assertNotNull(think[0]["durMs"], "no approximate duration derived from timestamps")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
     }
 
     @Test
