@@ -9,7 +9,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
-import com.intellij.openapi.vfs.LocalFileSystem
+import com.syncroze.claudecode.findVFile
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -72,7 +72,7 @@ class IdeTools(private val project: Project) {
 
     private fun openFile(rawPath: String): String {
         if (rawPath.isBlank()) return "error: missing filePath"
-        val vf = LocalFileSystem.getInstance().findFileByPath(rawPath.replace('\\', '/'))
+        val vf = findVFile(rawPath)
             ?: return "error: file not found: $rawPath"
         ApplicationManager.getApplication().invokeLater {
             OpenFileDescriptor(project, vf).navigate(true)
@@ -81,7 +81,7 @@ class IdeTools(private val project: Project) {
     }
 
     private fun saveDocument(rawPath: String): String {
-        val vf = LocalFileSystem.getInstance().findFileByPath(rawPath.replace('\\', '/'))
+        val vf = findVFile(rawPath)
             ?: return "error: file not found: $rawPath"
         ApplicationManager.getApplication().invokeLater {
             val fdm = FileDocumentManager.getInstance()
@@ -91,7 +91,7 @@ class IdeTools(private val project: Project) {
     }
 
     private fun checkDocumentDirty(rawPath: String): String = ReadAction.compute<String, RuntimeException> {
-        val vf = LocalFileSystem.getInstance().findFileByPath(rawPath.replace('\\', '/'))
+        val vf = findVFile(rawPath)
             ?: return@compute "error: file not found: $rawPath"
         val doc = FileDocumentManager.getInstance().getDocument(vf)
         "dirty: ${doc != null && FileDocumentManager.getInstance().isDocumentUnsaved(doc)}"
@@ -113,7 +113,7 @@ class IdeTools(private val project: Project) {
             fem.openFiles.toList()
         } else {
             val p = pathOrUri.removePrefix("file://").replace('\\', '/')
-            listOfNotNull(LocalFileSystem.getInstance().findFileByPath(p))
+            listOfNotNull(findVFile(p))
         }
         val arr = buildJsonArray {
             for (vf in files) {

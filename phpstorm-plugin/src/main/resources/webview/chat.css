@@ -12,6 +12,7 @@
   --border: #3a3d43;      /* subtle borders */
   --border-strong: #45494f;
   --accent: #d97757;      /* Claude orange */
+  --accent-rgb: 217, 119, 87;  /* --accent as channels, for rgba() tints — keep in sync */
   --green: #4ec26b;       /* tool dot */
   --blue: #4daafc;        /* links */
   --amber: #d7a35f;       /* inline code */
@@ -272,8 +273,8 @@ img { max-width: 100%; height: auto; }
 .ask-q { padding: 12px; color: var(--fg); font-size: 13px; line-height: 1.5; }
 .ask-list { display: flex; flex-direction: column; padding: 0 8px 6px; gap: 2px; }
 .ask-opt { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: var(--radius); cursor: pointer; }
-.ask-opt:hover { background: rgba(217,119,87,.07); }
-.ask-opt.checked { background: rgba(217,119,87,.14); }
+.ask-opt:hover { background: rgba(var(--accent-rgb), .07); }
+.ask-opt.checked { background: rgba(var(--accent-rgb), .14); }
 .ask-opt input { position: absolute; inset: 0; width: auto; height: auto; margin: 0; opacity: 0; cursor: pointer; }
 .ask-ind { display: inline-flex; flex: 0 0 auto; margin-top: 1px; color: var(--fg); }
 .ask-ind svg { width: 16px; height: 16px; display: block; }
@@ -286,7 +287,7 @@ img { max-width: 100%; height: auto; }
    NB: must not be called `.done` — that's the completion-summary line (22px dot-column indent). */
 .ask-done .ask-opt { cursor: default; }
 .ask-done .ask-opt:hover { background: transparent; }
-.ask-done .ask-opt.checked:hover { background: rgba(217,119,87,.14); }
+.ask-done .ask-opt.checked:hover { background: rgba(var(--accent-rgb), .14); }
 .ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
 .ask-go:disabled { opacity: .45; cursor: not-allowed; }
 .ask-foot { padding: 0 12px 12px; font-size: 12px; }
@@ -399,7 +400,7 @@ img { max-width: 100%; height: auto; }
   display: flex; justify-content: center; }
 #inputcard { position: relative; width: 100%; max-width: 720px; background: var(--user-bg); border: 1px solid var(--user-border); border-radius: 12px;
   padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
-#inputcard:focus-within { border-color: var(--accent); box-shadow: 0 2px 14px rgba(0,0,0,.35), 0 0 0 3px rgba(217,119,87,.15); }
+#inputcard:focus-within { border-color: var(--accent); box-shadow: 0 2px 14px rgba(0,0,0,.35), 0 0 0 3px rgba(var(--accent-rgb), .15); }
 #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
   font: inherit; line-height: 20px; height: 20px; max-height: 200px; padding: 0; overflow-y: hidden; }
 #input::placeholder { color: var(--user-muted); }

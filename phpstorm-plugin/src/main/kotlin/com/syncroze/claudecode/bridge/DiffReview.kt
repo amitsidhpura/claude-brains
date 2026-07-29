@@ -11,7 +11,7 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
+import com.syncroze.claudecode.findVFile
 import java.io.File
 import java.util.concurrent.CompletableFuture
 
@@ -24,7 +24,7 @@ class DiffReview(private val project: Project) {
 
     fun open(oldPath: String, newContent: String, tabName: String): CompletableFuture<List<String>> {
         val future = CompletableFuture<List<String>>()
-        val vf = LocalFileSystem.getInstance().findFileByPath(oldPath.replace('\\', '/'))
+        val vf = findVFile(oldPath)
         val fileName = vf?.name ?: File(oldPath).name
         val fileType = FileTypeManager.getInstance().getFileTypeByFileName(fileName)
 

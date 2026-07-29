@@ -116,9 +116,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun openFile(rawPath: String): Boolean {
         val p = rawPath.trim().replace('\\', '/')
         if (p.isEmpty()) return false
-        val fs = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
-        val vf = fs.findFileByPath(p)
-            ?: project.basePath?.let { fs.findFileByPath("$it/${p.trimStart('/')}") }
+        val vf = findVFile(p)
+            ?: project.basePath?.let { findVFile("$it/${p.trimStart('/')}") }
             ?: return false
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
             com.intellij.openapi.fileEditor.OpenFileDescriptor(project, vf).navigate(true)

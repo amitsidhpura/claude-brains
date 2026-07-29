@@ -114,42 +114,45 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     private fun frameOf(type: String, items: JsonElement): String =
         json.encodeToString(JsonObject.serializer(), buildJsonObject { put("type", type); put("items", items) })
 
+    private fun pushFrame(frame: JsonObject) =
+        pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+
     private fun clearLog() = pushEvent("""{"type":"__clear"}""")
 
     /** Full parsed transcript of the resumed session; only the tail is shipped up front. */
     private var transcriptItems: List<JsonObject> = emptyList()
     private var transcriptFrom = 0   // items before this index have not been sent yet
 
+    /** Blocks [from, to) of the parsed transcript, plus the aligned cut both chunk kinds need. */
+    private fun chunkItems(from: Int, to: Int) =
+        buildJsonArray { transcriptItems.subList(from, to).forEach { add(it) } }
+
+    private fun alignedCut(endExclusive: Int, maxBlocks: Int) =
+        com.syncroze.claudecode.session.SessionStore.alignedStart(transcriptItems, endExclusive, maxBlocks)
+
     private fun pushTranscript(id: String) {
         // The parse is cheap (~0.1s even for a 177 MB file) and unavoidable — tool results patch
         // earlier blocks, so the tail can't be read in isolation. What was slow is shipping and
         // rendering all of it at once, so only the newest turns go now; the rest wait for "more".
         transcriptItems = session.readTranscript(id)
-        transcriptFrom = com.syncroze.claudecode.session.SessionStore
-            .alignedStart(transcriptItems, transcriptItems.size, INITIAL_BLOCKS)
-        val frame = buildJsonObject {
+        transcriptFrom = alignedCut(transcriptItems.size, INITIAL_BLOCKS)
+        pushFrame(buildJsonObject {
             put("type", "__transcript")
             put("context", session.contextTokens(id))   // seeds the context gauge
             put("more", transcriptFrom)                 // blocks still available above
-            put("items", buildJsonArray {
-                transcriptItems.subList(transcriptFrom, transcriptItems.size).forEach { add(it) }
-            })
-        }
-        pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+            put("items", chunkItems(transcriptFrom, transcriptItems.size))
+        })
     }
 
     private fun pushEarlier() {
         val to = transcriptFrom
         if (to <= 0) return
-        val from = com.syncroze.claudecode.session.SessionStore
-            .alignedStart(transcriptItems, to, MORE_BLOCKS)
-        transcriptFrom = from
-        val frame = buildJsonObject {
+        transcriptFrom = alignedCut(to, MORE_BLOCKS)
+        pushFrame(buildJsonObject {
             put("type", "__transcript_more")
-            put("more", from)
-            put("items", buildJsonArray { transcriptItems.subList(from, to).forEach { add(it) } })
-        }
-        pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+            put("more", transcriptFrom)
+            put("items", chunkItems(transcriptFrom, to))
+        })
     }
 
     private fun pushSessions() {
@@ -168,7 +171,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 }
             })
         }
-        pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+        pushFrame(frame)
     }
 
     /**
@@ -195,7 +198,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
      * when it has genuine unsaved changes, since that's what Claude matched `old_string` against.
      */
     private fun readFileText(path: String): String? = runCatching {
-        val vf = com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(path.replace('\\', '/'))
+        val vf = com.syncroze.claudecode.findVFile(path)
         val unsaved: String? = if (vf != null) {
             com.intellij.openapi.application.ReadAction.compute<String?, RuntimeException> {
                 val fdm = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
@@ -249,7 +252,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     put("input", inputJson) // raw JSON string; the page parses/pretty-prints
                     editLineStart(toolName, inputJson)?.let { put("lineStart", it) } // for the diff gutter
                 }
-                pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+                pushFrame(frame)
             },
             onInit = { metaJson ->
                 val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull()
@@ -260,7 +263,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                             put("type", "__models"); put("items", models)
                             session.selectedModel()?.let { put("selected", it) }
                         }
-                        pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+                        pushFrame(frame)
                     }
                 }
             },
@@ -274,7 +277,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 put("type", "files")
                 put("items", buildJsonArray { files.forEach { add(JsonPrimitive(it)) } })
             }
-            pushEvent(json.encodeToString(JsonObject.serializer(), frame))
+            pushFrame(frame)
         }
     }
 

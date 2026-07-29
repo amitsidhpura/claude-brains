@@ -516,14 +516,20 @@ object SessionStore {
         }
     }
 
-    private fun resultText(content: JsonElement?): String = when (content) {
-        is JsonPrimitive -> content.content
+    /**
+     * Text parts of a message `content` value, which is either a bare string or an array of typed
+     * blocks — the shared shape behind tool results and user messages alike.
+     */
+    private fun textParts(content: JsonElement?): List<String> = when (content) {
+        is JsonPrimitive -> listOf(content.content)
         is JsonArray -> content.mapNotNull { p ->
             p.jsonObject.takeIf { it["type"]?.jsonPrimitive?.content == "text" }
                 ?.get("text")?.jsonPrimitive?.content
-        }.joinToString("\n")
-        else -> ""
+        }
+        else -> emptyList()
     }
+
+    private fun resultText(content: JsonElement?): String = textParts(content).joinToString("\n")
 
     /**
      * Image + document attachments on a user message, as {kind, media_type, data, name}. Images stay
@@ -593,27 +599,12 @@ object SessionStore {
     }
 
     /** Full user text (all text parts, newlines preserved) — skips tool_result-only messages. */
-    private fun userTextFull(obj: JsonObject): String? {
-        val content = obj["message"]?.jsonObject?.get("content") ?: return null
-        return when (content) {
-            is JsonPrimitive -> content.content
-            is JsonArray -> content.mapNotNull { p ->
-                p.jsonObject.takeIf { it["type"]?.jsonPrimitive?.content == "text" }
-                    ?.get("text")?.jsonPrimitive?.content
-            }.joinToString("\n").ifBlank { null }
-            else -> null
-        }
-    }
+    private fun userTextFull(obj: JsonObject): String? =
+        textParts(obj["message"]?.jsonObject?.get("content"))
+            .joinToString("\n").ifBlank { null }
 
-    private fun userText(obj: JsonObject): String? {
-        val content = obj["message"]?.jsonObject?.get("content") ?: return null
-        return when (content) {
-            is JsonPrimitive -> content.content
-            is JsonArray -> content.firstNotNullOfOrNull { part ->
-                part.jsonObject.takeIf { it["type"]?.jsonPrimitive?.content == "text" }
-                    ?.get("text")?.jsonPrimitive?.content
-            }
-            else -> null
-        }?.trim()?.replace("\n", " ")
-    }
+    /** First text part only, flattened to one line — the compact form titles and lists use. */
+    private fun userText(obj: JsonObject): String? =
+        textParts(obj["message"]?.jsonObject?.get("content"))
+            .firstOrNull()?.trim()?.replace("\n", " ")
 }
