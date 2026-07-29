@@ -148,7 +148,6 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun readTranscript(id: String): List<kotlinx.serialization.json.JsonObject> =
         com.syncroze.claudecode.session.SessionStore.readTranscript(cwd.path, id)
 
-    fun sendUserText(text: String) = cli?.sendUserText(text)
 
     /** Send a user turn with attachments (images / pdf / text). */
     fun sendUser(text: String, attachments: List<com.syncroze.claudecode.cli.Attachment>) =

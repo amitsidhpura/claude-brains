@@ -218,6 +218,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
             val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, name)
             if (wrapper != null) runCatching { wrapper.file.writeBytes(bytes) }
+                .onFailure {
+                    com.intellij.openapi.diagnostic.Logger.getInstance(ChatPanel::class.java)
+                        .warn("saving attachment $name failed", it)
+                }
         }
     }
 
@@ -225,9 +229,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         // loadHTML has no base URL, so a <link> can't resolve — splice the shared
         // stylesheet (webview/chat.css, also linked by design/mockup.html) at the marker.
         val html = javaClass.getResourceAsStream("/webview/chat.html")!!
-            .readBytes().toString(StandardCharsets.UTF_8)
+            .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
         val css = javaClass.getResourceAsStream("/webview/chat.css")!!
-            .readBytes().toString(StandardCharsets.UTF_8)
+            .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
         browser.loadHTML(html.replace("<!--CSS-->", "<style>\n$css\n</style>"))
     }
 

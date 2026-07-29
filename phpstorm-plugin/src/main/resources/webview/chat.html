@@ -246,7 +246,8 @@
     'Cogitating','Marinating','Wibbling','Frolicking','Puttering','Ruminating','Spelunking','Vibing',
     'Reticulating','Brewing','Churning','Mulling','Musing','Schlepping','Manifesting','Transmuting',
     'Honking','Booping','Concocting','Finagling','Moseying','Shimmying','Tinkering','Whirring','Germinating'];
-  let workingEl = null, workTimers = [], workStart = 0, turnTokens = 0, msgTokens = 0, msgChars = 0;
+  let workingEl = null, workMeta = null, workMetaHtml = '', workTimers = [], workStart = 0,
+      turnTokens = 0, msgTokens = 0, msgChars = 0;
   let awaitingUser = false; // a permission/plan/question card is waiting on the user
   function showWorking() {
     if (workingEl) return;
@@ -254,6 +255,7 @@
     if (!workStart) workStart = Date.now(); // cumulative across gaps within a turn
     workingEl.innerHTML = '<span class="spin">✳</span><span class="verb"></span><span class="meta"></span>';
     const spin = workingEl.querySelector('.spin'), verb = workingEl.querySelector('.verb');
+    workMeta = workingEl.querySelector('.meta'); workMetaHtml = '';
     updateWorkTokens();                     // composes the meta; empty until there is something to say
     let fi = 0, vi = Math.floor(Math.random() * VERBS.length);
     verb.textContent = VERBS[vi] + '…';
@@ -267,16 +269,17 @@
    * land first, and no empty parens (or its flex gap) when there is nothing to report at all.
    */
   function updateWorkTokens() {
-    if (!workingEl) return;
-    const meta = workingEl.querySelector('.meta');
-    if (!meta) return;
+    if (!workingEl || !workMeta) return;
     const secs = workStart ? Math.round((Date.now() - workStart) / 1000) : 0;
     const total = turnTokens + msgTokens;
     const parts = [];
     if (secs > 0) parts.push('<span class="w-el">' + secs + 's</span>');
     if (total > 0) parts.push(SVG_DOWN + '<span class="w-tok">' + fmtTok(total) + '</span> tokens');
-    meta.innerHTML = parts.length ? '(' + parts.join(' · ') + ')' : '';
-    meta.hidden = parts.length === 0;
+    const html = parts.length ? '(' + parts.join(' · ') + ')' : '';
+    if (html === workMetaHtml) return;   // called per delta — skip the DOM write when nothing changed
+    workMetaHtml = html;
+    workMeta.innerHTML = html;
+    workMeta.hidden = parts.length === 0;
   }
   // No authoritative usage arrives until message_delta (end of message), so show a live
   // chars/4 estimate as text/thinking streams; message_delta then reconciles to the real count.
@@ -284,6 +287,7 @@
   function hideWorking() {
     workTimers.forEach(clearInterval); workTimers = [];
     if (workingEl) { workingEl.remove(); workingEl = null; }
+    workMeta = null; workMetaHtml = '';
   }
   // The working line is shown for the WHOLE turn (like VS Code / the reference plugin): visible
   // whenever Claude is busy, except while a card is waiting on the user. It's pinned to the
@@ -388,7 +392,6 @@
 
   /* ---------- JS -> Kotlin bridge ---------- */
   function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
-  window.sendToClaude = function (t) { bridge({ kind: 'user', text: t }); };
   window.respondPermission = function (id, allow) { bridge({ kind: 'perm', id: id, allow: allow ? 'true' : 'false' }); };
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */
@@ -578,8 +581,12 @@
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';
     earlierRemaining = 0; earlierInFlight = false;  // never pull a previous session's chunks
-    curBubble = null; curRaw = ''; curThink = null; curThinkRaw = '';
+    curBubble = null; curRaw = ''; mdPending = false; curThink = null; curThinkRaw = ''; thinkTok = null;
     curTurn = null; workingEl = null; activeAsk = null;
+    // per-session stream state: a stale openTool would keep appending into a detached element,
+    // toolsById pins removed DOM for the page lifetime, and a leftover lastUser would let a
+    // first-turn Retry resend the PREVIOUS session's message (images included)
+    openTool = null; toolsById = {}; lastUser = null;
     turnTokens = 0; msgTokens = 0;
     // a fresh conversation carries no context; a resume re-seeds it from the __transcript frame,
     // which Kotlin pushes straight after this clear
@@ -1045,7 +1052,6 @@
 
   let lastUser = null;                 // { text, images } — for Retry
   let history = [], histIdx = 0, histDraft = ''; // sent-message history for ↑/↓ recall
-  function uuid() { try { return crypto.randomUUID(); } catch (_) { return 'id-' + Math.random().toString(16).slice(2); } }
 
   function sendTurn(t, imgs) {
     addUserMessage(t, imgs);
@@ -1245,11 +1251,25 @@
 
   /* ---------- Kotlin -> page ---------- */
   let curBubble = null, curRaw = '';
-  let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0, thinkTimer = null;
+  let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0, thinkTimer = null,
+      thinkTok = null;
+
+  /**
+   * Markdown re-render throttle: renderMd(curRaw) re-parses (and re-highlights) the WHOLE
+   * accumulated message, so doing it per text_delta is O(n²) over message length. Deltas only
+   * mark dirty; the render runs once per animation frame. Anything that finalizes or replaces
+   * curBubble must call flushMd() first so the last deltas aren't lost.
+   */
+  let mdPending = false;
+  function flushMd() {
+    if (!mdPending) return;
+    mdPending = false;
+    if (curBubble) { curBubble.innerHTML = renderMd(curRaw); maybeScroll(); }
+  }
   let openTool = null;        // tool block currently streaming its input
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
   let reqTokens = 0;          // output tokens summed across every result turn in one user request
-  const toolsById = {};       // tool_use id -> {el, name, io} for OUT boxes
+  let toolsById = {};         // tool_use id -> {el, name, io} for OUT boxes; reset by clearLogUI
 
   window.onClaudeEvent = function (raw) {
     let ev; try { ev = JSON.parse(raw); } catch (_) { return; }
@@ -1303,12 +1323,13 @@
       (empty ? '' : '<div class="body"></div>');
     if (!empty) det.querySelector('.body').textContent = curThinkRaw;
     curThink.replaceWith(det);
-    curThink = null; curThinkRaw = '';
+    curThink = null; curThinkRaw = ''; thinkTok = null;
   }
 
   function onStream(e) {
     switch (e.type) {
       case 'message_start': {
+        flushMd();
         curBubble = null; curRaw = '';
         msgTokens = 0; msgChars = 0;
         const u = (e.message || {}).usage || {};   // prompt side only arrives here
@@ -1323,12 +1344,14 @@
           t.innerHTML = '<b>' + esc(toolLabel(cb.name)) + '</b><span class="t-desc"></span>';
           openTool = { el: t, name: cb.name || 'tool', json: '' };
           if (cb.id) toolsById[cb.id] = openTool;
+          flushMd();
           curBubble = null; // text after a tool starts a fresh block
         } else if (cb.type === 'thinking') {
           curThink = el('think-live', '');
           curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
             '<span class="th-el-wrap" hidden> · <span class="th-el"></span></span><span class="tok"></span></div>';
           thinkStart = Date.now(); thinkChars = 0; curThinkRaw = '';
+          thinkTok = curThink.querySelector('.tok');
           const thEl = curThink.querySelector('.th-el'), thWrap = curThink.querySelector('.th-el-wrap');
           thinkTimer = setInterval(function () {
             if (!curThink) { clearInterval(thinkTimer); thinkTimer = null; return; }
@@ -1343,15 +1366,14 @@
         const d = e.delta || {};
         if (d.type === 'text_delta') {
           if (!curBubble) { curBubble = el('blk', ''); }
-          curRaw += d.text; curBubble.innerHTML = renderMd(curRaw);
+          curRaw += d.text;
+          if (!mdPending) { mdPending = true; requestAnimationFrame(flushMd); }
           msgChars += d.text.length; estimateMsgTokens();   // live token estimate
-          maybeScroll();
         } else if (d.type === 'thinking_delta' && curThink) {
           curThinkRaw += (d.thinking || '');
           thinkChars += (d.thinking || '').length;
           msgChars += (d.thinking || '').length; estimateMsgTokens();
-          const tok = curThink.querySelector('.tok');
-          if (tok) tok.textContent = ' · ' + fmtTok(Math.max(1, Math.round(thinkChars / 4))) + ' tokens';
+          if (thinkTok) thinkTok.textContent = ' · ' + fmtTok(Math.max(1, Math.round(thinkChars / 4))) + ' tokens';
           maybeScroll();
         } else if (d.type === 'input_json_delta' && openTool) {
           openTool.json += (d.partial_json || '');
@@ -1392,6 +1414,7 @@
         }
         break;
       case 'message_stop':
+        flushMd();              // the last deltas may still be waiting on a frame
         clampCode(curBubble);   // only once the block is final, not on every delta
         curBubble = null;
         finishThinking();
@@ -1566,6 +1589,7 @@
   function onResult(ev) {
     const usage = ev.usage || {};
     if (typeof usage.output_tokens === 'number') reqTokens += usage.output_tokens;
+    flushMd();
     curBubble = null;
     finishThinking();
     // A background subagent suspends the turn: the CLI emits an intermediate `result` while the

@@ -57,20 +57,42 @@ object SessionStore {
         return text.lineSequence().drop(if (f.length() > window) 1 else 0).toList()
     }
 
+    /**
+     * Per-file stats valid for one (mtime, size) — a stale entry is replaced wholesale. Fields fill
+     * lazily: list() wants lastActivity for every file but title/tokens only for the shown page.
+     * A 170 MB transcript is scanned once, not on every panel open.
+     */
+    private class FileStats(val mtime: Long, val size: Long) {
+        var tokens: Long? = null
+        var lastActivity: Long? = null
+        var title: String? = null
+        var context: Long? = null
+    }
+    private val statsCache = HashMap<String, FileStats>()
+
+    private fun statsOf(f: File): FileStats {
+        val cur = statsCache[f.path]
+        if (cur != null && cur.mtime == f.lastModified() && cur.size == f.length()) return cur
+        return FileStats(f.lastModified(), f.length()).also { statsCache[f.path] = it }
+    }
+
     private fun lastActivityOf(f: File): Long {
+        val s = statsOf(f)
+        s.lastActivity?.let { return it }
+        var result = f.lastModified()
         for (line in tailLines(f).asReversed()) {
             if (!line.contains("\"timestamp\"")) continue
             val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
             val type = obj["type"]?.jsonPrimitive?.content
             if (type != "user" && type != "assistant") continue
             val ts = obj["timestamp"]?.jsonPrimitive?.content ?: continue
-            runCatching { return java.time.Instant.parse(ts).toEpochMilli() }
+            val ms = runCatching { java.time.Instant.parse(ts).toEpochMilli() }.getOrNull() ?: continue
+            result = ms
+            break
         }
-        return f.lastModified()
+        s.lastActivity = result
+        return result
     }
-
-    /** path -> (mtime, size, tokens): a 170 MB transcript is scanned once, not on every panel open. */
-    private val tokenCache = HashMap<String, Triple<Long, Long, Long>>()
 
     /**
      * Total output tokens across the session. Only assistant records carry `usage`, so reject lines
@@ -78,10 +100,8 @@ object SessionStore {
      * (177 MB) well under a second, and the cache means it is paid once.
      */
     private fun tokensOf(f: File): Long {
-        val cached = tokenCache[f.path]
-        if (cached != null && cached.first == f.lastModified() && cached.second == f.length()) {
-            return cached.third
-        }
+        val s = statsOf(f)
+        s.tokens?.let { return it }
         var total = 0L
         runCatching {
             f.bufferedReader().useLines { lines ->
@@ -92,8 +112,8 @@ object SessionStore {
                         ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
                 }
             }
-        }
-        tokenCache[f.path] = Triple(f.lastModified(), f.length(), total)
+        }.onFailure { log.warning("tokensOf ${f.name}: $it") }
+        s.tokens = total
         return total
     }
 
@@ -123,6 +143,12 @@ object SessionStore {
     fun contextTokens(cwd: String, id: String): Long {
         val f = File(projectDir(cwd), "$id.jsonl")
         if (!f.isFile) return 0
+        val s = statsOf(f)
+        s.context?.let { return it }
+        return computeContextTokens(f).also { s.context = it }
+    }
+
+    private fun computeContextTokens(f: File): Long {
         for (line in tailLines(f).asReversed()) {
             if (!line.contains("\"usage\"")) continue
             val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
@@ -148,11 +174,15 @@ object SessionStore {
         if (transcript.parentFile?.canonicalFile != dir.canonicalFile) return false
         val sidecar = File(dir, id)
         if (sidecar.isDirectory) sidecar.deleteRecursively()
-        tokenCache.remove(transcript.path)
+        statsCache.remove(transcript.path)
         return transcript.isFile && transcript.delete()
     }
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    // java.util.logging, NOT the IntelliJ Logger: SessionStore stays platform-free so the plain
+    // JUnit tests (and the probe task) can run it outside an IDE fixture.
+    private val log = java.util.logging.Logger.getLogger("claudecode.SessionStore")
 
     /**
      * Cap on base64 image payload embedded in one replayed transcript; chips past it fall back to
@@ -186,6 +216,12 @@ object SessionStore {
      * sessions carry a `summary` record; fall back to the first user message.
      */
     private fun titleOf(f: File): String {
+        val s = statsOf(f)
+        s.title?.let { return it }
+        return computeTitle(f).also { s.title = it }
+    }
+
+    private fun computeTitle(f: File): String {
         var firstUser: String? = null
         var aiTitle: String? = null
         runCatching {
@@ -207,7 +243,7 @@ object SessionStore {
                     }
                 }
             }
-        }
+        }.onFailure { log.warning("titleOf ${f.name}: $it") }
         return aiTitle ?: firstUser?.take(80)?.ifBlank { null } ?: "(untitled session)"
     }
 
@@ -378,7 +414,7 @@ object SessionStore {
                 }
             }
             flushSummary() // the last request has no following user turn to close it
-        }
+        }.onFailure { log.warning("readTranscript $id truncated at ${out.size} blocks: $it") }
         trimAttachments(out)
         return out.map { it.toJson() }
     }

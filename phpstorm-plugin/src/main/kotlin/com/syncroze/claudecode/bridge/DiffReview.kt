@@ -32,7 +32,7 @@ class DiffReview(private val project: Project) {
             val current = if (vf != null) {
                 ReadAction.compute<String, RuntimeException> {
                     FileDocumentManager.getInstance().getDocument(vf)?.text
-                        ?: String(vf.contentsToByteArray())
+                        ?: String(vf.contentsToByteArray(), vf.charset)
                 }
             } else ""
 

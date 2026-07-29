@@ -85,7 +85,10 @@ class ClaudeCli(
 
         thread(name = "claude-stdout", isDaemon = true) {
             p.inputStream.bufferedReader(StandardCharsets.UTF_8).useLines { lines ->
-                lines.forEach { line -> if (line.isNotBlank()) runCatching { route(line) } }
+                lines.forEach { line ->
+                    if (line.isNotBlank()) runCatching { route(line) }
+                        .onFailure { log.warn("dropped stream line: ${line.take(200)}", it) }
+                }
             }
         }
         thread(name = "claude-stderr", isDaemon = true) {
@@ -131,7 +134,6 @@ class ClaudeCli(
     private fun handleControlResponse(obj: JsonObject) {
         val resp = obj["response"]?.jsonObject ?: return
         val reqId = resp["request_id"]?.jsonPrimitive?.content
-        val result = resp["response"]
         when {
             reqId == INIT_REQ_ID ->
                 resp["response"]?.jsonObject?.let { onInit(it.toString()) } // { commands, models, account, ... }
@@ -205,8 +207,6 @@ class ClaudeCli(
         writeLine(line)
     }
 
-    /** Send a text-only user turn. */
-    fun sendUserText(text: String) = sendUserMessage(text, emptyList())
 
     /** Send a user turn with optional attachments. */
     fun sendUserMessage(text: String, attachments: List<Attachment>) {
