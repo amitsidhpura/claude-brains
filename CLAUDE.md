@@ -153,6 +153,10 @@ good-looking screenshot doesn't reach them:
 - thinking with real text: local phpstorm/testing sessions are 100% empty bodies, so
   `syncroze-core` is the only place collapsed thinking and durations appear at all
 - live path: token meta from `message_delta.usage`, ask Other/multiSelect, fail dots
+- **streaming rAF throttle (2026-07-30) UNVERIFIED under real JCEF frame timing**: text_delta no
+  longer re-renders per token (`renderMd` was O(n²) over message length) — deltas mark dirty and
+  `flushMd()` renders once per frame, flushed synchronously wherever `curBubble` is finalized.
+  Correct under synthetic streams in a real browser; watch one long live answer for feel.
 Ctrl+Alt+G renders every transient state without driving the CLI; `./gradlew probe` dumps the
 replay blocks for any session, which is the fastest way to split a parser bug from a renderer bug.
 Replay also reconstructs, from fields the parser previously ignored: plan cards (`ExitPlanMode`
@@ -165,14 +169,31 @@ NB: many sessions store `thinking` blocks with an EMPTY body and only a `signatu
 replay as nothing at all; ~2.1k of 6.6k local thinking blocks carry text.
 Known gaps deliberately left:
 - sidechain/subagent ordering untested (no `isSidechain` records in local sessions yet)
-- tool lines still blank for tools whose input has no `description`/path/`pattern`/`query`/`url`:
-  `TaskUpdate` (has `activeForm`, ~308 local occurrences — the biggest), `Skill` (`skill`),
-  `TaskOutput`/`TaskStop` (`task_id`). Each needs a bespoke key, so the generic chain won't do it.
-  Bash and AskUserQuestion are blank BY DESIGN (IN box / card carry the content).
-- API-error records (`isApiErrorMessage`, 14 locally — "session limit", "usage credits") replay as
-  ordinary message text; live draws an `.error` block with an alert icon and a Retry line.
+- tool lines still blank for tools whose input has none of the desc-chain keys
+  (`description`/path/`pattern`/`query`/`url`/`element`/`filename`/`target` — the last three are
+  MCP/Playwright, added 2026-07-30): `TaskUpdate` (has `activeForm`, ~308 local occurrences — the
+  biggest), `Skill` (`skill`), `TaskOutput`/`TaskStop` (`task_id`). Each needs a bespoke key, so
+  the generic chain won't do it. Bash and AskUserQuestion are blank BY DESIGN.
 - windowed replay: DOM search (browser find, any future find-in-conversation) only sees loaded
-  blocks; and `IMAGE_BUDGET` is still spent in FILE order, so images in early unshipped blocks can
-  starve the visible tail — flip the budget walk to run from the end when it bites.
+  blocks.
+
+Audits (2026-07-30, all closed — findings live in the docs):
+- **Renderer parity** (docs/renderer-parity.md): 25 fixed / 10 accepted / 0 open. Fixed along the
+  way: API-error records replay as the live `.error` block, Retry after a resumed tail error
+  (replay seeds `lastUser`), IMAGE_BUDGET spent newest-first so the visible tail keeps its bytes.
+- **Spacing/radius**: three radius tiers (12px panels / 6px `--radius` / 3px micro — no 4px left),
+  one 12px text edge inside the ask card, history panel wears the popup-family metrics
+  (`10px 14px 6px` header + divider on all titled popups), `--accent-rgb` so tints can't desync,
+  both dropdown lists cap at exactly 5×54px rows (docs/limits.md).
+- **Code optimization** (all tranches shipped): rAF-throttled streaming render (see NEXT),
+  `FileStats` (mtime,size) cache — history opens on unchanged files do zero file reads (was ≤3
+  reads/file/click); `clearLogUI` resets `lastUser`/`toolsById`/`openTool` (cross-session Retry +
+  detached-DOM leaks); swallowed exceptions now log; `vf.charset` in DiffReview; dead code gone
+  (`uuid()`, `sendToClaude`, `sendUserText` pair). Dedup: shared block builders in chat.html
+  (`ioRow/ioBox/toolLine/errorBlock/thinkBlock/planCardHtml/writeDiffHtml/askTabsHtml/wireAskTabs/
+  resolveAsk`) — live and replay draw through the SAME functions now, so they cannot drift;
+  Kotlin `textParts()`/`pushFrame()`/`chunkItems()`/`findVFile()` (Vfs.kt, the one front door for
+  path lookups). Browser-verified: gallery + synthetic streams + ask interactions all green.
+
 Then: editor-title accept/reject, @-symbol mentions, worktrees,
 extensibility status view.
