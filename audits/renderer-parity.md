@@ -164,3 +164,29 @@ Mostly deliberate; listed so nothing is silently forgotten.
 ### Orphan
 - [ ] **Dead CSS:** `.status .undo` (`chat.css:384–385`) is referenced by neither the plugin JS nor the
       mockup — leftover from an earlier undo-placement design.
+
+---
+
+## Handoff — open follow-ups (2026-07-29, next session)
+
+Not renderer-parity, but the live threads to resume:
+
+- **Session title fix (just landed, this commit):** `titleOf()` now skips `isMeta`/caveat first
+  messages and runs `cleanInjected()`, so a session no longer titles as `<local-command-caveat>…`.
+  Test: `title falls through a local-command-caveat to the first real message`.
+- **File-attachments — needs a real `runIde` pass (can't verify in Chromium):**
+  (1) the native **save dialog** actually opens and writes on download, and (2) the CLI **accepts
+  `document` blocks** in stream-json input (PDF/text). Both mirror the official extension, so low
+  risk, but they're the only live-only unknowns. Same for the **inset focus-ring** (Audit 1 #8) —
+  JCEF paints focus rings its own way.
+- **Code block with no language label** (discussed, not started). A bare ``` fence renders an empty
+  header strip + copy button. Options: **A** default label `esc(lang||'text')` (1 line); **B** keep
+  as-is; **C** drop the header for plain blocks and float copy top-right on hover (VS Code style).
+  Leaning A or C.
+- **MCP / untested tool lines (Playwright etc.)** (discussed, not started). They render the raw
+  `mcp__<server>__<tool>` name and a description only when the input has `url`/`query`/`path`/… — so
+  `browser_navigate` shows its url but `browser_click`/`browser_take_screenshot` show a blank desc.
+  Options: **A** strip the `mcp__<server>__` prefix in the name path (shared live+replay — biggest,
+  cheapest win); **B** add more desc keys (`selector`/`filename`/…); **C** both. Leaning A (+ a few B keys).
+- Remaining Audit 3 mockup-coverage gaps above (clamped-block example, reverted-status line,
+  @-mention popup, name-only chip, multi-OUT/no-duration-thinking) and the orphan `.status .undo` CSS.
