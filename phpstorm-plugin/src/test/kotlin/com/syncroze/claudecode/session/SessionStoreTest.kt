@@ -306,6 +306,32 @@ class SessionStoreTest {
         }
     }
 
+    /**
+     * When a session has no summary / ai-title, the title falls back to the first user message — but
+     * must skip a leading `<local-command-caveat>` wrapper (isMeta) and land on the first real prompt,
+     * rather than showing the caveat blob as the title.
+     */
+    @Test
+    fun `title falls through a local-command-caveat to the first real message`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"<local-command-caveat>Caveat: The messages below were generated…</local-command-caveat>"}]}}""",
+            """{"type":"user","timestamp":"2026-07-28T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"Refactor the payment module"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-title", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "title.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+            val info = SessionStore.list(CWD).first { it.id == "title" }
+            assertEquals("Refactor the payment module", info.title, "title should skip the caveat wrapper")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     @Test
     fun `list reports size on disk and total output tokens`() {
         val info = SessionStore.list(CWD).first { it.id == ID }

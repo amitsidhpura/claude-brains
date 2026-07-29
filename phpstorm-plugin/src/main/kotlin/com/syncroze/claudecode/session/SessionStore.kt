@@ -198,7 +198,12 @@ object SessionStore {
                         // keep scanning: later ai-title records supersede earlier ones
                         "ai-title" -> obj["aiTitle"]?.jsonPrimitive?.content?.trim()
                             ?.takeIf { it.isNotBlank() }?.let { aiTitle = it }
-                        "user" -> if (firstUser == null) firstUser = userText(obj)
+                        // fall back to the first REAL user message: skip caveat/stdout/task wrappers
+                        // (isMeta + cleanInjected) exactly as replay does, so the title isn't a
+                        // <local-command-caveat> blob
+                        "user" -> if (firstUser == null && obj["isMeta"]?.jsonPrimitive?.content != "true") {
+                            firstUser = userText(obj)?.let { cleanInjected(it) }?.trim()?.takeIf { it.isNotBlank() }
+                        }
                     }
                 }
             }
