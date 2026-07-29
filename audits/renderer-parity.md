@@ -1,0 +1,166 @@
+# Renderer parity audit — live vs resume vs mockup
+
+Three audits of the chat UI's three render paths:
+- **live** — `chat.html` streaming renderer (`onStream`/`onResult`/`renderPermission`/`renderAsk`)
+- **resume** — `chat.html` replay (`renderBlocks`/`replayCard`/`replayAsk`) fed by `SessionStore.kt`
+- **mockup** — `design/mockup.html`, the static design fixture that mirrors the generated DOM
+
+First run: 2026-07-29. Legend: `[x]` done · `[ ]` open · `[~]` deliberate / documented, no action intended.
+
+When an item is fixed, tick it and add a one-line note (what + where). Keep the finding text so the
+history is legible.
+
+---
+
+## Audit 1 — Formatting: resume vs live
+
+Same-content blocks that render differently between the streaming path and the replay path.
+
+- [x] **1. Live answered/cancelled ask card never got `.ask-done`.** Replay builds `el('ask ask-done')`;
+      the live `go.onclick`/`cancelAsk` disabled inputs and swapped the badge but never added the class,
+      so a just-answered live card kept pointer cursor + option hover (`chat.css:278–280`) while its
+      replayed twin went inert.
+      **Fixed 2026-07-29** — `card.classList.add('ask-done')` in both `renderAsk` submit and `cancelAsk`
+      (`chat.html`). Verified in Chromium: answered → `.ask-done` + "✓ Answered"; cancel → `.ask-done` +
+      "✗ Cancelled".
+- [x] **2. Live diffs had no row cap; replay capped at `MAX_DIFF_ROWS` (400).** A whole-file Write/Edit
+      rendered every row live (the perf-dangerous case) but 400 + "… diff truncated" on resume.
+      **Fixed 2026-07-29** — `renderEditDiff()` counts rows and stops at 400 + marker (also closes the
+      uncapped `replayDiff` old/new fallback, same function); `previewHtml()` Write path mirrors
+      `replayDiff`'s content cap. Verified in Chromium (1000-line Edit + Write → 400 rows + marker;
+      small diffs untouched; boundary correct). `docs/limits.md:41` already claimed "live + replay" — now true.
+- [x] **3. Zero-token completion summaries.** Kotlin skipped the whole `✻ … for Ns · ↓ N tokens`
+      line when `reqTokens == 0`; live `onResult` always drew it, incl. a noisy "↓ 0 tokens". But the
+      **time is always real** even when tokens are 0 — only the token segment is meaningless.
+      **Fixed 2026-07-29** — both paths now share a `doneHtml(durMs, tokens)` helper: the time always
+      shows, the "↓ N tokens" segment is appended only when tokens > 0. Kotlin `flushSummary` dropped
+      the `reqTokens > 0` guard (keeps `reqWork` — a truly empty turn still emits nothing). So a
+      0-token request reads `✻ Baked for 2s` on both paths. Verified: JS `doneHtml`/replay in Chromium;
+      Kotlin unit test `a zero-token request still summarises its elapsed time` (synthetic transcript,
+      since the shared fixture ends on an interrupt); plus `interrupt … no summary` now asserts the
+      interrupt-suppression invariant.
+- [x] **4. Thinking-line wording.** Live always renders "Thought for Ns" (min 1s) and draws a
+      `think no-body` line for an empty stream; replay rendered bare "Thought" for sub-second /
+      timestamp-less durations and **dropped empty-body thinking entirely** (~2/3 of stored blocks
+      persist only a signature), so thinking visible live vanished on resume.
+      **Fixed 2026-07-29** (user chose: match live). Replay `case 'thinking'` now mirrors
+      `finishThinking` exactly — clamps to a 1s floor when a duration exists (bare "Thought" only when
+      there is no timestamp gap), and branches on empty body → non-expandable `think no-body` vs
+      collapsible `<details>`. Kotlin `readTranscript` now emits thinking items even when the body is
+      blank (was `takeIf { isNotBlank() }`). Verified: four render cases in Chromium (bodied /
+      empty+duration / sub-second→1s / no-gap→bare) all match live; Kotlin test
+      `empty-body thinking is still emitted…` (synthetic signature-only block); existing thinking
+      test now selects the bodied block.
+      · **Follow-on for Audit 3:** the mockup's replayed section could gain a no-body thinking example
+        (its only `no-body` sample is in the live turn) — tracked under Audit 3 "in plugin not mockup".
+- [x] **5. Bash OUT provenance.** Live shows the `tool_result` block **content** (model-facing text);
+      replay read the structured `stdout`+`stderr` fields FIRST (content only as fallback), so a
+      resumed OUT box could differ in text / stderr ordering / truncation boundary.
+      **Fixed 2026-07-29** — `applyToolResult` now prefers `resultText(block["content"])` (identical
+      source + join semantics to live's `onUserEvent`), with `stdout`/`stderr` as the fallback only
+      when the content block is empty. Kotlin test `Bash OUT prefers the tool_result content over raw
+      stdout and stderr` (content + differing stdout/stderr → OUT is the content). Note: live still
+      emits one OUT row *per* `tool_result` and caps each at 2000, while replay keeps a single OUT
+      capped at 2000 — the multi-result row-count edge is left as-is (rare for Bash; overwrites to the
+      last result on replay).
+- [x] **6. Replayed image chips are generic.** `imagesOf()` hardcoded `name: "image.png"` and carried
+      no w/h, so replayed user-box chips showed a wrong-format name and lost the `260×130` meta.
+      **Fixed 2026-07-29** (partial — the filename is inherently unrecoverable, see below):
+      · **Name** (`SessionStore.kt`) — `imageName(mediaType)` derives the extension from the transcript's
+        `media_type` → `file.jpg` / `file.png` / `file.webp` / `file.svg` (from svg+xml) / …, defaulting
+        to `file.png` for an odd/absent type. Base stays generic ("file") because the real filename is
+        never sent to the CLI (`sendTurn` ships only `{media_type, data}`), so it isn't in the transcript.
+        Test `replayed image name takes its extension from the media_type` (jpeg/png/webp/svg+xml/bogus).
+      · **Dimensions** (`chat.html`, `addUserMessage`) — a chip with data but no `w` is probed with the
+        same `new Image()` trick `addImageFile` uses live, and the `w×h` meta is appended on load.
+        Live chips already carry `w` → probe skipped (verified: no duplicate meta; real name untouched).
+        The one live effect is the rare paste-then-send-before-decode race, where it now *adds* the
+        previously-missing meta (improvement, not regression).
+      · **Not fixed (can't be):** the real original filename — never transmitted, so `file.<ext>` is as
+        honest as the transcript allows.
+- [~] **7. Random completion verb.** Both paths pick a random `DONE_VERBS` entry, so the same session
+      says "Baked" live and "Distilled" on resume. Cosmetic, by design.
+- [x] **8. Focus ring "cut" live, "full" resumed** (discovered 2026-07-29 while reviewing #4). The
+      thinking-summary (and any focusable element in a turn) showed the browser's default *outward*
+      `outline: auto`, with no CSS focus rule at all. The `.turn-body`'s `content-visibility: auto`
+      applies paint containment CONTINUOUSLY — on-screen too, not just at the viewport edge (proven in
+      Chromium: an identical flush child clips in a `content-visibility:auto` box but not a plain one).
+      An outward ring sticks out ~4px, so it is shaved where the element reaches the turn-body's
+      paint-clip edge — and the thinking line is the FIRST child of its turn-body (flush to the top)
+      on both paths. **Root cause of the live/resume asymmetry (pinned down 2026-07-29):**
+      `renderTranscript` — resume only — un-skips the last 8 turn-bodies with an inline
+      `contentVisibility = 'visible'` (chat.html ~794, done so the bottom-landing math gets honest
+      heights). That override also removes the paint containment, so the resumed tail can't clip the
+      ring; live turns from `newTurn()` keep the stylesheet's `content-visibility: auto` and clip it.
+      Reproduced side-by-side in the mockup: identical turn, cv:auto → ring-top cut, inline
+      cv:visible → full ring — matching the user's screenshots exactly. So live = always clipped,
+      resumed tail (last 8) = never clipped; a resumed turn OLDER than the tail would clip like live.
+      The inset ring is immune either way, so the fix holds regardless of which state a turn is in.
+      **Fixed 2026-07-29** — shared inset focus rule scoped to a turn (`chat.css`): `.turn :focus {
+      outline:none }` + `.turn :focus-visible { outline: 2px solid var(--accent); outline-offset:
+      -2px }`, plus `.ask-opt:has(input:focus-visible)` to surface the transparent radio/checkbox's
+      focus on the visible row. An inset ring can't exceed the element box, so no containment / sticky
+      box / clamped overflow can clip it — full ring on summary, ask tabs, card buttons, links, undo,
+      inputs, live and resumed alike. Verified in the mockup (all focusables resolve to offset -2px
+      accent) incl. a forced `contain:paint` turn-body → full ring. **Still to verify in a real
+      `runIde` sandbox** (focus-ring painting is engine-specific; the inset approach is engine-agnostic
+      by construction). CSS-only change — a `runIde` restart picks it up.
+
+---
+
+## Audit 2 — Live vs resumed: behavioral / content differences
+
+Mostly deliberate; listed so nothing is silently forgotten.
+
+### Deliberate (working as designed)
+- [~] Card wording changes: "Claude wants to run **Edit** on…" + ✓ Accepted → "**Edit** on…" + ✓ Applied
+      (transcript can't tell manual approval from auto-mode); ✗ Rejected / ✗ Kept planning / ✗ Cancelled
+      from `toolDenialKind`.
+- [~] Non-diff permission cards vanish on resume: `replayCard` only renders with a plan or diff body,
+      so a resolved **Bash permission card** leaves only the tool line + IN/OUT.
+- [~] ⏹ Stopped reconstructed from `interruptedByShutdown`; "Resumed" marker appended; `cleanInjected()`
+      strips CLI bookkeeping (matches live, which never renders those frames).
+- [~] Windowing: newest ~250 blocks at a turn boundary; earlier chunks stream on scroll; 4 MB image
+      budget → name-only chips.
+
+### Lossy — gone on resume, worth knowing
+- [ ] Undo buttons (never replayable — needs live CLI + client uuid) and "↩ Reverted file changes"
+      status lines: a session where you reverted shows no trace.
+- [ ] API-error records replay as plain assistant text — no `.error` block, no Retry line (~14 local).
+- [ ] Retry lines: `lastUser` isn't seeded from a transcript, so a resumed failed last turn can't be
+      retried from the UI.
+- [~] Thinking durations are record-gap approximations; live times the stream.
+- [ ] DOM/browser find only sees loaded blocks; `IMAGE_BUDGET` spends in file order (early unshipped
+      images can starve the visible tail).
+- [ ] Sidechain/subagent record ordering untested (no local fixtures).
+
+---
+
+## Audit 3 — Mockup vs plugin coverage
+
+### In the mockup but NOT in the plugin (fixture ahead of / diverged from reality)
+- [ ] **1. Attach menu has a third item, "Browse the web"** (`mockup.html:491`); the plugin menu has
+      only *Upload from computer* + *Add context*.
+- [ ] **2. Working line shows "· thought for 4s"** (`mockup.html:285`); `updateWorkTokens()` never emits
+      that segment — plugin meta is only `(Ns · ↓ N tokens)`.
+- [ ] **3. Auto-mode description differs.** Mockup: "Claude will automatically choose the best permission
+      mode for each task"; plugin: "Claude will approve actions automatically — no prompts".
+- [ ] **4. Composer placeholder differs.** Mockup: "ctrl esc to focus or unfocus Claude" (promises a
+      Ctrl+Esc focus shortcut that is ⬜ unimplemented); plugin: "Ask Claude…  (Ctrl+Enter to send,
+      Enter for newline)".
+- [ ] **5. Model chip label.** Mockup strips parens → "Default"; plugin `chipName()` renders
+      "Default (Opus 4.8)".
+- [~] Devbar, resizable frame/grip, static menus, `ph-img` placeholder thumbs, caption-only lightbox —
+      fixture-only scaffolding, by design.
+
+### In the plugin but NOT in the mockup (states the fixture never shows)
+- [ ] **1. Clamped blocks** — no `.clip`/`.clamp-more` "Show more" example (no 12+-line user message,
+      no 16+-line code block), despite this state having regressed sticky-pinning once.
+- [ ] **2. "↩ Reverted file changes"** status line (emoji-glyph `s-ic` path) — gallery covers it, mockup doesn't.
+- [ ] **3. @-mention popup** (`#mention` / `.mi`) — absent from the fixture.
+- [ ] **4. Name-only image chip** in a user box (past-budget replay state).
+- [ ] **5. Multiple OUT rows** on one Bash io box; **"Thought"-without-duration** replay variant.
+
+### Orphan
+- [ ] **Dead CSS:** `.status .undo` (`chat.css:384–385`) is referenced by neither the plugin JS nor the
+      mockup — leftover from an earlier undo-placement design.
