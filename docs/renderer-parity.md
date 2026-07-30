@@ -78,8 +78,19 @@ Same-content blocks that render differently between the streaming path and the r
         preference — size is uniform across all file types and needs no async probe. Verified in Chromium.
       · **Not fixed (can't be):** the real original *image* filename — never transmitted, so `file.<ext>`
         is as honest as the transcript allows. (PDF/text keep their real name via the `document` title.)
-- [~] **7. Random completion verb.** Both paths pick a random `DONE_VERBS` entry, so the same session
-      says "Baked" live and "Distilled" on resume. Cosmetic, by design.
+- [x] **7. Random completion verb.** Both paths picked a random `DONE_VERBS` entry, so a resumed
+      session said "Ruminated" one time and "Distilled" the next — the *unstable* half of this is a
+      bug, and it is fixed: `flushSummary` ships the request's start epoch-ms as `seed` (unique per
+      request, frozen in the JSONL) and `doneVerb()` hashes it (djb2 — `seed % len` clusters, since
+      consecutive requests share their high digits). A reopened session now renders the exact same
+      words every time. Measured over 14.6k real request timestamps from 40 local sessions: all 22
+      verbs used, per-verb counts 620–725 against 663 expected, 20 distinct first-verbs across the 40
+      sessions, consecutive repeats 4.2% vs 4.5% for true randomness — deterministic, still scattered.
+      · **Not fixed (can't be):** the verb you saw *live* is never persisted (the CLI writes the
+        transcript), so live↔replay can't match. Only replay↔replay stability was reachable. Live
+        keeps the random pick — `doneVerb(null)`.
+      · Rejected: one hardcoded verb. A long session shows one summary per request, so twenty
+        identical lines stop reading as separate events.
 - [x] **8. Focus ring "cut" live, "full" resumed** (discovered 2026-07-29 while reviewing #4). The
       thinking-summary (and any focusable element in a turn) showed the browser's default *outward*
       `outline: auto`, with no CSS focus rule at all. The `.turn-body`'s `content-visibility: auto`

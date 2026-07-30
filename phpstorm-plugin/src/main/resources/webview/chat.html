@@ -816,7 +816,7 @@
           break;
         case 'done': {
           const d = el('done', '');
-          d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0);
+          d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0, it.seed);
           break;
         }
         case 'thinking': {
@@ -1480,12 +1480,24 @@
   const DONE_VERBS = ['Baked', 'Brewed', 'Cooked', 'Conjured', 'Simmered', 'Pondered', 'Cogitated',
     'Noodled', 'Percolated', 'Marinated', 'Ruminated', 'Concocted', 'Wrangled', 'Finagled',
     'Assembled', 'Crafted', 'Whipped up', 'Mulled', 'Churned', 'Distilled', 'Tinkered', 'Puttered'];
+  // Which verb a summary wears. Live has nothing stable to key on (the pick is never persisted — the
+  // CLI writes the transcript), so it stays random. Replay passes the request's start epoch-ms, which
+  // is frozen in the JSONL: hashing it keeps the whimsy — the verbs still look scattered down the
+  // transcript, and differ per session — while a reopened session renders the exact same words.
+  // djb2 rather than `seed % len` because consecutive requests share their high digits.
+  function doneVerb(seed) {
+    if (seed == null) return DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)];
+    const str = String(seed);
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+    return DONE_VERBS[h % DONE_VERBS.length];
+  }
   // The completion summary line. The time always shows (a finished request always took some); the
   // token segment is appended only when non-zero, so a 0-token request reads "✻ Baked for 2s" rather
   // than a noisy "↓ 0 tokens". Live and replay share this so a request renders the same either way.
-  function doneHtml(durMs, tokens) {
+  function doneHtml(durMs, tokens, seed) {
     let s = '<span class="star">✻</span> ' +
-      DONE_VERBS[Math.floor(Math.random() * DONE_VERBS.length)] + ' for ' + fmtDur(durMs || 0);
+      doneVerb(seed) + ' for ' + fmtDur(durMs || 0);
     if (tokens > 0) s += ' · ' + SVG_DOWN + fmtTok(tokens) + ' tokens';
     return s;
   }

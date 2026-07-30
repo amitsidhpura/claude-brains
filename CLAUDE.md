@@ -178,7 +178,7 @@ Known gaps deliberately left:
   blocks.
 
 Audits (2026-07-30, all closed — findings live in the docs):
-- **Renderer parity** (docs/renderer-parity.md): 25 fixed / 10 accepted / 0 open. Fixed along the
+- **Renderer parity** (docs/renderer-parity.md): 26 fixed / 9 accepted / 0 open. Fixed along the
   way: API-error records replay as the live `.error` block, Retry after a resumed tail error
   (replay seeds `lastUser`), IMAGE_BUDGET spent newest-first so the visible tail keeps its bytes.
 - **Spacing/radius**: three radius tiers (12px panels / 6px `--radius` / 3px micro — no 4px left),

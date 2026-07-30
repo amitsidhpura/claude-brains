@@ -268,6 +268,7 @@ object SessionStore {
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
         var tokens: Long? = null           // output tokens for the request summary
+        var seed: Long? = null             // request start epoch-ms — picks the summary's whimsical verb
 
         fun toJson(): JsonObject = buildJsonObject {
             put("role", role)
@@ -277,6 +278,7 @@ object SessionStore {
             icon?.let { put("icon", it) }
             durMs?.let { put("durMs", it) }
             tokens?.let { put("tokens", it) }
+            seed?.let { put("seed", it) }
             desc?.let { put("desc", it) }
             if (isPath) put("isPath", true)
             cmd?.let { put("cmd", it) }
@@ -325,6 +327,10 @@ object SessionStore {
                 out.add(Item("done").apply {
                     durMs = java.time.Duration.between(s, e).toMillis().coerceAtLeast(0)
                     tokens = reqTokens
+                    // The request's start instant is unique per request and frozen in the JSONL, so
+                    // the renderer can hash it into a verb that never changes across reopens without
+                    // every session opening on the same word.
+                    seed = s.toEpochMilli()
                 })
             }
             reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false
