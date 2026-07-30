@@ -85,7 +85,17 @@ Same-content blocks that render differently between the streaming path and the r
       consecutive requests share their high digits). A reopened session now renders the exact same
       words every time. Measured over 14.6k real request timestamps from 40 local sessions: all 22
       verbs used, per-verb counts 620–725 against 663 expected, 20 distinct first-verbs across the 40
-      sessions, consecutive repeats 4.2% vs 4.5% for true randomness — deterministic, still scattered.
+      sessions — deterministic, still scattered.
+      · **Adjacent repeats** (found in the sandbox 2026-07-30, resume then send: `Finagled for 9s`
+        replayed, `Finagled for 2s` live). Not a seeding leak — live is still `Math.random()` — just
+        the 1-in-22 collision two independent picks are entitled to. It reads as a bug regardless, so
+        it is now structurally impossible: `lastDoneVerb` holds the verb above and `doneVerb()` bumps
+        by one on a match (bump, not re-roll, so replay stays deterministic). Windowed replay renders
+        earlier chunks LAST, so document order isn't render order — hence `prevSeed` on the item for a
+        chunk's first summary, and `renderEarlier` nulls `lastDoneVerb` for the chunk then restores the
+        tail's. `clearLogUI` resets it so the previous session can't constrain the next one's first.
+        Re-measured: 0 adjacent repeats in 14.6k summaries, 0 across 23 chunk boundaries, 0 over 200
+        resume-then-5-live-turns runs, and byte-identical verbs across repeat renders.
       · **Not fixed (can't be):** the verb you saw *live* is never persisted (the CLI writes the
         transcript), so live↔replay can't match. Only replay↔replay stability was reachable. Live
         keeps the random pick — `doneVerb(null)`.

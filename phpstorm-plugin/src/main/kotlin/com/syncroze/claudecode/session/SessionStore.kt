@@ -269,6 +269,7 @@ object SessionStore {
         var durMs: Long? = null            // thinking duration / request wall-clock
         var tokens: Long? = null           // output tokens for the request summary
         var seed: Long? = null             // request start epoch-ms — picks the summary's whimsical verb
+        var prevSeed: Long? = null         // previous summary's seed, so two in a row can't share a verb
 
         fun toJson(): JsonObject = buildJsonObject {
             put("role", role)
@@ -279,6 +280,7 @@ object SessionStore {
             durMs?.let { put("durMs", it) }
             tokens?.let { put("tokens", it) }
             seed?.let { put("seed", it) }
+            prevSeed?.let { put("prevSeed", it) }
             desc?.let { put("desc", it) }
             if (isPath) put("isPath", true)
             cmd?.let { put("cmd", it) }
@@ -315,6 +317,10 @@ object SessionStore {
         var reqLast: java.time.Instant? = null
         var reqTokens = 0L
         var reqWork = false
+        // Seed of the previous summary, so the renderer can refuse to draw the same verb twice in a
+        // row. It travels on the item rather than being inferred from render order, because windowed
+        // replay renders earlier chunks LAST (prepended) — document order isn't render order.
+        var prevDoneSeed: Long? = null
 
         fun flushSummary() {
             val s = reqStart
@@ -324,14 +330,17 @@ object SessionStore {
             // when it is 0, so there is no noisy "↓ 0 tokens" — but the "for Ns" time still shows.
             // A truly empty turn (no assistant record) has reqWork == false and is skipped here.
             if (reqWork && s != null && e != null) {
+                // The request's start instant is unique per request and frozen in the JSONL, so the
+                // renderer can hash it into a verb that never changes across reopens without every
+                // session opening on the same word.
+                val sd = s.toEpochMilli()
                 out.add(Item("done").apply {
                     durMs = java.time.Duration.between(s, e).toMillis().coerceAtLeast(0)
                     tokens = reqTokens
-                    // The request's start instant is unique per request and frozen in the JSONL, so
-                    // the renderer can hash it into a verb that never changes across reopens without
-                    // every session opening on the same word.
-                    seed = s.toEpochMilli()
+                    seed = sd
+                    prevSeed = prevDoneSeed
                 })
+                prevDoneSeed = sd
             }
             reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false
         }
