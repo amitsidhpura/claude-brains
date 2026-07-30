@@ -94,6 +94,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             "mode" -> msg["mode"]?.jsonPrimitive?.content?.let { session.setPermissionMode(it) }
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
+            "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
             "new" -> {
                 transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
@@ -258,6 +259,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull()
                 if (meta != null) {
                     meta["commands"]?.let { pushEvent(frameOf("__commands", it)) }
+                    // custom models first, so a restored custom selection can resolve its display name
+                    runCatching { json.parseToJsonElement(session.customModels()) }.getOrNull()
+                        ?.let { pushFrame(buildJsonObject { put("type", "__customModels"); put("items", it) }) }
                     meta["models"]?.let { models ->
                         val frame = buildJsonObject {
                             put("type", "__models"); put("items", models)

@@ -62,6 +62,7 @@
             <button class="chip-btn" id="modelChip">Default</button>
             <div id="modelMenu" class="popup">
               <div class="popup-h"><span>Select a model</span></div>
+              <div class="popup-search-wrap"><input id="modelSearch" class="popup-search" type="text" placeholder="Filter, or type any model…" autocomplete="off" spellcheck="false"></div>
               <div id="modelItems"></div>
             </div>
           </span>
@@ -407,6 +408,12 @@
     if (id === 'slashMenu') {
       renderSlash(input.value.charAt(0) === '/' ? input.value.slice(1) : '');
       input.focus();
+    } else if (id === 'modelMenu') {
+      if (modelSearch) modelSearch.value = '';   // fresh, unfiltered each open
+      renderModels();
+      const cur = p.querySelector('.popup-item.on') || p.querySelector('.popup-item');
+      if (cur) cur.classList.add('sel');
+      if (modelSearch) modelSearch.focus();       // type to filter or enter a model straight away
     } else {
       const items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
       items.forEach(function (x) { x.classList.remove('sel'); });
@@ -503,6 +510,29 @@
 
   /* ---------- model picker ---------- */
   let models = [], currentModel = null;
+  let customModels = [];   // user-defined, persisted via Kotlin PropertiesComponent (see the search field)
+  const modelSearch = document.getElementById('modelSearch');
+  function allModels() { return models.concat(customModels); }
+  // parse the search field, mirroring the CLI model shape: "value : Display Name : desc" (2 colons) /
+  // "value : Display Name" (1) / "value" (none → displayName defaults to a prettified label)
+  function parseCustomModel(t) {
+    const p = t.split(':');
+    const value = p[0].trim();
+    if (p.length >= 3) return { value: value, displayName: p[1].trim(), description: p.slice(2).join(':').trim(), custom: true };
+    if (p.length === 2) return { value: value, displayName: p[1].trim(), custom: true };
+    return { value: value, displayName: prettyModel(value), custom: true };
+  }
+  function persistCustom() { bridge({ kind: 'customModels', json: JSON.stringify(customModels) }); }
+  function addCustomModel(cm) {
+    if (!cm.value) return;
+    const i = customModels.findIndex(function (x) { return x.value === cm.value; });
+    if (i >= 0) customModels[i] = cm; else customModels.push(cm);   // update existing / add new
+    persistCustom();
+  }
+  function removeCustomModel(value) {
+    customModels = customModels.filter(function (x) { return x.value !== value; });
+    persistCustom(); renderModels();
+  }
   function chipName(m) {
     const base = (m.displayName || m.value).replace(/\s*\(.*\)$/, '');   // "Opus" / "Sonnet" / "Default"
     // the CLI leads each description with the concrete model, e.g. "Opus 4.8", "Sonnet 5", "Haiku 4.5"
@@ -511,22 +541,80 @@
     if (base === 'Default' || m.value === 'default') return ver ? 'Default (' + ver + ')' : base;
     return ver || base;                                 // named model: "Sonnet 5", "Opus 4.8", …
   }
+  // Friendly chip label for a model set by raw id/name (not in the dropdown): "claude-fable-5[1m]"
+  // -> "Fable 5 (1M)", "opus[1m]" -> "Opus (1M)", "haiku" -> "Haiku". Falls back to the raw string.
+  function prettyModel(v) {
+    const oneM = /\[1m\]/i.test(v);
+    const s = String(v).replace(/\[1m\]/i, '').replace(/^claude-/i, '');
+    const m = s.match(/^([a-z]+)(?:-([0-9][0-9-]*))?/i);
+    if (!m) return v;
+    const fam = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+    const ver = m[2] ? m[2].replace(/-/g, '.') : '';
+    return (ver ? fam + ' ' + ver : fam) + (oneM ? ' (1M)' : '');
+  }
   function renderModels() {
-    modelItems.innerHTML = models.map(function (m) {
+    const q = modelSearch ? modelSearch.value.trim().toLowerCase() : '';
+    const shown = allModels().filter(function (m) {
+      if (!q) return true;
+      return (m.value || '').toLowerCase().indexOf(q) !== -1 ||
+             (m.displayName || '').toLowerCase().indexOf(q) !== -1 ||
+             (m.description || '').toLowerCase().indexOf(q) !== -1;
+    });
+    modelItems.innerHTML = shown.map(function (m) {
       return '<div class="popup-item' + (m.value === currentModel ? ' on' : '') + '" data-v="' + esc(m.value) + '">' +
         '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
         (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
-        '</div><span class="pi-check">' + SVG_CHECK + '</span></div>';
+        '</div>' +
+        // custom rows get a remove (×) on hover; built-in rows show the selected checkmark
+        (m.custom ? '<button class="model-del" title="Remove model" data-del="' + esc(m.value) + '">' + SVG_X + '</button>'
+                  : '<span class="pi-check">' + SVG_CHECK + '</span>') +
+        '</div>';
     }).join('');
     Array.prototype.forEach.call(modelItems.children, function (c) {
-      c.onclick = function () { setModel(c.dataset.v); };
+      c.onclick = function (e) {
+        const del = e.target.closest('.model-del');
+        if (del) { e.stopPropagation(); removeCustomModel(del.dataset.del); return; }
+        setModel(c.dataset.v);
+      };
+    });
+  }
+  if (modelSearch) {
+    // filter as you type; keep the top match highlighted so Enter picks it
+    modelSearch.addEventListener('input', function () {
+      renderModels();
+      const first = modelItems.querySelector('.popup-item');
+      if (first) first.classList.add('sel');
+    });
+    // Enter: an exact listed value, else the highlighted filtered row, else the raw text (any model,
+    // even one not in the list — e.g. opus[1m]). stopPropagation so the menu's Enter handler doesn't
+    // also fire and click a different row.
+    modelSearch.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault(); e.stopPropagation();
+      const raw = modelSearch.value.trim(); if (!raw) return;
+      // no colon and it matches an existing model (or the highlighted filter row) → just select it
+      if (raw.indexOf(':') === -1) {
+        const exact = allModels().find(function (m) { return (m.value || '').toLowerCase() === raw.toLowerCase(); });
+        if (exact) { setModel(exact.value); return; }
+        const sel = modelItems.querySelector('.popup-item.sel');
+        if (sel && sel.dataset.v) { setModel(sel.dataset.v); return; }
+      }
+      // otherwise it's a new custom model (colon form, or a bare id matching nothing) → save + select
+      const cm = parseCustomModel(raw);
+      addCustomModel(cm);
+      setModel(cm.value);
     });
   }
   function setModel(v) {
-    currentModel = v; const m = models.find(function (x) { return x.value === v; });
-    if (m) modelChip.textContent = chipName(m);
-    // switching between a 1M model and a 200k one changes the denominator
-    { const w = windowOf(m); if (w) { ctxWindowFromCli = w; renderContext(); } }
+    currentModel = v; const m = allModels().find(function (x) { return x.value === v; });
+    // custom carries the same {value, displayName, description} shape as built-in, so both draw the
+    // Model+Version through chipName; an unlisted id falls back to a prettified label. The exact id is
+    // kept on hover so nothing is lost.
+    modelChip.textContent = m ? chipName(m) : prettyModel(v);
+    modelChip.title = v;
+    // switching between a 1M model and a 200k one changes the denominator; when we have no built-in
+    // metadata, infer 1M from a [1m] tag on the value
+    { const w = (m && !m.custom) ? windowOf(m) : (/\[1m\]/i.test(v) ? CTX_1M : 0); if (w) { ctxWindowFromCli = w; renderContext(); } }
     bridge({ kind: 'model', model: v }); renderModels(); closeMenus();
   }
   modelChip.onclick = function (e) { tg('modelMenu', e); };
@@ -1122,6 +1210,10 @@
   function submit() {
     const t = input.value.trim();
     if (!t && !pending.length) return;
+    // "/model <name>" switches the session model via the set_model control request instead of
+    // sending a turn — lets you pick ANY model, including ones not in the dropdown (e.g. opus[1m]).
+    const mm = t.match(/^\/model\s+(\S.*)$/);
+    if (mm) { input.value = ''; autoGrow(); closeMenus(); hideMenu(); setModel(mm[1].trim()); return; }
     const imgs = pending;
     input.value = ''; pending = []; renderAttachments(); autoGrow();
     closeMenus(); hideMenu();
@@ -1189,10 +1281,20 @@
 
   function renderSlash(q) {
     const ql = (q || '').toLowerCase();
-    const hits = slashCommands.filter(function (c) {
-      return (c.name || '').toLowerCase().indexOf(ql) !== -1 ||
-             (c.description || '').toLowerCase().indexOf(ql) !== -1;
-    }).slice(0, 40);
+    // rank: exact name (0) → name prefix (1) → name substring (2) → description-only (3), so an
+    // exact match like "/model" leads instead of sinking below commands that merely mention it in
+    // their description. Array.sort is stable, so ties keep the CLI's original order.
+    const hits = slashCommands.map(function (c) {
+      const name = (c.name || '').toLowerCase(), desc = (c.description || '').toLowerCase();
+      let score = -1;
+      if (name === ql) score = 0;
+      else if (name.indexOf(ql) === 0) score = 1;
+      else if (name.indexOf(ql) !== -1) score = 2;
+      else if (desc.indexOf(ql) !== -1) score = 3;
+      return { c: c, score: score };
+    }).filter(function (x) { return x.score >= 0; })
+      .sort(function (a, b) { return a.score - b.score; })
+      .map(function (x) { return x.c; }).slice(0, 40);
     if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
     slashList.innerHTML = hits.map(function (c, i) {
       return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '">' +
@@ -1342,12 +1444,18 @@
       case 'permission_request': return renderPermission(ev);
       case 'files':              files = ev.items || []; return;
       case '__commands':         slashCommands = ev.items || []; return;
+      case '__customModels':
+        customModels = ev.items || [];   // pushed before __models so a restored custom selection resolves
+        renderModels();
+        return;
       case '__models':
         models = ev.items || [];
         currentModel = ev.selected || (models[0] && models[0].value) || null;
-        { const w = windowOf(models.find(function (m) { return m.value === currentModel; }));
-          if (w) { ctxWindowFromCli = w; renderContext(); } }
-        { const cm = models.find(function (m) { return m.value === currentModel; }); if (cm) modelChip.textContent = chipName(cm); }
+        { const cm = allModels().find(function (m) { return m.value === currentModel; });
+          const w = (cm && !cm.custom) ? windowOf(cm) : (/\[1m\]/i.test(currentModel || '') ? CTX_1M : 0);
+          if (w) { ctxWindowFromCli = w; renderContext(); }
+          if (cm) { modelChip.textContent = chipName(cm); modelChip.title = cm.value; }
+          else if (currentModel) { modelChip.textContent = prettyModel(currentModel); modelChip.title = currentModel; } }
         renderModels();
         return;
       case 'system':

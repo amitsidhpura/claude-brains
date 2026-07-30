@@ -50,6 +50,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     /** Persisted model choice (null/"default" = CLI default). */
     fun selectedModel(): String? = props.getValue(MODEL_KEY)
 
+    /** User-defined models (JSON array of {value, displayName, description}) — persisted across runs. */
+    fun customModels(): String = props.getValue(CUSTOM_MODELS_KEY) ?: "[]"
+    fun setCustomModels(jsonArray: String) = props.setValue(CUSTOM_MODELS_KEY, jsonArray)
+
     /**
      * @param onEvent sink for raw stream-json conversation lines
      * @param onPermission (requestId, toolName, inputJson) when the CLI asks to run a tool
@@ -237,5 +241,6 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     private companion object {
         const val MODEL_KEY = "claudeCode.selectedModel"
+        const val CUSTOM_MODELS_KEY = "claudeCode.customModels"
     }
 }

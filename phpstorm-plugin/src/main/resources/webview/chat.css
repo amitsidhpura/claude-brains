@@ -111,6 +111,11 @@ img { max-width: 100%; height: auto; }
    and .msg-user (z 6) has to stay outside it or #fade-top (z 5) paints over the pinned message. */
 .turn-body { display: flex; flex-direction: column; gap: 18px;
   content-visibility: auto; contain-intrinsic-size: auto 250px; }
+/* A turn with no response yet (interrupt, /compact, /model, a resume-continuation) has an EMPTY
+   .turn-body; hide it so its 18px top-margin (and off-screen contain-intrinsic-size) don't stack on
+   #log's 18px gap and double the space between two consecutive user messages. It reverts to flex the
+   moment content is appended (:empty stops matching). */
+.turn-body:empty { display: none; }
 /* Focus rings inside a turn are drawn INSET (negative outline-offset). The turn-body's
    content-visibility applies paint containment while a turn sits at the viewport edge, which shaves
    an OUTWARD ring into a "cut" half-rectangle (the sticky user box and clamped overflow clip too).
@@ -449,8 +454,23 @@ img { max-width: 100%; height: auto; }
 #attachMenu .popup-item { align-items: center; }
 .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--user-muted);
   font-size: 11px; border-bottom: 1px solid var(--user-divider); }
-.popup-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
+/* model dropdown search/type field — its own section: 14px insets to match the rest of the popup,
+   with a full-width divider below separating "type a model" from the list */
+.popup-search-wrap { padding: 8px 14px; border-bottom: 1px solid var(--user-divider); }
+.popup-search { display: block; width: 100%; box-sizing: border-box; padding: 6px 9px;
+  background: var(--user-raised); color: var(--fg); border: 1px solid var(--user-border);
+  border-radius: var(--radius); font: inherit; font-size: 12px; outline: none; }
+.popup-search:focus { border-color: var(--accent); }
+.popup-search::placeholder { color: var(--user-muted); }
+.popup-item { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
 .popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
+/* remove (×) on a custom model row — hover-revealed, like the history/attachment delete controls */
+.model-del { display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: 0; color: var(--user-muted); cursor: pointer; padding: 3px;
+  border-radius: var(--radius); align-items: center; justify-content: center; }
+.popup-item:hover .model-del { display: inline-flex; }
+.model-del:hover { color: var(--fg); }
+.model-del svg { width: 12px; height: 12px; display: block; }
 .pi-ic { color: var(--user-muted); width: 20px; text-align: center; font-family: ui-monospace, Consolas, monospace; padding-top: 1px;
   display: inline-flex; align-items: flex-start; justify-content: center; flex: 0 0 20px; }
 .pi-ic svg { width: 17px; height: 17px; }

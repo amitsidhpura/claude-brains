@@ -493,10 +493,13 @@
           <button class="chip-btn" id="modelChip" onclick="tg('modelMenu', event)">Default (Opus 4.8)</button>
           <div id="modelMenu" class="popup">
             <div class="popup-h"><span>Select a model</span></div>
+            <div class="popup-search-wrap"><input id="modelSearch" class="popup-search" type="text" placeholder="Filter, or type any model…" autocomplete="off" spellcheck="false"></div>
             <div class="popup-item on"><div class="pi-body"><div class="pi-title">Default (recommended)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
             <div class="popup-item"><div class="pi-body"><div class="pi-title">Opus (1M context)</div><div class="pi-desc">Opus 4.8 with 1M context · Best for everyday, complex tasks</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
             <div class="popup-item"><div class="pi-body"><div class="pi-title">Sonnet</div><div class="pi-desc">Sonnet 5 · Efficient for routine tasks</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
             <div class="popup-item"><div class="pi-body"><div class="pi-title">Haiku</div><div class="pi-desc">Haiku 4.5 · Fastest for quick answers</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span></div>
+            <!-- a user-defined (custom) model: name : code : description, removable via the hover × -->
+            <div class="popup-item"><div class="pi-body"><div class="pi-title">Fable 5</div><div class="pi-desc">Most capable for your hardest and longest-running tasks</div></div><button class="model-del" title="Remove model"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
           </div>
           </span>
           <span class="menu-anchor">
@@ -762,12 +765,21 @@
     });
   });
   document.querySelectorAll('#modelMenu .popup-item').forEach(function (item) {
-    item.addEventListener('click', function () {
+    item.addEventListener('click', function (e) {
+      if (e.target.closest('.model-del')) { e.stopPropagation(); item.remove(); return; }   // custom row × → remove
       document.querySelectorAll('#modelMenu .popup-item').forEach(function (x) { x.classList.remove('on'); });
       item.classList.add('on');
       document.getElementById('modelChip').textContent =
         item.querySelector('.pi-title').textContent.replace(/\s*\(.*\)$/, '');
       document.getElementById('modelMenu').classList.remove('show');
+    });
+  });
+  // model dropdown search (mockup: filter the static rows by title/description)
+  var modelSearch = document.getElementById('modelSearch');
+  if (modelSearch) modelSearch.addEventListener('input', function () {
+    var q = modelSearch.value.trim().toLowerCase();
+    document.querySelectorAll('#modelMenu .popup-item').forEach(function (item) {
+      item.style.display = (!q || item.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
     });
   });
   document.querySelectorAll('#attachMenu .popup-item').forEach(function (item) {
