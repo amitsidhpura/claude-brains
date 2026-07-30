@@ -473,13 +473,14 @@
   }
 
   /* ---------- mode picker ---------- */
-  let currentMode = 'default';
+  let currentMode = 'default', currentEffort = 'High';   // effort trails the mode name as "(High)"
   function syncModeUI() {
     Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
       item.classList.toggle('on', item.dataset.v === currentMode);
     });
     const cur = modeItemsEl.querySelector('.popup-item.on');
-    if (cur) modeChip.innerHTML = cur.querySelector('.pi-ic').innerHTML + ' ' + esc(cur.querySelector('.pi-title').textContent);
+    if (cur) modeChip.innerHTML = cur.querySelector('.pi-ic').innerHTML + ' ' +
+      esc(cur.querySelector('.pi-title').textContent + (currentEffort ? ' (' + currentEffort + ')' : ''));
   }
   Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
     item.addEventListener('click', function () {
@@ -498,11 +499,16 @@
   function setEffortUI(i) {
     efDots.forEach(function (d, n) { d.classList.toggle('on', n <= i); d.classList.toggle('cur', n === i); });
     efName.textContent = efDots[i].dataset.l;
+    currentEffort = efDots[i].dataset.l; syncModeUI();   // reflect the level on the mode chip suffix
   }
   efDots.forEach(function (d, i) {
     d.addEventListener('click', function (e) {
       e.stopPropagation();
       setEffortUI(i);
+      // there is no silent control request for the effort level, so it rides a /effort turn; mute
+      // that turn's UI (below) so the slider is as quiet as the mode picker. Only when idle — mid-turn
+      // we couldn't tell the effort result apart from the real one.
+      if (!busy) effortMuted = true;
       bridge({ kind: 'user', text: '/effort ' + d.dataset.v });
     });
   });
@@ -1184,7 +1190,7 @@
     return d;
   }
 
-  let busy = false, stopping = false;
+  let busy = false, stopping = false, effortMuted = false; // effortMuted: swallow a silent /effort turn
   function setBusy(b) {
     busy = b;
     send.title = b ? 'Stop' : 'Send';
@@ -1207,16 +1213,27 @@
     smoothToBottom();
   }
 
+  function clearComposer() { input.value = ''; pending = []; renderAttachments(); autoGrow(); closeMenus(); hideMenu(); }
+
   function submit() {
     const t = input.value.trim();
     if (!t && !pending.length) return;
-    // "/model <name>" switches the session model via the set_model control request instead of
-    // sending a turn — lets you pick ANY model, including ones not in the dropdown (e.g. opus[1m]).
-    const mm = t.match(/^\/model\s+(\S.*)$/);
-    if (mm) { input.value = ''; autoGrow(); closeMenus(); hideMenu(); setModel(mm[1].trim()); return; }
+    // slash-command routing (only for a bare "/cmd [args]" turn with no attachments): native
+    // commands are handled in the IDE; TUI-only built-ins are refused rather than sent as literal
+    // text to the model; everything else falls through and is sent as a turn for the CLI to expand.
+    const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)\s*([\s\S]*)$/i);
+    if (sc) {
+      const name = sc[1].toLowerCase();
+      if (name === 'clear') { clearComposer(); bridge({ kind: 'new' }); return; }         // fresh conversation
+      if (cmdKind(name) === 'tui') {
+        clearComposer();
+        statusLine("'/" + name + "' isn't available in the IDE.", SVG_ALERT, 'status err');
+        return;
+      }
+      // else 'text' → fall through and send as a normal turn (CLI expands custom/prompt commands)
+    }
     const imgs = pending;
-    input.value = ''; pending = []; renderAttachments(); autoGrow();
-    closeMenus(); hideMenu();
+    clearComposer();
     sendTurn(t, imgs);
   }
   send.onclick = function () { if (busy) { stopping = true; bridge({ kind: 'stop' }); } else submit(); };
@@ -1279,6 +1296,33 @@
   let files = [];
   let slashCommands = [];
 
+  // We drive the CLI over --input-format stream-json (headless SDK) — there is no interactive
+  // terminal, so a picked command is only ever sent as a user-message text block. Three buckets:
+  //  · NATIVE  — handled in the IDE via a control request / UI action, never forwarded as text
+  //  · TUI     — interactive-only built-ins (auth, config UI, terminal setup, IDE pickers) that
+  //              have no headless effect; shown greyed + disabled and refused if typed
+  //  · text    — everything else (custom/project/user/plugin/MCP-prompt commands + prompt-style
+  //              built-ins like /compact, /effort, /init) — the CLI expands these as a turn
+  // Enabled by ALLOWLIST, not denylist: the CLI's command list has no type field, so rather than
+  // guess which built-ins work headlessly we start with only the verified ones and add one at a
+  // time (see docs/slash-commands.md). Everything else is greyed until confirmed.
+  const CMD_NATIVE  = new Set(['clear']);     // handled in the IDE, never forwarded
+  const CMD_ALLOWED = new Set(['compact']);   // forwarded to the CLI as a turn
+  function cmdKind(name) {
+    const n = (name || '').toLowerCase();
+    if (CMD_NATIVE.has(n)) return 'native';
+    if (CMD_ALLOWED.has(n)) return 'text';
+    return 'tui';   // greyed until verified — see docs/slash-commands.md
+  }
+  // Does the command REQUIRE an argument? CLI argumentHint convention: "<x>" required, "[x]"
+  // optional, "" none — but some hints read "<optional …>", so an "optional" mention (or "[…]")
+  // counts as not-required. Required-arg commands insert-and-wait; the rest run on menu click.
+  function cmdNeedsArg(c) {
+    const h = ((c && c.argumentHint) || '').trim();
+    if (!h || h.charAt(0) === '[' || /optional/i.test(h)) return false;
+    return h.charAt(0) === '<';
+  }
+
   function renderSlash(q) {
     const ql = (q || '').toLowerCase();
     // rank: exact name (0) → name prefix (1) → name substring (2) → description-only (3), so an
@@ -1292,21 +1336,27 @@
       else if (name.indexOf(ql) !== -1) score = 2;
       else if (desc.indexOf(ql) !== -1) score = 3;
       return { c: c, score: score };
-    }).filter(function (x) { return x.score >= 0; })
+    }).filter(function (x) { return x.score >= 0 && cmdKind(x.c.name) !== 'tui'; })  // hide unconfirmed
       .sort(function (a, b) { return a.score - b.score; })
       .map(function (x) { return x.c; }).slice(0, 40);
     if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
     slashList.innerHTML = hits.map(function (c, i) {
-      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '">' +
+      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '"' +
+        (cmdNeedsArg(c) ? ' data-needsarg="1"' : '') + '>' +
         '<div class="pi-body"><div class="pi-title">/' + esc(c.name) + '</div>' +
         (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
     }).join('');
   }
   slashList.addEventListener('click', function (e) {
     const item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
-    input.value = item.dataset.cmd + ' ';
     menuEl('slashMenu').classList.remove('show');
-    input.focus(); autoGrow();
+    if (item.dataset.needsarg) {              // needs an argument → insert and let the user type it
+      input.value = item.dataset.cmd + ' ';
+      input.focus(); autoGrow();
+    } else {                                   // no required argument → a command menu should act, run now
+      input.value = item.dataset.cmd;
+      submit();
+    }
   });
 
   const menu = document.getElementById('mention');
@@ -1434,6 +1484,13 @@
 
   window.onClaudeEvent = function (raw) {
     let ev; try { ev = JSON.parse(raw); } catch (_) { return; }
+    // A /effort change rides a real turn; swallow its stream/echo/summary so the slider is as quiet
+    // as the mode picker. Cleared on the turn's result. (setBusy was never called for it — the effort
+    // click uses a raw bridge, not sendTurn — so muting these leaves no spinner or stuck busy state.)
+    if (effortMuted) {
+      if (ev.type === 'stream_event' || ev.type === 'assistant' || ev.type === 'user') return;
+      if (ev.type === 'result') { effortMuted = false; return; }
+    }
     switch (ev.type) {
       case 'stream_event':       return onStream(ev.event || {});
       // Rendering is driven entirely by stream_event deltas, so the whole-message `assistant` record

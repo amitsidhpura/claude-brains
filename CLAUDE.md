@@ -107,6 +107,26 @@ Clickable file references (`.t-desc.path`, `.card-h code`) open in the editor vi
 line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
 ±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).
 
+Slash commands (finalized 2026-07-30, tracked in docs/slash-commands.md): the menu is an
+ALLOWLIST, not the full CLI roster. Over `--input-format stream-json` there is no interactive
+terminal, so only turn-producing commands actually work; unconfirmed ones are HIDDEN (and refused
+if typed). `cmdKind()` buckets each: `CMD_NATIVE` (handled in the IDE) / `CMD_ALLOWED` (forwarded
+as a turn) / else `tui` (hidden). Enabled today: `/compact` (→ CLI) + `/clear` (native → `kind:'new'`,
+identical to the New button: wipe view, fresh empty session, old one on disk & resumable). `/model`
+and `/effort` are deliberately hidden — the composer already has the model chip+dropdown (search /
+custom) and the effort slider. The init `commands` payload is only `{name,description,argumentHint}`
+— NO type field — so the allowlist is the only lever; enable one command at a time as each is
+verified in `runIde`, then tick it in the doc. Menu pick RUNS the command immediately unless its
+`argumentHint` marks a required `<arg>` (`cmdNeedsArg`: `[opt]` / `<optional …>` / empty = no-arg →
+run; a bare `<x>` → insert `/cmd ` and wait). Custom models parse as `value : Display Name :
+Description` (mirrors the CLI shape) and render through the same `chipName` as built-ins.
+Mode chip carries the effort as a plain-text suffix ("Ask before edits (High)") via `syncModeUI`.
+Effort changes are SILENT like the mode picker: no `set_effort`/`set_thinking_level` control request
+exists (probed — only `set_max_thinking_tokens`, a token count), so the slider rides a `/effort` turn
+whose stream/echo/summary is muted in `onClaudeEvent` via `effortMuted` (idle-gated so a mid-turn
+tweak can't eat a real turn). UNVERIFIED in `runIde` (bridge/turn paths can't be browser-tested):
+`/clear` from the menu clearing chat+composer, and the silent-effort mute.
+
 DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
 usage/tokens display, auto-include selection / Alt+K, voice input.
 

@@ -747,9 +747,18 @@
   // ---- effort slider (fills dots up to the selected level) ----
   var effort = document.getElementById('effort'), efName = document.getElementById('efName');
   var efDots = [].slice.call(effort.querySelectorAll('.d'));
+  var currentEffort = 'High';   // effort trails the mode name as "(High)"
+  function renderModeChip() {
+    var item = document.querySelector('#modeMenu .popup-item.on') || document.querySelector('#modeMenu .popup-item');
+    if (!item) return;
+    document.getElementById('modeChip').innerHTML =
+      item.querySelector('.pi-ic').innerHTML + ' ' +
+      item.querySelector('.pi-title').textContent + (currentEffort ? ' (' + currentEffort + ')' : '');
+  }
   function setEffort(i) {
     efDots.forEach(function (d, n) { d.classList.toggle('on', n <= i); d.classList.toggle('cur', n === i); });
     efName.textContent = efDots[i].dataset.l;
+    currentEffort = efDots[i].dataset.l; renderModeChip();   // reflect the level on the mode chip suffix
   }
   efDots.forEach(function (d, i) { d.addEventListener('click', function () { setEffort(i); }); });
   setEffort(2); // default: High
@@ -759,8 +768,7 @@
     item.addEventListener('click', function () {
       document.querySelectorAll('#modeMenu .popup-item').forEach(function (x) { x.classList.remove('on'); });
       item.classList.add('on');
-      document.getElementById('modeChip').innerHTML =
-        item.querySelector('.pi-ic').innerHTML + ' ' + item.querySelector('.pi-title').textContent;
+      renderModeChip();
       document.getElementById('modeMenu').classList.remove('show');
     });
   });
@@ -803,10 +811,12 @@
     { name: '/help',            desc: 'Show available commands' },
   ];
   var slashList = document.getElementById('slashList');
+  // enabled allowlist mirrors chat.html cmdKind (compact/effort/model/clear); everything else hidden
+  var SLASH_ON = { '/compact': 1, '/clear': 1 };
   function renderSlash(q) {
     var ql = (q || '').toLowerCase();
     var hits = SLASH.filter(function (c) {
-      return c.name.toLowerCase().indexOf(ql) !== -1 || c.desc.toLowerCase().indexOf(ql) !== -1;
+      return SLASH_ON[c.name] && (c.name.toLowerCase().indexOf(ql) !== -1 || c.desc.toLowerCase().indexOf(ql) !== -1);
     });
     if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
     slashList.innerHTML = hits.map(function (c, i) {
@@ -815,7 +825,7 @@
     }).join('');
   }
   slashList.addEventListener('click', function (e) {
-    var item = e.target.closest('.popup-item'); if (!item) return;
+    var item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
     inp.value = item.dataset.cmd + ' ';
     document.getElementById('slashMenu').classList.remove('show');
     inp.focus(); autoGrow();
