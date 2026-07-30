@@ -43,6 +43,15 @@ redistribute Anthropic's extension.js / webview / claude.exe.**
   Dropping the env var also stops the CLI writing file-history snapshots into every transcript.
 - Tool inputs stream via `input_json_delta`; tool results arrive as `user` events with
   `tool_result` blocks (used for Bash IN/OUT boxes).
+- Every stream line carries a `uuid`, and the `assistant` event's uuid is the SAME uuid the CLI writes
+  into the transcript record (timestamp too) — verified by diffing a live run against its own JSONL.
+  That is the only handle for tying a live render to its replayed twin; the completion-summary verb
+  uses it. Don't assume "live-only state can't be persisted" without checking for a shared uuid.
+- One API message is persisted as one record PER CONTENT BLOCK (`['thinking']`, `['tool_use']`,
+  `['text']`…), and every one of those records repeats the same *cumulative* `message.usage`. Anything
+  summing `output_tokens` over records must dedupe by `message.id` or it over-reports by the block
+  count (measured 2.45x across local sessions). Live is immune — `message_delta.usage` fires once per
+  message. 2546 split messages checked: none disagreed on usage, so the first record is authoritative.
 
 ## Build / run
 `cd phpstorm-plugin && ./gradlew runIde` (launches a sandbox PhpStorm), or the same task from
@@ -178,7 +187,7 @@ Known gaps deliberately left:
   blocks.
 
 Audits (2026-07-30, all closed — findings live in the docs):
-- **Renderer parity** (docs/renderer-parity.md): 26 fixed / 9 accepted / 0 open. Fixed along the
+- **Renderer parity** (docs/renderer-parity.md): 27 fixed / 9 accepted / 0 open. Fixed along the
   way: API-error records replay as the live `.error` block, Retry after a resumed tail error
   (replay seeds `lastUser`), IMAGE_BUDGET spent newest-first so the visible tail keeps its bytes.
 - **Spacing/radius**: three radius tiers (12px panels / 6px `--radius` / 3px micro — no 4px left),

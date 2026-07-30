@@ -98,17 +98,25 @@ object SessionStore {
      * Total output tokens across the session. Only assistant records carry `usage`, so reject lines
      * on a substring before paying for a JSON parse — that keeps even the largest local transcript
      * (177 MB) well under a second, and the cache means it is paid once.
+     *
+     * Counted once per `message.id`: one API message is persisted as one record per content block and
+     * each repeats the same cumulative `usage`, so summing records over-reported by 2.45x across local
+     * sessions (worst 3.63x). Same trap as the per-request summary in readTranscript.
      */
     private fun tokensOf(f: File): Long {
         val s = statsOf(f)
         s.tokens?.let { return it }
         var total = 0L
+        val seen = HashSet<String>()
         runCatching {
             f.bufferedReader().useLines { lines ->
                 for (line in lines) {
                     if (!line.contains("\"output_tokens\"")) continue
                     val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
-                    total += obj["message"]?.jsonObject?.get("usage")?.jsonObject
+                    val msg = obj["message"]?.jsonObject
+                    val mid = msg?.get("id")?.jsonPrimitive?.content
+                    if (mid != null && !seen.add(mid)) continue
+                    total += msg?.get("usage")?.jsonObject
                         ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
                 }
             }
@@ -268,8 +276,8 @@ object SessionStore {
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
         var tokens: Long? = null           // output tokens for the request summary
-        var seed: Long? = null             // request start epoch-ms — picks the summary's whimsical verb
-        var prevSeed: Long? = null         // previous summary's seed, so two in a row can't share a verb
+        var seed: String? = null           // first assistant uuid — picks the summary's whimsical verb
+        var prevSeed: String? = null       // previous summary's seed, so two in a row can't share a verb
 
         fun toJson(): JsonObject = buildJsonObject {
             put("role", role)
@@ -317,10 +325,12 @@ object SessionStore {
         var reqLast: java.time.Instant? = null
         var reqTokens = 0L
         var reqWork = false
+        var reqSeed: String? = null            // first assistant uuid of the request (verb seed)
+        val reqMsgIds = HashSet<String>()      // message.ids already counted — see the "assistant" branch
         // Seed of the previous summary, so the renderer can refuse to draw the same verb twice in a
         // row. It travels on the item rather than being inferred from render order, because windowed
         // replay renders earlier chunks LAST (prepended) — document order isn't render order.
-        var prevDoneSeed: Long? = null
+        var prevDoneSeed: String? = null
 
         fun flushSummary() {
             val s = reqStart
@@ -330,10 +340,10 @@ object SessionStore {
             // when it is 0, so there is no noisy "↓ 0 tokens" — but the "for Ns" time still shows.
             // A truly empty turn (no assistant record) has reqWork == false and is skipped here.
             if (reqWork && s != null && e != null) {
-                // The request's start instant is unique per request and frozen in the JSONL, so the
-                // renderer can hash it into a verb that never changes across reopens without every
-                // session opening on the same word.
-                val sd = s.toEpochMilli()
+                // Seed the verb on the first assistant uuid — the CLI puts the same uuid on the live
+                // stream event, so a turn keeps the verb it was born with across every resume. Falls
+                // back to the request's start instant, which is at least stable within the file.
+                val sd = reqSeed ?: s.toEpochMilli().toString()
                 out.add(Item("done").apply {
                     durMs = java.time.Duration.between(s, e).toMillis().coerceAtLeast(0)
                     tokens = reqTokens
@@ -343,6 +353,7 @@ object SessionStore {
                 prevDoneSeed = sd
             }
             reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false
+            reqSeed = null; reqMsgIds.clear()
         }
 
         runCatching {
@@ -396,9 +407,21 @@ object SessionStore {
                         "assistant" -> {
                             reqWork = true
                             if (ts != null) reqLast = ts
-                            obj["message"]?.jsonObject?.get("usage")?.jsonObject
-                                ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull()
-                                ?.let { reqTokens += it }
+                            val msg = obj["message"]?.jsonObject
+                            // The live path seeds the summary's verb from this uuid, which the CLI
+                            // emits verbatim on its `assistant` stream event — so keying on the
+                            // request's FIRST assistant record makes both paths agree exactly.
+                            if (reqSeed == null) reqSeed = obj["uuid"]?.jsonPrimitive?.content
+                            // One API message is persisted as one record PER CONTENT BLOCK (thinking,
+                            // tool_use, text…), and every one of them repeats the same cumulative
+                            // `usage` — so summing records inflated the count by the block count
+                            // (2.45x across local sessions, up to 3.63x). Count each message.id once.
+                            val mid = msg?.get("id")?.jsonPrimitive?.content
+                            if (mid == null || reqMsgIds.add(mid)) {
+                                msg?.get("usage")?.jsonObject
+                                    ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull()
+                                    ?.let { reqTokens += it }
+                            }
                             // an API error ("session limit", "usage credits") is persisted as an
                             // ordinary assistant record + `isApiErrorMessage`; live draws it as an
                             // `.error` block, so replay must not render it as prose

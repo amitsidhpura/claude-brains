@@ -587,7 +587,7 @@
     // toolsById pins removed DOM for the page lifetime, and a leftover lastUser would let a
     // first-turn Retry resend the PREVIOUS session's message (images included)
     openTool = null; toolsById = {}; lastUser = null;
-    turnTokens = 0; msgTokens = 0;
+    turnTokens = 0; msgTokens = 0; reqSeed = null;
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // a fresh conversation carries no context; a resume re-seeds it from the __transcript frame,
     // which Kotlin pushes straight after this clear
@@ -1108,7 +1108,7 @@
     lastUser = { text: t, images: imgs };
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
-    turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0;
+    turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null;
     bridge({ kind: 'user', text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
     stopping = false;
     setBusy(true);
@@ -1319,12 +1319,20 @@
   let openTool = null;        // tool block currently streaming its input
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
   let reqTokens = 0;          // output tokens summed across every result turn in one user request
+  // uuid of this request's FIRST assistant record. The CLI writes the very same uuid into the
+  // transcript, so seeding the summary verb on it is what makes a turn keep its verb across resumes
+  // (SessionStore.flushSummary reads the same field). First one wins — later blocks of the same
+  // message, and later turns of the request, must not move it.
+  let reqSeed = null;
   let toolsById = {};         // tool_use id -> {el, name, io} for OUT boxes; reset by clearLogUI
 
   window.onClaudeEvent = function (raw) {
     let ev; try { ev = JSON.parse(raw); } catch (_) { return; }
     switch (ev.type) {
       case 'stream_event':       return onStream(ev.event || {});
+      // Rendering is driven entirely by stream_event deltas, so the whole-message `assistant` record
+      // is only here for its uuid — the one field that ties a live summary to its replayed twin.
+      case 'assistant':          if (reqSeed == null && ev.uuid) reqSeed = ev.uuid; return;
       case 'user':               return onUserEvent(ev);
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
@@ -1497,12 +1505,14 @@
   // a bug even though random picks collide 1-in-22 by nature. Cleared by clearLogUI; parked and
   // restored around a prepended chunk, which renders out of document order (see renderEarlier).
   let lastDoneVerb = null;
-  /* Which verb a summary wears.
-     · Live has nothing stable to key on — its pick is never persisted, since the CLI writes the
-       transcript — so it stays random, and only avoids the verb above it.
-     · Replay hashes the request's start epoch-ms, frozen in the JSONL, so a reopened session renders
-       the exact same words; `prevSeed` covers the first summary of a chunk, whose predecessor may not
-       be in the DOM yet. Bumping by one keeps that deterministic (no re-roll). */
+  /* Which verb a summary wears. Both paths hash the request's first assistant-record uuid — the CLI
+     emits it on the live `assistant` event AND writes it to the transcript — so a turn keeps the verb
+     it was born with, live and after every resume. `prevSeed` covers the first summary of a chunk,
+     whose predecessor may not be in the DOM yet; bumping by one on a collision (rather than
+     re-rolling) is what keeps all of it deterministic. Live falls back to random only if the uuid
+     never arrived. Known imprecision: at a chunk boundary the bump compares against the raw hash of
+     `prevSeed` instead of the verb actually displayed, so a verb whose predecessor was ITSELF bumped
+     can differ there — ~1/484 of summaries, and only ever at a boundary. */
   function doneVerb(seed, prevSeed) {
     const L = DONE_VERBS.length;
     let i;
@@ -1673,7 +1683,8 @@
       }
     } else {
       const done = el('done', '');
-      done.innerHTML = doneHtml(durMs, outTok);   // time always; token segment only when non-zero
+      // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
+      done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero
     }
     stopping = false;
   }

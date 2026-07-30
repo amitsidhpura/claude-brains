@@ -96,11 +96,32 @@ Same-content blocks that render differently between the streaming path and the r
         tail's. `clearLogUI` resets it so the previous session can't constrain the next one's first.
         Re-measured: 0 adjacent repeats in 14.6k summaries, 0 across 23 chunk boundaries, 0 over 200
         resume-then-5-live-turns runs, and byte-identical verbs across repeat renders.
-      · **Not fixed (can't be):** the verb you saw *live* is never persisted (the CLI writes the
-        transcript), so live↔replay can't match. Only replay↔replay stability was reachable. Live
-        keeps the random pick — `doneVerb(null)`.
+      · **Live↔replay match — done 2026-07-30, after two rounds of getting this wrong.** Twice
+        recorded here as unreachable ("the live verb is never persisted"). It is reachable: the CLI
+        puts a `uuid` on its live `assistant` event and writes *that same uuid* into the transcript
+        record — verified byte-identical (`4e42341a-…`, timestamps too) by running the CLI and diffing
+        the stream against the JSONL it wrote. So both paths now hash the request's FIRST assistant
+        uuid: `case 'assistant'` in `onClaudeEvent` captures `reqSeed` (reset in `sendTurn` +
+        `clearLogUI`), `flushSummary` reads the same field, epoch-ms stays as the fallback. Verified
+        end-to-end against a live CLI run: same seed, same verb, same token count as the transcript.
+        **Lesson: "the CLI can't tell us that" is a claim to test against the CLI, not to assert.**
+      · Residual imprecision: at a chunk boundary the collision bump compares against the raw hash of
+        `prevSeed` rather than the verb actually displayed, so a summary whose predecessor was itself
+        bumped can differ there — ~1/484, boundary-only.
       · Rejected: one hardcoded verb. A long session shows one summary per request, so twenty
         identical lines stop reading as separate events.
+- [x] **11. Replayed summaries over-counted tokens ~2x** (found 2026-07-30 from a sandbox screenshot:
+      the same turn read `↓ 53 tokens` live and `↓ 106 tokens` resumed). The CLI persists one API
+      message as one record PER CONTENT BLOCK — `['thinking']`, `['tool_use']`, `['text']` — and every
+      one of those records repeats the same *cumulative* `message.usage`. Summing records therefore
+      multiplied the count by the block count. Both sum sites now count each `message.id` once:
+      `readTranscript` (the per-request summary) and `tokensOf` (the history panel's per-session
+      total, which was equally wrong and nobody had checked). Measured across 42 local sessions:
+      9.28M → 3.78M output tokens, i.e. **2.45x over-report overall, worst session 3.63x**; the
+      screenshot's session drops 2.06–2.08x per request. Safe because the split records never
+      disagree: 2546 split messages checked, 0 with differing `output_tokens`, so taking the first is
+      the whole truth. Live was always right (`message_delta.usage` fires once per message), which is
+      why only the resumed number looked odd.
 - [x] **8. Focus ring "cut" live, "full" resumed** (discovered 2026-07-29 while reviewing #4). The
       thinking-summary (and any focusable element in a turn) showed the browser's default *outward*
       `outline: auto`, with no CSS focus rule at all. The `.turn-body`'s `content-visibility: auto`
