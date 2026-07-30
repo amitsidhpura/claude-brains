@@ -199,16 +199,14 @@ Mostly deliberate; listed so nothing is silently forgotten.
       most, so the spike is bounded in practice.
 - [~] DOM/browser find only sees loaded blocks — inherent to windowed replay, documented in
       `docs/limits.md`. No action: the alternative is shipping the whole transcript again.
-- [ ] **Silent `/effort` turns reappear on resume** (found 2026-07-30 auditing the office batch,
+- [~] **Silent `/effort` turns reappear on resume** (found 2026-07-30 auditing the office batch,
       `c2db3ed`). Live swallows the whole turn — `effortMuted` drops its stream/echo/summary in
       `onClaudeEvent` — but the CLI still writes the turn to the transcript, and NOTHING on the
       replay path filters it: `cleanInjected()` collapses `<command-name>/effort…` to a visible
       `/effort <level>` user box, so a resumed session shows turns that live deliberately hid.
-      Inverse of the usual lossy-on-resume shape. Can't be verified end-to-end yet — no local
-      transcript contains a `/effort` turn (the mute itself is still unverified in `runIde`, per
-      CLAUDE.md), so the exact record shape (stdout-only vs assistant echo, summary or not) is a
-      guess. When the mute gets its sandbox pass, capture the transcript and decide: filter the
-      replayed turn to match live, or accept the visible `/effort` box as an honest audit trail.
+      Inverse of the usual lossy-on-resume shape. **Accepted 2026-07-30** — user verified in the
+      `runIde` sandbox and chose to keep the visible `/effort` box on resume as an honest audit
+      trail; no replay filter will be added.
 - [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
       neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
       with the parent turn; the parent's Task result still attaches to the Task tool line, not to a

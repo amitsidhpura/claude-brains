@@ -16,7 +16,9 @@ type); to pass an argument, type the command by hand and the menu autocompletes 
 
 `/model` and `/effort` are intentionally Hidden: the composer already has dedicated controls
 for them - the model chip + dropdown (search / custom models) and the effort slider (which
-sends `/effort <level>` directly) - so slash entries would be redundant.
+sends `/effort <level>` directly) - so slash entries would be redundant. The slider's silent
+`/effort` turn was verified in `runIde` 2026-07-30; a resumed session shows the `/effort` turn
+(the transcript records it and replay doesn't filter) - accepted as an honest audit trail.
 
 The command list carries only `{name, description, argumentHint}` - **no type field** - so the
 enabled set is a hand-maintained allowlist in `chat.html` (`CMD_NATIVE` + `CMD_ALLOWED`). We

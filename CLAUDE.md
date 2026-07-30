@@ -124,8 +124,9 @@ Mode chip carries the effort as a plain-text suffix ("Ask before edits (High)") 
 Effort changes are SILENT like the mode picker: no `set_effort`/`set_thinking_level` control request
 exists (probed — only `set_max_thinking_tokens`, a token count), so the slider rides a `/effort` turn
 whose stream/echo/summary is muted in `onClaudeEvent` via `effortMuted` (idle-gated so a mid-turn
-tweak can't eat a real turn). UNVERIFIED in `runIde` (bridge/turn paths can't be browser-tested):
-`/clear` from the menu clearing chat+composer, and the silent-effort mute.
+tweak can't eat a real turn). Both verified in `runIde` 2026-07-30: `/clear` from the menu works,
+and the effort mute holds live; resumed sessions DO show the `/effort` turn (transcript records it,
+replay doesn't filter) — accepted as an honest audit trail, no filter planned.
 
 DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
 usage/tokens display, auto-include selection / Alt+K, voice input.
@@ -194,8 +195,8 @@ Known gaps deliberately left:
   blocks.
 
 Audits (2026-07-30, all closed — findings live in the docs):
-- **Renderer parity** (docs/renderer-parity.md): 27 fixed / 9 accepted / 1 open (silent `/effort`
-  turns reappear on resume — blocked on the mute's own sandbox pass). Fixed along the
+- **Renderer parity** (docs/renderer-parity.md): 27 fixed / 10 accepted / 0 open (silent `/effort`
+  turns reappearing on resume was the last one — user accepted it as an audit trail). Fixed along the
   way: API-error records replay as the live `.error` block, Retry after a resumed tail error
   (replay seeds `lastUser`), IMAGE_BUDGET spent newest-first so the visible tail keeps its bytes.
 - **Spacing/radius**: three radius tiers (12px panels / 6px `--radius` / 3px micro — no 4px left),

@@ -77,7 +77,8 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [x] ✅ Commands fetched at startup via the `initialize` control request (before any message)
 - [x] ✅ Command **descriptions** shown in the menu (`/name — description`)
 - [x] ✅ Commands execute in stream-json mode (verified `/context`); output renders as markdown
-- [ ] ⬜ Special client-side handling where needed (`/login`, `/clear` → new conversation)
+- [x] ✅ `/clear` handled natively (→ new conversation, verified in `runIde` 2026-07-30);
+      `/login` deferred with the settings/non-terminal-login batch
 
 ## 8. Sessions / history
 - [x] ✅ **New conversation** (＋ New — restarts the CLI fresh, clears the log)
