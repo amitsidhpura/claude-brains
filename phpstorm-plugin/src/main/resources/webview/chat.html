@@ -951,6 +951,12 @@
   function downloadAtt(p) {
     if (p.data) bridge({ kind: 'download', name: p.name || 'file', media_type: p.media_type, data: p.data });
   }
+  // click an attachment chip (composer or sent message): image → lightbox, other file → download
+  function openAtt(p) {
+    if (!p.data) return;   // past-budget replay chip: name only, nothing to open
+    if (p.kind === 'image') openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'file');
+    else downloadAtt(p);
+  }
   // chip size label: byte count straight from the base64 length (the base64 IS the file's bytes).
   // fmtSize() (shared with the history panel) renders it as B / KB / MB — B below 1 KB so a tiny file
   // reads "17 B", not a misleading "0 KB"; MB at 1024 KB. Binary thresholds throughout.
@@ -976,8 +982,9 @@
     chips.innerHTML = '';
     pending.forEach(function (p, i) {
       const chip = document.createElement('span');
-      chip.className = 'att';
+      chip.className = p.data ? 'att click' : 'att';
       chip.innerHTML = attChipHtml(p, true, i);
+      chip.onclick = function (e) { if (!e.target.closest('.rm')) openAtt(p); };  // image → lightbox, file → download; rm handles itself
       chips.appendChild(chip);
     });
     chips.style.display = pending.length ? 'flex' : 'none';
@@ -1078,10 +1085,7 @@
         const chip = document.createElement('span');
         chip.className = p.data ? 'att click' : 'att';
         chip.innerHTML = attChipHtml(p, false, 0);
-        if (p.data) chip.onclick = function () {
-          if (p.kind === 'image') openLB('data:' + p.media_type + ';base64,' + p.data, p.name || 'file');
-          else downloadAtt(p);   // pdf / text / code → native save dialog
-        };
+        if (p.data) chip.onclick = function () { openAtt(p); };   // image → lightbox, file → download
         atts.appendChild(chip);
       });
       d.appendChild(atts);

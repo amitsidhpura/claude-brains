@@ -246,9 +246,11 @@ img { max-width: 100%; height: auto; }
 .no:hover { background: #474a4f; }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   overflow-x: auto; max-height: 240px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-.diff .del { display: block; color: var(--red); white-space: pre-wrap; }
-.diff .add { display: block; color: var(--green); white-space: pre-wrap; }
-.diff .ctx { display: block; color: var(--muted); white-space: pre-wrap; }   /* unchanged context lines */
+/* pre (not pre-wrap): long lines keep their width and the .diff box scrolls horizontally
+   (overflow-x: auto) rather than folding — matches the codeblock <pre> behaviour */
+.diff .del { display: block; color: var(--red); white-space: pre; }
+.diff .add { display: block; color: var(--green); white-space: pre; }
+.diff .ctx { display: block; color: var(--muted); white-space: pre; }   /* unchanged context lines */
 .diff .ln { display: inline-block; min-width: 2.2em; margin-right: 8px; text-align: right;
   color: var(--muted); opacity: .5; user-select: none; }
 
@@ -366,10 +368,12 @@ img { max-width: 100%; height: auto; }
   background: rgba(0,0,0,.55); }
 #lightbox.show { display: flex; }
 .lb-box { position: relative; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
-  padding: 10px; box-shadow: 0 12px 38px rgba(0,0,0,.55); max-width: 86%; }
-.lb-img { width: 320px; max-width: 100%; height: 200px; border-radius: var(--radius); overflow: hidden; }
-.lb-img .ph-img { width: 100%; height: 100%; }
-.lb-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  padding: 10px; box-shadow: 0 12px 38px rgba(0,0,0,.55); max-width: 94vw; }
+/* size to the image, capped to the panel: a real screenshot fills the tool window rather than a
+   fixed 320x200 thumbnail; a small image still shows at its natural size. aspect ratio preserved. */
+.lb-img { border-radius: var(--radius); overflow: hidden; }
+.lb-img .ph-img { display: block; width: 320px; height: 200px; }   /* mockup placeholder keeps a size */
+.lb-img img { display: block; max-width: 86vw; max-height: 78vh; }
 .lb-cap { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
 .lb-x { position: absolute; top: -12px; right: -12px; width: 26px; height: 26px; border-radius: 50%; background: var(--raised);
   border: 1px solid var(--border-strong); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
