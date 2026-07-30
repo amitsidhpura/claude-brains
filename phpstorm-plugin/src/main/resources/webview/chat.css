@@ -329,10 +329,12 @@ img { max-width: 100%; height: auto; }
 .hist-confirm .yes { background: var(--danger); color: #fff; }
 .hist-confirm .yes:hover { background: var(--danger-hover); }
 /* .no inherits the shared neutral button colours */
-.hist-item .t { color: var(--fg); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-item .t { color: var(--fg); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+/* the title truncates; min-width:0 lets a flex item shrink below its content so ellipsis kicks in,
+   and the badge (flex 0 0 auto) stays whole beside it instead of being clipped by a long title */
+.hist-item .t-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-item .d { color: var(--muted); font-size: 11px; margin-top: 1px; }
 /* live transcript: labelled, and deliberately has no delete control */
-.hist-item.current .t { display: flex; align-items: center; gap: 6px; }
 .hist-item .badge { flex: 0 0 auto; font-size: 10px; line-height: 1; padding: 2px 5px; border-radius: 3px;
   background: var(--user-raised); color: var(--user-muted); border: 1px solid var(--user-border); }
 .hist-empty { padding: 10px 14px; color: var(--muted); font-size: 12px; }

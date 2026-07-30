@@ -545,7 +545,7 @@
       const isCurrent = !!current && s.id === current;
       row.className = isCurrent ? 'hist-item current' : 'hist-item';
       const meta = [fmtWhen(s.time), fmtSize(s.size), fmtTok(s.tokens) + ' tokens'].filter(Boolean).join(' · ');
-      row.innerHTML = '<div class="t">' + esc(s.title) +
+      row.innerHTML = '<div class="t"><span class="t-txt">' + esc(s.title) + '</span>' +
         (isCurrent ? '<span class="badge">current</span>' : '') +
         '</div><div class="d">' + esc(meta) + '</div>' +
         // the CLI reopens the transcript per write, so deleting the live one truncates rather
