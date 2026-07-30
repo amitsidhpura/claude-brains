@@ -616,9 +616,10 @@ object SessionStore {
         return "file.$ext"
     }
 
-    // The CLI injects bookkeeping as user messages: slash-command wrappers and background-task
-    // notifications. Drop the caveat/stdout/task-notification wrappers (plumbing the main agent
-    // consumes — its own replies carry the user-facing content), and collapse a
+    // The CLI injects bookkeeping as user messages: slash-command wrappers, background-task
+    // notifications and IDE context. Drop the caveat/stdout/task-notification/ide-opened-file
+    // wrappers (plumbing the main agent consumes — its own replies carry the user-facing content;
+    // and they must never become a session title), and collapse a
     // <command-name>/x</command-name>…<command-args>y</command-args> block into a compact "/x y".
     private val CMD_RE = Regex(
         "<command-name>\\s*(.*?)\\s*</command-name>.*?<command-args>\\s*(.*?)\\s*</command-args>",
@@ -627,7 +628,7 @@ object SessionStore {
     private fun cleanInjected(text: String): String? {
         val t = text.trim()
         if (t.startsWith("<local-command-caveat>") || t.startsWith("<local-command-stdout>") ||
-            t.startsWith("<task-notification>")) return null
+            t.startsWith("<task-notification>") || t.startsWith("<ide_opened_file>")) return null
         CMD_RE.find(t)?.let { m ->
             val name = m.groupValues[1].trim()
             val args = m.groupValues[2].trim()

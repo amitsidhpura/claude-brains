@@ -332,6 +332,32 @@ class SessionStoreTest {
         }
     }
 
+    /**
+     * An `<ide_opened_file>` context injection (IDE "user opened a file" bookkeeping) must not become
+     * the title. Unlike the caveat it is not flagged isMeta, so cleanInjected has to reject it — this
+     * covers that path specifically, landing the title on the first real prompt.
+     */
+    @Test
+    fun `title falls through an ide_opened_file wrapper to the first real message`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"<ide_opened_file>The user opened the file src/App.kt in the IDE.</ide_opened_file>"}]}}""",
+            """{"type":"user","timestamp":"2026-07-28T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"Add a dark-mode toggle"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-ide", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "ide.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+            val info = SessionStore.list(CWD).first { it.id == "ide" }
+            assertEquals("Add a dark-mode toggle", info.title, "title should skip the ide_opened_file wrapper")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     @Test
     fun `list reports size on disk and total output tokens`() {
         val info = SessionStore.list(CWD).first { it.id == ID }
