@@ -103,7 +103,10 @@ Same-content blocks that render differently between the streaming path and the r
         the stream against the JSONL it wrote. So both paths now hash the request's FIRST assistant
         uuid: `case 'assistant'` in `onClaudeEvent` captures `reqSeed` (reset in `sendTurn` +
         `clearLogUI`), `flushSummary` reads the same field, epoch-ms stays as the fallback. Verified
-        end-to-end against a live CLI run: same seed, same verb, same token count as the transcript.
+        end-to-end against a live CLI run: same seed, same verb, same token count as the transcript,
+        then **confirmed in the sandbox** — a turn rendered live keeps its verb across a resume. (Turns
+        written BEFORE this change can't: their live verb was random and never recorded, so they settle
+        on whatever their uuid hashes to.)
         **Lesson: "the CLI can't tell us that" is a claim to test against the CLI, not to assert.**
       · Residual imprecision: at a chunk boundary the collision bump compares against the raw hash of
         `prevSeed` rather than the verb actually displayed, so a summary whose predecessor was itself
@@ -121,7 +124,8 @@ Same-content blocks that render differently between the streaming path and the r
       screenshot's session drops 2.06–2.08x per request. Safe because the split records never
       disagree: 2546 split messages checked, 0 with differing `output_tokens`, so taking the first is
       the whole truth. Live was always right (`message_delta.usage` fires once per message), which is
-      why only the resumed number looked odd.
+      why only the resumed number looked odd. **Confirmed in the sandbox**: the turn from the original
+      screenshot now replays as `↓ 53 tokens`, matching what it showed live.
 - [x] **8. Focus ring "cut" live, "full" resumed** (discovered 2026-07-29 while reviewing #4). The
       thinking-summary (and any focusable element in a turn) showed the browser's default *outward*
       `outline: auto`, with no CSS focus rule at all. The `.turn-body`'s `content-visibility: auto`
