@@ -140,32 +140,19 @@ collapses `<command-name>/x</command-name>…<command-args>y</command-args>` to 
 Titles: the CLI writes `ai-title` records (no `summary` in current sessions) — `titleOf()` prefers
 summary → last ai-title → first user message.
 
-NEXT: **Phase 3 — finish sandbox verification.** A resumed session now renders correctly in
-`runIde` (confirmed 2026-07-28), which covers the parser rewrite, structuredPatch diffs, ask tab
-header, plan cards, Stopped lines, refusal states and summaries. Still unexercised, because a
-good-looking screenshot doesn't reach them:
-- **the whole performance batch (2026-07-29) is UNVERIFIED in the IDE** — it was built and
-  measured entirely in headless Chrome, which has no compositor and never dynamically
-  renders/unrenders `content-visibility` subtrees. Check, in a restarted sandbox (these are
-  resource changes, so a restart is required):
-  · a BIG session opens fast and lands at the BOTTOM (three layers try to guarantee that: tail
-    pre-render, `scrollIntoView` on the last element, then a settle loop with late re-checks)
-  · scrolling up streams earlier history in silently, with no viewport jump
-  · a long (12+ line) user message still PINS while scrolling — that regressed once already when
-    `.clip`'s `position: relative` beat `.msg-user`'s `sticky` on equal specificity
-  · the scrollbar feels honest: `contain-intrinsic-size: auto 250px` is a guess and turns range
-    from one line to a 400-row diff. If the thumb jumps, tune that one number.
-  · "New conversation" from a windowed session doesn't pull the old session's chunks (guarded on
-    both sides, never seen live)
-- images past the 4 MB budget (falls back to name-only chips)
-- a multi-question ask card — replayed tab switching is wired but has never been clicked
-- thinking with real text: local phpstorm/testing sessions are 100% empty bodies, so
-  `syncroze-core` is the only place collapsed thinking and durations appear at all
-- live path: token meta from `message_delta.usage`, ask Other/multiSelect, fail dots
-- **streaming rAF throttle (2026-07-30) UNVERIFIED under real JCEF frame timing**: text_delta no
-  longer re-renders per token (`renderMd` was O(n²) over message length) — deltas mark dirty and
-  `flushMd()` renders once per frame, flushed synchronously wherever `curBubble` is finalized.
-  Correct under synthetic streams in a real browser; watch one long live answer for feel.
+Phase 3 — sandbox verification COMPLETE (2026-07-30, confirmed live in `runIde`, not just headless
+Chrome). Verified working:
+- the performance batch: a BIG session opens fast and lands at the BOTTOM (tail pre-render →
+  `scrollIntoView` on the last element → settle loop with late re-checks); scrolling up streams
+  earlier history in silently, no viewport jump; a long (12+ line) user message PINS while scrolling
+  (`.msg-user` sticky holds over `.clip`); the scrollbar reads honest (`contain-intrinsic-size:
+  auto 250px`); "New conversation" from a windowed session doesn't pull the old session's chunks.
+- images past the 4 MB budget fall back to name-only chips; multi-question ask card tab switching
+  works; thinking with real text (via `syncroze-core`); live token meta from `message_delta.usage`,
+  ask Other/multiSelect, fail dots.
+- streaming rAF throttle holds under real JCEF frame timing: text_delta marks dirty and `flushMd()`
+  renders once per frame (was O(n²) per token via `renderMd`), flushed synchronously wherever
+  `curBubble` is finalized.
 Ctrl+Alt+G renders every transient state without driving the CLI; `./gradlew probe` dumps the
 replay blocks for any session, which is the fastest way to split a parser bug from a renderer bug.
 Replay also reconstructs, from fields the parser previously ignored: plan cards (`ExitPlanMode`
