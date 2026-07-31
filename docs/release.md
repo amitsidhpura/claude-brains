@@ -10,9 +10,8 @@ release-asset URLs are stable and not behind the raw.githubusercontent CDN cache
 Only `updatePlugins.xml` lives in the repo — its few-minutes CDN cache just delays
 update discovery, which is fine.
 
-Two git remotes carry the same `main`: `origin` (`claude-code-phpstorm`, the original dev
-repo) and `brains` (`claude-brains`, the public face). **Releases exist only on `brains`.**
-Push both on every release commit.
+One remote: `origin` (`claude-brains`) — the old `claude-code-phpstorm` dev repo was
+deleted 2026-07-31, so there is no second remote to push anymore.
 
 ## Versioning
 
@@ -49,8 +48,8 @@ one first so only a single release is ever listed.
    (`https://github.com/amitsidhpura/claude-brains/releases/download/vX.Y.Z/claude-brains-X.Y.Z.zip`).
 5. Keep the README's **Install** section true: before the first release it says "no release is
    published yet"; from then on the custom-repo URL is the primary path.
-6. Commit, tag, push BOTH remotes:
-   `git tag vX.Y.Z && git push origin main vX.Y.Z && git push brains main vX.Y.Z`.
+6. Commit, tag, push:
+   `git tag vX.Y.Z && git push origin main vX.Y.Z`.
 7. `gh release create vX.Y.Z phpstorm-plugin/build/distributions/claude-brains-X.Y.Z.zip \
    --repo amitsidhpura/claude-brains --title "Claude Brains vX.Y.Z" --notes "..."`.
 8. Verify: the asset URL returns 200 and `cmp`s equal to the local zip, and the feed served
@@ -65,7 +64,7 @@ heading, so the body must NOT open with its own `#` H1; start straight at the ta
 **Emoji go on section headings ONLY** — never on bullets. Bullets are short plain phrases,
 one capability each.
 
-Structure that worked for 0.1.0:
+Structure for the FIRST release (worked for 0.1.0):
 
 ```
 <one-line what it is>
@@ -82,6 +81,31 @@ Structure that worked for 0.1.0:
 <closing invite for feedback>
 <unofficial / no bundled Anthropic code disclaimer>
 ```
+
+Structure for UPDATE releases (0.2.0 onward) — same tagline/punchy opening, but the body
+splits into what changed rather than re-listing every feature:
+
+```
+<one-line theme of the release>
+
+<two short punchy lines — what you no longer have to do>
+
+<one paragraph — what this release changes>
+
+## ✨ New              — new capabilities only, short plain bullets
+## 🐛 Fixes            — user-visible fixes, phrased as what now works (with the old
+                         behaviour in a trailing dash-clause when it helps: "— used to X")
+## 📥 Install / update — "already installed? the IDE offers X.Y.Z automatically" first,
+                         then the custom-repo URL for new installs, zip-from-disk last
+## ⚠️ Notes            — honest caveats specific to THIS release + the standing
+                         requirements line (CLI logged in from a terminal, IDE build)
+---
+<closing invite for feedback>
+<unofficial / no bundled Anthropic code disclaimer>
+```
+
+Internal work (docs, design pages, refactors, probes) stays OUT of release notes — users
+only read about behaviour they can see.
 
 **Accuracy rules — claims that have been wrong before:**
 
