@@ -16,3 +16,6 @@ phpstorm-plugin/.intellijPlatform/
 
 # Playwright MCP browser-session artifacts (snapshots/console logs from design checks)
 /.playwright-mcp/
+
+# Claude Code local settings (per-machine permission grants)
+.claude/
