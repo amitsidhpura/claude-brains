@@ -1,0 +1,160 @@
+/* ============================================================
+   LIGHT THEME — design-time drafts, NOT shipped.
+   Loaded by design/mockup.html after chat.css. The devbar "light" button cycles
+   dark -> light (v1 warm) -> light2 (v2 cool) -> dark, via data-theme on <html>.
+   This prototypes the exact mechanism docs/colors.md proposes for shipping
+   (data-theme + token overrides), so promoting a variant is a copy, not a rewrite.
+
+   Structure:
+     1. per-variant token overrides (the 30 :root custom properties), plus
+        design-time `--lt-*` sub-tokens for chat.css's 24 hardcoded spots
+     2. shared rules that apply those sub-tokens — scoped html[data-theme^="light"]
+        so both variants reuse them. This is also a preview of the eventual fix:
+        tokenise the debt, then themes are pure token sets.
+   When a hardcoded value gets tokenised in chat.css, delete its rule here.
+   ============================================================ */
+
+/* ---------- 1a. variant 1: WARM — cream page, Claude-brand adjacent ---------- */
+html[data-theme="light"] {
+  --bg: #faf9f7;
+  --panel: #ffffff;
+  --fg: #2e3033;
+  --muted: #71767d;
+  --dot: #9aa0a7;
+  --border: #e5e2dd;
+  --border-strong: #d5d1ca;
+  --accent: #d97757;      /* brand constant — same in every theme */
+  --accent-rgb: 217, 119, 87;
+  --green: #2c9e52;
+  --blue: #1268cf;
+  --amber: #9c621d;
+  --code-bg: #f1efeb;     /* code still recedes: slightly darker than the page */
+  --red: #d0453e;
+  --raised: #efece8;
+  --raised-hover: #e6e2dc;
+  --hover: #f0ede9;
+  --warn-border: #e2b89f;
+  --warn-bg: #faf1e9;
+  --user-bg: #eef3fa;
+  --user-border: #b4cbe8;
+  --user-raised: #dfe8f5;
+  --user-raised-hover: #d2dff0;
+  --user-divider: #c9d8ec;
+  --user-muted: #49658f;
+  --ok: #1b7f41;
+  --ok-hover: #219a50;
+  --danger: #c03333;
+  --danger-hover: #d54040;
+  /* sub-tokens for the hardcoded spots (warm greys) */
+  --lt-scroll: #c8c4bd;      --lt-scroll-hover: #b2ada5;
+  --lt-cbh: #e9e6e1;         --lt-card: #ffffff;
+  --lt-btn2: #e8e5e0;        --lt-btn2-hover: #dcd8d1;
+  --lt-effort: #d3cfc8;      --lt-effort-hover: #beb9b0;
+  --lt-ask-text: #8c5330;
+  --lt-err-border: #e5b8b4;  --lt-err-bg: #fbeeed;
+  --lt-shim-base: #9aa0a7;   --lt-shim-peak: #3c4046;
+  --lt-gen-base: #c2603d;    --lt-gen-peak: #8a3d1e;
+  --lt-ph-a: #b7c6e4;        --lt-ph-b: #dcb7cc;
+}
+
+/* ---------- 1b. variant 2: COOL — white page, GitHub/JetBrains-Light greys ---------- */
+html[data-theme="light2"] {
+  --bg: #ffffff;
+  --panel: #f7f8fa;
+  --fg: #1f2328;
+  --muted: #656d76;
+  --dot: #8c959f;
+  --border: #e3e6ea;
+  --border-strong: #d0d5db;
+  --accent: #d97757;
+  --accent-rgb: 217, 119, 87;
+  --green: #1a7f37;
+  --blue: #0969da;
+  --amber: #96590d;
+  --code-bg: #f6f8fa;
+  --red: #cf222e;
+  --raised: #eef0f3;
+  --raised-hover: #e4e7eb;
+  --hover: #f2f4f6;
+  --warn-border: #dcb49c;   /* feedback stays warm even in the cool theme — it's semantic */
+  --warn-bg: #faf3ec;
+  --user-bg: #eef4fc;
+  --user-border: #a9c7ec;
+  --user-raised: #dce9f8;
+  --user-raised-hover: #cfe1f5;
+  --user-divider: #c4d8ef;
+  --user-muted: #3b608e;
+  --ok: #187a3c;
+  --ok-hover: #1e9448;
+  --danger: #c13030;
+  --danger-hover: #d33d3d;
+  /* sub-tokens (cool greys) */
+  --lt-scroll: #cdd2d9;      --lt-scroll-hover: #b6bcc4;
+  --lt-cbh: #eceef1;         --lt-card: #ffffff;
+  --lt-btn2: #e6e9ed;        --lt-btn2-hover: #d9dde2;
+  --lt-effort: #d3d8de;      --lt-effort-hover: #bcc2ca;
+  --lt-ask-text: #8c5330;
+  --lt-err-border: #e2b4b0;  --lt-err-bg: #fcecec;
+  --lt-shim-base: #8c959f;   --lt-shim-peak: #30363d;
+  --lt-gen-base: #c2603d;    --lt-gen-peak: #8a3d1e;
+  --lt-ph-a: #aec4e8;        --lt-ph-b: #d7b3cd;
+}
+
+/* ---------- 2. shared rules for chat.css's hardcoded spots ---------- */
+
+/* scrollbars */
+html[data-theme^="light"] * { scrollbar-color: var(--lt-scroll) transparent; }
+html[data-theme^="light"] ::-webkit-scrollbar-thumb { background: var(--lt-scroll); background-clip: content-box; }
+html[data-theme^="light"] ::-webkit-scrollbar-thumb:hover { background: var(--lt-scroll-hover); background-clip: content-box; }
+
+/* shimmers — the sweep must be DARKER than the base on light, not lighter */
+html[data-theme^="light"] .think-live .shimmer {
+  background: linear-gradient(90deg, var(--lt-shim-base) 35%, var(--lt-shim-peak) 50%, var(--lt-shim-base) 65%);
+  background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; }
+html[data-theme^="light"] .generating .verb {
+  background: linear-gradient(90deg, var(--lt-gen-base) 35%, var(--lt-gen-peak) 50%, var(--lt-gen-base) 65%);
+  background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; }
+
+/* code block header + card surface */
+html[data-theme^="light"] .codeblock .cb-h { background: var(--lt-cbh); }
+html[data-theme^="light"] .card { background: var(--lt-card); }
+
+/* syntax highlighting — VS Code Light+ set (the dark values are Dark+) */
+html[data-theme^="light"] .hl-k { color: #af00db; }
+html[data-theme^="light"] .hl-s { color: #a31515; }
+html[data-theme^="light"] .hl-c { color: #008000; }
+html[data-theme^="light"] .hl-n { color: #098658; }
+html[data-theme^="light"] .hl-v { color: #001080; }
+
+/* secondary buttons */
+html[data-theme^="light"] .no { background: var(--lt-btn2); color: var(--fg); }
+html[data-theme^="light"] .no:hover { background: var(--lt-btn2-hover); }
+
+/* ask-card warm text */
+html[data-theme^="light"] .ask .q-d,
+html[data-theme^="light"] .ask-foot,
+html[data-theme^="light"] .ask-tab { color: var(--lt-ask-text); }
+
+/* error block */
+html[data-theme^="light"] .error { border-color: var(--lt-err-border); background: var(--lt-err-bg); }
+
+/* send / stop buttons — hover darkens instead of lightens */
+html[data-theme^="light"] #send:hover { background: #c4623f; }
+html[data-theme^="light"] #send.stop { background: #c9403a; }
+html[data-theme^="light"] #send.stop:hover { background: #b23631; }
+
+/* effort slider dots */
+html[data-theme^="light"] .effort .d { background: var(--lt-effort); }
+html[data-theme^="light"] .effort:hover .d { background: var(--lt-effort-hover); }
+
+/* attachment placeholder gradient — pastel versions of the same hues */
+html[data-theme^="light"] .ph-img { background: linear-gradient(135deg, var(--lt-ph-a), var(--lt-ph-b)); }
+
+/* shadows — dark-theme depths read as smudges on light; soften them all */
+html[data-theme^="light"] #scrollBtn { box-shadow: 0 2px 10px rgba(0,0,0,.14); }
+html[data-theme^="light"] #histPanel { box-shadow: 0 12px 38px rgba(0,0,0,.16); }
+html[data-theme^="light"] .lb-box { box-shadow: 0 12px 38px rgba(0,0,0,.20); }
+html[data-theme^="light"] #inputcard { box-shadow: 0 2px 14px rgba(0,0,0,.08); }
+html[data-theme^="light"] #inputcard:focus-within {
+  box-shadow: 0 2px 14px rgba(0,0,0,.08), 0 0 0 3px rgba(var(--accent-rgb), .15); }
+html[data-theme^="light"] .popup { box-shadow: 0 12px 38px rgba(0,0,0,.16); }

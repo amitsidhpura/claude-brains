@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Claude Brains — design mockup</title>
 <link rel="stylesheet" href="../phpstorm-plugin/src/main/resources/webview/chat.css"/>
+<link rel="stylesheet" href="light.css"/><!-- design-time light theme, active only with html[data-theme="light"] (devbar toggle) -->
 <style>
   /* ============================================================
      MOCKUP-ONLY styles (preview scaffolding — never shipped).
@@ -41,6 +42,12 @@
   <span class="sep"></span>
   <!-- states that can't coexist with a populated log / history list -->
   <button onclick="tgWelcome()">welcome</button>
+  <button onclick="var h=document.documentElement, t=h.dataset.theme||''; var n = t==='' ? 'light' : t==='light' ? 'light2' : ''; h.dataset.theme=n;
+    var label = n==='' ? 'dark' : n==='light' ? 'warm light' : 'cool light';
+    this.textContent = 'theme: ' + label;
+    var ttl = document.querySelector('#head .title');
+    if (!ttl.dataset.orig) ttl.dataset.orig = ttl.textContent;
+    ttl.textContent = n==='' ? ttl.dataset.orig : ttl.dataset.orig + '  —  ' + label + ' theme';">theme: dark</button>
   <button onclick="(function(m){var i=document.getElementById('input').getBoundingClientRect();
     m.style.display = m.style.display==='none' ? 'block' : 'none';
     m.style.left=i.left+'px'; m.style.width=i.width+'px';
