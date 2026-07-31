@@ -200,7 +200,7 @@ Mostly deliberate; listed so nothing is silently forgotten.
 - [~] DOM/browser find only sees loaded blocks — inherent to windowed replay, documented in
       `docs/limits.md`. No action: the alternative is shipping the whole transcript again.
 - [~] **Silent `/effort` turns reappear on resume** (found 2026-07-30 auditing the office batch,
-      `c2db3ed`). Live swallows the whole turn — `effortMuted` drops its stream/echo/summary in
+      `1e3a31b`). Live swallows the whole turn — `effortMuted` drops its stream/echo/summary in
       `onClaudeEvent` — but the CLI still writes the turn to the transcript, and NOTHING on the
       replay path filters it: `cleanInjected()` collapses `<command-name>/effort…` to a visible
       `/effort <level>` user box, so a resumed session shows turns that live deliberately hid.

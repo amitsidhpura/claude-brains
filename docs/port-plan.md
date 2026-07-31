@@ -1,6 +1,6 @@
 # Port plan: design/mockup.html → chat.html
 
-The mockup is **finalized** (commits `4879fe4`, `baa67ea`) and is the source of truth for
+The mockup is **finalized** (commits `1a12a3c`, `b3067d0`) and is the source of truth for
 all styles and markup. Open it in a browser to see every component live; the devbar in the
 top-right toggles menus/stop-state and sets preview widths.
 
