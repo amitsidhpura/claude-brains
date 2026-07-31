@@ -14,6 +14,13 @@ turn. Consequences:
 Picking a command from the menu **runs it immediately** (a command menu should act, not just
 type); to pass an argument, type the command by hand and the menu autocompletes as you go.
 
+Command detection requires the name to be the **entire first token** — whitespace or
+end-of-message right after it. A message starting with a path (`/home/x …`) is ordinary text:
+it is sent as a turn, and the autocomplete menu closes on the second `/` (or whenever the
+filter has no hits, so a dead "No matching commands" popup can't swallow Enter). The one
+ambiguous shape left is a bare single token like `/home` with nothing after it — that still
+reads as a command attempt and is refused, same as the CLI's own TUI.
+
 `/model` and `/effort` are intentionally Hidden: the composer already has dedicated controls
 for them - the model chip + dropdown (search / custom models) and the effort slider (which
 sends `/effort <level>` directly) - so slash entries would be redundant. The slider's silent

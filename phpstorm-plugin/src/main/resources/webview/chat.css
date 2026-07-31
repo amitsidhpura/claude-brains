@@ -373,6 +373,7 @@ img { max-width: 100%; height: auto; }
 
 /* attachments inside a user message: chip row on top, click opens preview */
 .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.msg-atts:last-child { margin-bottom: 0; }   /* image-only message: no text below to space from */
 .att.click { cursor: pointer; }
 .att.click:hover { background: var(--user-raised-hover); }
 

@@ -1210,7 +1210,13 @@
       });
       d.appendChild(atts);
     }
-    if (text) d.appendChild(document.createTextNode(text));
+    if (text) {
+      // an element, not a bare text node — .msg-atts:last-child (which drops the chip row's
+      // bottom margin on image-only messages) is blind to text nodes
+      const t = document.createElement('span');
+      t.textContent = text;
+      d.appendChild(t);
+    }
     turnEl.prepend(d); maybeScroll();   // before .turn-body, and outside its containment
     clampBlock(d, 12);   // long prompts collapse to a fade + Show more
     return d;
@@ -1247,7 +1253,9 @@
     // slash-command routing (only for a bare "/cmd [args]" turn with no attachments): native
     // commands are handled in the IDE; TUI-only built-ins are refused rather than sent as literal
     // text to the model; everything else falls through and is sent as a turn for the CLI to expand.
-    const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)\s*([\s\S]*)$/i);
+    // The name must be the ENTIRE first token (whitespace or end after it) — a message starting
+    // with a path ("/home/x …") is ordinary text, not a command named "home".
+    const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/i);
     if (sc) {
       const name = sc[1].toLowerCase();
       if (name === 'clear') { clearComposer(); bridge({ kind: 'new' }); return; }         // fresh conversation
@@ -1365,13 +1373,14 @@
     }).filter(function (x) { return x.score >= 0 && cmdKind(x.c.name) !== 'tui'; })  // hide unconfirmed
       .sort(function (a, b) { return a.score - b.score; })
       .map(function (x) { return x.c; }).slice(0, 40);
-    if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
+    if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return 0; }
     slashList.innerHTML = hits.map(function (c, i) {
       return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '"' +
         (cmdNeedsArg(c) ? ' data-needsarg="1"' : '') + '>' +
         '<div class="pi-body"><div class="pi-title">/' + esc(c.name) + '</div>' +
         (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
     }).join('');
+    return hits.length;
   }
   slashList.addEventListener('click', function (e) {
     const item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
@@ -1432,20 +1441,23 @@
     const selEl = menu.children[menuSel]; if (selEl) selEl.scrollIntoView({ block: 'nearest' });
   }
 
-  input.addEventListener('input', function () {
+  input.addEventListener('input', function (e) {
     autoGrow();
     updateAuto();
-    // slash-command autocomplete: open + filter while the line starts with "/"
+    // slash-command autocomplete: open + filter while the line is a single "/token". A second
+    // "/" (a path like /home/…) or any whitespace ends the command shape, and a filter with no
+    // hits closes the menu too — a dead "No matching commands" popup would swallow Enter.
     const slashOpen = menuEl('slashMenu').classList.contains('show');
     let v = input.value;
-    // if the menu was opened via the button, the first typed character gets the leading slash
-    if (slashOpen && v.length && v.charAt(0) !== '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
+    // if the menu was opened via the button, the first typed character gets the leading slash —
+    // but never on a deletion, or erasing the "/" would just re-insert it (un-deletable slash)
+    if (slashOpen && v.length && v.charAt(0) !== '/' && !/^delete/.test(e.inputType || '') &&
+        v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
       input.value = '/' + v;
       const end = input.value.length; input.setSelectionRange(end, end);
       v = input.value;
     }
-    if (v.charAt(0) === '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
-      renderSlash(v.slice(1));
+    if (/^\/[\w-]*$/.test(v) && renderSlash(v.slice(1))) {
       ['modeMenu', 'modelMenu', 'attachMenu'].forEach(function (x) { menuEl(x).classList.remove('show'); });
       menuEl('slashMenu').classList.add('show');
     } else {
