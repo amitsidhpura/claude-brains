@@ -50,10 +50,18 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [ ] ⬜ Multi-file change review
 
 ## 4. Permission modes
-- [x] ✅ Permission prompts for tool use (allow / deny) — launched with `--permission-mode default`
-- [x] ✅ Mode switcher: **default (manual)**, **acceptEdits**, **plan**, **bypassPermissions** (`set_permission_mode`)
-- [ ] ⬜ `initialPermissionMode` setting
-- [ ] ⬜ `allowDangerouslySkipPermissions` (bypass) toggle + guardrails
+- [x] ✅ Permission prompts for tool use (allow / deny) — launched with the **persisted** mode
+- [x] ✅ Mode switcher: **default (manual)**, **acceptEdits**, **plan** live via `set_permission_mode`;
+      **bypassPermissions** by relaunch-with-resume (the CLI refuses to raise to bypass at runtime)
+- [x] ✅ Mode chip driven by the CLI (`permissionMode` on `system/init`+`system/status` — follows
+      plan-approval's drop back to default); refused control requests surface as error blocks
+- [x] ✅ **"Don't ask again" buttons** from `can_use_tool.permission_suggestions` (accept-all-edits /
+      always-allow / allow-directory → echoed as `updatedPermissions`); hidden on sandbox-escape
+      (`blocked_path`) prompts, where no grant stops the re-ask
+- [x] ✅ Mode persists across restarts & New/Refresh/resume (was: silently reset to `default`)
+      — also covers the old `initialPermissionMode` row; a settings-page override stays deferred
+- [n/a] `allowDangerouslySkipPermissions` — deliberately NOT used: the flag turns every mode into
+      a bypass (probed), so Auto relaunches with `--permission-mode bypassPermissions` instead
 
 ## 5. Plan mode
 - [x] ✅ Enter **Plan Mode** (via the permission-mode switcher → `plan`)

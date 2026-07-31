@@ -41,6 +41,16 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
   `updatedInput={questions, answers:{"<question>": "<label(s)>"}}` — plain allow returns
   "user did not answer".
 - Permission gate ONLY works with `--permission-prompt-tool stdio`.
+- Permission modes & suggestions (probed 2.1.220, full findings in docs/ide-mcp-protocol.md §5b):
+  `acceptEdits` covers EDITS ONLY (Bash still asks — correct, not a bug); `bypassPermissions` can't
+  be entered via `set_permission_mode` (refused unless launched `--dangerously-skip-permissions`,
+  which guts every other mode) → entering Auto relaunches with `--permission-mode bypassPermissions`
+  + `--resume`; `system/init`+`system/status` broadcast `permissionMode` (plan approval drops to
+  `default`) — the chip follows those, not the last request; `can_use_tool` carries
+  `permission_suggestions` → echo the accepted one as `updatedPermissions` (malformed = silently
+  dropped); sandbox-escape prompts (`blocked_path`) re-ask no matter what is granted, so suggestion
+  buttons are stripped there. Refused control requests answer `subtype:"error"` — surfaced as
+  `__ctl_error`, never swallowed.
 - Per-turn file rewind was REMOVED (2026-07-30). If it ever returns: `rewind_files` needs
   `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo and a client-supplied `uuid` on sent
   user messages; success is `{canRewind, skippedLinks}` (no filesChanged), so dry_run first.
@@ -113,6 +123,11 @@ Long-session performance (see docs/limits.md for the measurements and the traps)
 per reflow), and replay is WINDOWED — Kotlin parses the whole file but ships only the newest ~250
 blocks cut at a turn boundary (`alignedStart`), 89–95% smaller frames; earlier chunks load silently
 as you scroll within 600px of the top, prepended viewport-anchored so nothing jumps.
+Permission mode is PERSISTED (like the model) and every CLI (re)start launches with it; the chip is
+CLI-driven (`__mode` seed + `permissionMode` on system events), Auto = relaunch-with-resume
+(`__modeRestarted` ends a hanging busy state), refused control requests render as `__ctl_error`
+blocks, and permission cards grow one button per CLI `permission_suggestion` (accept-all-edits /
+always-allow / allow-directory; stripped on `blocked_path` cards where no grant stops the re-ask).
 Clickable file references (`.t-desc.path`, `.card-h code`) open in the editor via `kind:"open"`,
 line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
 ±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).

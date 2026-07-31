@@ -2,6 +2,7 @@ package io.github.amitsidhpura.claudebrains.cli
 
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -38,7 +39,7 @@ class ClaudeCli(
     private val permissionMode: String,
     private val resumeSessionId: String? = null,
     private val onEvent: (String) -> Unit,
-    private val onPermission: (requestId: String, toolName: String, input: JsonObject) -> Unit,
+    private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?) -> Unit,
     private val onInit: (commandsJson: String) -> Unit,
     private val onExit: (Int) -> Unit,
 ) {
@@ -134,6 +135,16 @@ class ClaudeCli(
     private fun handleControlResponse(obj: JsonObject) {
         val resp = obj["response"]?.jsonObject ?: return
         val reqId = resp["request_id"]?.jsonPrimitive?.content
+        // A refused host request (e.g. set_permission_mode the CLI won't honour) must reach the
+        // user — swallowing it once left the mode chip lying about Auto mode.
+        if (resp["subtype"]?.jsonPrimitive?.content == "error") {
+            val msg = resp["error"]?.jsonPrimitive?.content ?: "control request failed"
+            log.warn("control error ($reqId): $msg")
+            onEvent(json.encodeToString(JsonObject.serializer(), buildJsonObject {
+                put("type", "__ctl_error"); put("error", msg)
+            }))
+            return
+        }
         when {
             reqId == INIT_REQ_ID ->
                 resp["response"]?.jsonObject?.let { onInit(it.toString()) } // { commands, models, account, ... }
@@ -147,19 +158,34 @@ class ClaudeCli(
             "can_use_tool" -> {
                 val tool = request["tool_name"]?.jsonPrimitive?.content ?: "tool"
                 val input = request["input"]?.jsonObject ?: JsonObject(emptyMap())
-                onPermission(reqId, tool, input)
+                // Ready-made "don't ask again" options the CLI computed for this exact prompt
+                // (setMode / addRules / addDirectories) — echoed back as `updatedPermissions`.
+                // EXCEPT sandbox escalations (`blocked_path`): those re-ask on every command no
+                // matter what is granted — allow rules, additionalDirectories and acceptEdits were
+                // all probed (2.1.220) and none suppresses the next prompt (only a bare "Bash"
+                // rule or bypassPermissions does). Offering "don't ask again" there would be a
+                // lie, so those cards fall back to plain Accept / Reject.
+                val suggestions =
+                    if (request["blocked_path"] == null) request["permission_suggestions"] as? JsonArray
+                    else null
+                onPermission(reqId, tool, input, suggestions)
             }
             // Anything else we don't implement (hooks, sdk mcp): acknowledge so the CLI won't hang.
             else -> writeControlResponse(reqId, buildJsonObject {})
         }
     }
 
-    /** Answer a can_use_tool request. allow=true applies the tool; false rejects it. */
-    fun respondPermission(requestId: String, allow: Boolean, input: JsonObject) {
+    /**
+     * Answer a can_use_tool request. allow=true applies the tool; false rejects it.
+     * [updatedPermissions] optionally carries the accepted permission suggestion(s), which the CLI
+     * persists (session or settings file, per each entry's `destination`) so it stops asking.
+     */
+    fun respondPermission(requestId: String, allow: Boolean, input: JsonObject, updatedPermissions: JsonArray? = null) {
         val response = if (allow) {
             buildJsonObject {
                 put("behavior", "allow")
                 put("updatedInput", input)
+                if (updatedPermissions != null) put("updatedPermissions", updatedPermissions)
             }
         } else {
             buildJsonObject {
@@ -182,7 +208,13 @@ class ClaudeCli(
         writeLine(line)
     }
 
-    /** Host-initiated: change the permission mode (default | acceptEdits | plan | bypassPermissions). */
+    /**
+     * Host-initiated: change the permission mode (default | acceptEdits | plan). NOT
+     * bypassPermissions — the CLI refuses to *raise* to bypass at runtime unless launched with
+     * `--dangerously-skip-permissions` (which would gut every other mode), so entering Auto is a
+     * relaunch with `--permission-mode bypassPermissions` instead (see ClaudeSessionService).
+     * Switching *down* from bypass live works fine.
+     */
     fun setPermissionMode(mode: String) = sendControlRequest(buildJsonObject {
         put("subtype", "set_permission_mode")
         put("mode", mode)

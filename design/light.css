@@ -126,7 +126,7 @@ html[data-theme^="light"] .hl-c { color: #008000; }
 html[data-theme^="light"] .hl-n { color: #098658; }
 html[data-theme^="light"] .hl-v { color: #001080; }
 
-/* secondary buttons */
+/* secondary buttons (.card-b .alt needs no override — its color-mix tint tracks --green) */
 html[data-theme^="light"] .no { background: var(--lt-btn2); color: var(--fg); }
 html[data-theme^="light"] .no:hover { background: var(--lt-btn2-hover); }
 

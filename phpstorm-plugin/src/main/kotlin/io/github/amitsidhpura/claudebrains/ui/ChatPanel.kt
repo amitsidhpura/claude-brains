@@ -86,7 +86,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "perm" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val allow = msg["allow"]?.jsonPrimitive?.content == "true"
-                session.respondPermission(id, allow)
+                // sugg >= 0: the user accepted via one of the CLI's permission_suggestions
+                val sugg = msg["sugg"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
+                session.respondPermission(id, allow, sugg)
             }
             "answer" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
@@ -275,12 +277,13 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 // turn, so re-read at every result; pushTitle no-ops unless the name changed.
                 if (line.contains("\"type\":\"result\"")) pushTitle(session.currentSessionId())
             },
-            onPermission = { requestId, toolName, inputJson ->
+            onPermission = { requestId, toolName, inputJson, suggestionsJson ->
                 val frame = buildJsonObject {
                     put("type", "permission_request")
                     put("id", requestId)
                     put("tool", toolName)
                     put("input", inputJson) // raw JSON string; the page parses/pretty-prints
+                    suggestionsJson?.let { put("suggestions", it) } // CLI's don't-ask-again options
                     editLineStart(toolName, inputJson)?.let { put("lineStart", it) } // for the diff gutter
                 }
                 pushFrame(frame)
@@ -303,6 +306,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             },
             onExit = { code -> pushEvent("""{"type":"__exit","code":$code}""") },
         )
+
+        // Seed the mode chip with the persisted mode the CLI was just launched with —
+        // it isn't in the initialize payload, and the chip's built-in default is "default".
+        pushFrame(buildJsonObject { put("type", "__mode"); put("mode", session.selectedMode()) })
 
         // Feed the file list for @-mention autocomplete.
         runCatching {

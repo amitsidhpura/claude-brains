@@ -137,17 +137,43 @@ if you reuse the webview; a minimal plugin can ignore them and rely on `useTermi
 Edit approval is **not** done via `openDiff` — it's the SDK **control protocol** over the CLI's
 stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+ `--permission-mode`).
 
-- CLI → host (stdout line): `{"type":"control_request","request_id":"…","request":{"subtype":"can_use_tool","tool_name":"Edit","input":{…}}}`
-- host → CLI (stdin line): `{"type":"control_response","response":{"subtype":"success","request_id":"…","response":{"behavior":"allow","updatedInput":{…}}}}`
+- CLI → host (stdout line): `{"type":"control_request","request_id":"…","request":{"subtype":"can_use_tool","tool_name":"Edit","input":{…},"permission_suggestions":[…],"blocked_path":"…?"}}`
+- host → CLI (stdin line): `{"type":"control_response","response":{"subtype":"success","request_id":"…","response":{"behavior":"allow","updatedInput":{…},"updatedPermissions":[…]?}}}`
   - reject: `response:{"behavior":"deny","message":"…"}`
-  - transport error: `response:{"subtype":"error","request_id":"…","error":"…"}`
+  - transport error: `response:{"subtype":"error","request_id":"…","error":"…"}` — the CLI answers
+    a refused host request this way too (e.g. `set_permission_mode` to bypass); surface it, don't drop it.
 - Other control subtypes: `initialize` (host→CLI: declares `hooks`, `sdkMcpServers`, `jsonSchema`,
   `systemPrompt`), `set_permission_mode` (host→CLI: `{subtype,mode}`), `hook_callback`, `mcp_message`.
-- Permission modes: `default` (ask), `acceptEdits`, `plan`, `bypassPermissions`. Without
-  `--permission-prompt-tool stdio` the CLI applies edits without asking.
+- Permission modes: `default` (ask), `acceptEdits` (auto-approves **edits only** — Bash etc. still
+  ask), `plan`, `bypassPermissions`. Without `--permission-prompt-tool stdio` the CLI applies edits
+  without asking.
+
+### Permission facts probed against 2.1.220 (2026-07-31) — don't rediscover
+
+- **`bypassPermissions` cannot be *entered* at runtime.** `set_permission_mode` → bypass is refused
+  unless launched with `--dangerously-skip-permissions` — and that flag makes EVERY mode a bypass
+  (probed: `--permission-mode default` + the flag ran an out-of-sandbox write unprompted), so it's
+  unusable for a mode *switcher*. Entering Auto = relaunch with `--permission-mode bypassPermissions`
+  (+ `--resume`). Switching *down* from bypass live works.
+- **The CLI broadcasts the mode**: `system/init` and `system/status` events carry `permissionMode`,
+  including changes the CLI makes itself — approving `ExitPlanMode` drops it to `default`. Drive any
+  mode UI from these, not from what the host last requested.
+- **`permission_suggestions`** on `can_use_tool` are ready-made "don't ask again" options
+  (`setMode` / `addRules {toolName, ruleContent?}` / `addDirectories`, each with `behavior` and
+  `destination`: `userSettings|projectSettings|localSettings|session|cliArg`). Echo the accepted one
+  back verbatim in `updatedPermissions` on the allow response: `addRules`+`localSettings` writes
+  `.claude/settings.local.json`; `setMode acceptEdits` silences further edit prompts. Malformed
+  entries are **silently dropped** — verify by behaviour, not by lack of error.
+- **Bash runs sandboxed.** In-workspace commands run without asking in every mode; a command that
+  escapes (write outside cwd, network) asks with `blocked_path` set — and those escalations
+  **re-ask every time regardless of persisted grants**. Probed useless: `Bash(prefix:*)` /
+  exact-command allow rules (even pre-seeded in settings), `additionalDirectories` (settings or
+  echoed suggestion), `acceptEdits`. Only a bare `Bash` allow-rule or `bypassPermissions` silences
+  them — so don't offer "don't ask again" on a `blocked_path` card.
 
 Our plugin: `ClaudeCli` splits `control_request` frames from conversation events, surfaces
-`can_use_tool` as an Accept/Reject card, and replies with `control_response`.
+`can_use_tool` as an Accept/Reject card (+ one button per usable permission suggestion; suppressed
+when `blocked_path` is set), and replies with `control_response`.
 
 ## 6. Relevant environment variables (host → CLI)
 

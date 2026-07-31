@@ -135,6 +135,8 @@ theme is possible — each one is a spot that would stay dark on a light backgro
 
 - **`--accent-rgb` must track `--accent`.** They're separate tokens only because CSS can't
   derive channels from a hex; a theme that changes one and not the other desyncs every tint.
+  For *new* tints prefer `color-mix(in srgb, var(--x) N%, …)` — it derives from the token
+  directly, so themes adapt with no companion token (JCEF's Chromium is well past the 111 baseline).
 - **Two surface families carry meaning**, not decoration: blue = the user's own input, warm =
   awaiting the user's decision. A light palette must preserve that contrast relationship, not
   just lighten each value independently.

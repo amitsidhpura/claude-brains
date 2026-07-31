@@ -244,13 +244,17 @@ img { max-width: 100%; height: auto; }
 .card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
 .card-h { margin-bottom: 8px; }
 .card-h code { font-family: ui-monospace, Consolas, monospace; color: var(--fg); }
-.card-b { display: flex; gap: 8px; margin-top: 10px; }
+.card-b { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }  /* wrap: suggestion buttons can crowd the row */
 .card-b button, .ask-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
 .card-b button svg, .ask-b button svg { width: 15px; height: 15px; }
 .ok { background: var(--ok); color: #fff; }
 .ok:hover:not(:disabled) { background: var(--ok-hover); }
 .no { background: #3a3d41; color: var(--fg); }
 .no:hover { background: #474a4f; }
+/* permission-suggestion buttons ("accept all edits" / "always allow"): styled exactly like
+   Accept (.ok) — only the double-check icon tells them apart */
+.card-b .alt { background: var(--ok); color: #fff; }
+.card-b .alt:hover { background: var(--ok-hover); }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   overflow-x: auto; max-height: 240px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 /* pre (not pre-wrap): long lines keep their width and the .diff box scrolls horizontally

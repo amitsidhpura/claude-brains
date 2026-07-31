@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Claude Brains — "Accept all" button variants</title>
+<!-- Links the SHIPPED stylesheet so every variant sits on the real card surface.
+     Same trap as the other design pages: relative path, only works from inside design/. -->
+<link rel="stylesheet" href="../phpstorm-plugin/src/main/resources/webview/chat.css"/>
+<style>
+  html, body { overflow: auto; height: auto; }
+  body { padding: 28px 32px 60px; max-width: 760px; }
+  h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .v { margin: 22px 0; }
+  .v h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .v p { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+
+  /* ---- the candidate styles (scoped per variant; picked one moves to chat.css as .card-b .alt) ---- */
+
+  /* A — shipped today: neutral surface, green single check */
+  .vA .alt { background: #3a3d41; color: var(--fg); }
+  .vA .alt:hover { background: #474a4f; }
+  .vA .alt svg { color: var(--green); }
+
+  /* B — double check, same neutral surface */
+  .vB .alt { background: #3a3d41; color: var(--fg); }
+  .vB .alt:hover { background: #474a4f; }
+  .vB .alt svg { color: var(--green); }
+
+  /* C — green tint: double check, translucent green wash + green text */
+  .vC .alt { background: rgba(78,194,107,.13); color: var(--green); }
+  .vC .alt:hover { background: rgba(78,194,107,.22); }
+
+  /* D — ghost green: transparent, 1px green border */
+  .vD .alt { background: transparent; color: var(--green); box-shadow: inset 0 0 0 1px rgba(78,194,107,.55); }
+  .vD .alt:hover { background: rgba(78,194,107,.12); }
+
+  /* F — CHOSEN (shipped): identical to Accept — the double-check icon is the differentiator */
+  .vF .alt { background: var(--ok); color: #fff; }
+  .vF .alt:hover { background: var(--ok-hover); }
+
+  /* E — dim solid green: same family as Accept, one step quieter */
+  .vE .alt { background: #0d3a20; color: #7ed99a; }
+  .vE .alt:hover { background: #12502c; }
+</style>
+</head>
+<body>
+
+<h1>"Accept all edits" — styling variants</h1>
+<p class="sub">Each row is the real permission-card button bar. A is what ships today; B–E use the
+double-check icon. Hover works on all of them.</p>
+
+<div id="rows"></div>
+
+<script>
+const CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const DBL   = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>';
+const XCIRC = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+const VARIANTS = [
+  ['A', 'Shipped today', 'neutral surface, single check-circle in green', CHECK],
+  ['B', 'Double check, neutral', 'smallest change — only the icon says "all"', DBL],
+  ['C', 'Green tint', 'translucent green wash + green text, reads as an accent of Accept', DBL],
+  ['D', 'Ghost green', 'transparent with a green outline — secondary but clearly an accept', DBL],
+  ['E', 'Dim solid green', 'same family as Accept, one step darker/quieter', DBL],
+  ['F', 'Same as Accept — CHOSEN, shipped in chat.css', 'solid Accept green; only the double-check icon differs', DBL],
+];
+
+document.getElementById('rows').innerHTML = VARIANTS.map(function (v) {
+  return '<div class="v v' + v[0] + '">' +
+    '<h2>' + v[0] + ' — ' + v[1] + '</h2><p>' + v[2] + '</p>' +
+    '<div class="card warn"><div class="card-h">Claude wants to run <b>Edit</b> on <code>src/util/math.ts</code></div>' +
+      '<div class="card-b">' +
+        '<button class="ok">' + CHECK + 'Accept</button>' +
+        '<button class="alt">' + v[3] + 'Accept all edits</button>' +
+        '<button class="no">' + XCIRC + 'Reject</button>' +
+      '</div></div></div>';
+}).join('');
+</script>
+</body>
+</html>

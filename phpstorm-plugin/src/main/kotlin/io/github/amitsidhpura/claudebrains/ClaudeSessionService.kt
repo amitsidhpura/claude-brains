@@ -37,12 +37,15 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** UI callbacks, kept so we can restart the CLI (new/resume) without re-registering. */
     private var onEventCb: ((String) -> Unit)? = null
-    private var onPermissionCb: ((String, String, String) -> Unit)? = null
+    private var onPermissionCb: ((String, String, String, String?) -> Unit)? = null
     private var onInitCb: ((String) -> Unit)? = null
     private var onExitCb: ((Int) -> Unit)? = null
 
     /** requestId -> tool input, so the UI can answer allow/deny without echoing the payload. */
     private val pendingPermissions = ConcurrentHashMap<String, JsonObject>()
+
+    /** requestId -> the CLI's permission_suggestions, so an accepted one can be echoed back. */
+    private val pendingSuggestions = ConcurrentHashMap<String, kotlinx.serialization.json.JsonArray>()
 
     private val cwd: File get() = File(project.basePath ?: System.getProperty("user.home"))
 
@@ -50,17 +53,21 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     /** Persisted model choice (null/"default" = CLI default). */
     fun selectedModel(): String? = props.getValue(MODEL_KEY)
 
+    /** Persisted permission mode; every (re)start launches the CLI with it. */
+    fun selectedMode(): String = props.getValue(MODE_KEY) ?: "default"
+
     /** User-defined models (JSON array of {value, displayName, description}) — persisted across runs. */
     fun customModels(): String = props.getValue(CUSTOM_MODELS_KEY) ?: "[]"
     fun setCustomModels(jsonArray: String) = props.setValue(CUSTOM_MODELS_KEY, jsonArray)
 
     /**
      * @param onEvent sink for raw stream-json conversation lines
-     * @param onPermission (requestId, toolName, inputJson) when the CLI asks to run a tool
+     * @param onPermission (requestId, toolName, inputJson, suggestionsJson?) when the CLI asks
+     *   to run a tool; suggestionsJson is its permission_suggestions array, when present
      */
     fun start(
         onEvent: (String) -> Unit,
-        onPermission: (requestId: String, toolName: String, inputJson: String) -> Unit,
+        onPermission: (requestId: String, toolName: String, inputJson: String, suggestionsJson: String?) -> Unit,
         onInit: (commandsJson: String) -> Unit,
         onExit: (Int) -> Unit,
     ) {
@@ -82,16 +89,18 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     private fun startCli(resumeSessionId: String?) {
         runCatching { cli?.stop() }
         pendingPermissions.clear()
+        pendingSuggestions.clear()
         cli = ClaudeCli(
             workingDir = cwd,
             ssePort = port,
             executable = resolveExecutable(),
-            permissionMode = "default",
+            permissionMode = selectedMode(),
             resumeSessionId = resumeSessionId,
             onEvent = { line -> onEventCb?.invoke(line) },
-            onPermission = { requestId, toolName, input ->
+            onPermission = { requestId, toolName, input, suggestions ->
                 pendingPermissions[requestId] = input
-                onPermissionCb?.invoke(requestId, toolName, input.toString())
+                suggestions?.let { pendingSuggestions[requestId] = it }
+                onPermissionCb?.invoke(requestId, toolName, input.toString(), suggestions?.toString())
             },
             onInit = { commandsJson -> onInitCb?.invoke(commandsJson) },
             onExit = { code -> onExitCb?.invoke(code) },
@@ -167,14 +176,26 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun sendUser(text: String, attachments: List<io.github.amitsidhpura.claudebrains.cli.Attachment>) =
         cli?.sendUserMessage(text, attachments)
 
-    fun respondPermission(requestId: String, allow: Boolean) {
+    /**
+     * Answer a permission card. [suggestionIndex] >= 0 means the user took one of the CLI's
+     * permission_suggestions ("accept all edits" / "always allow" / "allow directory") — that
+     * entry rides the allow response as `updatedPermissions` and the CLI stops asking.
+     */
+    fun respondPermission(requestId: String, allow: Boolean, suggestionIndex: Int = -1) {
         val input = pendingPermissions.remove(requestId) ?: JsonObject(emptyMap())
-        cli?.respondPermission(requestId, allow, input)
+        val suggestions = pendingSuggestions.remove(requestId)
+        val chosen = if (allow && suggestionIndex >= 0)
+            suggestions?.getOrNull(suggestionIndex)?.let { s ->
+                kotlinx.serialization.json.buildJsonArray { add(s) }
+            }
+        else null
+        cli?.respondPermission(requestId, allow, input, chosen)
     }
 
     /** Answer an AskUserQuestion permission: allow + {questions, answers} as updatedInput. */
     fun answerQuestion(requestId: String, answersJson: String) {
         val original = pendingPermissions.remove(requestId) ?: JsonObject(emptyMap())
+        pendingSuggestions.remove(requestId)
         val answers = runCatching { Json.parseToJsonElement(answersJson).jsonObject }.getOrNull()
             ?: JsonObject(emptyMap())
         val updated = buildJsonObject {
@@ -184,7 +205,23 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli?.respondPermission(requestId, true, updated)
     }
 
-    fun setPermissionMode(mode: String) = cli?.setPermissionMode(mode)
+    /**
+     * Persist + apply the permission mode. default/acceptEdits/plan switch live; bypassPermissions
+     * cannot be *raised to* at runtime (the CLI refuses without `--dangerously-skip-permissions`,
+     * a launch flag that would gut every other mode), so entering Auto relaunches the CLI with
+     * `--permission-mode bypassPermissions`, resuming the current conversation when it has a
+     * transcript. Costs any session-scoped grants; the webview is told via __modeRestarted.
+     */
+    fun setPermissionMode(mode: String) {
+        props.setValue(MODE_KEY, mode)
+        if (mode == "bypassPermissions") {
+            val id = cli?.sessionId?.takeIf { sessionExists(it) }
+            startCli(resumeSessionId = id)
+            onEventCb?.invoke("""{"type":"__modeRestarted","mode":"bypassPermissions"}""")
+        } else {
+            cli?.setPermissionMode(mode)
+        }
+    }
 
     fun interrupt() = cli?.interrupt()
 
@@ -252,6 +289,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     private companion object {
         const val MODEL_KEY = "claudeCode.selectedModel"
+        const val MODE_KEY = "claudeCode.permissionMode"
         const val CUSTOM_MODELS_KEY = "claudeCode.customModels"
     }
 }
