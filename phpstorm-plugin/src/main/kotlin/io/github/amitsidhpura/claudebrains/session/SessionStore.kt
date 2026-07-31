@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.session
+package io.github.amitsidhpura.claudebrains.session
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

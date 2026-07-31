@@ -1,56 +1,53 @@
-# Claude Code for PhpStorm (Syncroze, personal build)
+# Claude Brains — Claude Code for JetBrains IDEs (unofficial)
 
-Runs Anthropic's official `claude` CLI inside PhpStorm, wired to the editor via the same
-**IDE-MCP bridge** the VS Code extension uses. Opens in a **right-side tool window** (sidebar).
+Runs Anthropic's official `claude` CLI inside PhpStorm (and any IntelliJ-platform IDE), wired
+to the editor via the same **IDE-MCP bridge** the VS Code extension uses. Opens in a
+**right-side tool window**: streaming chat, permission cards with diffs, plan mode, slash
+commands, @-file mentions, image paste, session history/resume, and more — see
+[`../docs/feature-checklist.md`](../docs/feature-checklist.md) for the full status.
 
-Protocol reference: [`../docs/ide-mcp-protocol.md`](../docs/ide-mcp-protocol.md).
+> ⚠️ **Unofficial, personal project.** Not affiliated with Anthropic or JetBrains. It does not
+> bundle or redistribute any Anthropic code — it only *interoperates* with the `claude` CLI you
+> already installed. Protocol reference: [`../docs/ide-mcp-protocol.md`](../docs/ide-mcp-protocol.md).
 
-> ⚠️ **Status: unbuilt scaffold.** These files were written but have **not** been compiled or
-> run — no JDK/Gradle was available in the authoring environment. Expect to fix a few
-> imports/signatures on first build. Treat it as a reviewed starting point, not a finished plugin.
+## Requirements
 
-> ⚠️ **Personal use only.** Do not bundle or redistribute Anthropic's `extension.js`, `webview/`,
-> or `claude.exe`. This plugin only *interoperates* with the CLI you already installed.
+- The [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code) installed and **already
+  logged in via a terminal** (the plugin has no login flow yet).
+- The CLI is resolved from `-Dclaude.executable=<path>` → `PATH` → the installed VS Code
+  extension's binary.
+- IDE build 2024.2+ (`since-build 242`).
+
+## Install
+
+From the custom plugin repository (gets auto-updates):
+
+1. Settings → Plugins → ⚙ → **Manage Plugin Repositories**
+2. Add `https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml`
+3. Search for **Claude Brains** in the Marketplace tab → Install → restart.
+
+Or install a downloaded zip directly: Settings → Plugins → ⚙ → **Install Plugin from Disk**.
+
+## Build from source
+
+```
+./gradlew buildPlugin        # installable zip in build/distributions/
+./gradlew runIde             # sandbox IDE with the plugin loaded
+./gradlew test               # plain JUnit 5 over SessionStore
+./gradlew compileKotlin      # fast type-check
+```
+
+Build JVM must be **Java 21** (Gradle 8.10.2 refuses JDK >23). See the repo root `CLAUDE.md`
+for the full build notes, architecture detail, and protocol facts.
 
 ## Architecture
 
 ```
-PhpStorm plugin (this project)
-├─ bridge/
-│   ├─ PortFinder      pick a free 127.0.0.1 port (10000–65535)
-│   ├─ IdeLockFile     write ~/.claude/ide/<port>.lock  { …, authToken }
-│   ├─ IdeMcpServer    WebSocket MCP server; checks x-claude-code-ide-authorization
-│   └─ IdeTools        IntelliJ-backed tools (openFile, getSelection, diagnostics…)
-├─ cli/ClaudeCli       spawns `claude` with CLAUDE_CODE_SSE_PORT, streams stream-json
-├─ ClaudeSessionService  one session per project (bridge + CLI lifecycle)
-└─ ui/
-    ├─ ClaudeToolWindowFactory   right-anchored sidebar
-    ├─ ChatPanel                 JCEF host + JS⇄Kotlin bridge
-    └─ resources/webview/chat.html   native chat UI (driven by stream-json)
+Claude Brains (this plugin)
+├─ bridge/    IDE-MCP server: free port, ~/.claude/ide/<port>.lock, WS + auth header,
+│             IDE tools (openFile / openDiff / getDiagnostics / selection / …)
+├─ cli/       spawns `claude --input-format stream-json --output-format stream-json
+│             --permission-prompt-tool stdio`, routes control protocol vs conversation
+├─ ui/        JCEF webview (webview/chat.html + chat.css), JS↔Kotlin bridge
+└─ session/   reads ~/.claude/projects/<enc-cwd>/*.jsonl, resume + transcript replay
 ```
-
-The UI is **swappable**: today it loads our own `chat.html` (native tier). To move to the
-**pixel-identical** tier later, point `ChatPanel.loadUi()` at Anthropic's `webview/index.html`
-and translate messages in `pushEvent` / the JS-query handler — no bridge changes needed.
-
-## Build & run
-
-Prerequisites: **JDK 17** and either the Gradle wrapper jar or the IDE's bundled Gradle.
-
-1. **Open** `phpstorm-plugin/` in IntelliJ IDEA (or PhpStorm with the Gradle plugin). The IDE
-   will provision Gradle and generate the wrapper. (Or run `gradle wrapper` once if you have Gradle.)
-2. Adjust `build.gradle.kts` → `phpstorm("2024.2")` to a version you have, or use
-   `local("C:/Program Files/JetBrains/PhpStorm <ver>")`.
-3. Run the **`runIde`** Gradle task → launches a sandbox PhpStorm with the plugin.
-4. Open the **Claude Code** tool window on the right; type a prompt.
-
-`claude` is resolved from `-Dclaude.executable=…`, else PATH (`claude`/`claude.exe`).
-
-## Known gaps (next tasks)
-
-- `openDiff`, `getDiagnostics`, `close_tab`, `closeAllDiffTabs`, `executeCode` are **stubbed** in
-  `IdeTools` — wire to `DiffManager` / `DaemonCodeAnalyzer`.
-- Auth: the CLI uses your existing Claude login; no in-plugin login UI yet.
-- stream-json rendering in `chat.html` handles text, tool_use chips, and result; richer blocks
-  (diffs, plan cards, thinking) are TODO.
-- No persistence of past conversations / `/resume`.

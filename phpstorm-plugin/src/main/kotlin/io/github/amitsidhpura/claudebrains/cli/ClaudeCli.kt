@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.cli
+package io.github.amitsidhpura.claudebrains.cli
 
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.json.Json
@@ -76,7 +76,7 @@ class ClaudeCli(
         val pb = ProcessBuilder(cmd).directory(workingDir).redirectErrorStream(false)
         pb.environment().apply {
             put("CLAUDE_CODE_SSE_PORT", ssePort.toString())
-            put("CLAUDE_CODE_ENTRYPOINT", "phpstorm-syncroze")
+            put("CLAUDE_CODE_ENTRYPOINT", "phpstorm-claude-brains")
             gitBashPath()?.let { put("CLAUDE_CODE_GIT_BASH_PATH", it) }
         }
 

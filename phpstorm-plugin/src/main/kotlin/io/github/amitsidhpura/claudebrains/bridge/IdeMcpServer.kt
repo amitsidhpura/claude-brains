@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.bridge
+package io.github.amitsidhpura.claudebrains.bridge
 
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.json.Json

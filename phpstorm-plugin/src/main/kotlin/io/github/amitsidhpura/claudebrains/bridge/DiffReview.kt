@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.bridge
+package io.github.amitsidhpura.claudebrains.bridge
 
 import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.DiffManager
@@ -11,7 +11,7 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
-import com.syncroze.claudecode.findVFile
+import io.github.amitsidhpura.claudebrains.findVFile
 import java.io.File
 import java.util.concurrent.CompletableFuture
 
@@ -46,7 +46,7 @@ class DiffReview(private val project: Project) {
             )
             DiffManager.getInstance().showDiff(project, request)
 
-            val group = NotificationGroupManager.getInstance().getNotificationGroup("Claude Code")
+            val group = NotificationGroupManager.getInstance().getNotificationGroup("Claude Brains")
             val notif = group.createNotification(
                 "Claude proposes changes to $fileName",
                 "Review the diff, then Accept or Reject.",

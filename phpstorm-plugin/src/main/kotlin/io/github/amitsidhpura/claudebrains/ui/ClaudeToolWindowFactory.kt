@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.ui
+package io.github.amitsidhpura.claudebrains.ui
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader

@@ -5,7 +5,7 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.1.0"
 }
 
-group = "com.syncroze"
+group = "io.github.amitsidhpura"
 version = "0.1.0"
 
 repositories {
@@ -49,7 +49,7 @@ tasks.register<JavaExec>("probe") {
     group = "verification"
     description = "Dump replay blocks for a session: --args=\"<projectPath> <sessionId>\""
     classpath = sourceSets["test"].runtimeClasspath
-    mainClass = "com.syncroze.claudecode.session.SessionProbeKt"
+    mainClass = "io.github.amitsidhpura.claudebrains.session.SessionProbeKt"
 }
 
 intellijPlatform {
@@ -62,8 +62,8 @@ intellijPlatform {
     buildSearchableOptions = false
 
     pluginConfiguration {
-        id = "com.syncroze.claude-code"
-        name = "Claude Code (Syncroze)"
+        id = "io.github.amitsidhpura.claude-brains"
+        name = "Claude Brains"
         version = project.version.toString()
         ideaVersion {
             sinceBuild = "242"

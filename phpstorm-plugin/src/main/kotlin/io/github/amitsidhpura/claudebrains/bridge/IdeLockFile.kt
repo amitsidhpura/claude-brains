@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.bridge
+package io.github.amitsidhpura.claudebrains.bridge
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

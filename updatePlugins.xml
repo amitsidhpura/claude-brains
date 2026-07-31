@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Custom plugin repository feed (Path B — no JetBrains Marketplace).
+     Users add this URL under Settings > Plugins > gear > Manage Plugin Repositories:
+       https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml
+     Release process: docs/release.md -->
+<plugins>
+    <plugin id="io.github.amitsidhpura.claude-brains"
+            version="0.1.0"
+            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.1.0/claude-brains-0.1.0.zip">
+        <idea-version since-build="242"/>
+        <name>Claude Brains</name>
+        <description>Claude Code for JetBrains IDEs (unofficial). Runs Anthropic's official
+            claude CLI inside PhpStorm and other IntelliJ IDEs. Requires the claude CLI
+            installed and logged in; does not bundle or redistribute Anthropic code.
+            Not affiliated with Anthropic or JetBrains.</description>
+    </plugin>
+</plugins>

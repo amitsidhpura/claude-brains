@@ -1,12 +1,14 @@
 <idea-plugin>
-    <id>com.syncroze.claude-code</id>
-    <name>Claude Code (Syncroze)</name>
-    <vendor email="support@syncroze.com">Syncroze</vendor>
+    <id>io.github.amitsidhpura.claude-brains</id>
+    <name>Claude Brains</name>
+    <vendor url="https://github.com/amitsidhpura/claude-brains">Amit Sidhpura</vendor>
 
     <description><![CDATA[
-        Runs Anthropic's official <code>claude</code> CLI inside PhpStorm, wired to the editor
+        Claude Code for JetBrains IDEs (unofficial). Runs Anthropic's official
+        <code>claude</code> CLI inside PhpStorm and other IntelliJ IDEs, wired to the editor
         through the same IDE-MCP bridge the VS Code extension uses. Opens in a right-side tool
-        window. Personal/interop build — does not bundle or redistribute Anthropic code.
+        window. Requires the <code>claude</code> CLI installed and logged in — does not bundle
+        or redistribute Anthropic code. Not affiliated with Anthropic or JetBrains.
     ]]></description>
 
     <!-- Platform only: works in PhpStorm and any other IntelliJ IDE. -->
@@ -14,15 +16,15 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- The sidebar: anchor="right" == VS Code's right sidebar. -->
-        <toolWindow id="Claude Code"
+        <toolWindow id="Claude Brains"
                     anchor="right"
                     secondary="false"
                     icon="/icons/claude.svg"
-                    factoryClass="com.syncroze.claudecode.ui.ClaudeToolWindowFactory"/>
+                    factoryClass="io.github.amitsidhpura.claudebrains.ui.ClaudeToolWindowFactory"/>
 
-        <projectService serviceImplementation="com.syncroze.claudecode.ClaudeSessionService"/>
+        <projectService serviceImplementation="io.github.amitsidhpura.claudebrains.ClaudeSessionService"/>
 
         <!-- Balloon used by DiffReview for Accept/Reject on proposed changes. -->
-        <notificationGroup id="Claude Code" displayType="BALLOON"/>
+        <notificationGroup id="Claude Brains" displayType="BALLOON"/>
     </extensions>
 </idea-plugin>

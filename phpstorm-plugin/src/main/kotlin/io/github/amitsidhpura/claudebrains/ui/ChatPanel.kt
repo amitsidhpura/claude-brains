@@ -1,4 +1,4 @@
-package com.syncroze.claudecode.ui
+package io.github.amitsidhpura.claudebrains.ui
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -9,7 +9,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
-import com.syncroze.claudecode.ClaudeSessionService
+import io.github.amitsidhpura.claudebrains.ClaudeSessionService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -74,7 +74,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     val mt = o["media_type"]?.jsonPrimitive?.content ?: "application/octet-stream"
                     val kind = o["kind"]?.jsonPrimitive?.content ?: "image"
                     val name = o["name"]?.jsonPrimitive?.content ?: "file"
-                    com.syncroze.claudecode.cli.Attachment(kind, mt, data, name)
+                    io.github.amitsidhpura.claudebrains.cli.Attachment(kind, mt, data, name)
                 } ?: emptyList()
                 session.sendUser(text, attachments)
             }
@@ -129,7 +129,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         buildJsonArray { transcriptItems.subList(from, to).forEach { add(it) } }
 
     private fun alignedCut(endExclusive: Int, maxBlocks: Int) =
-        com.syncroze.claudecode.session.SessionStore.alignedStart(transcriptItems, endExclusive, maxBlocks)
+        io.github.amitsidhpura.claudebrains.session.SessionStore.alignedStart(transcriptItems, endExclusive, maxBlocks)
 
     private fun pushTranscript(id: String) {
         // The parse is cheap (~0.1s even for a 177 MB file) and unavoidable — tool results patch
@@ -199,7 +199,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
      * when it has genuine unsaved changes, since that's what Claude matched `old_string` against.
      */
     private fun readFileText(path: String): String? = runCatching {
-        val vf = com.syncroze.claudecode.findVFile(path)
+        val vf = io.github.amitsidhpura.claudebrains.findVFile(path)
         val unsaved: String? = if (vf != null) {
             com.intellij.openapi.application.ReadAction.compute<String?, RuntimeException> {
                 val fdm = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()

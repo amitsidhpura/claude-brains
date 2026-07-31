@@ -1,8 +1,12 @@
-# Claude Code for PhpStorm
+# Claude Brains — Claude Code for JetBrains IDEs (unofficial)
 
 Personal project: a JetBrains/PhpStorm plugin that drives the official `claude` CLI,
 replicating the VS Code Claude Code extension. **Personal use only — never bundle or
 redistribute Anthropic's extension.js / webview / claude.exe.**
+Renamed from "Claude Code (Syncroze)" 2026-07-31: plugin id `io.github.amitsidhpura.claude-brains`,
+packages `io.github.amitsidhpura.claudebrains.*`, no syncroze references in the plugin.
+Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude-brains`
+(NOT the JetBrains Marketplace); process in `docs/release.md`.
 
 ## Repo layout
 - `phpstorm-plugin/` — the plugin (Kotlin, Gradle IntelliJ Platform 2.x, JCEF webview UI)

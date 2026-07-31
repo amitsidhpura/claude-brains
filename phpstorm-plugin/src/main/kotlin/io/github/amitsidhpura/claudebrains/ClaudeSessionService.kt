@@ -1,4 +1,4 @@
-package com.syncroze.claudecode
+package io.github.amitsidhpura.claudebrains
 
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
@@ -8,11 +8,11 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
-import com.syncroze.claudecode.bridge.IdeLockFile
-import com.syncroze.claudecode.bridge.IdeMcpServer
-import com.syncroze.claudecode.bridge.IdeTools
-import com.syncroze.claudecode.bridge.PortFinder
-import com.syncroze.claudecode.cli.ClaudeCli
+import io.github.amitsidhpura.claudebrains.bridge.IdeLockFile
+import io.github.amitsidhpura.claudebrains.bridge.IdeMcpServer
+import io.github.amitsidhpura.claudebrains.bridge.IdeTools
+import io.github.amitsidhpura.claudebrains.bridge.PortFinder
+import io.github.amitsidhpura.claudebrains.cli.ClaudeCli
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * One live Claude Code session per project: owns the IDE-MCP bridge (server + lockfile)
- * and the CLI process. The UI ([com.syncroze.claudecode.ui.ChatPanel]) attaches via [connectUi].
+ * and the CLI process. The UI ([io.github.amitsidhpura.claudebrains.ui.ChatPanel]) attaches via [connectUi].
  */
 @Service(Service.Level.PROJECT)
 class ClaudeSessionService(private val project: Project) : Disposable {
@@ -108,12 +108,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun resumeSession(id: String) = startCli(resumeSessionId = id)
 
     /** Past conversations for this project, newest first. */
-    fun listSessions(): List<com.syncroze.claudecode.session.SessionStore.SessionInfo> =
-        com.syncroze.claudecode.session.SessionStore.list(cwd.path)
+    fun listSessions(): List<io.github.amitsidhpura.claudebrains.session.SessionStore.SessionInfo> =
+        io.github.amitsidhpura.claudebrains.session.SessionStore.list(cwd.path)
 
     /**
      * Open a file referenced in the chat (tool line path, card header) in the editor.
-     * Mirrors [com.syncroze.claudecode.bridge.IdeTools]'s `openFile`, which is private and
+     * Mirrors [io.github.amitsidhpura.claudebrains.bridge.IdeTools]'s `openFile`, which is private and
      * MCP-facing; paths from the transcript are usually absolute, but a relative one is resolved
      * against the project root so @-mention style references work too.
      */
@@ -140,20 +140,20 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      */
     fun deleteSession(id: String): Boolean {
         if (id == cli?.sessionId) return false
-        return com.syncroze.claudecode.session.SessionStore.delete(cwd.path, id)
+        return io.github.amitsidhpura.claudebrains.session.SessionStore.delete(cwd.path, id)
     }
 
     /** Context in use at the end of a past conversation, so a resumed thread shows its gauge. */
     fun contextTokens(id: String): Long =
-        com.syncroze.claudecode.session.SessionStore.contextTokens(cwd.path, id)
+        io.github.amitsidhpura.claudebrains.session.SessionStore.contextTokens(cwd.path, id)
 
     /** Renderable blocks of a past conversation, for replay into the UI. */
     fun readTranscript(id: String): List<kotlinx.serialization.json.JsonObject> =
-        com.syncroze.claudecode.session.SessionStore.readTranscript(cwd.path, id)
+        io.github.amitsidhpura.claudebrains.session.SessionStore.readTranscript(cwd.path, id)
 
 
     /** Send a user turn with attachments (images / pdf / text). */
-    fun sendUser(text: String, attachments: List<com.syncroze.claudecode.cli.Attachment>) =
+    fun sendUser(text: String, attachments: List<io.github.amitsidhpura.claudebrains.cli.Attachment>) =
         cli?.sendUserMessage(text, attachments)
 
     fun respondPermission(requestId: String, allow: Boolean) {

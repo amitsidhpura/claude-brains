@@ -1,4 +1,4 @@
-package com.syncroze.claudecode
+package io.github.amitsidhpura.claudebrains
 
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
