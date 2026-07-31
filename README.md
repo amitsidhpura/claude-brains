@@ -47,18 +47,18 @@ installed VS Code Claude Code extension.
 
 ## Install
 
-No release is published yet — build from source (below) and install the zip:
-
-**Settings → Plugins → ⚙ → Install Plugin from Disk** →
-`phpstorm-plugin/build/distributions/claude-brains-<version>.zip`
-
-Once releases are published, the plugin is distributed through a custom plugin repository rather
-than the JetBrains Marketplace. Add this URL under **Settings → Plugins → ⚙ → Manage Plugin
-Repositories** and it installs (and auto-updates) like any marketplace plugin:
+The plugin is distributed through a custom plugin repository rather than the JetBrains
+Marketplace. Add this URL under **Settings → Plugins → ⚙ → Manage Plugin Repositories**:
 
 ```
 https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml
 ```
+
+Then find **Claude Brains** in the Marketplace tab and install — it auto-updates from there like
+any marketplace plugin.
+
+Or grab the zip from the [latest release](https://github.com/amitsidhpura/claude-brains/releases)
+and use **Settings → Plugins → ⚙ → Install Plugin from Disk**.
 
 ## Build from source
 
