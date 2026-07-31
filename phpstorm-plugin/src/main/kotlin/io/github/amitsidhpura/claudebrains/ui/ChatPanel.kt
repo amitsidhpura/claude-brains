@@ -98,10 +98,21 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "stop" -> session.interrupt()
             "new" -> {
                 transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
-                clearLog(); session.newConversation()
+                clearLog(); session.newConversation(); pushTitle(null)
             }
             "resume" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
-                clearLog(); pushTranscript(id); session.resumeSession(id)
+                clearLog(); pushTranscript(id); session.resumeSession(id); pushTitle(id)
+            }
+            // Reload the current conversation from disk — same path as picking it in history, so
+            // out-of-band edits (and a CLI that died) come back as a clean replay. An id with no
+            // file yet is an untouched session: `--resume` would exit 1, so restart it clean.
+            "refresh" -> {
+                val id = session.currentSessionId()?.takeIf { session.sessionExists(it) }
+                transcriptItems = emptyList(); transcriptFrom = 0
+                clearLog()
+                if (id != null) { pushTranscript(id); session.resumeSession(id) }
+                else session.newConversation()
+                pushTitle(id)
             }
             "open" -> msg["path"]?.jsonPrimitive?.content?.let { session.openFile(it) }
             "more" -> pushEarlier()
@@ -119,6 +130,20 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))
 
     private fun clearLog() = pushEvent("""{"type":"__clear"}""")
+
+    /** Last title shipped, so the per-turn re-check only pushes when the CLI renames the thread. */
+    private var lastTitle: String? = null
+
+    /**
+     * Header title. [id] null = fresh conversation; the page shows its own "New conversation"
+     * placeholder when the text is empty, so an unnamed live session doesn't flash a stale name.
+     */
+    private fun pushTitle(id: String?) {
+        val title = id?.let { session.sessionTitle(it) } ?: ""
+        if (title == lastTitle) return
+        lastTitle = title
+        pushFrame(buildJsonObject { put("type", "__title"); put("text", title) })
+    }
 
     /** Full parsed transcript of the resumed session; only the tail is shipped up front. */
     private var transcriptItems: List<JsonObject> = emptyList()
@@ -244,7 +269,12 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         if (started) return
         started = true
         session.start(
-            onEvent = { line -> pushEvent(line) },
+            onEvent = { line ->
+                pushEvent(line)
+                // The CLI names a thread with an `ai-title` record written around the end of a
+                // turn, so re-read at every result; pushTitle no-ops unless the name changed.
+                if (line.contains("\"type\":\"result\"")) pushTitle(session.currentSessionId())
+            },
             onPermission = { requestId, toolName, inputJson ->
                 val frame = buildJsonObject {
                     put("type", "permission_request")

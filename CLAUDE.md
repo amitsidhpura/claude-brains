@@ -98,6 +98,7 @@ DONE: bridge+tools, streaming chat, permission cards with diffs, plan card, AskU
 mode switcher (Manual/Edit automatically/Plan/Auto), model selector (persisted), slash-command
 menu with descriptions, @-file-mentions, image paste/drop, markdown+syntax highlight, thinking,
 stop/interrupt, retry, sessions (new/history/resume+replay),
+header conversation title + Refresh (re-resume) button,
 Ctrl+N, VS Code-style document UI (user boxes, dot blocks, tool lines with IN/OUT, composer,
 mode/model popups, top+bottom scroll fades), tool-window icon (grey/white on selection), per-request
 completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resume aware),

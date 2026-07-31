@@ -83,6 +83,11 @@ Work order suggestion in **§ Milestones** at the bottom.
 ## 8. Sessions / history
 - [x] ✅ **New conversation** (＋ New — restarts the CLI fresh, clears the log)
 - [x] ✅ **Resume** past conversations (🕘 History list → `--resume <id>`)
+- [x] ✅ Header shows the **conversation title** ("New conversation" until the CLI names it;
+      re-read after every turn since `ai-title` lands late)
+- [x] ✅ **Refresh** button — re-resumes the current session (replay from disk; also recovers a
+      dead CLI). Guarded by `SessionStore.exists`: an id whose file the CLI hasn't written yet
+      would make `--resume` exit 1, so that case restarts clean instead.
 - [x] ✅ Past-conversations list (reads `~/.claude/projects/<enc-cwd>/*.jsonl`, titles from summary/first-user)
 - [x] ✅ Resume **replays prior turns into the UI** (parses the JSONL: user/assistant text + tool chips)
 - [ ] ⬜ **Reopen closed session** (Ctrl+Shift+T)

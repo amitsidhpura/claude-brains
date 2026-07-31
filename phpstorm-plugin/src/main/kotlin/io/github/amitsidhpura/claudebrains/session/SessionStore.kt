@@ -220,6 +220,22 @@ object SessionStore {
     }
 
     /**
+     * True once a session has records on disk. The CLI hands out a session id at startup but
+     * doesn't create the file until the first turn, and `--resume <id>` on a file that isn't
+     * there yet exits 1 — so anything restarting the CLI mid-session must check this first.
+     */
+    fun exists(cwd: String, id: String): Boolean =
+        File(projectDir(cwd), "$id.jsonl").let { it.isFile && it.length() > 0 }
+
+    /**
+     * Title of one session by id, or null if its transcript isn't on disk yet — a brand-new
+     * session has no file until the CLI writes its first record. Rides the same (mtime,size)
+     * cache as [list], so polling it while a live session grows re-reads only after a write.
+     */
+    fun titleOf(cwd: String, id: String): String? =
+        File(projectDir(cwd), "$id.jsonl").takeIf { it.isFile }?.let { titleOf(it) }
+
+    /**
      * Derive a human title. The CLI writes an `ai-title` record (current versions) and older
      * sessions carry a `summary` record; fall back to the first user message.
      */

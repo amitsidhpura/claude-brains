@@ -132,6 +132,17 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     /** Transcript the live CLI is writing, once known (null on a fresh session until it reports). */
     fun currentSessionId(): String? = cli?.sessionId
 
+    /** Title of the live conversation, or null before it has a transcript worth naming. */
+    fun currentTitle(): String? = currentSessionId()?.let { sessionTitle(it) }
+
+    /** Whether a session id has records on disk — i.e. whether `--resume` on it can work. */
+    fun sessionExists(id: String): Boolean =
+        io.github.amitsidhpura.claudebrains.session.SessionStore.exists(cwd.path, id)
+
+    /** Title of any conversation on disk. */
+    fun sessionTitle(id: String): String? =
+        io.github.amitsidhpura.claudebrains.session.SessionStore.titleOf(cwd.path, id)
+
     /**
      * Delete a past conversation from disk. Irreversible; the UI confirms first.
      * Refuses the live transcript: the CLI reopens the file per write, so deleting it mid-session
