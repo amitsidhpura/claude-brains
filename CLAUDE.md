@@ -86,6 +86,11 @@ zip in `build/distributions/`.
   `requestAnimationFrame` fires ~once per 400ms and rAF-driven animations (scroll glide, auto-scroll
   re-assert) read as frozen — stub `requestAnimationFrame` onto `setTimeout` to test them.
 - `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
+- REAL-IDE compat: 2025.x+ moved JCEF out of the platform core into a bundled plugin
+  (`com.intellij.modules.jcef`) — without the optional `<depends>` on it, ChatPanel dies with
+  `NoClassDefFoundError: JBCefBrowser` on PhpStorm 2026.2 while the 2024.2 `runIde` sandbox
+  works fine (JCEF still in core there). Optional because the module id doesn't exist on 242.
+  The sandbox can't catch this class of bug; smoke-test installs in the real snap IDE.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
 
 ## Status (see docs/feature-checklist.md for detail)
