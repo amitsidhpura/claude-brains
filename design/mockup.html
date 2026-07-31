@@ -123,10 +123,11 @@
            (not <details>) with a <summary> inside keeps the styling but can't be toggled. -->
       <div class="think no-body"><summary>Thought for 1s</summary></div>
 
-      <!-- CLAMPED user message: over 12 lines collapses to a fade with a tab straddling the bottom
-           border (chat.html clampBlock). This state regressed sticky-pinning once — `.clip` sets
-           position:relative and beat `.msg-user`'s sticky on equal specificity. -->
-      <div class="msg-user clip" style="--clamp-lines:12">Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. <button class="clamp-more" title="Show more"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div>
+      <!-- FOLDED user message: over 3 lines collapses to 2 + a fading 3rd, and the WHOLE block is
+           the click-toggle (chat.html foldBlock). This state regressed sticky-pinning once — the
+           collapsed state sets position:relative and beat `.msg-user`'s sticky on equal
+           specificity, hence `.msg-user.fold:not(.open) { position: sticky }`. -->
+      <div class="msg-user fold" title="Show more" onclick="this.classList.toggle('open')">Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline.</div>
 
       <div class="blk">
         <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
@@ -160,6 +161,27 @@
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">✖ 2 problems (2 errors, 0 warnings)</span></div>
       </div>
 
+      <!-- FOLDED IN/OUT: each .io-v over 3 lines folds independently (2 lines + fading 3rd,
+           chat.html ioRow → foldBlock). The multi-line IN here folds AND its long line scrolls
+           horizontally once expanded (white-space: pre); 1-line rows never fold. -->
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Build, then verify the bundle</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v fold" title="Show more" onclick="this.classList.toggle('open')">set -e
+npm run build -- --mode production --sourcemap hidden --outDir dist/release --emptyOutDir
+ls -la dist/release
+du -sh dist/release
+sha256sum dist/release/assets/*.js | tee dist/release/checksums.txt</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v fold" title="Show more" onclick="this.classList.toggle('open')">vite v5.2.0 building for production…
+✓ 214 modules transformed.
+dist/release/index.html                  0.46 kB │ gzip:  0.30 kB
+dist/release/assets/index-BqT4pZm2.css  12.18 kB │ gzip:  3.02 kB
+dist/release/assets/vendor-Ck9wQx1n.js 141.77 kB │ gzip: 45.59 kB
+dist/release/assets/index-D3hV8f0a.js   38.41 kB │ gzip: 12.86 kB
+✓ built in 3.42s
+total 196K
+-rw-r--r-- 1 dev dev 141K Jul 31 14:02 vendor-Ck9wQx1n.js</span></div>
+      </div>
+
       <!-- "Thought" with NO duration: replay path when the transcript has no timestamp gap -->
       <details class="think"><summary>Thought<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">Reconstructed from a record with no measurable gap.</div></details>
 
@@ -178,7 +200,7 @@
 
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Edit</b> on <code>D:\sites\demo\functions.php</code></div>
-        <div class="diff"><span class="ctx"><span class="ln">13</span>  // helper functions</span>
+        <div class="diff fold" title="Show more" onclick="this.classList.toggle('open')"><span class="ctx"><span class="ln">13</span>  // helper functions</span>
 <span class="del"><span class="ln">14</span>- function old_helper() {</span>
 <span class="add"><span class="ln">14</span>+ function new_helper(string $name): string {</span>
 <span class="add"><span class="ln">15</span>+     return "Hello, {$name}!";</span>
@@ -190,7 +212,7 @@
         <p>Here's the final helper with a docblock:</p>
         <div class="codeblock">
           <div class="cb-h"><span>php</span><button class="copy" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
-          <pre><span class="hl-c">/** Greet a user by name. */</span>
+          <pre class="fold" title="Show more" onclick="this.classList.toggle('open')"><span class="hl-c">/** Greet a user by name. */</span>
 <span class="hl-k">function</span> new_helper(<span class="hl-k">string</span> <span class="hl-v">$name</span>): <span class="hl-k">string</span> {
     <span class="hl-k">return</span> <span class="hl-s">"Hello, {$name}!"</span>;
 }</pre>
@@ -300,7 +322,7 @@
       <div class="turn-body">
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Write</b> on <code>config/app.php</code></div>
-        <div class="diff"><span class="add"><span class="ln">1</span>+ &lt;?php</span>
+        <div class="diff fold" title="Show more" onclick="this.classList.toggle('open')"><span class="add"><span class="ln">1</span>+ &lt;?php</span>
 <span class="add"><span class="ln">2</span>+ return [</span>
 <span class="add"><span class="ln">3</span>+     'name'  =&gt; 'Demo',</span>
 <span class="add"><span class="ln">4</span>+     'debug' =&gt; false,</span>
@@ -412,7 +434,7 @@
            manual approval from an auto mode. Diff rows come from structuredPatch. -->
       <div class="card warn">
         <div class="card-h"><b>Edit</b> on <code>src/Greeter.php</code></div>
-        <div class="diff"><span class="ctx"><span class="ln">7</span>  final class Greeter</span>
+        <div class="diff fold" title="Show more" onclick="this.classList.toggle('open')"><span class="ctx"><span class="ln">7</span>  final class Greeter</span>
 <span class="del"><span class="ln">8</span>- public function greet() {</span>
 <span class="add"><span class="ln">8</span>+ public function greet(string $name): string {</span>
 <span class="add"><span class="ln">9</span>+     return "Hello, {$name}!";</span></div>

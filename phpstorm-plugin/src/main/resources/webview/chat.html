@@ -130,8 +130,6 @@
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
   const SVG_STOP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>';
-  const SVG_CHEV_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
-  const SVG_CHEV_UP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>';
   const SVG_TRASH ='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
   // same glyph as the top-bar history button — a replayed thread is history
   const SVG_HISTORY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
@@ -753,6 +751,7 @@
     row.innerHTML = '<span class="io-k"></span><span class="io-v"></span>';
     row.querySelector('.io-k').textContent = kind;
     row.querySelector('.io-v').textContent = text;
+    foldBlock(row.querySelector('.io-v'));   // measured on the post-insert frame (callers mount same-tick)
     return row;
   }
   function ioBox(rows) {
@@ -857,6 +856,7 @@
       '<div class="card-b">' + (it.denied
         ? '<span class="no-t">✗ Rejected</span>'
         : '<span class="ok-t">✓ Applied</span>') + '</div>';
+    foldBlock(card.querySelector('.diff'));
   }
 
   // Answered AskUserQuestion: questions with the chosen options checked, no inputs.
@@ -923,7 +923,7 @@
           lastUser = { text: it.text || '', images: it.images || [] };
           break;
         case 'assistant': {
-          const b = el('blk', ''); b.innerHTML = renderMd(it.text); clampCode(b);
+          const b = el('blk', ''); b.innerHTML = renderMd(it.text); foldCode(b);
           break;
         }
         // API errors are persisted as assistant records flagged isApiErrorMessage; live draws the
@@ -986,7 +986,7 @@
     // is honest; the rest keep their estimates and stay cheap.
     Array.prototype.slice.call(log.querySelectorAll('.turn-body')).slice(-8)
       .forEach(function (b) { b.style.contentVisibility = 'visible'; });
-    settleToBottom(); // heights still resolve over several frames: images, highlighting, clamps
+    settleToBottom(); // heights still resolve over several frames: images, highlighting, folds
     setTimeout(maybeLoadEarlier, 250);   // tail shorter than the viewport: auto-fill upward
   }
 
@@ -1166,32 +1166,32 @@
 
   /* ---------- send / stop / retry ---------- */
   /**
-   * Collapse an over-long block to `lines` with a fade and a Show more toggle. Measured after a
-   * frame so the real height is known; blocks that fit keep no affordance at all.
+   * Fold an over-long block: collapsed shows 2 full lines + a fading 3rd, and the WHOLE block is
+   * the click-toggle (both directions, no separate button). Measured after a frame so the real
+   * height is known; content of ≤3 lines gets no fold and no affordance at all. A click that ends
+   * a text selection never toggles (or copying from code/output would be impossible), and clicks
+   * on interactive children (links, attachment chips) pass through.
    */
-  function clampBlock(elm, lines) {
-    if (!elm || elm.dataset.clamped) return;
-    elm.dataset.clamped = '1';
-    elm.style.setProperty('--clamp-lines', lines);
-    elm.classList.add('clip');
+  function foldBlock(elm) {
+    if (!elm || elm.dataset.folded) return;
+    elm.dataset.folded = '1';
+    elm.classList.add('fold');
     requestAnimationFrame(function () {
-      if (elm.scrollHeight <= elm.clientHeight + 4) { elm.classList.remove('clip'); return; }
-      const btn = document.createElement('button');
-      btn.className = 'clamp-more';
-      const paint = function (open) {
-        btn.innerHTML = open ? SVG_CHEV_UP : SVG_CHEV_DOWN;
-        btn.title = open ? 'Show less' : 'Show more';   // icon-only, so the tooltip carries the label
-      };
-      paint(false);
-      btn.onclick = function (e) {
-        e.stopPropagation();
-        paint(elm.classList.toggle('open'));
-      };
-      elm.appendChild(btn);   // inside the block, so it reads as belonging to it
+      // an attachment-chip row is overhead, not content: widen the collapsed cap by its height
+      // so "3 lines" means 3 TEXT lines — otherwise a chip row leaves ~1 visible line of text
+      const atts = elm.querySelector(':scope > .msg-atts');
+      if (atts) elm.style.setProperty('--fold-extra', (atts.offsetHeight + 8) + 'px');
+      if (elm.scrollHeight <= elm.clientHeight + 4) { elm.classList.remove('fold'); return; }
+      elm.title = 'Show more';
+      elm.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, .att')) return;
+        if (window.getSelection && String(window.getSelection())) return;
+        elm.title = elm.classList.toggle('open') ? 'Show less' : 'Show more';
+      });
     });
   }
-  function clampCode(root) {
-    if (root) root.querySelectorAll('.codeblock pre').forEach(function (p) { clampBlock(p, 16); });
+  function foldCode(root) {
+    if (root) root.querySelectorAll('.codeblock pre').forEach(foldBlock);
   }
 
   function addUserMessage(text, imgs) {
@@ -1218,7 +1218,7 @@
       d.appendChild(t);
     }
     turnEl.prepend(d); maybeScroll();   // before .turn-body, and outside its containment
-    clampBlock(d, 12);   // long prompts collapse to a fade + Show more
+    foldBlock(d);   // long prompts fold to 2 lines + fade; the box itself toggles
     return d;
   }
 
@@ -1679,7 +1679,7 @@
         break;
       case 'message_stop':
         flushMd();              // the last deltas may still be waiting on a frame
-        clampCode(curBubble);   // only once the block is final, not on every delta
+        foldCode(curBubble);    // only once the block is final, not on every delta
         curBubble = null;
         finishThinking();
         turnTokens += msgTokens; msgTokens = 0; msgChars = 0;
@@ -2099,7 +2099,8 @@
         cardBtns('Accept', SVG_CHECK, 'Reject', SVG_X, suggBtns);
     }
     (curTurn || log).appendChild(card); maybeScroll();
-    clampBlock(card.querySelector('.cmd'), 14);   // whole scripts land here
+    foldBlock(card.querySelector('.cmd'));   // whole scripts land here
+    foldBlock(card.querySelector('.diff'));  // long edits fold too (was a 240px scroll box)
     const done = function (allow, sugg) {
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') +

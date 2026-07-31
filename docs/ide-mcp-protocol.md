@@ -164,6 +164,10 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
   back verbatim in `updatedPermissions` on the allow response: `addRules`+`localSettings` writes
   `.claude/settings.local.json`; `setMode acceptEdits` silences further edit prompts. Malformed
   entries are **silently dropped** — verify by behaviour, not by lack of error.
+- **The session scratchpad is pre-authorized.** Edit/Write into `/tmp/claude-1000/<enc-cwd>/
+  <session>/scratchpad/` never emits `can_use_tool`, even in `default` mode — the CLI treats its
+  own temp area as approved (probed: a scratchpad Write ran silently while the cwd Write in the
+  same turn prompted). Not a broken permission gate; don't re-investigate.
 - **Bash runs sandboxed.** In-workspace commands run without asking in every mode; a command that
   escapes (write outside cwd, network) asks with `blocked_path` set — and those escalations
   **re-ask every time regardless of persisted grants**. Probed useless: `Bash(prefix:*)` /

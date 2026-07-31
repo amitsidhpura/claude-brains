@@ -12,7 +12,7 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
 - `phpstorm-plugin/` — the plugin (Kotlin, Gradle IntelliJ Platform 2.x, JCEF webview UI)
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
 - `docs/feature-checklist.md` — feature parity checklist + status (the working TODO list)
-- `docs/limits.md` — every size cap (clamped / scrolled / truncated / volume) and where it is set
+- `docs/limits.md` — every size cap (folded / scrolled / truncated / volume) and where it is set
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved
   changes get ported into `phpstorm-plugin/src/main/resources/webview/chat.html`
 - `vscode/` — NOT in git. Extracted official VS Code extension (from
@@ -190,8 +190,8 @@ Phase 3 — sandbox verification COMPLETE (2026-07-30, confirmed live in `runIde
 Chrome). Verified working:
 - the performance batch: a BIG session opens fast and lands at the BOTTOM (tail pre-render →
   `scrollIntoView` on the last element → settle loop with late re-checks); scrolling up streams
-  earlier history in silently, no viewport jump; a long (12+ line) user message PINS while scrolling
-  (`.msg-user` sticky holds over `.clip`); the scrollbar reads honest (`contain-intrinsic-size:
+  earlier history in silently, no viewport jump; a long user message PINS while scrolling
+  (`.msg-user` sticky holds over the collapsed `.fold` state); the scrollbar reads honest (`contain-intrinsic-size:
   auto 250px`); "New conversation" from a windowed session doesn't pull the old session's chunks.
 - images past the 4 MB budget fall back to name-only chips; multi-question ask card tab switching
   works; thinking with real text (via `syncroze-core`); live token meta from `message_delta.usage`,

@@ -136,36 +136,27 @@ img { max-width: 100%; height: auto; }
   background: var(--user-bg); border: 1px solid var(--user-border);
   border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
 
-/* Over-long blocks collapse to a fade + toggle rather than getting their own scrollbar: a nested
-   scroll area inside #log traps the wheel. The toggle lives INSIDE the block, sitting on the fade,
-   so it reads as part of that block; space is reserved for it so it never covers text.
-   --clip-fade matches the surface the block is drawn on; the button itself wears #scrollBtn's skin. */
-.clip { --clip-fade: var(--bg); position: relative; overflow: hidden;
-  max-height: calc(var(--clamp-lines, 12) * 1.5em); padding-bottom: 24px; }
-.clip.open { max-height: none; }
-.clip:not(.open)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 58px;
-  pointer-events: none; background: linear-gradient(to bottom, transparent, var(--clip-fade) 60%); }
-/* position:sticky must survive .clip's position:relative (same specificity, declared later) —
-   without this, every clamped user message silently stops pinning. Sticky elements are positioned,
-   so the clamp button and fade still anchor to the message. */
-.msg-user.clip { --clip-fade: var(--user-bg); position: sticky; }
-.card .cmd.clip { --clip-fade: var(--code-bg); }
-.codeblock pre.clip { --clip-fade: var(--code-bg); }
-
-/* A tab straddling the block's bottom edge: bottom:0 puts it against the inner edge of the
-   container's border, and dropping its own bottom border lets the two merge into one line.
-   Space is reserved in both states (.clip padding-bottom) so it never covers text. */
-.clamp-more { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 2;
-  /* even width: centring halves an odd width onto x.5, which antialiases the 1px side borders
-     across two pixel columns and makes them look fainter than the crisp top border */
-  width: 48px; height: 18px; padding: 0; cursor: pointer;
-  border-radius: var(--radius) var(--radius) 0 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  /* same skin as #scrollBtn — the two sit in one vertical line and should read as one family */
-  background: var(--user-bg); border: 1px solid var(--user-border); border-bottom: 0;
-  color: var(--user-muted); }
-.clamp-more:hover { background: var(--user-raised-hover); color: var(--fg); border-color: var(--accent); }
-.clamp-more svg { width: 13px; height: 13px; display: block; }
+/* Over-long blocks FOLD rather than getting their own scrollbar (a nested vertical scroll area
+   inside #log traps the wheel): collapsed shows 2 full lines with the 3rd fading out, and the
+   WHOLE block is the toggle — click to expand, click again to collapse (a click that ends a text
+   selection never toggles; see foldBlock). `lh` makes the 3-line cap exact for each block's own
+   line-height; --fold-pad is the block's vertical padding+border, so the cap bounds CONTENT lines
+   rather than the border box. --fold-fade matches the surface the block is drawn on. */
+.fold { cursor: pointer; }
+/* --fold-extra: non-text overhead inside the block (an attachment-chip row), measured by
+   foldBlock, so the 3-line cap counts TEXT lines */
+.fold:not(.open) { position: relative; overflow: hidden;
+  max-height: calc(3lh + var(--fold-pad, 0px) + var(--fold-extra, 0px)); }
+.fold:not(.open)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+  height: calc(1lh + var(--fold-pad, 0px) / 2); pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--fold-fade, var(--bg)) 75%); }
+/* position:sticky must survive the collapsed state's position:relative (same specificity,
+   declared later) — without this, every folded user message silently stops pinning. */
+.msg-user.fold:not(.open) { position: sticky; }
+.msg-user.fold { --fold-fade: var(--user-bg); --fold-pad: 18px; }   /* 8+8 padding, 1+1 border */
+.card .cmd.fold, .diff.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; }
+.codeblock pre.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; }  /* border lives on .codeblock */
+.io-v.fold { --fold-fade: var(--code-bg); }                             /* padding lives on .io-row */
 
 /* assistant block: plain text with small dot */
 .blk { position: relative; padding-left: 22px; }
@@ -228,7 +219,9 @@ img { max-width: 100%; height: auto; }
 /* 22px is the floor: "OUT" measures 21.11px here, and anything narrower either overflows the
    label into the gap or (below ~18px) breaks alignment between the IN and OUT rows. */
 .io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 22px; }
-.io-v { white-space: pre-wrap; word-break: break-all; flex: 1; max-height: 200px; overflow-y: auto; }
+/* pre (no wrap): long lines scroll horizontally like .diff / codeblock pre; min-width lets the
+   flex item shrink so the scrollbar appears instead of the row growing */
+.io-v { white-space: pre; flex: 1; min-width: 0; overflow-x: auto; }
 
 /* code block */
 .codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
@@ -256,7 +249,7 @@ img { max-width: 100%; height: auto; }
 .card-b .alt { background: var(--ok); color: #fff; }
 .card-b .alt:hover { background: var(--ok-hover); }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
-  overflow-x: auto; max-height: 240px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 /* pre (not pre-wrap): long lines keep their width and the .diff box scrolls horizontally
    (overflow-x: auto) rather than folding — matches the codeblock <pre> behaviour */
 .diff .del { display: block; color: var(--red); white-space: pre; }
@@ -396,7 +389,7 @@ img { max-width: 100%; height: auto; }
 
 /* command preview in permission card (Bash) */
 .card .cmd { margin: 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
-  font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; overflow-x: auto; }
+  font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre; overflow-x: auto; }
 
 /* retry — timeline line: icon sits in the dot column, text at the shared indent */
 .retry { position: relative; padding-left: 22px; font-size: 13px; }
