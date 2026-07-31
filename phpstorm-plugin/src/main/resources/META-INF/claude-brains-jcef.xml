@@ -1,0 +1,4 @@
+<!-- Intentionally empty: the optional depends on com.intellij.modules.jcef exists only to
+     put the JCEF plugin's classloader on our parent chain on 2025.x+ IDEs. -->
+<idea-plugin>
+</idea-plugin>

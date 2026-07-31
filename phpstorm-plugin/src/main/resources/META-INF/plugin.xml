@@ -13,6 +13,11 @@
 
     <!-- Platform only: works in PhpStorm and any other IntelliJ IDE. -->
     <depends>com.intellij.modules.platform</depends>
+    <!-- 2025.x+ extracted JCEF into its own bundled plugin (com.intellij.modules.jcef);
+         without this the plugin classloader can't see JBCefBrowser (NoClassDefFoundError
+         on 2026.2). Optional because the module id doesn't exist on our 2024.2 baseline,
+         where JCEF is still in the platform core. -->
+    <depends optional="true" config-file="claude-brains-jcef.xml">com.intellij.modules.jcef</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- The sidebar: anchor="right" == VS Code's right sidebar. -->
