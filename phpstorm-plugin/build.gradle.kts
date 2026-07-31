@@ -23,6 +23,8 @@ dependencies {
 
         // JCEF + platform APIs come with the platform; nothing extra needed for the sidebar.
         instrumentationTools()
+        // The Plugin Verifier CLI for `verifyPlugin` (IDE list in pluginVerification.ides).
+        pluginVerifier()
         // No testFramework(TestFrameworkType.Platform): our tests are plain JUnit 5 over
         // SessionStore, which has no IntelliJ dependencies. The platform test framework registers
         // a JUnit LauncherSessionListener that cannot instantiate outside a real IDE test fixture,
@@ -68,6 +70,23 @@ intellijPlatform {
         ideaVersion {
             sinceBuild = "242"
             untilBuild = provider { null }
+        }
+        // Shown on the Marketplace plugin page for the current version.
+        changeNotes = """
+            <b>0.2.0</b>
+            <ul>
+              <li>"Don't ask again" buttons on permission cards — accept all edits, always allow, allow directory</li>
+              <li>Auto mode works: relaunches the CLI in bypass mode and resumes the conversation</li>
+              <li>Permission mode persists across restarts; the mode chip follows the CLI's actual mode</li>
+              <li>Long blocks fold to 2 lines and expand on click; code never wraps (horizontal scroll)</li>
+              <li>Slash routing fixes: messages starting with a file path are sent as text</li>
+            </ul>
+        """.trimIndent()
+    }
+
+    pluginVerification {
+        ides {
+            recommended()
         }
     }
 }
