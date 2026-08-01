@@ -38,6 +38,16 @@ installed it (learned the hard way with the icon build). If a shipped version ne
 bump the patch digit — and, pre-1.0, it is fine to `gh release delete --cleanup-tag` the old
 one first so only a single release is ever listed.
 
+**If a Marketplace upload is rejected (verification/moderation), the version number is burned** —
+the Marketplace won't take the same number twice. Decided policy (2026-08-01): keep the standard
+release order (release on GitHub first, then upload the same zip to the Marketplace); if the
+Marketplace rejects it, fix and cut a normal bug-fix release (patch bump) through the same
+process. Version gaps this leaves on the Marketplace are fine — it lists published versions only,
+the IDE update dialog shows one version, and nobody diffs the sequence. Risk is low anyway:
+`./gradlew verifyPlugin` runs the same engine + IDE list JetBrains runs, and "Compatible with
+warnings" does NOT block publication (0.2.0 cleared moderation carrying warnings; updates to an
+approved plugin generally publish without a human review pass).
+
 ## Cutting a release
 
 1. Bump `version = "X.Y.Z"` in `phpstorm-plugin/build.gradle.kts`.

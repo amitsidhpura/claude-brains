@@ -31,6 +31,21 @@ overhead, not content — `foldBlock` measures it into `--fold-extra` so the cap
 TEXT lines. Wide content (`.diff`, `.codeblock pre`, `.io-v` —
 all `white-space: pre`) scrolls horizontally when expanded; while collapsed it just crops.
 
+**Known inconsistency (spotted 2026-08-01, deliberately deferred):** the fade GEOMETRY differs per
+surface even where the colour matches. The `::after` gradient is anchored to the element's bottom
+(`height: 1lh + --fold-pad/2`, opaque at 75%), but surfaces disagree about where their bottom
+padding lives: `.cmd`/`.diff`/`.msg-user`/`pre` carry padding INSIDE the folded element, so the
+gradient's opaque end lands in the padding and the 3rd line fades gently; `.io-v`'s padding lives
+on the parent `.io-row`, so the same formula compresses into exactly `1lh` and reaches full
+opacity mid-line — a visibly harsher cut (same command in a card `.cmd` vs a Bash IN box fades
+differently). Fix, when picked up: give each surface a `--fold-bpad` (real bottom padding+border:
+msg-user 9px / cmd+diff 9px / pre 8px / io-v 0) and anchor the gradient to the TEXT —
+`height: calc(1lh + var(--fold-bpad, 0px))` with the colour stop at
+`calc(100% - var(--fold-bpad, 0px))` — so the transition spans exactly the last text line on every
+surface. Fade colour stays per-surface (a user message must blend to its own bubble, not
+`--code-bg`). `calc()` px-from-end stops and `lh` units are fine on JCEF's Chromium 122. Verify by
+rendering all five surfaces with the same 4-line text and pixel-sampling the fade span per line.
+
 ## Scrolled (height capped, content intact)
 
 | block | limit |
