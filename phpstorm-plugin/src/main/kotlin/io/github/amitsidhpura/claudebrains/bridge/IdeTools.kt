@@ -1,15 +1,16 @@
 package io.github.amitsidhpura.claudebrains.bridge
 
-import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerImpl
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.editor.impl.DocumentMarkupModel
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import io.github.amitsidhpura.claudebrains.findVFile
+import io.github.amitsidhpura.claudebrains.readLocked
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -51,20 +52,20 @@ class IdeTools(private val project: Project) {
         return ToolResult(diffReview.open(oldPath, newContent, tabName).get())
     }
 
-    private fun getWorkspaceFolders(): String = ReadAction.compute<String, RuntimeException> {
+    private fun getWorkspaceFolders(): String = readLocked {
         val roots = ProjectRootManager.getInstance(project).contentRoots.map { it.path }
         (listOfNotNull(project.basePath) + roots).distinct().joinToString("\n")
             .ifEmpty { "(no workspace folders)" }
     }
 
-    private fun getOpenEditors(): String = ReadAction.compute<String, RuntimeException> {
+    private fun getOpenEditors(): String = readLocked {
         FileEditorManager.getInstance(project).openFiles.joinToString("\n") { it.path }
             .ifEmpty { "(no open editors)" }
     }
 
-    private fun getCurrentSelection(): String = ReadAction.compute<String, RuntimeException> {
+    private fun getCurrentSelection(): String = readLocked {
         val editor = FileEditorManager.getInstance(project).selectedTextEditor
-            ?: return@compute "(no active editor)"
+            ?: return@readLocked "(no active editor)"
         val sel = editor.selectionModel.selectedText ?: ""
         val file = FileDocumentManager.getInstance().getFile(editor.document)?.path ?: "?"
         "file: $file\n$sel"
@@ -90,9 +91,9 @@ class IdeTools(private val project: Project) {
         return "saved: $rawPath"
     }
 
-    private fun checkDocumentDirty(rawPath: String): String = ReadAction.compute<String, RuntimeException> {
+    private fun checkDocumentDirty(rawPath: String): String = readLocked {
         val vf = findVFile(rawPath)
-            ?: return@compute "error: file not found: $rawPath"
+            ?: return@readLocked "error: file not found: $rawPath"
         val doc = FileDocumentManager.getInstance().getDocument(vf)
         "dirty: ${doc != null && FileDocumentManager.getInstance().isDocumentUnsaved(doc)}"
     }
@@ -107,7 +108,7 @@ class IdeTools(private val project: Project) {
         return "closed diff tabs"
     }
 
-    private fun getDiagnostics(pathOrUri: String?): String = ReadAction.compute<String, RuntimeException> {
+    private fun getDiagnostics(pathOrUri: String?): String = readLocked {
         val fem = FileEditorManager.getInstance(project)
         val files = if (pathOrUri.isNullOrBlank()) {
             fem.openFiles.toList()
@@ -118,7 +119,13 @@ class IdeTools(private val project: Project) {
         val arr = buildJsonArray {
             for (vf in files) {
                 val doc = FileDocumentManager.getInstance().getDocument(vf) ?: continue
-                val infos = DaemonCodeAnalyzerImpl.getHighlights(doc, HighlightSeverity.WARNING, project)
+                // Same data DaemonCodeAnalyzerImpl.getHighlights returns, via public API:
+                // the daemon publishes its results into the document's markup model.
+                val infos = DocumentMarkupModel.forDocument(doc, project, false)
+                    ?.allHighlighters.orEmpty()
+                    .mapNotNull { HighlightInfo.fromRangeHighlighter(it) }
+                    .filter { it.severity >= HighlightSeverity.WARNING }
+                    .sortedBy { it.startOffset }
                 add(buildJsonObject {
                     put("uri", vf.url)
                     put("diagnostics", buildJsonArray {

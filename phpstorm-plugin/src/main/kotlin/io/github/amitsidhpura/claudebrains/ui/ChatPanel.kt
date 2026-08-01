@@ -228,7 +228,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     private fun readFileText(path: String): String? = runCatching {
         val vf = io.github.amitsidhpura.claudebrains.findVFile(path)
         val unsaved: String? = if (vf != null) {
-            com.intellij.openapi.application.ReadAction.compute<String?, RuntimeException> {
+            io.github.amitsidhpura.claudebrains.readLocked {
                 val fdm = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
                 val doc = fdm.getDocument(vf)
                 if (doc != null && fdm.isDocumentUnsaved(doc)) doc.text else null
@@ -245,7 +245,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     private fun saveAttachment(name: String, base64: String) {
         val bytes = runCatching { java.util.Base64.getDecoder().decode(base64) }.getOrNull() ?: return
         ApplicationManager.getApplication().invokeLater {
-            val descriptor = FileSaverDescriptor("Save Attachment", "Save the attached file to disk")
+            val descriptor = saveDescriptor("Save Attachment", "Save the attached file to disk")
             val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
             val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, name)
             if (wrapper != null) runCatching { wrapper.file.writeBytes(bytes) }
@@ -255,6 +255,21 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 }
         }
     }
+
+    /**
+     * 2025.1+ deprecates the (title, description, vararg extensions) ctor in favor of a two-arg
+     * overload that doesn't exist on our 242 baseline. Reflection lets one binary use whichever
+     * the running IDE has, without a direct bytecode ref the Plugin Verifier would flag.
+     */
+    private fun saveDescriptor(title: String, desc: String): FileSaverDescriptor =
+        runCatching {
+            FileSaverDescriptor::class.java.getConstructor(String::class.java, String::class.java)
+                .newInstance(title, desc)
+        }.getOrElse {
+            FileSaverDescriptor::class.java
+                .getConstructor(String::class.java, String::class.java, Array<String>::class.java)
+                .newInstance(title, desc, emptyArray<String>())
+        }
 
     private fun loadUi() {
         // loadHTML has no base URL, so a <link> can't resolve — splice the shared

@@ -3,7 +3,6 @@ package io.github.amitsidhpura.claudebrains
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -232,7 +231,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** Relative paths of project content files, for @-mention autocomplete (capped). */
     fun listProjectFiles(limit: Int = 3000): List<String> =
-        ReadAction.compute<List<String>, RuntimeException> {
+        readLocked {
             val base = project.basePath?.replace('\\', '/')
             val out = ArrayList<String>(limit)
             ProjectFileIndex.getInstance(project).iterateContent { vf ->

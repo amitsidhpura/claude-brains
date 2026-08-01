@@ -7,11 +7,11 @@ import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 import io.github.amitsidhpura.claudebrains.findVFile
+import io.github.amitsidhpura.claudebrains.readLocked
 import java.io.File
 import java.util.concurrent.CompletableFuture
 
@@ -30,7 +30,7 @@ class DiffReview(private val project: Project) {
 
         ApplicationManager.getApplication().invokeLater {
             val current = if (vf != null) {
-                ReadAction.compute<String, RuntimeException> {
+                readLocked {
                     FileDocumentManager.getInstance().getDocument(vf)?.text
                         ?: String(vf.contentsToByteArray(), vf.charset)
                 }

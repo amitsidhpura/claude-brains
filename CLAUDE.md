@@ -102,6 +102,15 @@ zip in `build/distributions/`.
   works fine (JCEF still in core there). Optional because the module id doesn't exist on 242.
   The sandbox can't catch this class of bug; smoke-test installs in the real snap IDE.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
+- Plugin Verifier hygiene (0 warnings on 242→262, achieved post-0.2.0): blocking reads go
+  through `readLocked {}` (Threads.kt) — `ReadAction.compute` AND Kotlin's `runReadAction {}`
+  are both deprecated on 2026.1, `Application.runReadAction(Computable)` is the one blocking-read
+  API clean everywhere (checked in platform bytecode via javap on the Gradle-cached IDEs).
+  Diagnostics come from `DocumentMarkupModel` + `HighlightInfo.fromRangeHighlighter` (public),
+  not `DaemonCodeAnalyzerImpl` (internal). `FileSaverDescriptor` is built via reflection
+  (ChatPanel.saveDescriptor): 2025.1+ deprecates the vararg ctor, its replacement doesn't exist
+  on 242 — reflection is the only warning-free way to keep 2024.x support. Deprecation is
+  per-IDE-version; the same zip shows MORE warnings on NEWER IDEs, never the reverse.
 
 ## Status (see docs/feature-checklist.md for detail)
 DONE: bridge+tools, streaming chat, permission cards with diffs, plan card, AskUserQuestion,
