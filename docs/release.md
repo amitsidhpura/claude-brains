@@ -127,9 +127,38 @@ only read about behaviour they can see.
   `io.github.amitsidhpura.claudebrains.*`).
 - `since-build = 242`, `until-build` open.
 
-## If this ever goes to the Marketplace
+## Marketplace listing (submitted 2026-07-31)
 
-Revisit first: the name embeds Anthropic's "Claude Code" mark (reorder or rename, e.g.
-"Code Bridge for Claude"), add a LICENSE, plugin signing (`signPlugin`), vendor account,
-`verifyPlugin` against current IDE releases, and the deferred settings page (CLI path
-config) becomes mandatory.
+The plugin IS on the JetBrains Marketplace (vendor `amitsidhpura`), alongside the custom repo —
+same plugin id, IDEs take the higher version from either source. Listing facts learned the
+hard way:
+
+- The **web Description editor stores Markdown**: pasted HTML gets converted, and source-wrapped
+  lines become hard `<br>`s. Edit it with Markdown, one line per paragraph. `plugin.xml` keeps the
+  HTML version (whitespace collapses there, so wrapping is fine) — keep the two in sync, since a
+  new zip upload re-reads plugin.xml.
+- The description carries an honest **"Current limitations"** list (dark-only UI, terminal login,
+  no settings page, slash allowlist, in-chat diffs, no tabs, no auto-context). Update it when a
+  limitation falls.
+- Screenshots live in `design/marketplace/` (2400×1520 = 1200×760 @2x), composed from the real
+  renderer by driving chat.html state-by-state.
+- Uploads are manual via the web form; JetBrains signs Marketplace builds themselves. Run
+  `./gradlew verifyPlugin` first (needs the `pluginVerifier()` dependency; IDE downloads are
+  cached after the first run).
+- All verifier warnings from the 0.2.0 run were resolved after submission (rides the next
+  release): `DaemonCodeAnalyzerImpl.getHighlights` → `DocumentMarkupModel` +
+  `HighlightInfo.fromRangeHighlighter` (public API, same data); the 8 `ReadAction.compute`
+  sites → our `readLocked {}` helper (Threads.kt) wrapping `Application.runReadAction` — the
+  ONE blocking-read API non-deprecated on every build 242 → 262 (Kotlin's `runReadAction {}`
+  is ALSO deprecated on 2026.1, learned by re-running the verifier); and the
+  `FileSaverDescriptor` ctor built via reflection — 2025.1+ deprecates the vararg ctor but
+  its replacement doesn't exist on our 242 baseline, so reflection is the only way to be
+  warning-free AND keep 2024.x support. Deprecation is per-IDE-version: the same zip shows
+  more warnings on newer IDEs as APIs get deprecated there, never the reverse.
+
+Resolved from the old pre-Marketplace checklist: LICENSE (MIT, repo root), vendor account,
+`verifyPlugin` (clean on 2024.2 → 2026.2 EAP) — and the **name stayed "Claude Brains"**: several
+third-party "Claude …" plugins live on the Marketplace unchallenged (Claude Code with GUI,
+ClaudeMind, Claude Code Usage), so the trademark-leading-name concern was policy, not practice.
+Worst case is a rename request later — a display-name edit, never the id. Still open: the
+settings page (CLI path config) matters more now that strangers install this.

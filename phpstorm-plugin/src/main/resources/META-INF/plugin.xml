@@ -9,6 +9,25 @@
         through the same IDE-MCP bridge the VS Code extension uses. Opens in a right-side tool
         window. Requires the <code>claude</code> CLI installed and logged in — does not bundle
         or redistribute Anthropic code. Not affiliated with Anthropic or JetBrains.
+
+        <h3>Current limitations — read before installing</h3>
+        <ul>
+          <li><b>Dark UI only</b> — the panel does not follow light IDE themes yet.</li>
+          <li><b>Login is terminal-only</b> — run <code>claude</code> in a terminal and sign in
+              there first; there is no in-IDE login flow.</li>
+          <li><b>No settings page</b> — the <code>claude</code> binary is resolved from PATH
+              (or the <code>-Dclaude.executable</code> JVM option); nothing is configurable in
+              the IDE yet.</li>
+          <li><b>Few slash commands</b> — only the verified set is enabled (<code>/compact</code>,
+              <code>/clear</code>); the rest are hidden rather than half-working. Model, mode and
+              effort have dedicated controls in the composer instead.</li>
+          <li><b>Diffs live in the chat</b> — changes are reviewed as line-numbered diffs inside
+              the permission card, not in IDE diff tabs.</li>
+          <li><b>One conversation at a time</b> — full history with resume and replay exists,
+              tabs don't.</li>
+          <li><b>No auto-context from the editor</b> — the current selection isn't attached
+              automatically; use @-file mentions or paste.</li>
+        </ul>
     ]]></description>
 
     <!-- Platform only: works in PhpStorm and any other IntelliJ IDE. -->
