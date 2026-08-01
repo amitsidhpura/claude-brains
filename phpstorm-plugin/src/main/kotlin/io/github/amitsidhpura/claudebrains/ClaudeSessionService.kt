@@ -179,18 +179,20 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli?.sendUserMessage(text, attachments)
 
     /**
-     * Answer a permission card. [suggestionIndex] >= 0 means the user took one of the CLI's
-     * permission_suggestions ("accept all edits" / "always allow" / "allow directory") — that
-     * entry rides the allow response as `updatedPermissions` and the CLI stops asking.
+     * Answer a permission card. Non-empty [suggestionIndexes] means the user took one of the CLI's
+     * permission_suggestions ("accept all edits" / "always allow" / "allow directory") — those
+     * entries ride the allow response as `updatedPermissions` and the CLI stops asking. The merged
+     * "Always allow" button sends several indexes (one addRules suggestion per sub-command of a
+     * compound command), all granted together.
      */
-    fun respondPermission(requestId: String, allow: Boolean, suggestionIndex: Int = -1) {
+    fun respondPermission(requestId: String, allow: Boolean, suggestionIndexes: List<Int> = emptyList()) {
         val input = pendingPermissions.remove(requestId) ?: JsonObject(emptyMap())
         val suggestions = pendingSuggestions.remove(requestId)
-        val chosen = if (allow && suggestionIndex >= 0)
-            suggestions?.getOrNull(suggestionIndex)?.let { s ->
-                kotlinx.serialization.json.buildJsonArray { add(s) }
-            }
-        else null
+        val picked = if (allow && suggestions != null)
+            suggestionIndexes.mapNotNull { suggestions.getOrNull(it) }
+        else emptyList()
+        val chosen = if (picked.isEmpty()) null
+        else kotlinx.serialization.json.buildJsonArray { picked.forEach { add(it) } }
         cli?.respondPermission(requestId, allow, input, chosen)
     }
 

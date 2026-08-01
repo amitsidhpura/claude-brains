@@ -140,8 +140,11 @@ as you scroll within 600px of the top, prepended viewport-anchored so nothing ju
 Permission mode is PERSISTED (like the model) and every CLI (re)start launches with it; the chip is
 CLI-driven (`__mode` seed + `permissionMode` on system events), Auto = relaunch-with-resume
 (`__modeRestarted` ends a hanging busy state), refused control requests render as `__ctl_error`
-blocks, and permission cards grow one button per CLI `permission_suggestion` (accept-all-edits /
+blocks, and permission cards grow buttons from the CLI's `permission_suggestions` (accept-all-edits /
 always-allow / allow-directory; stripped on `blocked_path` cards where no grant stops the re-ask).
+ALL `addRules` suggestions merge into ONE "Always allow" button that echoes every rule index at
+once (compound commands arrive as one suggestion per sub-command — granting half would re-prompt;
+the wire `sugg` field is a comma-separated index list, done-text names the granted rules).
 Clickable file references (`.t-desc.path`, `.card-h code`) open in the editor via `kind:"open"`,
 line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
 ±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).

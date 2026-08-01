@@ -143,6 +143,9 @@
   };
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  // Attribute-context escape: esc() covers < > & but NOT quotes — a value with `"` inside
+  // title="..." silently truncates the attribute and leaks the rest into the markup.
+  function escA(s) { return esc(s).replace(/"/g, '&quot;'); }
 
   // Auto-scroll only when the user is already near the bottom (scroll pinning).
   let pinned = true;
@@ -394,9 +397,9 @@
 
   /* ---------- JS -> Kotlin bridge ---------- */
   function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
-  window.respondPermission = function (id, allow, sugg) {
+  window.respondPermission = function (id, allow, suggIdxs) {
     bridge({ kind: 'perm', id: id, allow: allow ? 'true' : 'false',
-             sugg: (typeof sugg === 'number' && sugg >= 0) ? String(sugg) : '-1' });
+             sugg: (suggIdxs && suggIdxs.length) ? suggIdxs.join(',') : '-1' });
   };
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */
@@ -580,12 +583,12 @@
              (m.description || '').toLowerCase().indexOf(q) !== -1;
     });
     modelItems.innerHTML = shown.map(function (m) {
-      return '<div class="popup-item' + (m.value === currentModel ? ' on' : '') + '" data-v="' + esc(m.value) + '">' +
+      return '<div class="popup-item' + (m.value === currentModel ? ' on' : '') + '" data-v="' + escA(m.value) + '">' +
         '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
         (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
         '</div>' +
         // custom rows get a remove (×) on hover; built-in rows show the selected checkmark
-        (m.custom ? '<button class="model-del" title="Remove model" data-del="' + esc(m.value) + '">' + SVG_X + '</button>'
+        (m.custom ? '<button class="model-del" title="Remove model" data-del="' + escA(m.value) + '">' + SVG_X + '</button>'
                   : '<span class="pi-check">' + SVG_CHECK + '</span>') +
         '</div>';
     }).join('');
@@ -1915,33 +1918,47 @@
   }
   // The CLI sends permission_suggestions with each can_use_tool — ready-made "don't ask again"
   // options (accept-all-edits / allow-rule / allow-directory) it persists when echoed back on the
-  // allow response. Map each to a button; entries we don't understand are skipped. `idx` is the
-  // position in the ORIGINAL array — Kotlin echoes suggestions[idx], so it must survive filtering.
+  // allow response. Map to buttons; entries we don't understand are skipped. `idxs` holds positions
+  // in the ORIGINAL array — Kotlin echoes those entries verbatim, so they must survive filtering.
+  // Compound commands arrive as one addRules suggestion PER sub-command; those merge into a single
+  // "Always allow" button that grants the whole set (matches the CLI's own TUI), because granting
+  // half the rules would just re-prompt on the next compound command.
   function permSuggestions(raw, isPlan) {
     let arr = []; try { arr = JSON.parse(raw) || []; } catch (_) {}
     const out = [];
+    let ruleEntry = null;
     arr.forEach(function (s, idx) {
       if (s.behavior && s.behavior !== 'allow') return;             // never offer deny/ask shortcuts
       if (s.type === 'setMode' && s.mode === 'acceptEdits') {
-        out.push({ idx: idx, label: isPlan ? 'Approve, auto-edit' : 'Accept all edits',
+        out.push({ idxs: [idx], label: isPlan ? 'Approve, auto-edit' : 'Accept all edits',
           title: 'Auto-approve every edit for the rest of this session',
           doneText: 'auto-approving edits' });
       } else if (s.type === 'addRules' && s.rules && s.rules.length) {
-        const rule = s.rules.map(function (r) {
-          return r.toolName + (r.ruleContent ? '(' + r.ruleContent + ')' : '');
-        }).join(', ');
-        out.push({ idx: idx, label: 'Always allow',
-          title: 'Allow ' + rule + (s.destination === 'session' ? ' for this session'
-            : ' from now on (saved to .claude/settings.local.json)'),
-          doneText: 'always allowed' });
+        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], session: s.destination === 'session' }; out.push(ruleEntry); }
+        ruleEntry.idxs.push(idx);
+        s.rules.forEach(function (r) {
+          ruleEntry.rules.push(r.ruleContent ? r.ruleContent.replace(/:\*$/, '') : r.toolName);
+        });
       } else if (s.type === 'addDirectories' && s.directories && s.directories.length) {
-        out.push({ idx: idx, label: 'Allow ' + s.directories.join(', '),
+        out.push({ idxs: [idx], label: 'Allow ' + s.directories.join(', '),
           title: 'Allow file access to ' + s.directories.join(', ') +
             (s.destination === 'session' ? ' for this session' : ''),
           doneText: 'directory allowed' });
       }
     });
+    if (ruleEntry) {
+      ruleEntry.label = 'Always allow';
+      ruleEntry.title = 'Allow' + (ruleEntry.session
+        ? ' for this session' : ' from now on (saved to .claude/settings.local.json)') +
+        ':\n' + ruleEntry.rules.join('\n');
+      ruleEntry.doneText = 'always allowed';   // rules render as chips, see doneHtmlFor
+    }
     return out;
+  }
+  // Middle-truncate a rule for chip display — both ends of a command matter.
+  function ruleChip(r) {
+    const shown = r.length > 46 ? r.slice(0, 28) + '…' + r.slice(-15) : r;
+    return '<code title="' + escA(r) + '">' + esc(shown) + '</code>';
   }
   function diffRow(cls, prefix, num, text) {
     const g = (typeof num === 'number') ? '<span class="ln">' + num + '</span>' : '';
@@ -2082,7 +2099,7 @@
     const file = inp.file_path || inp.path || '';
     const suggs = permSuggestions(ev.suggestions, isPlan);
     const suggBtns = suggs.map(function (s, i) {
-      return '<button class="alt" data-s="' + i + '" title="' + esc(s.title) + '">' +
+      return '<button class="alt" data-s="' + i + '" title="' + escA(s.title) + '">' +
         SVG_CHECKS + esc(s.label) + '</button>';
     }).join('');
     const card = document.createElement('div');
@@ -2104,10 +2121,11 @@
     const done = function (allow, sugg) {
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') +
-            (sugg ? ' · ' + esc(sugg.doneText) : '') + '</span>'
+            (sugg ? ' · ' + esc(sugg.doneText) : '') +
+            (sugg && sugg.rules ? ' ' + sugg.rules.map(ruleChip).join('') : '') + '</span>'
         : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + '</span>';
       awaitingUser = false;
-      window.respondPermission(ev.id, allow, sugg ? sugg.idx : -1);
+      window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null);
       if (busy) showWorking(); // Claude resumes processing
     };
     card.querySelector('.ok').onclick = function () { done(true); };
@@ -2153,11 +2171,14 @@
       suggestions: JSON.stringify([{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }]) });
 
     // permission card — Bash with allow-rule + allow-directory suggestions (Kotlin strips these
-    // on sandbox escalations, where no grant stops the re-ask; this is the non-sandbox shape)
+    // on sandbox escalations, where no grant stops the re-ask; this is the non-sandbox shape).
+    // Two addRules entries (one per sub-command, as the CLI sends for compound commands) merge
+    // into a single "Always allow" button that grants both.
     renderPermission({ tool: 'Bash', id: 'gallery-bash', input: JSON.stringify({
-      command: 'touch /tmp/report.txt', description: 'Create the report file' }),
+      command: 'mkdir -p /tmp/report && touch /tmp/report/out.txt', description: 'Create the report file' }),
       suggestions: JSON.stringify([
-        { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'touch /tmp/report.txt' }], behavior: 'allow', destination: 'localSettings' },
+        { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'mkdir -p:*' }], behavior: 'allow', destination: 'localSettings' },
+        { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'touch:*' }], behavior: 'allow', destination: 'localSettings' },
         { type: 'addDirectories', directories: ['/tmp'], destination: 'session' },
         { type: 'setMode', mode: 'acceptEdits', destination: 'session' } ]) });
 

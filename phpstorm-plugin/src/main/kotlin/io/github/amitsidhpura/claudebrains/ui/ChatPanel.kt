@@ -86,9 +86,12 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "perm" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val allow = msg["allow"]?.jsonPrimitive?.content == "true"
-                // sugg >= 0: the user accepted via one of the CLI's permission_suggestions
-                val sugg = msg["sugg"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
-                session.respondPermission(id, allow, sugg)
+                // "sugg" is a comma-separated list of permission_suggestions indexes the user
+                // accepted — usually one, but the merged "Always allow" button (one addRules
+                // suggestion per sub-command of a compound command) sends all of them at once.
+                val suggs = (msg["sugg"]?.jsonPrimitive?.content ?: "")
+                    .split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it >= 0 }
+                session.respondPermission(id, allow, suggs)
             }
             "answer" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return

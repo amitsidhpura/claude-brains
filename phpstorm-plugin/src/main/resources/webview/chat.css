@@ -405,6 +405,11 @@ img { max-width: 100%; height: auto; }
 .status.err { color: var(--red); }
 .ok-t { color: var(--green); font-size: 13px; }
 .no-t { color: var(--red); font-size: 13px; }
+/* granted rules on a resolved card: one chip per rule, so compound-command rules stay separable */
+.ok-t code { display: inline-block; margin: 1px 2px; padding: 0 6px; border-radius: 3px;
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 17px; }
 
 /* ---------- composer ---------- */
 #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
