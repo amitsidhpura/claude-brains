@@ -278,7 +278,7 @@
     const secs = workStart ? Math.round((Date.now() - workStart) / 1000) : 0;
     const total = turnTokens + msgTokens;
     const parts = [];
-    if (secs > 0) parts.push('<span class="w-el">' + secs + 's</span>');
+    if (secs > 0) parts.push('<span class="w-el">' + fmtDur(secs * 1000) + '</span>');
     if (total > 0) parts.push(SVG_DOWN + '<span class="w-tok">' + fmtTok(total) + '</span> tokens');
     const html = parts.length ? '(' + parts.join(' · ') + ')' : '';
     if (html === workMetaHtml) return;   // called per delta — skip the DOM write when nothing changed
@@ -782,7 +782,7 @@
     const empty = !(text || '').trim();
     const det = document.createElement(empty ? 'div' : 'details');
     det.className = empty ? 'think no-body' : 'think';
-    det.innerHTML = '<summary>Thought' + (secs ? ' for ' + secs + 's' : '') +
+    det.innerHTML = '<summary>Thought' + (secs ? ' for ' + fmtDur(secs * 1000) : '') +
       (empty ? '' : SVG_CHEVRON) + '</summary>' + (empty ? '' : '<div class="body"></div>');
     if (!empty) det.querySelector('.body').textContent = text;
     return det;
@@ -1625,7 +1625,7 @@
           thinkTimer = setInterval(function () {
             if (!curThink) { clearInterval(thinkTimer); thinkTimer = null; return; }
             const secs = Math.round((Date.now() - thinkStart) / 1000);
-            thEl.textContent = secs + 's';
+            thEl.textContent = fmtDur(secs * 1000);
             thWrap.hidden = secs <= 0;   // hide "· 0s" until at least a second has passed
           }, 1000);
         }
