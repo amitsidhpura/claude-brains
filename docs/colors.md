@@ -5,7 +5,7 @@ theme** and for making colours configurable. Two audiences: whoever builds themi
 anyone touching the CSS who needs to know which token to reach for.
 
 Source of truth is the `:root` block at the top of
-`phpstorm-plugin/src/main/resources/webview/chat.css`. `design/mockup.html` links that same file,
+`plugin/src/main/resources/webview/chat.css`. `design/mockup.html` links that same file,
 so the mockup and the shipped UI can never drift on colour.
 
 **Rule: no new hardcoded colours.** Add a token to `:root` and use `var(--x)`. The 24 hardcoded

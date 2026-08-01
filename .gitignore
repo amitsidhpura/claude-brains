@@ -4,10 +4,10 @@
 # Build & IDE artifacts
 .idea/
 *.iml
-phpstorm-plugin/.gradle/
-phpstorm-plugin/.kotlin/
-phpstorm-plugin/build/
-phpstorm-plugin/.intellijPlatform/
+plugin/.gradle/
+plugin/.kotlin/
+plugin/build/
+plugin/.intellijPlatform/
 # NB: gradle/wrapper/gradle-wrapper.jar is deliberately NOT ignored — the wrapper
 # only bootstraps if the jar is committed, so a fresh clone can run ./gradlew.
 

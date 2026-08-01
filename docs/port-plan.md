@@ -26,7 +26,7 @@ Notes from the implementation:
   `<link href="chat.css">` will NOT resolve inside JCEF. Instead splice at load time: read
   both resources and replace a `<!--CSS-->` marker in the HTML with `<style>…</style>`
   (3-line change in `loadUi()`). `design/mockup.html` then `<link>`s the same file relatively
-  (`../phpstorm-plugin/src/main/resources/webview/chat.css`), which browsers resolve over
+  (`../plugin/src/main/resources/webview/chat.css`), which browsers resolve over
   `file://`. Do this as PART of Phase 1 — retrofitting later is much more work.
   After this, styling-only iterations = edit one file, no porting step.
 - Copy the token block (`:root`) and all component CSS; drop the frame/devbar/scrollbar-preview sections.

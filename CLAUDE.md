@@ -9,12 +9,13 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
 (NOT the JetBrains Marketplace); process in `docs/release.md`.
 
 ## Repo layout
-- `phpstorm-plugin/` — the plugin (Kotlin, Gradle IntelliJ Platform 2.x, JCEF webview UI)
+- `plugin/` — Kotlin source + Gradle root (IntelliJ Platform Gradle Plugin 2.x, JCEF
+  webview UI); every `./gradlew` command runs from here
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
 - `docs/feature-checklist.md` — feature parity checklist + status (the working TODO list)
 - `docs/limits.md` — every size cap (folded / scrolled / truncated / volume) and where it is set
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved
-  changes get ported into `phpstorm-plugin/src/main/resources/webview/chat.html`
+  changes get ported into `plugin/src/main/resources/webview/chat.html`
 - `vscode/` — NOT in git. Extracted official VS Code extension (from
   `~/.vscode/extensions/anthropic.claude-code-<ver>/`, minus `resources/native-binary/claude.exe`).
   Re-extract locally for reference; used to reverse-engineer protocols and styles.
@@ -73,7 +74,7 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
   message. 2546 split messages checked: none disagreed on usage, so the first record is authoritative.
 
 ## Build / run
-`cd phpstorm-plugin && ./gradlew runIde` (launches a sandbox PhpStorm), or the same task from
+`cd plugin && ./gradlew runIde` (launches a sandbox PhpStorm), or the same task from
 IntelliJ. `./gradlew compileKotlin` for a fast type-check; `buildPlugin` produces the installable
 zip in `build/distributions/`.
 - Build JVM must be **Java 21**. Do NOT use the JBR bundled with a recent PhpStorm — 2026.x ships
@@ -96,7 +97,7 @@ zip in `build/distributions/`.
   session without launching the IDE. Fastest way to tell a parser bug from a renderer bug.
 - Measuring layout in headless Chrome (`--dump-dom` + a probe script) settles CSS questions fast,
   with two traps: (1) don't copy `mockup.html` elsewhere to inject a probe — its stylesheet link is
-  relative (`../phpstorm-plugin/…`) and silently resolves to nothing, so you measure an UNSTYLED
+  relative (`../plugin/…`) and silently resolves to nothing, so you measure an UNSTYLED
   page; write the probe copy into `design/`. (2) headless has no compositor, so
   `requestAnimationFrame` fires ~once per 400ms and rAF-driven animations (scroll glide, auto-scroll
   re-assert) read as frozen — stub `requestAnimationFrame` onto `setTimeout` to test them.

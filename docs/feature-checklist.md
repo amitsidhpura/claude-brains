@@ -1,7 +1,7 @@
 # Claude Code for PhpStorm — feature parity checklist
 
 Derived from the extracted VS Code extension v2.1.220 (`vscode/package.json`, `webview/index.js`,
-`extension.js`). Status is for **our** PhpStorm plugin (`phpstorm-plugin/`).
+`extension.js`). Status is for **our** PhpStorm plugin (`plugin/`).
 
 Legend: ✅ done · 🟡 partial · ⬜ not started · ➖ N/A for JetBrains
 

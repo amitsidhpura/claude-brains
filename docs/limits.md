@@ -109,12 +109,12 @@ Parsing is not the bottleneck:
 
 | session | file | blocks | `readTranscript` | frame shipped to the webview |
 |---|---|---|---|---|
-| claude-code-phpstorm | 10 MB | 1,848 | 175 ms | 4.18 MB |
+| claude-brains | 10 MB | 1,848 | 175 ms | 4.18 MB |
 | syncroze-core | 177 MB | 4,000 (capped) | 91 ms | 4.29 MB |
 
 What the frame is made of differs sharply by session, so there is no single fix:
 
-- **phpstorm**: 57% of the 4.18 MB is base64 image payload — 2.38 MB from just 46 blocks.
+- **brains**: 57% of the 4.18 MB is base64 image payload — 2.38 MB from just 46 blocks.
 - **core**: 9% images; the bulk is tool blocks (2.26 MB) and thinking (0.69 MB).
 
 DOM construction is trivial; **layout is the cost**, and it scales with the whole document

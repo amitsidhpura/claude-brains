@@ -50,8 +50,8 @@ approved plugin generally publish without a human review pass).
 
 ## Cutting a release
 
-1. Bump `version = "X.Y.Z"` in `phpstorm-plugin/build.gradle.kts`.
-2. `cd phpstorm-plugin && ./gradlew test buildPlugin` → `build/distributions/claude-brains-X.Y.Z.zip`.
+1. Bump `version = "X.Y.Z"` in `plugin/build.gradle.kts`.
+2. `cd plugin && ./gradlew test buildPlugin` → `build/distributions/claude-brains-X.Y.Z.zip`.
 3. Sanity: `unzip -l` the zip — must contain ONLY our jar + open-source deps
    (never any Anthropic assets).
 4. Update `updatePlugins.xml`: `version` and the `url`
@@ -64,7 +64,7 @@ approved plugin generally publish without a human review pass).
    happens until the user has seen the notes and said yes. Held for 0.2.0 and 0.3.0.
 7. Commit, tag, push:
    `git tag vX.Y.Z && git push origin main vX.Y.Z`.
-8. `gh release create vX.Y.Z phpstorm-plugin/build/distributions/claude-brains-X.Y.Z.zip \
+8. `gh release create vX.Y.Z plugin/build/distributions/claude-brains-X.Y.Z.zip \
    --repo amitsidhpura/claude-brains --title "Claude Brains vX.Y.Z" --notes "..."`.
 9. Verify: the asset URL returns 200 and `cmp`s equal to the local zip, and the feed served
    from `raw.githubusercontent.com` advertises the new version. IDEs pick it up within

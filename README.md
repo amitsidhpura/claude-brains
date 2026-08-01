@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="phpstorm-plugin/src/main/resources/META-INF/pluginIcon.svg" width="64" alt="">
+  <img src="plugin/src/main/resources/META-INF/pluginIcon.svg" width="64" alt="">
 </p>
 
 <h1 align="center">Claude Brains</h1>
@@ -66,7 +66,7 @@ Requires **Java 21** (Gradle 8.10.2 refuses anything newer — don't use the JBR
 PhpStorm, which ships JDK 25).
 
 ```bash
-cd phpstorm-plugin
+cd plugin
 ./gradlew runIde          # sandbox IDE with the plugin loaded
 ./gradlew buildPlugin     # installable zip in build/distributions/
 ./gradlew test            # JUnit 5 over the transcript parser
@@ -103,7 +103,7 @@ as you scroll.
 
 | Path | What |
 |---|---|
-| `phpstorm-plugin/` | the plugin — Kotlin, Gradle IntelliJ Platform 2.x, JCEF webview UI |
+| `plugin/` | Kotlin source and Gradle build — IntelliJ Platform Gradle Plugin 2.x, JCEF webview UI |
 | `design/` | the icon source and `mockup.html`, a static fixture mirroring the shipped renderer |
 | `docs/` | protocol reference, feature checklist, limits, release process |
 
