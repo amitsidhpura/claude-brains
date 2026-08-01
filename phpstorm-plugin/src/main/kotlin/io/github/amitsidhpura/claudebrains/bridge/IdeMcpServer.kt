@@ -11,7 +11,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.java_websocket.WebSocket
+import org.java_websocket.drafts.Draft
+import org.java_websocket.drafts.Draft_6455
 import org.java_websocket.handshake.ClientHandshake
+import org.java_websocket.protocols.IProtocol
+import org.java_websocket.protocols.Protocol
 import org.java_websocket.server.WebSocketServer
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
@@ -28,7 +32,13 @@ class IdeMcpServer(
     private val authToken: String,
     private val ideName: String,
     private val tools: IdeTools,
-) : WebSocketServer(InetSocketAddress("127.0.0.1", port)) {
+) : WebSocketServer(
+    InetSocketAddress("127.0.0.1", port),
+    // The CLI's WebSocket MCP client requests subprotocol "mcp" and aborts (~20ms ErrorEvent)
+    // if the 101 response doesn't echo it. Java-WebSocket's default draft never echoes, so the
+    // "mcp" protocol must be advertised; the empty protocol keeps protocol-less clients working.
+    listOf<Draft>(Draft_6455(emptyList(), listOf<IProtocol>(Protocol("mcp"), Protocol("")))),
+) {
 
     private val log = Logger.getInstance(IdeMcpServer::class.java)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }

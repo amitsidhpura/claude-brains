@@ -91,9 +91,36 @@ Server setup lives in `U0e(...)` / the `.listen` closure.
 `"Claude Code <appName> MCP"` (default). Internal id string seen: `claude-code-ide`.
 Version = the extension's `package.json` version.
 
-> The CLI discovers the IDE purely from `CLAUDE_CODE_SSE_PORT` (env) + `<port>.lock` (token).
-> A JetBrains plugin that sets the same env var when spawning `claude` and serves the same
-> lockfile/token/tools will be indistinguishable from the VS Code host to the CLI.
+> The CLI discovers the IDE purely from `CLAUDE_CODE_SSE_PORT` (env) + `<port>.lock` (token) —
+> **but only in the interactive TUI.** See §3b for how a stream-json host must connect instead.
+
+### 3b. Stream-json mode does NOT auto-connect (probed 2.1.220, 2026-08-01)
+
+Hard-won facts, established by bytecode tracing + live probes; don't rediscover:
+
+- The env/lockfile auto-connect (`ASo()` discovery, "wait ≤30s for exactly one valid IDE") is
+  reachable ONLY from two React hooks in the TUI, both guarded `if(isPrintMode||…)return`. A CLI
+  spawned with `--input-format stream-json` **never** connects to the WS bridge on its own —
+  `CLAUDE_CODE_SSE_PORT` set, lockfile valid, zero connection attempts (verified with `ss` against
+  a live session). The model in such a session has NO `mcp__ide__*` tools.
+- The official VS Code **webview** extension doesn't use the WS bridge for this either: it passes
+  its tools as an SDK MCP server named `claude-vscode` via `--mcp-config {"mcpServers":{…}}`,
+  tunneled over the stdio control protocol (`connectSdkMcpServer` / `sendMcpServerMessageToCli`).
+  The WS bridge + lockfile remain for the terminal (Cmd+Esc TUI) flow.
+- **What works for us:** pass the bridge explicitly at spawn:
+  `--mcp-config {"mcpServers":{"ide":{"type":"ws","url":"ws://127.0.0.1:<port>","headers":{"x-claude-code-ide-authorization":"<token>"}}}}`.
+  Config types `ws-ide`/`sse-ide` are FILTERED from user-supplied config (internal-only transport,
+  silently dropped — the server never even shows in `mcp_servers[]`); plain `ws` with a headers map
+  is accepted. Server name `ide` is allowed from `--mcp-config` and yields the canonical
+  `mcp__ide__<tool>` names. Do NOT pass `--strict-mcp-config` (it would kill the user's own servers).
+- **Subprotocol trap:** the CLI's WebSocket client requests `Sec-WebSocket-Protocol: mcp` and
+  aborts (~20ms `ErrorEvent`) when the 101 response doesn't echo it. Java-WebSocket's default
+  draft never echoes → construct the server with
+  `Draft_6455(emptyList(), listOf(Protocol("mcp"), Protocol("")))` (IdeMcpServer does).
+- Verified end-to-end 2026-08-01 against a replica server + real CLI: `mcp_servers:[{"name":"ide",
+  "status":"connected"}]`, tool listed as `mcp__ide__getDiagnostics`, `tools/call` round-trip OK
+  (client sends `_meta.claudecode/toolUseId`; protocolVersion `2025-11-25` requested, our
+  `2024-11-05` answer accepted). Tool calls flow through `can_use_tool` like any other tool.
 
 ---
 

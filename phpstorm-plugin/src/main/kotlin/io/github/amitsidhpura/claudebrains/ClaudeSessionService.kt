@@ -33,6 +33,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     private var lock: IdeLockFile? = null
     private var cli: ClaudeCli? = null
     private var port: Int = -1
+    private var authToken: String = ""
 
     /** UI callbacks, kept so we can restart the CLI (new/resume) without re-registering. */
     private var onEventCb: ((String) -> Unit)? = null
@@ -75,6 +76,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
         port = PortFinder.findFree()
         val token = UUID.randomUUID().toString()
+        authToken = token
         val ideName = ApplicationInfo.getInstance().versionName // e.g. "PhpStorm"
 
         val tools = IdeTools(project)
@@ -92,6 +94,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli = ClaudeCli(
             workingDir = cwd,
             ssePort = port,
+            authToken = authToken,
             executable = resolveExecutable(),
             permissionMode = selectedMode(),
             resumeSessionId = resumeSessionId,

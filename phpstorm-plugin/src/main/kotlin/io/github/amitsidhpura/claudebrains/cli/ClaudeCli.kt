@@ -35,6 +35,7 @@ data class Attachment(val kind: String, val mediaType: String, val data: String,
 class ClaudeCli(
     private val workingDir: File,
     private val ssePort: Int,
+    private val authToken: String,
     private val executable: String,
     private val permissionMode: String,
     private val resumeSessionId: String? = null,
@@ -61,6 +62,22 @@ class ClaudeCli(
     @Volatile
     private var stopped = false
 
+    /** Inline `--mcp-config` JSON pointing the CLI at the plugin's MCP-over-WebSocket bridge. */
+    private fun ideMcpConfig(): String {
+        val cfg = buildJsonObject {
+            put("mcpServers", buildJsonObject {
+                put("ide", buildJsonObject {
+                    put("type", "ws")
+                    put("url", "ws://127.0.0.1:$ssePort")
+                    put("headers", buildJsonObject {
+                        put("x-claude-code-ide-authorization", authToken)
+                    })
+                })
+            })
+        }
+        return json.encodeToString(JsonObject.serializer(), cfg)
+    }
+
     fun start() {
         val cmd = mutableListOf(
             executable,
@@ -70,6 +87,12 @@ class ClaudeCli(
             "--verbose",
             "--permission-prompt-tool", "stdio",
             "--permission-mode", permissionMode,
+            // Expose the IDE bridge to the model. In stream-json mode the CLI never auto-connects
+            // from CLAUDE_CODE_SSE_PORT (that discovery only runs in the interactive TUI), so the
+            // server must be passed explicitly. Plain "ws" transport (the "ws-ide" type is filtered
+            // as internal-only from user config); the CLI requests WebSocket subprotocol "mcp",
+            // which IdeMcpServer advertises. Tools surface to the model as mcp__ide__<name>.
+            "--mcp-config", ideMcpConfig(),
         )
         if (resumeSessionId != null) {
             cmd += listOf("--resume", resumeSessionId)

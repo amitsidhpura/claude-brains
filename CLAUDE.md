@@ -22,8 +22,13 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
 ## Architecture (all verified working end-to-end)
 - **Bridge** (`bridge/`): picks a free port (10000–65535), writes `~/.claude/ide/<port>.lock`
   `{pid, workspaceFolders, ideName, transport:"ws", runningInWindows, authToken}`, runs an
-  MCP-over-WebSocket server on 127.0.0.1 checking header `x-claude-code-ide-authorization`.
+  MCP-over-WebSocket server on 127.0.0.1 checking header `x-claude-code-ide-authorization`,
+  advertising WebSocket subprotocol "mcp" (the CLI's WS client aborts without the echo).
   IDE tools implemented in `IdeTools.kt` (openFile/openDiff/getDiagnostics/selection/etc.).
+  CRITICAL (learned 2026-08-01, §3b of the protocol doc): a stream-json CLI NEVER auto-connects
+  from `CLAUDE_CODE_SSE_PORT` — that discovery is TUI-only. ClaudeCli passes the bridge via
+  `--mcp-config` (server "ide", type "ws" — "ws-ide" is filtered from user config) so the model
+  gets `mcp__ide__*` tools; env var + lockfile stay for terminal-launched TUI sessions.
 - **CLI** (`cli/ClaudeCli.kt`): spawns `claude --input-format stream-json --output-format
   stream-json --include-partial-messages --verbose --permission-prompt-tool stdio
   --permission-mode <mode>` with env `CLAUDE_CODE_SSE_PORT=<port>`. Routes control protocol
