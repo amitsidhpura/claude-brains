@@ -19,3 +19,6 @@ phpstorm-plugin/.intellijPlatform/
 
 # Claude Code local settings (per-machine permission grants)
 .claude/
+
+# Personal scratch space — notes, throwaway files. Never part of the plugin.
+/_local/
