@@ -58,11 +58,15 @@ approved plugin generally publish without a human review pass).
    (`https://github.com/amitsidhpura/claude-brains/releases/download/vX.Y.Z/claude-brains-X.Y.Z.zip`).
 5. Keep the README's **Install** section true: before the first release it says "no release is
    published yet"; from then on the custom-repo URL is the primary path.
-6. Commit, tag, push:
+6. **APPROVAL GATE — never skip:** present the version number and the COMPLETE release notes to
+   the user and wait for an explicit go. Steps 1–5 are local prep and fine to do proactively;
+   nothing from step 7 on (commit of the bump, tag, push, GitHub release, Marketplace upload)
+   happens until the user has seen the notes and said yes. Held for 0.2.0 and 0.3.0.
+7. Commit, tag, push:
    `git tag vX.Y.Z && git push origin main vX.Y.Z`.
-7. `gh release create vX.Y.Z phpstorm-plugin/build/distributions/claude-brains-X.Y.Z.zip \
+8. `gh release create vX.Y.Z phpstorm-plugin/build/distributions/claude-brains-X.Y.Z.zip \
    --repo amitsidhpura/claude-brains --title "Claude Brains vX.Y.Z" --notes "..."`.
-8. Verify: the asset URL returns 200 and `cmp`s equal to the local zip, and the feed served
+9. Verify: the asset URL returns 200 and `cmp`s equal to the local zip, and the feed served
    from `raw.githubusercontent.com` advertises the new version. IDEs pick it up within
    minutes (CDN cache) on their next plugin-update check.
 

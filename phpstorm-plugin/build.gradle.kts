@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.2.0"
+version = "0.3.0"
 
 repositories {
     mavenCentral()
@@ -73,13 +73,15 @@ intellijPlatform {
         }
         // Shown on the Marketplace plugin page for the current version.
         changeNotes = """
-            <b>0.2.0</b>
+            <b>0.3.0</b>
             <ul>
-              <li>"Don't ask again" buttons on permission cards — accept all edits, always allow, allow directory</li>
-              <li>Auto mode works: relaunches the CLI in bypass mode and resumes the conversation</li>
-              <li>Permission mode persists across restarts; the mode chip follows the CLI's actual mode</li>
-              <li>Long blocks fold to 2 lines and expand on click; code never wraps (horizontal scroll)</li>
-              <li>Slash routing fixes: messages starting with a file path are sent as text</li>
+              <li>Claude can now see your editor: IDE tools (diagnostics, open editors, selection)
+                  reach the model as mcp__ide__* tools</li>
+              <li>One "Always allow" button per permission card — a single click grants every rule
+                  the CLI suggests, and the granted rules are shown as chips</li>
+              <li>Durations show as minutes/seconds (5m 30s, not 330s)</li>
+              <li>Tooltips no longer cut off at the first double quote</li>
+              <li>Zero Plugin Verifier warnings across IDE 2024.2–2026.2</li>
             </ul>
         """.trimIndent()
     }
