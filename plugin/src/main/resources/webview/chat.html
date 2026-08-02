@@ -1185,17 +1185,35 @@
   function foldBlock(elm) {
     if (!elm || elm.dataset.folded) return;
     elm.dataset.folded = '1';
+    // An attachment-chip row is overhead, not content: widen the collapsed cap by its height so
+    // "3 lines" means 3 TEXT lines — otherwise a chip row leaves ~1 visible line of text.
+    // Measured BEFORE .fold is applied (and synchronously, not in the rAF below): deferring it
+    // made the box paint one frame at the un-widened cap and then grow, and a sticky element
+    // resizing right after it appears is exactly what leaves a stale tile in JCEF. The layout
+    // flush this costs is paid only by messages that HAVE attachments, which are rare.
+    // Height comes from getBoundingClientRect (offsetHeight rounds, and a rounded-up cap shows
+    // a sliver of the next line); the margin is read rather than hardcoded because
+    // .msg-atts:last-child (image-only message) drops it to 0.
+    const atts = elm.querySelector(':scope > .msg-atts');
+    let syncExtra = function () {};
+    if (atts) {
+      syncExtra = function () {
+        const mb = parseFloat(getComputedStyle(atts).marginBottom) || 0;
+        elm.style.setProperty('--fold-extra', (atts.getBoundingClientRect().height + mb) + 'px');
+      };
+      syncExtra();
+      // ResizeObserver covers rewraps with no interaction; it does NOT fire in headless
+      // Chrome (no compositor), so the toggle below re-measures as well.
+      if (window.ResizeObserver) new ResizeObserver(syncExtra).observe(atts);
+    }
     elm.classList.add('fold');
     requestAnimationFrame(function () {
-      // an attachment-chip row is overhead, not content: widen the collapsed cap by its height
-      // so "3 lines" means 3 TEXT lines — otherwise a chip row leaves ~1 visible line of text
-      const atts = elm.querySelector(':scope > .msg-atts');
-      if (atts) elm.style.setProperty('--fold-extra', (atts.offsetHeight + 8) + 'px');
       if (elm.scrollHeight <= elm.clientHeight + 4) { elm.classList.remove('fold'); return; }
       elm.title = 'Show more';
       elm.addEventListener('click', function (e) {
         if (e.target.closest('a, button, input, .att')) return;
         if (window.getSelection && String(window.getSelection())) return;
+        syncExtra();   // the chip row may have rewrapped since the cap was last measured
         elm.title = elm.classList.toggle('open') ? 'Show less' : 'Show more';
       });
     });

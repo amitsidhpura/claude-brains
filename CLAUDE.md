@@ -101,6 +101,9 @@ zip in `build/distributions/`.
   page; write the probe copy into `design/`. (2) headless has no compositor, so
   `requestAnimationFrame` fires ~once per 400ms and rAF-driven animations (scroll glide, auto-scroll
   re-assert) read as frozen — stub `requestAnimationFrame` onto `setTimeout` to test them.
+  (3) `ResizeObserver` EXISTS but never (reliably) fires headless — same missing-compositor cause.
+  Code that keeps a measurement in sync via RO can't be validated there; give it a second trigger
+  (e.g. re-measure on the interaction) and test that instead, or it reads as a false "stale" bug.
 - `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
 - REAL-IDE compat: 2025.x+ moved JCEF out of the platform core into a bundled plugin
   (`com.intellij.modules.jcef`) — without the optional `<depends>` on it, ChatPanel dies with
