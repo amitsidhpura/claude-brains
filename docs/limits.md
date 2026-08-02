@@ -252,11 +252,25 @@ the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
    `margin-top: auto` survived and pinned it to the BOTTOM, while on first load the class that
    restored flex was never in the markup at all, leaving it at the TOP. Fixed by making `#welcome`
    centre itself, which removed the class plumbing from chat.html and the mockup entirely.
-   OPEN: the `250px` fallback in `contain-intrinsic-size: auto 250px` is a guess. Synthetic turns
-   measured ~193px, so it still overestimates; real turns with cards/diffs run much taller.
-   The `auto` keyword should decay that error as turns are visited and remembered, but headless
-   never marks a turn rendered, so that half is UNVERIFIED — check the scrollbar in a sandbox and
-   tune the fallback there.
+   The placeholder was `250px` (from SYNTHETIC turns, ~193px) until it was MEASURED on 2026-08-03
+   and raised to `1000px`. Real turns are several times taller: 298 turns from two sessions,
+   rendered with containment disabled so heights are honest, at three panel widths —
+
+   | session | turns | median | mean | p75 | p90 | max |
+   |---|---|---|---|---|---|---|
+   | 42d09b97 (15 MB) @560 | 285 | 1006 | 1457 | 1709 | 2882 | 13949 |
+   | 42d09b97 @760 | 285 | 873 | 1324 | 1584 | 2762 | 13718 |
+   | 7d30ad11 (1.2 MB) @560 | 13 | 1208 | 2320 | 3972 | 3989 | 9717 |
+
+   so `250px` under-reported the scrollbar by roughly 4x. The median is the right statistic here
+   rather than the mean, which a single 14000px turn drags upward. Reproduce with
+   `./gradlew probe --args="<project> <session> --json"` piped into a headless render of chat.html
+   (see the note on embedding a transcript in a `<script>` tag, below). The decay half — `auto`
+   remembering a turn's real size once rendered — cannot be measured headless, which never marks a
+   turn rendered, so it was checked in the sandbox instead (2026-08-03, `runIde`, the 15 MB session,
+   scrolled bottom→top→bottom): thumb stable rather than resizing pass to pass, no stutter as turns
+   came into view, earlier chunks streaming in without a jump, and the return pass steadier than the
+   first — which is decay working. Nothing about the estimate is open now.
    FOLLOW-UP 2026-07-29: windowed loading (below) shipped — initial frame is the newest ~250
    blocks cut at a turn boundary (`SessionStore.alignedStart`, tested), 89–95% smaller on real
    sessions (4.35→0.46 MB, 4.09→0.21 MB). Earlier chunks (~500 blocks) load automatically and

@@ -121,8 +121,13 @@ img { max-width: 100%; height: auto; }
 .turn > * + * { margin-top: 18px; }   /* spaces .msg-user from the .turn-body that follows it */
 /* The skipped subtree is .turn-body, NOT .turn: content-visibility creates a stacking context,
    and .msg-user (z 6) has to stay outside it or #fade-top (z 5) paints over the pinned message. */
+/* The 1000px placeholder is MEASURED, not guessed: 298 real turns from two sessions, rendered at
+   three panel widths with containment disabled, have a median turn height of 873-1208px (mean
+   1324-2320, skewed by the odd 14000px turn). The old 250px came from synthetic turns and
+   under-reported the scrollbar by roughly 4x. `auto` still decays the error as turns are visited
+   and their real size is remembered — this only sets where unvisited turns start. */
 .turn-body { display: flex; flex-direction: column; gap: 18px;
-  content-visibility: auto; contain-intrinsic-size: auto 250px; }
+  content-visibility: auto; contain-intrinsic-size: auto 1000px; }
 /* A turn with no response yet (interrupt, /compact, /model, a resume-continuation) has an EMPTY
    .turn-body; hide it so its 18px top-margin (and off-screen contain-intrinsic-size) don't stack on
    #log's 18px gap and double the space between two consecutive user messages. It reverts to flex the
