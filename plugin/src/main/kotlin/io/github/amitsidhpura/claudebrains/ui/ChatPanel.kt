@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains.ui
 
+import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooserFactory
@@ -281,8 +282,19 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
         val css = javaClass.getResourceAsStream("/webview/chat.css")!!
             .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
-        browser.loadHTML(html.replace("<!--CSS-->", "<style>\n$css\n</style>"))
+        browser.loadHTML(
+            html.replace("<!--CSS-->", "<style>\n$css\n</style>")
+                // Welcome-screen version, spliced (not pushed as an event) so it is present on
+                // first paint. Read from our own descriptor — never hardcode, it would drift
+                // from build.gradle.kts. getPluginByClass avoids repeating the plugin id and is
+                // non-deprecated on 242 → 262 (checked in platform bytecode).
+                .replace("<!--VERSION-->", pluginVersion()?.let { "v$it" } ?: "")
+        )
     }
+
+    private fun pluginVersion(): String? = runCatching {
+        PluginManager.getPluginByClass(ChatPanel::class.java)?.version
+    }.getOrNull()
 
     private var started = false
     private fun startSession() {
