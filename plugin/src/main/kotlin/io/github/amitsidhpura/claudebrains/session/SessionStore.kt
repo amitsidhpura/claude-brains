@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains.session
 
+import io.github.amitsidhpura.claudebrains.RenderLimits
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -8,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -509,23 +511,18 @@ object SessionStore {
         } else {
             Item("tool").apply {
                 text = name
-                val path = inp?.get("file_path")?.jsonPrimitive?.content
-                    ?: inp?.get("path")?.jsonPrimitive?.content
-                // keep this chain in step with chat.html's live `content_block_stop` handler;
-                // query/url cover ToolSearch, WebSearch and WebFetch, which carry no description
-                val d = inp?.get("description")?.jsonPrimitive?.content
-                    ?: path
-                    ?: inp?.get("pattern")?.jsonPrimitive?.content
-                    ?: inp?.get("query")?.jsonPrimitive?.content
-                    ?: inp?.get("url")?.jsonPrimitive?.content
-                    // MCP (Playwright): `element` is the schema's own human-readable description;
-                    // `target` is the machine ref, so it comes last
-                    ?: inp?.get("element")?.jsonPrimitive?.content
-                    ?: inp?.get("filename")?.jsonPrimitive?.content
-                    ?: inp?.get("target")?.jsonPrimitive?.content
-                if (d != null) { desc = d.take(140); isPath = (d == path) }
+                fun str(key: String) = (inp?.get(key) as? JsonPrimitive)?.contentOrNull
+                val path = str("file_path") ?: str("path")
+                // Order, caps and path-ness all come from RenderLimits, which chat.html's live
+                // `content_block_stop` handler reads through the same splice — the two paths can no
+                // longer drift. First NON-BLANK key wins (a blank value is not a description).
+                val descKey = RenderLimits.DESC_KEYS.firstOrNull { !str(it).isNullOrBlank() }
+                if (descKey != null) {
+                    desc = str(descKey)!!.take(RenderLimits.DESC_MAX)
+                    isPath = descKey in RenderLimits.PATH_KEYS
+                }
                 file = path
-                if (name == "Bash") cmd = inp?.get("command")?.jsonPrimitive?.content?.take(2000)
+                if (name == "Bash") cmd = str("command")?.take(RenderLimits.BASH_MAX)
                 if (name == "ExitPlanMode") plan = inp?.get("plan")?.jsonPrimitive?.content
                 oldStr = inp?.get("old_string")?.jsonPrimitive?.content
                 newStr = inp?.get("new_string")?.jsonPrimitive?.content
@@ -566,7 +563,7 @@ object SessionStore {
             val stdout = res?.get("stdout")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val stderr = res?.get("stderr")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val txt = fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n")
-            item.out = txt.trim().takeIf { it.isNotBlank() }?.take(2000)
+            item.out = txt.trim().takeIf { it.isNotBlank() }?.take(RenderLimits.BASH_MAX)
         }
     }
 

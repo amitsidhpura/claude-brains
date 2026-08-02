@@ -11,6 +11,7 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import io.github.amitsidhpura.claudebrains.ClaudeSessionService
+import io.github.amitsidhpura.claudebrains.RenderLimits
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -289,6 +290,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 // from build.gradle.kts. getPluginByClass avoids repeating the plugin id and is
                 // non-deprecated on 242 → 262 (checked in platform bytecode).
                 .replace("<!--VERSION-->", pluginVersion()?.let { "v$it" } ?: "")
+                // Caps/key-order shared with the replay parser. Spliced for the same reason as the
+                // version: one source (RenderLimits.kt), so live and replay cannot drift apart.
+                .replace("<!--LIMITS-->", "<script>window.LIMITS=${RenderLimits.asJs()}</script>")
         )
     }
 

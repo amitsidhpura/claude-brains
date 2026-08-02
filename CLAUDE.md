@@ -111,6 +111,14 @@ zip in `build/distributions/`.
   works fine (JCEF still in core there). Optional because the module id doesn't exist on 242.
   The sandbox can't catch this class of bug; smoke-test installs in the real snap IDE.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
+- Caps/key-orders shared by the LIVE renderer and the REPLAY parser live in ONE place,
+  `RenderLimits.kt` (tool-description cap + key order, Bash IN/OUT cap). `ChatPanel.loadUi` splices
+  them into chat.html as `window.LIMITS` (the `LIMITS` marker, same idiom as `<!--CSS-->` and the
+  version); the webview reads `LIM.*` and THROWS on load if unspliced, since a JS-side default
+  would just be the second copy again. `RenderLimitsTest` fails the build if a literal is
+  hardcoded back, if the marker stops appearing exactly once, or if script tags stop balancing —
+  both of those silently truncate the whole script block and look like a dead webview.
+  Anything loading chat.html outside the IDE (headless probes) must splice LIMITS too.
 - Plugin Verifier hygiene (0 warnings on 242→262, achieved post-0.2.0): blocking reads go
   through `readLocked {}` (Threads.kt) — `ReadAction.compute` AND Kotlin's `runReadAction {}`
   are both deprecated on 2026.1, `Application.runReadAction(Computable)` is the one blocking-read
@@ -232,11 +240,11 @@ NB: many sessions store `thinking` blocks with an EMPTY body and only a `signatu
 replay as nothing at all; ~2.1k of 6.6k local thinking blocks carry text.
 Known gaps deliberately left:
 - sidechain/subagent ordering untested (no `isSidechain` records in local sessions yet)
-- tool lines still blank for tools whose input has none of the desc-chain keys
-  (`description`/path/`pattern`/`query`/`url`/`element`/`filename`/`target` — the last three are
-  MCP/Playwright, added 2026-07-30): `TaskUpdate` (has `activeForm`, ~308 local occurrences — the
-  biggest), `Skill` (`skill`), `TaskOutput`/`TaskStop` (`task_id`). Each needs a bespoke key, so
-  the generic chain won't do it. Bash and AskUserQuestion are blank BY DESIGN.
+- tool lines still blank for tools whose input has none of the desc-chain keys (now ONE list,
+  `RenderLimits.DESC_KEYS`, spliced into the webview — see below): `TaskUpdate` (has `activeForm`,
+  ~308 local occurrences — the biggest), `Skill` (`skill`), `TaskOutput`/`TaskStop` (`task_id`).
+  Each needs a bespoke key, so the generic chain won't do it. Bash and AskUserQuestion are blank
+  BY DESIGN.
 - windowed replay: DOM search (browser find, any future find-in-conversation) only sees loaded
   blocks.
 

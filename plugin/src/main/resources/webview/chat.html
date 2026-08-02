@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <!--CSS-->
+<!--LIMITS-->
 </head>
 <body>
 <div id="app">
@@ -117,6 +118,16 @@
   const fadeEl = document.getElementById('fade');
   const slashList = document.getElementById('slashList');
   const lightbox = document.getElementById('lightbox');
+
+  // Caps and the description key order, spliced into <head> from RenderLimits.kt so the live
+  // renderer and the replay parser (SessionStore) cannot drift apart. Throw rather than fall back
+  // to defaults: a default would BE a second copy, and every use below sits inside a try/catch
+  // that would swallow the mistake and quietly render half a UI.
+  // NB: never write the marker's literal text anywhere but the one spot in <head> — ChatPanel
+  // replaces EVERY occurrence, and the replacement carries a closing script tag, which the HTML
+  // parser honours even inside a JS comment and would silently truncate this whole block.
+  const LIM = window.LIMITS;
+  if (!LIM) throw new Error('chat.html: the LIMITS marker in <head> was not spliced — see RenderLimits.kt');
 
   /* ---------- shared icons ---------- */
   // plain check (lucide check) — confirm buttons, selection marks, copy flash (circled variants retired 2026-07-31)
@@ -1712,19 +1723,20 @@
         if (openTool) {
           try {
             const inp = JSON.parse(openTool.json || '{}');
-            // query/url cover ToolSearch, WebSearch and WebFetch, which carry no description
-            // element/filename/target are MCP (Playwright): `element` is the schema's own
-            // "human-readable element description", so it reads best; `target` is the machine
-            // ref ("exact target element reference from the page snapshot") and is last resort.
-            const desc = inp.description || inp.file_path || inp.path || inp.pattern ||
-              inp.query || inp.url || inp.element || inp.filename || inp.target || '';
-            if (desc) {
+            // key order, cap and path-ness all come from RenderLimits.kt (see LIM) — the replay
+            // parser walks the SAME list, so a tool line reads identically live and on resume
+            let descKey = '';
+            for (let i = 0; i < LIM.descKeys.length && !descKey; i++) {
+              const v = inp[LIM.descKeys[i]];
+              if (v && String(v).trim()) descKey = LIM.descKeys[i];
+            }
+            if (descKey) {
               const dEl = openTool.el.querySelector('.t-desc');
-              dEl.textContent = String(desc).slice(0, 140);
-              if (desc === inp.file_path || desc === inp.path) dEl.classList.add('path');
+              dEl.textContent = String(inp[descKey]).slice(0, LIM.descMax);
+              if (LIM.pathKeys.indexOf(descKey) !== -1) dEl.classList.add('path');
             }
             if (openTool.name === 'Bash' && inp.command) {
-              const io = ioBox([['IN', String(inp.command).slice(0, 2000)]]);
+              const io = ioBox([['IN', String(inp.command).slice(0, LIM.bashMax)]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
           } catch (_) {}
@@ -1759,7 +1771,7 @@
       txt = (txt || '').trim();
       if (!txt) return;
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
-      t.io.appendChild(ioRow('OUT', txt.slice(0, 2000)));
+      t.io.appendChild(ioRow('OUT', txt.slice(0, LIM.bashMax)));
       maybeScroll();
     });
   }

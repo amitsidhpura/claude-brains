@@ -108,10 +108,10 @@ this cap is future-proofing rather than a live fix.
 | what | limit | where |
 |---|---|---|
 | diff rows | 400 | `MAX_DIFF_ROWS`, live + replay; appends "… diff truncated" |
-| Bash command | 2000 chars | `chat.html` + `SessionStore.toolItem` |
-| Bash output | 2000 chars | `chat.html` + `SessionStore.applyToolResult` |
+| Bash command | 2000 chars | `RenderLimits.BASH_MAX` (live + replay) |
+| Bash output | 2000 chars | `RenderLimits.BASH_MAX` (live + replay) |
 | card command preview | 4000 chars | `previewHtml` |
-| tool description | 140 chars | `chat.html` + `SessionStore.toolItem` |
+| tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) |
 | session title fallback | 80 chars | `SessionStore.titleOf` |
 
 ## Volume (how much is loaded at all)
@@ -130,11 +130,32 @@ this cap is future-proofing rather than a live fix.
 
 ## Known rough edges
 
-**Duplicated constants.** The 2000-char Bash caps and the 140-char description cap exist twice —
-once in `chat.html` for the live path and once in `SessionStore.kt` for replay. They are the same
-number in two languages with nothing tying them together, so live and replayed renderings of the
-same tool call can silently diverge if only one side is changed. The `description → file_path →
-path → pattern → query → url` chain has the same problem and carries a comment on both sides.
+**Duplicated constants — FIXED 2026-08-02.** The 2000-char Bash caps, the 140-char description cap
+and the description key order used to exist twice: once in `chat.html` for the live path, once in
+`SessionStore.kt` for replay, the same values in two languages with nothing tying them together.
+They now have one home, `RenderLimits.kt`, which `ChatPanel.loadUi` splices into the webview as
+`window.LIMITS` at the `LIMITS` marker — the same trick as the spliced plugin version, and for the
+same reason. The webview reads `LIM.descMax` / `LIM.bashMax` / `LIM.descKeys` / `LIM.pathKeys` and
+throws on load if the splice is missing, rather than falling back to defaults: a default WOULD BE
+the second copy, and every use of these sits inside a `try/catch` that would swallow the mistake.
+
+`RenderLimitsTest` keeps it that way — it fails the build if a literal is hardcoded back into the
+JS, if the chain is rebuilt by hand, or if the marker disappears, and it replays the same six
+description cases that were driven through the live handler in a browser so both paths are pinned
+to identical results.
+
+That parity check earned its keep immediately: Kotlin's `?:` KEPT a blank description while JS's
+`||` skipped it, so a tool call carrying `description: "   "` plus a `file_path` showed the path
+live and a blank line on resume. Both now skip blanks.
+
+Two traps found while wiring the splice, both of which silently truncate the whole webview and
+present as a blank tool window rather than an error:
+
+- `String.replace` swaps EVERY occurrence, so the marker's literal text must appear exactly once —
+  a second mention inside a JS comment gets a real `<script>` element spliced into it.
+- A closing script tag anywhere inside the script block ends it as far as the HTML parser is
+  concerned, *including inside a `//` comment*. Describing this hazard in a comment is enough to
+  cause it. `RenderLimitsTest` asserts both invariants (marker appears once, script tags balance).
 
 **Preview shows more than the transcript keeps.** The permission card previews 4000 chars of a
 command, but only 2000 are stored for the IN box — so after approving, the record of what ran is
