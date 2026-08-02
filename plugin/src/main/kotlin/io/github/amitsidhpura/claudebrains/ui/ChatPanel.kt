@@ -1,6 +1,5 @@
 package io.github.amitsidhpura.claudebrains.ui
 
-import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooserFactory
@@ -296,8 +295,20 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         )
     }
 
+    /**
+     * Our own version, read from the `plugin.xml` that Gradle's `patchPluginXml` writes into our
+     * jar — still sourced from `build.gradle.kts`, never hardcoded, so it cannot drift.
+     *
+     * Deliberately NOT `PluginManager.getPluginByClass`: that is annotated `@ApiStatus.Internal`,
+     * which the Plugin Verifier reports on 2026.2 (it is not deprecated, so a deprecation check
+     * misses it — check for BOTH). Every public alternative varies across the 242 → 262 range,
+     * whereas reading our own resource depends on no platform API at all and cannot rot.
+     */
     private fun pluginVersion(): String? = runCatching {
-        PluginManager.getPluginByClass(ChatPanel::class.java)?.version
+        javaClass.getResourceAsStream("/META-INF/plugin.xml")!!
+            .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
+            .let { Regex("<version>([^<]+)</version>").find(it)?.groupValues?.get(1)?.trim() }
+            ?.takeIf { it.isNotEmpty() }
     }.getOrNull()
 
     private var started = false
