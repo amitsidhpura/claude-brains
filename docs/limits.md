@@ -119,7 +119,7 @@ this cap is future-proofing rather than a live fix.
 | what | limit | note |
 |---|---|---|
 | replay blocks per session | 4000 | `readTranscript(max)`. A 5.7 MB session yields ~876, so rarely reached. |
-| transcript images | 4 MB of base64 | `IMAGE_BUDGET`; past it, chips render name-only. The whole transcript ships as one `executeJavaScript` string. |
+| transcript images | 4 MB of base64 | `IMAGE_BUDGET`, spent newest-block-first so the visible tail keeps its bytes; past it, chips render name-only. Budgeted over the whole PARSE, not per frame — a frame carries only its own window's images (0.02 MB at 250 blocks, measured 2026-08-03). |
 | history list | 40 sessions | `SessionStore.list(limit)` |
 | title scan | first 400 lines | `titleOf` |
 | @-mention file index | 3000 files | `ClaudeSessionService.listProjectFiles` |
@@ -279,11 +279,28 @@ the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
    topmost element moved). Known trade-off: DOM search only sees loaded blocks.
    (The IMAGE_BUDGET-in-file-order trade-off noted here originally is GONE — `SessionStore` now
    walks the budget newest-block-first, so the visible tail keeps its bytes.)
-2. Stop inlining base64 images in the transcript frame; load on lightbox open. Halves image-heavy frames.
-3. Chunk the transcript push — currently one ~4 MB string escaped into a JS literal, shipped through
-   `executeJavaScript` and `JSON.parse`d in one hit.
-4. Defer per-block markdown/highlight until visible. UNMEASURED. The original suspect, `clampBlock`
-   (one rAF per block, each reading `scrollHeight` after a DOM mutation — layout thrash at ~1,850
-   blocks), no longer exists: the clamp system was replaced by `foldBlock` in 2026-07-31, which
-   measures the same way, so re-confirm the suspicion against `foldBlock` before acting on it.
+2. ~~Stop inlining base64 images in the transcript frame; load on lightbox open.~~
+   **MOOT 2026-08-03 — measured.** Windowing removed the premise. At the shipped 250-block window
+   the whole frame is 0.22 MB and base64 is 0.02 MB of it (8.9%); it is only at whole-session size
+   that images dominate (2.77 MB of 5.48 MB, 50.6%), and that frame is never shipped.
+3. ~~Chunk the transcript push.~~ **MOOT 2026-08-03 — measured.** The "~4 MB string in one hit"
+   this was written against is now 0.22 MB (250 blocks) / 0.67 MB (750). Windowing solved it.
+4. ~~Defer per-block markdown/highlight until visible.~~ **NOT WORTH IT 2026-08-03 — measured.**
+   `renderTranscript` over the real 250-block window costs 40 ms of build and ~0 ms of layout,
+   once, at open (750 blocks: 34 ms; the entire 3334-block session, which is never shipped:
+   184 ms). The original suspect `clampBlock` no longer exists either — folding replaced clamping
+   on 2026-07-31. Revisit only if the window size grows a lot.
 5. **DONE 2026-07-29** — windowed rendering, described in the FOLLOW-UP under 1.
+
+All three of the remaining options were closed by the same thing: windowed loading changed what
+gets shipped, so optimisations sized against a 4 MB frame no longer have anything to save. Measure
+before implementing any of them again — the numbers above are the baseline to re-take.
+
+**Rendering a real transcript headless** (how the numbers above were taken): dump blocks with
+`./gradlew probe --args="<project> <session> --json"`, embed them in a
+`<script type="application/json">` block, and call `renderTranscript(items, 0)`. Two traps: the CSS
+and the LIMITS marker must both be spliced exactly as `ChatPanel.loadUi` does it, or the page is
+unstyled or throws; and transcripts CONTAIN literal `</script>` text, which ends the JSON block
+early and silently renders garbage — escape `</` as `<\/`, which is a valid JSON escape. To measure
+true turn heights, also disable containment (`.turn-body { content-visibility: visible }`),
+otherwise off-screen turns report the placeholder instead of their real size.
