@@ -17,6 +17,12 @@ fun main(args: Array<String>) {
         return
     }
     val items = SessionStore.readTranscript(args[0], args[1])
+    // --json dumps the blocks exactly as the webview receives them, so a real session can be
+    // rendered in headless Chrome (feed it to onClaudeEvent as a __transcript event) and measured.
+    if (args.getOrNull(2) == "--json") {
+        println(kotlinx.serialization.json.JsonArray(items))
+        return
+    }
     if (items.isEmpty()) {
         println("no blocks — wrong project path or session id?")
         println("looked in: ${SessionStore.projectDir(args[0])}")
