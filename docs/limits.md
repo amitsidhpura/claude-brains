@@ -17,34 +17,55 @@ Long blocks fold rather than getting their own vertical scrollbar — a nested s
 ≤3 lines gets no fold and no affordance. Clicking anywhere toggles both ways; a click that ends a
 text selection never toggles, and clicks on links/chips pass through (`foldBlock`, chat.html).
 
-| block | fade colour | foldBlock called from |
-|---|---|---|
-| user message `.msg-user` | `--user-bg` | `addUserMessage` |
-| permission card command `.card .cmd` | `--code-bg` | `renderPermission` |
-| diffs `.diff` (live + replay cards) | `--code-bg` | `renderPermission` / `replayCard` |
-| Bash IN/OUT `.io-v` | `--code-bg` | `ioRow` (covers live IN, patched OUT, replay) |
-| code blocks `.codeblock pre` | `--code-bg` | `foldCode` |
+| block | fade colour | `--fold-bpad` | foldBlock called from |
+|---|---|---|---|
+| user message `.msg-user` | `--user-bg` | 9px (8 pad + 1 border) | `addUserMessage` |
+| permission card command `.card .cmd` | `--code-bg` | 9px | `renderPermission` |
+| diffs `.diff` (live + replay cards) | `--code-bg` | 9px | `renderPermission` / `replayCard` |
+| Bash IN/OUT `.io-v` | `--code-bg` | 0 (padding lives on `.io-row`) | `ioRow` (covers live IN, patched OUT, replay) |
+| code blocks `.codeblock pre` | `--code-bg` | 8px (border lives on `.codeblock`) | `foldCode` |
 
 The 3-line cap is exact per block (`3lh` + the block's own padding/border via `--fold-pad`), so it
 holds across differing fonts and line-heights. An attachment-chip row inside a user message is
 overhead, not content — `foldBlock` measures it into `--fold-extra` so the cap still yields 3
-TEXT lines. Wide content (`.diff`, `.codeblock pre`, `.io-v` —
-all `white-space: pre`) scrolls horizontally when expanded; while collapsed it just crops.
+TEXT lines. Wide content (`.card .cmd`, `.diff`, `.codeblock pre`, `.io-v` — all
+`white-space: pre`) scrolls horizontally when expanded; while collapsed it just crops.
 
-**Known inconsistency (spotted 2026-08-01, deliberately deferred):** the fade GEOMETRY differs per
-surface even where the colour matches. The `::after` gradient is anchored to the element's bottom
-(`height: 1lh + --fold-pad/2`, opaque at 75%), but surfaces disagree about where their bottom
-padding lives: `.cmd`/`.diff`/`.msg-user`/`pre` carry padding INSIDE the folded element, so the
-gradient's opaque end lands in the padding and the 3rd line fades gently; `.io-v`'s padding lives
-on the parent `.io-row`, so the same formula compresses into exactly `1lh` and reaches full
-opacity mid-line — a visibly harsher cut (same command in a card `.cmd` vs a Bash IN box fades
-differently). Fix, when picked up: give each surface a `--fold-bpad` (real bottom padding+border:
-msg-user 9px / cmd+diff 9px / pre 8px / io-v 0) and anchor the gradient to the TEXT —
-`height: calc(1lh + var(--fold-bpad, 0px))` with the colour stop at
-`calc(100% - var(--fold-bpad, 0px))` — so the transition spans exactly the last text line on every
-surface. Fade colour stays per-surface (a user message must blend to its own bubble, not
-`--code-bg`). `calc()` px-from-end stops and `lh` units are fine on JCEF's Chromium 122. Verify by
-rendering all five surfaces with the same 4-line text and pixel-sampling the fade span per line.
+That crop-while-collapsed rule was silently FALSE for `.card .cmd` until 2026-08-02. Its own
+`overflow-x: auto` ties the collapsed rule's `overflow: hidden` on specificity (both 0,2,0) and is
+declared later, so it won — and a horizontal scrollbar inside a `max-height`-capped box steals its
+height from the CONTENT, clipping the 3rd line to about a third of itself (measured: `clientHeight`
+48px against the 58px the other surfaces get, a 10px scrollbar headless / ~15px in the IDE). The
+fade then rides over a stub of a line, which reads as a much harsher cut than the same command in
+a Bash IN box. Fixed with `.card .cmd.fold:not(.open) { overflow: hidden }` (0,3,0). Every other
+folded surface is a weaker selector (`.diff` / `.io-v` 0,1,0 · `.codeblock pre` 0,1,1) and was
+never affected. Any NEW folded surface declared with two-or-more classes and its own `overflow-x`
+will hit exactly this — `#wide` in `design/fold-fade-probe.html` flags it in one run.
+
+**Fade geometry (inconsistency spotted 2026-08-01, FIXED 2026-08-02).** The fade is anchored to the
+TEXT, not to the border box: `height: calc(1lh + var(--fold-bpad, 0px))` with the colour stop at
+`calc(100% - var(--fold-bpad, 0px))`, where `--fold-bpad` is that surface's own bottom
+padding+border (column above). The ramp therefore spans exactly the 3rd text line everywhere and
+whatever padding sits below it stays flat.
+
+The old formula anchored to the box (`height: 1lh + --fold-pad/2`, opaque at 75%), which only
+worked for surfaces that pad themselves. `.io-v` pads via its parent `.io-row`, so the same
+formula compressed into exactly `1lh` and hit full opacity MID-LINE — the same command faded
+gently in a card `.cmd` and got cut off in a Bash IN box. Measured span of the
+transparent→opaque ramp, in text lines (`design/fold-fade-probe.html`, five surfaces, identical
+4-line text; `#old` re-applies the old rule, `#open` renders unfolded as the alpha reference):
+
+| surface | old | new |
+|---|---|---|
+| `.msg-user` | 1.12 | 1.00 |
+| `.card .cmd` | 1.24 | 1.00 |
+| `.diff` | 1.24 | 1.00 |
+| `.codeblock pre` | 1.18 | 1.00 |
+| `.io-v` | **0.75** | 1.00 |
+
+Fade colour stays per-surface — a user message must blend to its own bubble, not `--code-bg`.
+`--fold-pad` is untouched; it feeds the 3-line `max-height` cap, which was always correct.
+`calc()` px-from-end stops and `lh` units are fine on JCEF's Chromium 122.
 
 ## Scrolled (height capped, content intact)
 

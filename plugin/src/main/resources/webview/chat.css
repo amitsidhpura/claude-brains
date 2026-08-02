@@ -157,16 +157,28 @@ img { max-width: 100%; height: auto; }
    foldBlock, so the 3-line cap counts TEXT lines */
 .fold:not(.open) { position: relative; overflow: hidden;
   max-height: calc(3lh + var(--fold-pad, 0px) + var(--fold-extra, 0px)); }
+/* The fade is anchored to the TEXT, not the border box: --fold-bpad is the block's own BOTTOM
+   padding+border, so the transparent->opaque ramp spans exactly the 3rd text line and everything
+   below it stays flat. Anchoring to the box instead made the ramp land in the padding on surfaces
+   that pad themselves and compress into the line on ones that don't (.io-v pads via .io-row),
+   so the same text faded differently in a card than in a Bash IN box. */
 .fold:not(.open)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0;
-  height: calc(1lh + var(--fold-pad, 0px) / 2); pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--fold-fade, var(--bg)) 75%); }
+  height: calc(1lh + var(--fold-bpad, 0px)); pointer-events: none;
+  background: linear-gradient(to bottom, transparent,
+    var(--fold-fade, var(--bg)) calc(100% - var(--fold-bpad, 0px))); }
 /* position:sticky must survive the collapsed state's position:relative (same specificity,
    declared later) — without this, every folded user message silently stops pinning. */
 .msg-user.fold:not(.open) { position: sticky; }
-.msg-user.fold { --fold-fade: var(--user-bg); --fold-pad: 18px; }   /* 8+8 padding, 1+1 border */
-.card .cmd.fold, .diff.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; }
-.codeblock pre.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; }  /* border lives on .codeblock */
-.io-v.fold { --fold-fade: var(--code-bg); }                             /* padding lives on .io-row */
+/* Same fight over overflow: `.card .cmd` (0,2,0, declared later) beat the collapsed rule's
+   overflow:hidden, so a folded command kept its horizontal scrollbar — and the scrollbar eats the
+   bottom of the 3-line content box, clipping the 3rd line to a third of its height. Every other
+   surface (.diff / .io-v / .codeblock pre) is a weaker selector and already crops while collapsed,
+   which is the intent: wide content scrolls when EXPANDED, crops while folded. */
+.card .cmd.fold:not(.open) { overflow: hidden; }
+.msg-user.fold { --fold-fade: var(--user-bg); --fold-pad: 18px; --fold-bpad: 9px; }  /* 8+8 padding, 1+1 border */
+.card .cmd.fold, .diff.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
+.codeblock pre.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; --fold-bpad: 8px; }  /* border lives on .codeblock */
+.io-v.fold { --fold-fade: var(--code-bg); }                             /* padding lives on .io-row, so --fold-bpad stays 0 */
 
 /* assistant block: plain text with small dot */
 .blk { position: relative; padding-left: 22px; }

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fold fade geometry — all surfaces</title>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/chat.css"/>
+<style>
+  body { background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; padding: 24px; }
+  h1 { font-size: 15px; margin: 0 0 16px; }
+  .case { margin-bottom: 26px; max-width: 520px; }
+  .name { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  /* #old restores the pre-2026-08-02 fade (anchored to the box, opaque at 75% of its own height)
+     so the before/after can be measured with the same probe. */
+  body.old .fold:not(.open)::after {
+    height: calc(1lh + var(--fold-pad, 0px) / 2);
+    background: linear-gradient(to bottom, transparent, var(--fold-fade, var(--bg)) 75%);
+  }
+</style>
+</head>
+<body>
+<h1>Fold fade — same 4-line text on every folded surface</h1>
+
+<div class="case"><div class="name">.msg-user</div>
+  <div class="turn"><div class="msg-user fold" id="s-user">line one of the text
+line two of the text
+line three of the text
+line four of the text</div></div>
+</div>
+
+<div class="case"><div class="name">.card .cmd</div>
+  <div class="card"><pre class="cmd fold" id="s-cmd">line one of the text
+line two of the text
+line three of the text
+line four of the text</pre></div>
+</div>
+
+<div class="case"><div class="name">.diff</div>
+  <div class="diff fold" id="s-diff"><span class="ctx">line one of the text</span><span class="ctx">line two of the text</span><span class="ctx">line three of the text</span><span class="ctx">line four of the text</span></div>
+</div>
+
+<div class="case"><div class="name">.codeblock pre</div>
+  <div class="codeblock"><pre class="fold" id="s-pre">line one of the text
+line two of the text
+line three of the text
+line four of the text</pre></div>
+</div>
+
+<div class="case"><div class="name">.io-v (Bash IN)</div>
+  <div class="io"><div class="io-row"><span class="io-k">IN</span><div class="io-v fold" id="s-io">line one of the text
+line two of the text
+line three of the text
+line four of the text</div></div></div>
+</div>
+
+<script>
+// Report, per surface: the fade element's box relative to the 3rd text line, and the offsets
+// (as a fraction of the line) where the gradient starts and reaches full opacity.
+window.__probe = function () {
+  var out = [];
+  ['s-user', 's-cmd', 's-diff', 's-pre', 's-io'].forEach(function (id) {
+    var el = document.getElementById(id);
+    var cs = getComputedStyle(el);
+    // line-height computes to "normal" here, so measure 1lh with a throwaway child
+    var ruler = document.createElement('div');
+    ruler.style.cssText = 'height:1lh;position:absolute;visibility:hidden';
+    el.appendChild(ruler);
+    var lh = ruler.getBoundingClientRect().height;
+    ruler.remove();
+    var after = getComputedStyle(el, '::after');
+    var bpad = parseFloat(cs.getPropertyValue('--fold-bpad')) || 0;
+    var fadeH = parseFloat(after.height);
+    var box = el.getBoundingClientRect();
+    // top of the 3rd text line, relative to the element's border box
+    var padTop = parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth);
+    var line3Top = padTop + 2 * lh;
+    var fadeTop = box.height - fadeH;               // ::after is bottom-anchored
+    var opaqueAt = box.height - bpad;               // colour stop, per the new formula
+    out.push({
+      id: id, lh: +lh.toFixed(2), bpad: bpad, fadeH: +fadeH.toFixed(2),
+      startVsLine3: +((fadeTop - line3Top) / lh).toFixed(3),
+      opaqueVsLine3: +((opaqueAt - line3Top) / lh).toFixed(3),
+      bg: after.backgroundImage.slice(0, 60),
+      // page coords for pixel-sampling a screenshot
+      x: Math.round(box.left + 4), line3Y: Math.round(box.top + line3Top), boxBottom: Math.round(box.bottom)
+    });
+  });
+  return out;
+};
+// #open renders the SAME page unfolded (no ::after) — the reference for measuring the fade's real
+// alpha profile as observed/unfaded per pixel row, which is robust to glyph shapes. A hash, not a
+// query string: Chrome resolves `file.html?x` as a literal filename and fails to load it.
+if (location.hash.indexOf('open') >= 0)
+  [].forEach.call(document.querySelectorAll('.fold'), function (e) { e.classList.add('open'); });
+if (location.hash.indexOf('old') >= 0) document.body.classList.add('old');
+// #wide makes every line overflow horizontally — folding is supposed to CROP wide content, so any
+// surface that still shows a horizontal scrollbar while collapsed is losing text height to it.
+if (location.hash.indexOf('wide') >= 0)
+  [].forEach.call(document.querySelectorAll('.fold'), function (e) {
+    e.innerHTML = e.innerHTML.replace(/the text/g, 'the text ' + '/home/syncroze/Sites/claude-brains/plugin/src/main/resources/webview/chat.css');
+  });
+window.__scroll = function () {
+  return ['s-user', 's-cmd', 's-diff', 's-pre', 's-io'].map(function (id) {
+    var el = document.getElementById(id), cs = getComputedStyle(el);
+    var borders = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    return { id: id, overflowX: cs.overflowX, overflowY: cs.overflowY,
+             scrollbarPx: Math.round(el.offsetHeight - el.clientHeight - borders),
+             offsetH: el.offsetHeight, clientH: el.clientHeight };
+  });
+};
+window.addEventListener('load', function () {
+  document.title = JSON.stringify(location.hash.indexOf('wide') >= 0 ? window.__scroll() : window.__probe());
+});
+</script>
+</body>
+</html>
