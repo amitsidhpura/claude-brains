@@ -60,7 +60,7 @@
         </div>
         <div class="right">
           <span class="menu-anchor">
-            <button class="chip-btn" id="modelChip">Default</button>
+            <button class="chip-btn" id="modelChip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg> Default</button>
             <div id="modelMenu" class="popup">
               <div class="popup-h"><span>Select a model</span></div>
               <div class="popup-search-wrap"><input id="modelSearch" class="popup-search" type="text" placeholder="Filter, or type any model…" autocomplete="off" spellcheck="false"></div>
@@ -130,6 +130,8 @@
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
   const SVG_STOP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>';
+  // model chip (lucide sparkles) — mirrored in the static #modelChip markup and design/mockup.html
+  const SVG_SPARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
   const SVG_TRASH ='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
   // same glyph as the top-bar history button — a replayed thread is history
   const SVG_HISTORY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
@@ -627,13 +629,18 @@
       setModel(cm.value);
     });
   }
+  // The one writer for the model chip — icon + label, label ESCAPED (custom model names are
+  // user input). Both callers (setModel, the CLI's model event) go through it so they can't drift.
+  function setModelChip(label, title) {
+    modelChip.innerHTML = SVG_SPARK + ' ' + esc(label);
+    modelChip.title = title;
+  }
   function setModel(v) {
     currentModel = v; const m = allModels().find(function (x) { return x.value === v; });
     // custom carries the same {value, displayName, description} shape as built-in, so both draw the
     // Model+Version through chipName; an unlisted id falls back to a prettified label. The exact id is
     // kept on hover so nothing is lost.
-    modelChip.textContent = m ? chipName(m) : prettyModel(v);
-    modelChip.title = v;
+    setModelChip(m ? chipName(m) : prettyModel(v), v);
     // switching between a 1M model and a 200k one changes the denominator; when we have no built-in
     // metadata, infer 1M from a [1m] tag on the value
     { const w = (m && !m.custom) ? windowOf(m) : (/\[1m\]/i.test(v) ? CTX_1M : 0); if (w) { ctxWindowFromCli = w; renderContext(); } }
@@ -1552,8 +1559,8 @@
         { const cm = allModels().find(function (m) { return m.value === currentModel; });
           const w = (cm && !cm.custom) ? windowOf(cm) : (/\[1m\]/i.test(currentModel || '') ? CTX_1M : 0);
           if (w) { ctxWindowFromCli = w; renderContext(); }
-          if (cm) { modelChip.textContent = chipName(cm); modelChip.title = cm.value; }
-          else if (currentModel) { modelChip.textContent = prettyModel(currentModel); modelChip.title = currentModel; } }
+          if (cm) { setModelChip(chipName(cm), cm.value); }
+          else if (currentModel) { setModelChip(prettyModel(currentModel), currentModel); } }
         renderModels();
         return;
       case 'system':

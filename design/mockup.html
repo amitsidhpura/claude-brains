@@ -524,7 +524,7 @@ total 196K
         </div>
         <div class="right">
           <span class="menu-anchor">
-          <button class="chip-btn" id="modelChip" onclick="tg('modelMenu', event)">Default (Opus 4.8)</button>
+          <button class="chip-btn" id="modelChip" onclick="tg('modelMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg> Default (Opus 4.8)</button>
           <div id="modelMenu" class="popup">
             <div class="popup-h"><span>Select a model</span></div>
             <div class="popup-search-wrap"><input id="modelSearch" class="popup-search" type="text" placeholder="Filter, or type any model…" autocomplete="off" spellcheck="false"></div>
@@ -580,6 +580,7 @@ total 196K
 </div>
 
 <script>
+  var MOCK_SPARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
   // dev toolbar toggles (mockup only)
   var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu'];
   function tg(id, e) {
@@ -809,9 +810,10 @@ total 196K
   document.querySelectorAll('#modelMenu .popup-item').forEach(function (item) {
     item.addEventListener('click', function (e) {
       if (e.target.closest('.model-del')) { e.stopPropagation(); item.remove(); return; }   // custom row × → remove
+      /* mirrors SVG_SPARK in chat.html */
       document.querySelectorAll('#modelMenu .popup-item').forEach(function (x) { x.classList.remove('on'); });
       item.classList.add('on');
-      document.getElementById('modelChip').textContent =
+      document.getElementById('modelChip').innerHTML = MOCK_SPARK + ' ' +
         item.querySelector('.pi-title').textContent.replace(/\s*\(.*\)$/, '');
       document.getElementById('modelMenu').classList.remove('show');
     });
