@@ -71,9 +71,37 @@ Fade colour stays per-surface — a user message must blend to its own bubble, n
 
 | block | limit |
 |---|---|
-| history list `.hist-list` | 270px (5 × 54px rows) |
-| slash-command menu `#slashList` | 274px (5 × 54px rows + 4px pad) |
+| history list `.hist-list` | 5 rows, MEASURED at render (`capToRows`); 271px CSS fallback |
+| slash-command menu `#slashList` | 5 rows, MEASURED at render (`capToRows`); 274px CSS fallback |
 | composer textarea `#input` | 200px (~10 lines) |
+
+Both lists cap at 5 rows through one helper, `capToRows(list, n, sel)` in chat.html. A row is NOT a
+whole number of pixels (54.19px for history) and its height follows the IDE's font, so any
+hardcoded "N × row" cap eventually lands a fraction under the real height and shows a scrollbar
+for a list that visibly fits — that is what happened to the history list at exactly 5 items (270px
+cap vs 270.9px of rows). The CSS values survive only as the pre-measure fallback.
+
+The helper measures the BOTTOM OF ROW N, not one row's height × n: `#slashList` rows differ (a
+command with no description is shorter), so multiplying is wrong there. Four rules, each of which
+cost a debugging round:
+
+- Measure only while the list is VISIBLE. A hidden panel measures 0 and pins `max-height: 0px`,
+  which silently empties the list. `renderSlash` is called BEFORE `.show` on the typing path, so
+  the cap is applied after `.show` at both call sites rather than inside `renderSlash`.
+- Reset with `max-height: none`, not `''`. Clearing the inline style leaves the CSS fallback in
+  force, so the measurement comes back already clamped and the cap re-applies the stale number.
+- n rows or fewer get NO row cap — falling back to the CSS value reintroduces the original bug the
+  moment the IDE font makes rows taller (verified: at a larger font 5 slash rows are 321px against
+  the 274px fallback, 5 history rows 372px against 271px).
+- Clamp to the webview either way. The history panel grows DOWN and the composer popups grow UP, so
+  the guard trims by `max(0, -top, bottom - innerHeight)`; in a short tool window the list scrolls
+  instead of putting rows off-screen where nothing can reach them.
+
+Verified headless against the real chat.html (CSS spliced in as Kotlin does it) at 1–7 rows, both
+open paths, normal and enlarged fonts, and a 380px-tall window. `CMD_ALLOWED` is a `const Set` but
+Sets mutate, so the probe widens the allowlist without editing the code under test — today only
+`/compact` and `/clear` pass `cmdKind`, so the slash menu never reaches 5 rows in production and
+this cap is future-proofing rather than a live fix.
 
 ## Truncated (data is dropped)
 

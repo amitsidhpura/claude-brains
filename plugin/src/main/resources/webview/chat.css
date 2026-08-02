@@ -334,8 +334,11 @@ img { max-width: 100%; height: auto; }
 #histPanel.show { display: block; }
 .hist-h { padding: 10px 14px 6px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
 /* 5 complete rows: a two-line row (title + desc/date) measures 54px */
-/* 5 complete rows: a two-line row (title + desc/date) measures 54px */
-.hist-list { max-height: 270px; overflow-y: auto; }
+/* 5 rows. Rows are ~54.2px, not a round 54 — renderHistory() overwrites this with the measured
+   5-row height once rows exist (the IDE's font decides it); 271px is the static fallback and
+   what the mockup uses. A cap even 1px under the true height shows a scrollbar for a list that
+   visibly fits. */
+.hist-list { max-height: 271px; overflow-y: auto; }
 .hist-item { position: relative; padding: 8px 14px; cursor: pointer; }
 .hist-item:hover { background: var(--hover); }
 /* delete: hidden until hover. The gutter is reserved ONLY while the row is hovered, so an
@@ -481,7 +484,9 @@ img { max-width: 100%; height: auto; }
 #modeMenu { right: 0; } #modelMenu { right: 0; } #slashMenu { left: 0; min-width: 0; max-width: 100%; }
 .menu-anchor { position: relative; display: inline-flex; align-items: center; }
 .menu-anchor .popup { bottom: calc(100% + 9px); }
-/* 5 complete rows (5 × 54px) + own 4px bottom padding, so exactly 5 commands don't scroll */
+/* Pre-measure fallback only: renderSlash caps this at exactly 5 rows via capToRows, measured,
+   because rows here vary (a command with no description is shorter) and a hardcoded n × row cap
+   scrolls a list that visibly fits. Keep it >= 5 real rows so it never clips before the measure. */
 #slashList { max-height: 274px; overflow-y: auto; padding-bottom: 4px; }
 .popup-empty { padding: 10px 14px; color: var(--user-muted); font-size: 12px; }
 #attachMenu { left: 0; min-width: 220px; }

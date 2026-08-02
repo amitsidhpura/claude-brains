@@ -416,6 +416,7 @@
     if (!p.classList.contains('show')) return;
     if (id === 'slashMenu') {
       renderSlash(input.value.charAt(0) === '/' ? input.value.slice(1) : '');
+      capToRows(slashList, 5, '.popup-item');   // .show was set above, so rows measure
       input.focus();
     } else if (id === 'modelMenu') {
       if (modelSearch) modelSearch.value = '';   // fresh, unfiltered each open
@@ -661,6 +662,31 @@
   // Reload = re-resume the same session: the transcript on disk is the source of truth, so this
   // both refreshes out-of-band changes and recovers a dead CLI without losing the thread.
   document.getElementById('refreshBtn').onclick = function () { bridge({ kind: 'refresh' }); };
+  // Cap a popup list at exactly `n` rows, MEASURED rather than assumed. A row is not a whole number
+  // of pixels (54.19px for history here) and its height follows the IDE's font, so a hardcoded
+  // "n x row" cap eventually lands a fraction under the real height and shows a scrollbar for a
+  // list that visibly fits. Measures the BOTTOM of row n rather than multiplying one row's height,
+  // so it also holds where rows differ (a slash command with no description is shorter).
+  // MUST be called while the list is VISIBLE: a hidden panel measures 0 and would pin
+  // max-height to 0px, silently emptying the list. The CSS value is only a pre-measure fallback.
+  function capToRows(list, n, sel) {
+    if (!list) return;
+    list.style.maxHeight = 'none';   // 'none', not '': clearing the inline style leaves the CSS
+                                     // fallback in force and the measurement comes back clamped
+    const rows = list.querySelectorAll(sel);
+    const box = list.getBoundingClientRect();
+    // Never run past either edge of the webview: the history panel grows DOWN, the composer popups
+    // grow UP. With no hardcoded cap left, a tall list in a short tool window would otherwise put
+    // its last rows out of reach — a cap that scrolls beats rows that can't be seen at all.
+    let h = box.height - Math.max(0, -box.top, box.bottom - window.innerHeight);
+    // n rows or fewer must never scroll on their own account, so nothing else bounds them — the CSS
+    // value is only a pre-measure fallback and is exactly what fails once rows grow with the font.
+    if (rows.length > n) {
+      const pad = parseFloat(getComputedStyle(list).paddingBottom) || 0;
+      h = Math.min(h, rows[n - 1].getBoundingClientRect().bottom - box.top + pad);
+    }
+    if (h > 0) list.style.maxHeight = Math.ceil(h) + 'px';
+  }
   document.getElementById('histBtn').onclick = function (e) {
     e.stopPropagation();
     if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
@@ -703,6 +729,7 @@
     });
     histPanel.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';
     histPanel.classList.add('show');
+    capToRows(histList, 5, '.hist-item');   // after .show — see capToRows
   }
 
   function clearLogUI() {
@@ -1488,6 +1515,7 @@
     if (/^\/[\w-]*$/.test(v) && renderSlash(v.slice(1))) {
       ['modeMenu', 'modelMenu', 'attachMenu'].forEach(function (x) { menuEl(x).classList.remove('show'); });
       menuEl('slashMenu').classList.add('show');
+      capToRows(slashList, 5, '.popup-item');   // AFTER .show: renderSlash ran while still hidden
     } else {
       menuEl('slashMenu').classList.remove('show');
     }
