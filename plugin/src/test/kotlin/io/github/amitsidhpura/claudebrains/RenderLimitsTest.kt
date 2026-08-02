@@ -51,10 +51,14 @@ class RenderLimitsTest {
     fun `caps are not hardcoded in the webview`() {
         // The exact literals that used to live in both languages. Anything matching means a value
         // was written into the JS again instead of being read from LIM.
-        listOf("slice(0, ${RenderLimits.DESC_MAX})", "slice(0, ${RenderLimits.BASH_MAX})").forEach {
+        listOf(
+            "slice(0, ${RenderLimits.DESC_MAX})",
+            "slice(0, ${RenderLimits.CMD_MAX})",
+            "slice(0, ${RenderLimits.OUT_MAX})",
+        ).forEach {
             assertTrue(!html.contains(it), "chat.html hardcodes `$it` — read it from LIM instead")
         }
-        listOf("LIM.descMax", "LIM.bashMax", "LIM.descKeys", "LIM.pathKeys").forEach {
+        listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.descKeys", "LIM.pathKeys").forEach {
             assertTrue(html.contains(it), "chat.html no longer uses $it")
         }
     }
@@ -70,7 +74,7 @@ class RenderLimitsTest {
     @Test
     fun `js literal round-trips the values`() {
         assertEquals(
-            "{descMax:140,bashMax:2000," +
+            "{descMax:140,cmdMax:4000,outMax:2000," +
                 "descKeys:[\"description\",\"file_path\",\"path\",\"pattern\",\"query\",\"url\"," +
                 "\"element\",\"filename\",\"target\"]," +
                 "pathKeys:[\"file_path\",\"path\"]}",

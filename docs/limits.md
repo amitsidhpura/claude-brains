@@ -108,9 +108,9 @@ this cap is future-proofing rather than a live fix.
 | what | limit | where |
 |---|---|---|
 | diff rows | 400 | `MAX_DIFF_ROWS`, live + replay; appends "… diff truncated" |
-| Bash command | 2000 chars | `RenderLimits.BASH_MAX` (live + replay) |
-| Bash output | 2000 chars | `RenderLimits.BASH_MAX` (live + replay) |
-| card command preview | 4000 chars | `previewHtml` |
+| Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number |
+| Bash output | 2000 chars | `RenderLimits.OUT_MAX` (live + replay) |
+| card command preview | 4000 chars | `RenderLimits.CMD_MAX` — same cap as the IN box, by construction |
 | tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) |
 | session title fallback | 80 chars | `SessionStore.titleOf` |
 
@@ -157,9 +157,15 @@ present as a blank tool window rather than an error:
   concerned, *including inside a `//` comment*. Describing this hazard in a comment is enough to
   cause it. `RenderLimitsTest` asserts both invariants (marker appears once, script tags balance).
 
-**Preview shows more than the transcript keeps.** The permission card previews 4000 chars of a
-command, but only 2000 are stored for the IN box — so after approving, the record of what ran is
-shorter than what was approved.
+**Preview shows more than the transcript keeps — FIXED 2026-08-03.** The permission card previewed
+4000 chars of a command while only 2000 were stored, so the record of what ran was shorter than
+what was approved. Both now use `RenderLimits.CMD_MAX` (4000): whatever you were shown is what gets
+kept, live and on replay. Bash OUTPUT keeps its own tighter cap (`OUT_MAX`, 2000) — it is the bulky
+half and is not something you approved.
+
+Fixed alongside it: the preview sliced the ESCAPED string, so a cut could land inside an entity
+(`&amp;`) and the effective limit shrank with every special character in the command. It slices
+first, then escapes.
 
 **Token/size scans are cached, not free.** `SessionStore.tokensOf` scans the whole transcript to
 sum `message.usage.output_tokens`, rejecting lines on a substring before parsing. Cached by

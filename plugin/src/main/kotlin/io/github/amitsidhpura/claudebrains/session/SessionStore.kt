@@ -522,7 +522,7 @@ object SessionStore {
                     isPath = descKey in RenderLimits.PATH_KEYS
                 }
                 file = path
-                if (name == "Bash") cmd = str("command")?.take(RenderLimits.BASH_MAX)
+                if (name == "Bash") cmd = str("command")?.take(RenderLimits.CMD_MAX)
                 if (name == "ExitPlanMode") plan = inp?.get("plan")?.jsonPrimitive?.content
                 oldStr = inp?.get("old_string")?.jsonPrimitive?.content
                 newStr = inp?.get("new_string")?.jsonPrimitive?.content
@@ -563,7 +563,7 @@ object SessionStore {
             val stdout = res?.get("stdout")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val stderr = res?.get("stderr")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val txt = fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n")
-            item.out = txt.trim().takeIf { it.isNotBlank() }?.take(RenderLimits.BASH_MAX)
+            item.out = txt.trim().takeIf { it.isNotBlank() }?.take(RenderLimits.OUT_MAX)
         }
     }
 

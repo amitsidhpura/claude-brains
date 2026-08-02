@@ -1736,7 +1736,7 @@
               if (LIM.pathKeys.indexOf(descKey) !== -1) dEl.classList.add('path');
             }
             if (openTool.name === 'Bash' && inp.command) {
-              const io = ioBox([['IN', String(inp.command).slice(0, LIM.bashMax)]]);
+              const io = ioBox([['IN', String(inp.command).slice(0, LIM.cmdMax)]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
           } catch (_) {}
@@ -1771,7 +1771,7 @@
       txt = (txt || '').trim();
       if (!txt) return;
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
-      t.io.appendChild(ioRow('OUT', txt.slice(0, LIM.bashMax)));
+      t.io.appendChild(ioRow('OUT', txt.slice(0, LIM.outMax)));
       maybeScroll();
     });
   }
@@ -2064,7 +2064,9 @@
       return writeDiffHtml(inp.content, (typeof lineStart === 'number' ? lineStart : 1));
     }
     const cmd = inp.command || inp.description;
-    if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd)).slice(0, 4000) + '</pre>';
+    // slice BEFORE escaping: slicing the escaped string can cut an entity (&amp;) in half and
+    // makes the real limit depend on how many specials the command happens to contain
+    if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd).slice(0, LIM.cmdMax)) + '</pre>';
     return '';
   }
 

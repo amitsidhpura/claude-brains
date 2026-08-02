@@ -15,8 +15,16 @@ object RenderLimits {
     /** Tool description shown on a tool line, in characters. */
     const val DESC_MAX = 140
 
-    /** Bash command (IN) and Bash output (OUT), in characters. */
-    const val BASH_MAX = 2000
+    /**
+     * Bash command, in characters — the SAME cap wherever a command is shown or kept: the
+     * permission card's preview, the IN box that records what ran, and replay. The card used to
+     * preview 4000 while only 2000 was stored, so the record of what ran was shorter than what was
+     * approved; whatever you were shown is now what gets kept.
+     */
+    const val CMD_MAX = 4000
+
+    /** Bash output (OUT), in characters. Output is the bulky half, so it stays tighter. */
+    const val OUT_MAX = 2000
 
     /**
      * Keys tried IN ORDER for a tool line's description; the first non-blank one wins.
@@ -38,7 +46,7 @@ object RenderLimits {
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
-        return "{descMax:$DESC_MAX,bashMax:$BASH_MAX," +
+        return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX," +
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)}}"
     }
 }
