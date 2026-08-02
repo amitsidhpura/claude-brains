@@ -104,10 +104,12 @@ img { max-width: 100%; height: auto; }
 /* version badge, spliced into the markup by ChatPanel.loadUi (empty when unknown — the :empty
    rule then hides it so the title never renders with a dangling gap). Anchored with left:100%
    rather than a negative right offset: the badge then GROWS RIGHTWARD, so a longer string
-   (v0.10.12) can't creep back over the title text. */
-.w-ver { position: absolute; top: -5px; left: 100%; margin-left: 6px;
-  font-size: 11px; line-height: 1; color: #fff; background: var(--accent);
-  padding: 3px 5px; border-radius: 3px; white-space: nowrap; }
+   (v0.10.12) can't creep back over the title text. Wears the same chip metrics and surface as
+   the history list's "current" badge (.hist-item .badge) — one badge look in the UI, not two. */
+.w-ver { position: absolute; top: -3px; left: 100%; margin-left: 6px;
+  font-size: 11px; font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
+  background: var(--user-raised); color: var(--user-muted);
+  border: 1px solid var(--user-border); white-space: nowrap; }
 .w-ver:empty { display: none; }
 .w-sub { font-size: 13px; line-height: 1.65; color: var(--muted); }
 .w-sub kbd { font: 12px ui-monospace, Consolas, monospace; color: var(--fg);
@@ -384,7 +386,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 .hist-item .t-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-item .d { color: var(--muted); font-size: 11px; margin-top: 1px; }
 /* live transcript: labelled, and deliberately has no delete control */
-.hist-item .badge { flex: 0 0 auto; font-size: 10px; line-height: 1; padding: 2px 5px; border-radius: 3px;
+.hist-item .badge { flex: 0 0 auto; font-size: 11px; font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
   background: var(--user-raised); color: var(--user-muted); border: 1px solid var(--user-border); }
 .hist-empty { padding: 10px 14px; color: var(--muted); font-size: 12px; }
 
