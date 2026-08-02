@@ -246,7 +246,7 @@ the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
    `margin-top: auto` survived and pinned it to the BOTTOM, while on first load the class that
    restored flex was never in the markup at all, leaving it at the TOP. Fixed by making `#welcome`
    centre itself, which removed the class plumbing from chat.html and the mockup entirely.
-   OPEN: the `250px` fallback in `contain-intrinsic-size: auto 300px` is a guess. Synthetic turns
+   OPEN: the `250px` fallback in `contain-intrinsic-size: auto 250px` is a guess. Synthetic turns
    measured ~193px, so it still overestimates; real turns with cards/diffs run much taller.
    The `auto` keyword should decay that error as turns are visited and remembered, but headless
    never marks a turn rendered, so that half is UNVERIFIED — check the scrollbar in a sandbox and
@@ -256,12 +256,14 @@ the benchmark, as expected: a one-shot synthetic run never re-visits a turn.
    sessions (4.35→0.46 MB, 4.09→0.21 MB). Earlier chunks (~500 blocks) load automatically and
    silently as the user scrolls within 600px of the top — no visible affordance; chunks are
    near-instant since Kotlin holds the parsed list. Prepends are viewport-anchored (scrollTop shifted by exactly how far the previously
-   topmost element moved). Known trade-offs: DOM search only sees loaded blocks, and IMAGE_BUDGET
-   is still consumed in file order, so unshipped early blocks can starve visible tail images — flip
-   the budget walk when it bites.
+   topmost element moved). Known trade-off: DOM search only sees loaded blocks.
+   (The IMAGE_BUDGET-in-file-order trade-off noted here originally is GONE — `SessionStore` now
+   walks the budget newest-block-first, so the visible tail keeps its bytes.)
 2. Stop inlining base64 images in the transcript frame; load on lightbox open. Halves image-heavy frames.
 3. Chunk the transcript push — currently one ~4 MB string escaped into a JS literal, shipped through
    `executeJavaScript` and `JSON.parse`d in one hit.
-4. Defer per-block markdown/highlight until visible. `clampBlock` is the suspect: one rAF per block,
-   each reading `scrollHeight` after a DOM mutation — classic layout thrash at ~1,850 blocks. UNMEASURED.
-5. Windowed rendering (newest N turns + "load earlier"). Probably unnecessary if 1–3 land.
+4. Defer per-block markdown/highlight until visible. UNMEASURED. The original suspect, `clampBlock`
+   (one rAF per block, each reading `scrollHeight` after a DOM mutation — layout thrash at ~1,850
+   blocks), no longer exists: the clamp system was replaced by `foldBlock` in 2026-07-31, which
+   measures the same way, so re-confirm the suspicion against `foldBlock` before acting on it.
+5. **DONE 2026-07-29** — windowed rendering, described in the FOLLOW-UP under 1.
