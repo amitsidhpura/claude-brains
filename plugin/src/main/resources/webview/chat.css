@@ -317,15 +317,22 @@ img { max-width: 100%; height: auto; }
 .error code { font-family: ui-monospace, Consolas, monospace; }
 
 /* history panel (past conversations) */
-#histPanel { position: absolute; right: 10px; z-index: 30; width: 300px; background: var(--panel);
+#histPanel { position: absolute; right: 10px; z-index: 30; width: 310px; background: var(--panel);
   border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; }
 #histPanel.show { display: block; }
 .hist-h { padding: 10px 14px 6px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
 /* 5 complete rows: a two-line row (title + desc/date) measures 54px */
+/* 5 complete rows: a two-line row (title + desc/date) measures 54px */
 .hist-list { max-height: 270px; overflow-y: auto; }
 .hist-item { position: relative; padding: 8px 14px; cursor: pointer; }
 .hist-item:hover { background: var(--hover); }
-/* delete: hidden until hover, overlaid so the title keeps its full width (no layout shift) */
+/* delete: hidden until hover. The gutter is reserved ONLY while the row is hovered, so an
+   unhovered list uses its full width and the title shortens (one more ellipsis step) exactly
+   when the button needs the room — no permanently wasted space, and nothing is ever drawn over
+   the text. Skipped on .arm (the row is then the confirmation, which needs the full width) and
+   on the live-session row, which has no delete control at all (:has needs Chromium 105+, JCEF
+   is 122+ — older than the color-mix and lh units already relied on elsewhere). */
+.hist-item:hover:not(.arm):has(.hist-del) { padding-right: 36px; }
 .hist-del { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); display: none;
   background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 3px; }
 .hist-item:hover .hist-del { display: block; }
