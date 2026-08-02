@@ -185,6 +185,14 @@ img { max-width: 100%; height: auto; }
 .codeblock pre.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; --fold-bpad: 8px; }  /* border lives on .codeblock */
 .io-v.fold { --fold-fade: var(--code-bg); }                             /* padding lives on .io-row, so --fold-bpad stays 0 */
 
+/* markdown blockquote: a quiet left rule, not a panel — a quoted line inside an assistant block
+   should read as an aside, not compete with the permission/ask cards. Nothing else in the UI uses
+   <blockquote>, so this stays unscoped. */
+blockquote { margin: .5em 0; padding: 1px 0 1px 10px; border-left: 2px solid var(--border-strong);
+  color: var(--muted); }
+blockquote > *:first-child { margin-top: 0; }
+blockquote > *:last-child { margin-bottom: 0; }
+
 /* assistant block: plain text with small dot */
 .blk { position: relative; padding-left: 22px; }
 .blk::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--fg); }

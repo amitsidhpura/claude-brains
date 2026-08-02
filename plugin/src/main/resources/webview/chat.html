@@ -350,9 +350,21 @@
       .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>')
       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
   }
-  function renderMd(srcRaw) {
-    let src = esc(srcRaw);                              // escape everything first
-    const blocks = [];
+  // A quote marker reaches the block parser as `&gt;`, never `>`, because esc() runs FIRST — see
+  // MD_QUOTE. Testing for the raw character is why the blockquote branch silently never fired
+  // until 2026-08-03: quoted lines fell through to the paragraph branch, printing the marker
+  // literally, and a `- item` behind that marker no longer started the line so the list branch
+  // missed it too. Any NEW block rule added here has to match escaped text for the same reason.
+  const MD_QUOTE = /^\s*&gt;\s?/;
+  function renderMd(srcRaw) { return mdBlocks(esc(srcRaw), []); }
+  /**
+   * Block parser over ALREADY-ESCAPED markdown. Split out of renderMd so a blockquote can
+   * re-enter it for its own contents — a quoted list stays a list instead of collapsing into one
+   * run-on paragraph — without escaping the text a second time. `blocks` (fenced-code
+   * placeholders) is shared with nested calls so a placeholder made by the outer pass still
+   * resolves when a nested one emits it.
+   */
+  function mdBlocks(src, blocks) {
     // [^\s`]* not \w*: a language can carry punctuation, and \w* left the remainder in the body
     // (```c++ parsed as lang "c" + body "++\n…"). Unlabelled fences read as "code" so the header
     // is never an empty strip with a lone copy button.
@@ -372,10 +384,10 @@
       let m;
       if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { out += '<h' + m[1].length + '>' + inlineMd(m[2]) + '</h' + m[1].length + '>'; i++; continue; }
       if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out += '<hr>'; i++; continue; }
-      if (/^\s*>\s?/.test(line)) {
+      if (MD_QUOTE.test(line)) {
         let buf = [];
-        while (i < lines.length && /^\s*>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
-        out += '<blockquote>' + inlineMd(buf.join(' ')) + '</blockquote>'; continue;
+        while (i < lines.length && MD_QUOTE.test(lines[i])) { buf.push(lines[i].replace(MD_QUOTE, '')); i++; }
+        out += '<blockquote>' + mdBlocks(buf.join('\n'), blocks) + '</blockquote>'; continue;
       }
       if (/^\s*([-*+])\s+/.test(line)) {
         let buf = [];
@@ -390,7 +402,7 @@
       // paragraph: gather consecutive normal lines
       let buf = [];
       while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^ B\d+ $/.test(lines[i]) &&
-             !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !/^\s*>/.test(lines[i])) {
+             !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !MD_QUOTE.test(lines[i])) {
         buf.push(lines[i]); i++;
       }
       out += '<p>' + inlineMd(buf.join('\n')).replace(/\n/g, '<br>') + '</p>';
