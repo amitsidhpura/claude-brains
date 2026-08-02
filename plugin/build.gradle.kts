@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.3.0"
+version = "0.3.1"
 
 repositories {
     mavenCentral()
@@ -73,15 +73,22 @@ intellijPlatform {
         }
         // Shown on the Marketplace plugin page for the current version.
         changeNotes = """
-            <b>0.3.0</b>
+            <b>0.3.1</b>
             <ul>
-              <li>Claude can now see your editor: IDE tools (diagnostics, open editors, selection)
-                  reach the model as mcp__ide__* tools</li>
-              <li>One "Always allow" button per permission card — a single click grants every rule
-                  the CLI suggests, and the granted rules are shown as chips</li>
-              <li>Durations show as minutes/seconds (5m 30s, not 330s)</li>
-              <li>Tooltips no longer cut off at the first double quote</li>
-              <li>Zero Plugin Verifier warnings across IDE 2024.2–2026.2</li>
+              <li>Quoted text in replies renders as a quote, with any list inside it kept as
+                  a list — it previously showed the raw &gt; and - characters</li>
+              <li>Folded blocks fade the same way everywhere — a long command in a permission card
+                  no longer looks cut off compared with the same text in a Bash IN box, and a
+                  folded command keeps all three lines instead of losing one to a scrollbar</li>
+              <li>The permission card and the record of what ran now show the same 4000 characters
+                  of a command; the card previously previewed more than was kept</li>
+              <li>History and slash-command menus no longer show a scrollbar for exactly five
+                  items that visibly fit</li>
+              <li>The delete button in the history list no longer overlaps the conversation title</li>
+              <li>Tool lines keep their description on resume when the tool sends a blank one —
+                  live and replayed sessions now render identically</li>
+              <li>Long conversations report a more honest scrollbar</li>
+              <li>Welcome screen shows the running version; the model chip has an icon</li>
             </ul>
         """.trimIndent()
     }
