@@ -51,7 +51,20 @@ img { max-width: 100%; height: auto; }
 ::-webkit-scrollbar-corner { background: transparent; }
 ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 
-#app { display: flex; flex-direction: column; height: 100%; position: relative; }
+/* Composer accent follows the permission mode, so the focus border and Send say what will happen
+   when you press it. syncModeUI stamps #app[data-mode]; both rules read --mode-accent, and the
+   fallback is the Claude orange the composer used before, so an unknown mode degrades to it
+   rather than losing its colour.
+   --mode-fg is the Send arrow ON that accent; all four are dark enough to keep it white
+   (slate 4.76:1, orange 3.12:1, blue 4.02:1, gold 2.97:1 — the last a hair under the 3:1 bar for
+   graphical parts, kept for consistency). Re-measure if a colour changes: an earlier palette had
+   blue/violet/green at 2.3-2.7:1, which is genuinely unreadable and would need a dark --mode-fg. */
+#app { display: flex; flex-direction: column; height: 100%; position: relative;
+  --mode-accent: var(--accent); --mode-fg: #fff; }
+#app[data-mode="manual"]      { --mode-accent: #62748e; }
+#app[data-mode="acceptEdits"] { --mode-accent: #d97757; }
+#app[data-mode="plan"]        { --mode-accent: #0084d1; }
+#app[data-mode="auto"]        { --mode-accent: #cf8600; }
 
 /* ---------- header ---------- */
 #head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); }
@@ -540,7 +553,9 @@ blockquote > *:last-child { margin-bottom: 0; }
   display: flex; justify-content: center; }
 #inputcard { position: relative; width: 100%; max-width: 720px; background: var(--user-bg); border: 1px solid var(--user-border); border-radius: 12px;
   padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
-#inputcard:focus-within { border-color: var(--accent); box-shadow: 0 2px 14px rgba(0,0,0,.35), 0 0 0 3px rgba(var(--accent-rgb), .15); }
+/* focus is the coloured border alone — the 3px tinted halo that used to sit outside it made the
+   composer look like it had two edges once the border carried a mode colour of its own */
+#inputcard:focus-within { border-color: var(--mode-accent); box-shadow: 0 2px 14px rgba(0,0,0,.35); }
 #input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
   font: inherit; line-height: 20px; height: 20px; max-height: 200px; padding: 0; overflow-y: hidden; }
 #input::placeholder { color: var(--user-muted); }
@@ -555,10 +570,12 @@ blockquote > *:last-child { margin-bottom: 0; }
 .ctx.warn, .ctx.warn:hover { color: var(--accent); }
 #inputbar .icon-btn { color: var(--user-muted); }
 #inputbar .icon-btn:hover { color: var(--fg); }
-#send { background: var(--accent); color: #fff; border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
+#send { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 #inputbar svg { width: 18px; height: 18px; }
-#send:hover { background: #e28a6b; }
+/* lifted from whatever the mode accent is — a hardcoded orange here stayed orange in Plan, Auto
+   and Manual, so hovering Send flashed the wrong colour. color-mix is fine on JCEF's Chromium. */
+#send:hover { background: color-mix(in srgb, var(--mode-accent) 84%, #fff); }
 #inputbar button { padding: 4px; }
 #inputbar .left button { padding: 4px 0; }   /* icon buttons: no side padding */
 #inputbar .chip-btn { padding: 4px 0; }      /* context / model / mode chips: same, gap does the spacing */

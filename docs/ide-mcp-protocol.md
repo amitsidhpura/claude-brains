@@ -171,17 +171,25 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
     a refused host request this way too (e.g. `set_permission_mode` to bypass); surface it, don't drop it.
 - Other control subtypes: `initialize` (host→CLI: declares `hooks`, `sdkMcpServers`, `jsonSchema`,
   `systemPrompt`), `set_permission_mode` (host→CLI: `{subtype,mode}`), `hook_callback`, `mcp_message`.
-- Permission modes: `default` (ask), `acceptEdits` (auto-approves **edits only** — Bash etc. still
-  ask), `plan`, `bypassPermissions`. Without `--permission-prompt-tool stdio` the CLI applies edits
-  without asking.
+- Permission modes (`--permission-mode`, re-probed 2026-08-03 on 2.1.220 — the advertised set has
+  GROWN): `manual` (ask), `acceptEdits` (auto-approves **edits only** — Bash etc. still ask),
+  `plan`, `auto`, `dontAsk`, `bypassPermissions`. `default` still parses but is no longer
+  advertised; `manual` replaced it. `auto` is the one the official UIs call Auto — it approves
+  actions that pass a safety check and pauses on anything risky (the binary ties it to
+  `CLAUDE_CODE_AUTO_MODE_CLASSIFY_EDITS` / `classifyEditsModels`), which is NOT the same as
+  `bypassPermissions`. `dontAsk` is a distinct branch in the permission flow; its semantics are
+  unverified and no UI here exposes it. Without `--permission-prompt-tool stdio` the CLI applies
+  edits without asking.
 
 ### Permission facts probed against 2.1.220 (2026-07-31) — don't rediscover
 
-- **`bypassPermissions` cannot be *entered* at runtime.** `set_permission_mode` → bypass is refused
-  unless launched with `--dangerously-skip-permissions` — and that flag makes EVERY mode a bypass
-  (probed: `--permission-mode default` + the flag ran an out-of-sandbox write unprompted), so it's
-  unusable for a mode *switcher*. Entering Auto = relaunch with `--permission-mode bypassPermissions`
-  (+ `--resume`). Switching *down* from bypass live works.
+- **`bypassPermissions` cannot be *entered* at runtime** — and ONLY it. Re-probed 2026-08-03 by
+  sending `set_permission_mode` to a live CLI: `auto`, `dontAsk` and `manual` all answer `success`;
+  only bypass errors ("session was not launched with…"). It needs
+  `--dangerously-skip-permissions`, and that flag makes EVERY mode a bypass (probed:
+  `--permission-mode default` + the flag ran an out-of-sandbox write unprompted), so it stays
+  unusable for a mode *switcher*. The plugin used to relaunch with `--resume` to enter Auto; now
+  that Auto means `auto`, that relaunch is gone and every mode switch is a plain control request.
 - **The CLI broadcasts the mode**: `system/init` and `system/status` events carry `permissionMode`,
   including changes the CLI makes itself — approving `ExitPlanMode` drops it to `default`. Drive any
   mode UI from these, not from what the host last requested.

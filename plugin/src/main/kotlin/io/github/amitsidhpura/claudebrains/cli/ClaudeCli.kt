@@ -251,11 +251,9 @@ class ClaudeCli(
     }
 
     /**
-     * Host-initiated: change the permission mode (default | acceptEdits | plan). NOT
-     * bypassPermissions — the CLI refuses to *raise* to bypass at runtime unless launched with
-     * `--dangerously-skip-permissions` (which would gut every other mode), so entering Auto is a
-     * relaunch with `--permission-mode bypassPermissions` instead (see ClaudeSessionService).
-     * Switching *down* from bypass live works fine.
+     * Host-initiated: change the permission mode — manual | acceptEdits | plan | auto, all of
+     * which the CLI accepts at runtime (probed 2.1.220). `bypassPermissions` is the exception it
+     * refuses to be raised to without `--dangerously-skip-permissions`; nothing sends it.
      */
     fun setPermissionMode(mode: String) = sendControlRequest(buildJsonObject {
         put("subtype", "set_permission_mode")

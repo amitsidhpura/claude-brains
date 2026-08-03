@@ -54,7 +54,18 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun selectedModel(): String? = props.getValue(MODEL_KEY)
 
     /** Persisted permission mode; every (re)start launches the CLI with it. */
-    fun selectedMode(): String = props.getValue(MODE_KEY) ?: "default"
+    /**
+     * Persisted permission mode, migrated to the CLI's current vocabulary (2.1.220): `default` is
+     * no longer advertised (it still parses, but `manual` replaced it), and what this plugin
+     * labelled "Auto mode" was `bypassPermissions` — approve everything — while the CLI's own Auto
+     * is `auto`, which safety-checks each action and pauses on anything risky. A stored bypass is
+     * therefore migrated DOWN to `auto`: the label the user chose now means the safer thing.
+     */
+    fun selectedMode(): String = when (val m = props.getValue(MODE_KEY)) {
+        null, "", "default" -> "manual"
+        "bypassPermissions" -> "auto"
+        else -> m
+    }
 
     /** User-defined models (JSON array of {value, displayName, description}) — persisted across runs. */
     fun customModels(): String = props.getValue(CUSTOM_MODELS_KEY) ?: "[]"
@@ -210,21 +221,19 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     }
 
     /**
-     * Persist + apply the permission mode. default/acceptEdits/plan switch live; bypassPermissions
-     * cannot be *raised to* at runtime (the CLI refuses without `--dangerously-skip-permissions`,
-     * a launch flag that would gut every other mode), so entering Auto relaunches the CLI with
-     * `--permission-mode bypassPermissions`, resuming the current conversation when it has a
-     * transcript. Costs any session-scoped grants; the webview is told via __modeRestarted.
+     * Persist + apply the permission mode. All four switch LIVE — probed against 2.1.220:
+     * `set_permission_mode` succeeds for manual/acceptEdits/plan/auto.
+     *
+     * This used to special-case Auto: it meant `bypassPermissions`, which the CLI refuses to be
+     * *raised to* at runtime (only via `--dangerously-skip-permissions`, a launch flag that guts
+     * every other mode), so entering it relaunched the CLI with `--resume` and told the webview
+     * via `__modeRestarted`. Auto now means the CLI's own `auto`, which switches like any other
+     * mode — so the relaunch, the resume and that event are all gone. Recover from git history if
+     * a bypass option is ever wanted back.
      */
     fun setPermissionMode(mode: String) {
         props.setValue(MODE_KEY, mode)
-        if (mode == "bypassPermissions") {
-            val id = cli?.sessionId?.takeIf { sessionExists(it) }
-            startCli(resumeSessionId = id)
-            onEventCb?.invoke("""{"type":"__modeRestarted","mode":"bypassPermissions"}""")
-        } else {
-            cli?.setPermissionMode(mode)
-        }
+        cli?.setPermissionMode(mode)
     }
 
     fun interrupt() = cli?.interrupt()

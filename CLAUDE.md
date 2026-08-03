@@ -48,11 +48,13 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
   "user did not answer".
 - Permission gate ONLY works with `--permission-prompt-tool stdio`.
 - Permission modes & suggestions (probed 2.1.220, full findings in docs/ide-mcp-protocol.md §5b):
-  `acceptEdits` covers EDITS ONLY (Bash still asks — correct, not a bug); `bypassPermissions` can't
-  be entered via `set_permission_mode` (refused unless launched `--dangerously-skip-permissions`,
-  which guts every other mode) → entering Auto relaunches with `--permission-mode bypassPermissions`
-  + `--resume`; `system/init`+`system/status` broadcast `permissionMode` (plan approval drops to
-  `default`) — the chip follows those, not the last request; `can_use_tool` carries
+  `acceptEdits` covers EDITS ONLY (Bash still asks — correct, not a bug); the switcher sends the
+  CLI's own four — `manual` / `acceptEdits` / `plan` / `auto` — and ALL switch live (re-probed
+  2026-08-03). `auto` is a safety-checked mode, NOT `bypassPermissions`: the plugin used to send
+  bypass under the label "Auto" and relaunch the CLI to enter it, because only bypass is refused at
+  runtime. Both are gone; a stored `default`/`bypassPermissions` migrates in `selectedMode()`.
+  `system/init`+`system/status` broadcast `permissionMode` (plan approval drops to `default`) —
+  the chip follows those, not the last request; `can_use_tool` carries
   `permission_suggestions` → echo the accepted one as `updatedPermissions` (malformed = silently
   dropped); sandbox-escape prompts (`blocked_path`) re-ask no matter what is granted, so suggestion
   buttons are stripped there. Refused control requests answer `subtype:"error"` — surfaced as
@@ -150,8 +152,10 @@ per reflow), and replay is WINDOWED — Kotlin parses the whole file but ships o
 blocks cut at a turn boundary (`alignedStart`), 89–95% smaller frames; earlier chunks load silently
 as you scroll within 600px of the top, prepended viewport-anchored so nothing jumps.
 Permission mode is PERSISTED (like the model) and every CLI (re)start launches with it; the chip is
-CLI-driven (`__mode` seed + `permissionMode` on system events), Auto = relaunch-with-resume
-(`__modeRestarted` ends a hanging busy state), refused control requests render as `__ctl_error`
+CLI-driven (`__mode` seed + `permissionMode` on system events), every mode switches live via one
+control request (the old Auto relaunch-with-resume and its `__modeRestarted` event are gone — see
+the mode note above), the composer's focus border and Send follow the mode
+(`#app[data-mode]` → `--mode-accent`, chat.css), refused control requests render as `__ctl_error`
 blocks, and permission cards grow buttons from the CLI's `permission_suggestions` (accept-all-edits /
 always-allow / allow-directory; stripped on `blocked_path` cards where no grant stops the re-ask).
 ALL `addRules` suggestions merge into ONE "Always allow" button that echoes every rule index at
