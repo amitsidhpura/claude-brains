@@ -195,6 +195,18 @@ blockquote { margin: .5em 0; padding: 1px 0 1px 10px; border-left: 2px solid var
 blockquote > *:first-child { margin-top: 0; }
 blockquote > *:last-child { margin-bottom: 0; }
 
+/* markdown table (GFM). Unscoped for the same reason as <blockquote>: nothing else in the UI
+   uses <table>. The tool window is narrow, so a wide table scrolls HORIZONTALLY inside .tbl
+   instead of stretching #log — never vertically (a nested vertical scroller traps the wheel).
+   width:auto, not 100%: a two-column table shouldn't stretch its cells across the panel. */
+.tbl { overflow-x: auto; margin: .55em 0; }
+.tbl table { border-collapse: collapse; width: auto; max-width: 100%; }
+.tbl th, .tbl td { border: 1px solid var(--border); padding: 4px 9px; text-align: left;
+  vertical-align: top; }
+.tbl th { background: var(--raised); font-weight: 600; white-space: nowrap; }
+.tbl tbody tr:nth-child(even) td { background: rgba(255, 255, 255, .022); }
+.tbl .ta-c { text-align: center; } .tbl .ta-r { text-align: right; }
+
 /* assistant block: plain text with small dot */
 .blk { position: relative; padding-left: 22px; }
 .blk::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--fg); }

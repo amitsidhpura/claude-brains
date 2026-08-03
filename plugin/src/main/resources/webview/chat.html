@@ -356,6 +356,22 @@
   // literally, and a `- item` behind that marker no longer started the line so the list branch
   // missed it too. Any NEW block rule added here has to match escaped text for the same reason.
   const MD_QUOTE = /^\s*&gt;\s?/;
+  /* GFM tables. Split a row into cells: outer pipes are optional (both forms are legal GFM),
+     and a `\|` inside a cell is an escaped literal, not a separator. */
+  function mdCells(line) {
+    let s = line.trim();
+    if (s.charAt(0) === '|') s = s.slice(1);
+    if (s.slice(-1) === '|' && s.slice(-2) !== '\\|') s = s.slice(0, -1);
+    return s.split(/(?<!\\)\|/).map(function (c) { return c.trim().replace(/\\\|/g, '|'); });
+  }
+  /* A table is recognised by its DELIMITER row, never by the header — that is what keeps a lone
+     `---` an <hr> and stops an ordinary paragraph that happens to contain a `|` from being eaten. */
+  function mdIsSep(line) {
+    return line.indexOf('|') >= 0 && mdCells(line).every(function (c) { return /^:?-+:?$/.test(c); });
+  }
+  function mdTableAt(lines, i) {
+    return lines[i].indexOf('|') >= 0 && i + 1 < lines.length && mdIsSep(lines[i + 1]);
+  }
   function renderMd(srcRaw) { return mdBlocks(esc(srcRaw), []); }
   /**
    * Block parser over ALREADY-ESCAPED markdown. Split out of renderMd so a blockquote can
@@ -389,6 +405,27 @@
         while (i < lines.length && MD_QUOTE.test(lines[i])) { buf.push(lines[i].replace(MD_QUOTE, '')); i++; }
         out += '<blockquote>' + mdBlocks(buf.join('\n'), blocks) + '</blockquote>'; continue;
       }
+      if (mdTableAt(lines, i)) {
+        const heads = mdCells(line);
+        // ':' on a side of the delimiter cell sets that column's alignment for header AND body
+        const al = mdCells(lines[i + 1]).map(function (c) {
+          return c.slice(-1) === ':' ? (c.charAt(0) === ':' ? ' class="ta-c"' : ' class="ta-r"') : '';
+        });
+        i += 2;
+        let rows = '';
+        // Body rows are padded/truncated to the header's column count, as GFM requires — a ragged
+        // row must not shift the columns of the rows below it.
+        while (i < lines.length && lines[i].indexOf('|') >= 0 && !mdIsSep(lines[i])) {
+          const cells = mdCells(lines[i]); i++;
+          rows += '<tr>' + heads.map(function (_, c) {
+            return '<td' + (al[c] || '') + '>' + inlineMd(cells[c] || '') + '</td>';
+          }).join('') + '</tr>';
+        }
+        out += '<div class="tbl"><table><thead><tr>' + heads.map(function (h, c) {
+          return '<th' + (al[c] || '') + '>' + inlineMd(h) + '</th>';
+        }).join('') + '</tr></thead>' + (rows ? '<tbody>' + rows + '</tbody>' : '') + '</table></div>';
+        continue;
+      }
       if (/^\s*([-*+])\s+/.test(line)) {
         let buf = [];
         while (i < lines.length && /^\s*([-*+])\s+/.test(lines[i])) { buf.push('<li>' + inlineMd(lines[i].replace(/^\s*([-*+])\s+/, '')) + '</li>'); i++; }
@@ -402,7 +439,8 @@
       // paragraph: gather consecutive normal lines
       let buf = [];
       while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^ B\d+ $/.test(lines[i]) &&
-             !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !MD_QUOTE.test(lines[i])) {
+             !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !MD_QUOTE.test(lines[i]) &&
+             !mdTableAt(lines, i)) {
         buf.push(lines[i]); i++;
       }
       out += '<p>' + inlineMd(buf.join('\n')).replace(/\n/g, '<br>') + '</p>';
@@ -2226,7 +2264,11 @@
     // assistant text block (markdown + code)
     const b = el('blk', '');
     b.innerHTML = renderMd('An assistant **text block** with `inline code`, a [link](#), a list:\n\n' +
-      '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```');
+      '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```\n\n' +
+      '| Page | URL | Template | Hits |\n|---|---|---|--:|\n' +
+      '| Home | `/` | `front-page.php` | 1,204 |\n' +
+      '| Shop | `/shop/` | `woocommerce/archive-product.php` | 318 |\n' +
+      '| 404 | `/no-such-page/` | `404.php` | 7 |');
 
     // collapsed thinking
     (curTurn || log).appendChild(thinkBlock('Weighing a couple of approaches before writing the diff…', 4));

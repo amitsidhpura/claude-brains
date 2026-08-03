@@ -17,7 +17,9 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [x] ✅ **AskUserQuestion** interactive card (radio/checkbox options → answer via updatedInput)
 - [x] ✅ **Stop / interrupt** an in-flight response (Send↔Stop toggle → control_request `interrupt`)
 - [x] ✅ **Retry** last turn (↻ Retry re-runs the last prompt + images)
-- [x] ✅ Markdown rendering (headings, lists, links, inline code, blockquote, hr, bold/italic)
+- [x] ✅ Markdown rendering (headings, lists, links, inline code, blockquote, hr, bold/italic,
+      GFM tables — recognised by the delimiter row, `:` alignment, escaped `\|`, scroll-x when a
+      cell can't wrap)
 - [x] 🟡 **Code blocks** with language label + copy button (no syntax highlighting yet)
 - [x] ✅ **Thinking** blocks (collapsible `<details>`)
 - [x] ✅ Error surfacing (result `is_error`)

@@ -224,6 +224,16 @@ total 196K
           <pre>git status --short
  M src/App.tsx</pre>
         </div>
+        <!-- GFM table: .tbl is the horizontal scroller (the panel is narrow); the delimiter row's
+             ':' markers become .ta-c / .ta-r on both the header cell and its column's body cells -->
+        <div class="tbl"><table>
+          <thead><tr><th>Page</th><th>URL</th><th>Template</th><th class="ta-r">Hits</th></tr></thead>
+          <tbody>
+            <tr><td>Home</td><td><code class="ic">/</code></td><td><code class="ic">front-page.php</code></td><td class="ta-r">1,204</td></tr>
+            <tr><td>Shop</td><td><code class="ic">/shop/</code></td><td><code class="ic">woocommerce/archive-product.php</code></td><td class="ta-r">318</td></tr>
+            <tr><td>404</td><td><code class="ic">/no-such-page/</code></td><td><code class="ic">404.php</code></td><td class="ta-r">7</td></tr>
+          </tbody>
+        </table></div>
       </div>
       </div>
     </div>
