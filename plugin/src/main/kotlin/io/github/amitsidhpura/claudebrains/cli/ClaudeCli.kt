@@ -59,10 +59,13 @@ class ClaudeCli(
     private var process: Process? = null
     private var stdin: OutputStreamWriter? = null
 
+    /** Temp file backing `--mcp-config`; deleted when the process is stopped. */
+    private var mcpConfigFile: File? = null
+
     @Volatile
     private var stopped = false
 
-    /** Inline `--mcp-config` JSON pointing the CLI at the plugin's MCP-over-WebSocket bridge. */
+    /** `--mcp-config` JSON pointing the CLI at the plugin's MCP-over-WebSocket bridge. */
     private fun ideMcpConfig(): String {
         val cfg = buildJsonObject {
             put("mcpServers", buildJsonObject {
@@ -78,6 +81,22 @@ class ClaudeCli(
         return json.encodeToString(JsonObject.serializer(), cfg)
     }
 
+    /**
+     * Spill the MCP config to a temp file and hand the CLI its path.
+     *
+     * `--mcp-config` also accepts the JSON inline, but not on Windows: ProcessBuilder joins argv
+     * into one command line and only quotes arguments containing whitespace. This JSON has none,
+     * so it goes through raw and the CLI's C-runtime argument parser eats every `"` — the CLI then
+     * sees `{mcpServers:{ide:...}}`, decides it must be a filename, and exits 1 with
+     * "MCP config file not found". A path has no quotes to lose, and works identically on POSIX.
+     */
+    private fun writeMcpConfig(): File =
+        File.createTempFile("claude-brains-mcp", ".json").apply {
+            deleteOnExit() // backstop if stop() never runs (IDE killed)
+            writeText(ideMcpConfig(), StandardCharsets.UTF_8)
+            mcpConfigFile = this
+        }
+
     fun start() {
         val cmd = mutableListOf(
             executable,
@@ -92,7 +111,7 @@ class ClaudeCli(
             // server must be passed explicitly. Plain "ws" transport (the "ws-ide" type is filtered
             // as internal-only from user config); the CLI requests WebSocket subprotocol "mcp",
             // which IdeMcpServer advertises. Tools surface to the model as mcp__ide__<name>.
-            "--mcp-config", ideMcpConfig(),
+            "--mcp-config", writeMcpConfig().absolutePath,
         )
         if (resumeSessionId != null) {
             cmd += listOf("--resume", resumeSessionId)
@@ -316,6 +335,9 @@ class ClaudeCli(
         stopped = true
         runCatching { stdin?.close() }
         process?.destroy()
+        // Carries the bridge auth token; don't leave it in the temp dir.
+        runCatching { mcpConfigFile?.delete() }
+        mcpConfigFile = null
     }
 
     private companion object {
