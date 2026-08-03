@@ -2056,7 +2056,7 @@
           title: 'Auto-approve every edit for the rest of this session',
           doneText: 'auto-approving edits' });
       } else if (s.type === 'addRules' && s.rules && s.rules.length) {
-        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], parts: [], session: s.destination === 'session' }; out.push(ruleEntry); }
+        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], sigs: [], parts: [], session: s.destination === 'session' }; out.push(ruleEntry); }
         ruleEntry.idxs.push(idx);
         // parts keeps the suggestions separate so the split menu can grant ONE of them; rules
         // stays flat for the merged button and the done-text chips.
@@ -2065,11 +2065,20 @@
         // than one suggestion — which rendered as the same chip twice, and would have been two
         // identical menu rows. Dedupe is display-only: every contributing index is kept, because
         // the CLI persists a suggestion only if its own index comes back.
-        const txts = s.rules.map(function (r) {
-          return r.ruleContent ? r.ruleContent.replace(/:\*$/, '') : r.toolName;
+        // Identity for deduping is the WHOLE grant — tool, raw rule and destination — not the text
+        // shown. Two different grants can render the same string (Read(//p/**) and Grep(//p/**)
+        // both display as //p/**, and one rule can be offered both for the session and persisted),
+        // and folding those would grant wider scope than the row's single line admits.
+        const txts = [], sigs = [];
+        s.rules.forEach(function (r) {
+          txts.push(r.ruleContent ? r.ruleContent.replace(/:\*$/, '') : r.toolName);
+          sigs.push((r.toolName || '') + '\u0001' + (r.ruleContent || '') + '\u0001' + (s.destination || ''));
         });
-        txts.forEach(function (t) { if (ruleEntry.rules.indexOf(t) === -1) ruleEntry.rules.push(t); });
-        const key = txts.join('\u0000');
+        sigs.forEach(function (sig, n) {
+          if (ruleEntry.sigs.indexOf(sig) !== -1) return;   // the same grant, sent twice
+          ruleEntry.sigs.push(sig); ruleEntry.rules.push(txts[n]);
+        });
+        const key = sigs.join('\u0000');
         const twin = ruleEntry.parts.filter(function (p) { return p.key === key; })[0];
         if (twin) twin.idxs.push(idx);
         else ruleEntry.parts.push({ key: key, idxs: [idx], rules: txts });
