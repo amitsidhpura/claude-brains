@@ -59,8 +59,10 @@ img { max-width: 100%; height: auto; }
 #head .actions { display: flex; gap: 10px; flex: none; }
 .icon-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 14px;
   padding: 0; width: auto; height: auto; border-radius: var(--radius); display: inline-flex; align-items: center; justify-content: center; }
+/* Hover brightens the glyph only — no background plate. The header icons used to grow a
+   --hover rectangle while the composer's attach/slash icons did not; same control, two
+   behaviours. Colour-only everywhere now. */
 .icon-btn:hover { color: var(--fg); }
-#head .icon-btn:hover { background: var(--hover); }
 .icon-btn svg { width: 19px; height: 19px; display: block; }
 
 /* ---------- log ---------- */
