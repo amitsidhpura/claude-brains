@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.3.2"
+version = "0.3.3"
 
 repositories {
     mavenCentral()
@@ -73,12 +73,20 @@ intellijPlatform {
         }
         // Shown on the Marketplace plugin page for the current version.
         changeNotes = """
-            <b>0.3.2</b>
+            <b>0.3.3</b>
             <ul>
-              <li>The plugin works on Windows — every conversation used to end immediately with
-                  "claude process exited (1)" before a single word was exchanged</li>
-              <li>The version badge on the welcome screen wears the same chip as the history
-                  list's "current" label — the two styled the same idea differently</li>
+              <li><b>Auto mode changed meaning.</b> It now matches Claude Code's own Auto —
+                  actions that pass a safety check are approved, anything risky still pauses.
+                  It previously approved everything with no checks</li>
+              <li>Modes match the official names — Manual / Edit automatically / Plan / Auto —
+                  and switching between them no longer restarts the CLI or interrupts a reply</li>
+              <li>The composer's focus border and Send button take the colour of the current
+                  mode, so the panel shows how much it is allowed to do on its own</li>
+              <li>"Always allow" is now a split button: the main half grants every rule the CLI
+                  suggests, the arrow opens the list to grant just one</li>
+              <li>Tables in replies render as tables — they used to print as raw pipe characters —
+                  and match the code block styling</li>
+              <li>Header icons no longer grow a background box on hover</li>
             </ul>
         """.trimIndent()
     }
