@@ -5,8 +5,8 @@
      Release process: docs/release.md -->
 <plugins>
     <plugin id="io.github.amitsidhpura.claude-brains"
-            version="0.3.1"
-            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.3.1/claude-brains-0.3.1.zip">
+            version="0.3.2"
+            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.3.2/claude-brains-0.3.2.zip">
         <idea-version since-build="242"/>
         <name>Claude Brains</name>
         <description>Claude Code for JetBrains IDEs (unofficial). Runs Anthropic's official
