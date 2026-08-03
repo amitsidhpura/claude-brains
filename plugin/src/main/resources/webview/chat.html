@@ -497,6 +497,12 @@
     return null;
   }
   function closeMenus() { MENUS.forEach(function (x) { menuEl(x).classList.remove('show'); }); }
+  // Permission-card split-button menus are transient DOM (one per live card), so they are
+  // found by class rather than living in MENUS like the fixed composer popups.
+  function closeCardMenus() {
+    Array.prototype.forEach.call(document.querySelectorAll('.card-menu.show'),
+      function (m) { m.classList.remove('show'); m.parentNode.classList.remove('open'); });
+  }
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
@@ -532,6 +538,7 @@
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#histPanel') && !e.target.closest('#histBtn')) histPanel.classList.remove('show');
     if (e.target.closest('.popup')) return;
+    closeCardMenus();
     closeMenus();
   });
   lightbox.addEventListener('click', function (e) {
@@ -2049,11 +2056,23 @@
           title: 'Auto-approve every edit for the rest of this session',
           doneText: 'auto-approving edits' });
       } else if (s.type === 'addRules' && s.rules && s.rules.length) {
-        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], session: s.destination === 'session' }; out.push(ruleEntry); }
+        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], parts: [], session: s.destination === 'session' }; out.push(ruleEntry); }
         ruleEntry.idxs.push(idx);
-        s.rules.forEach(function (r) {
-          ruleEntry.rules.push(r.ruleContent ? r.ruleContent.replace(/:\*$/, '') : r.toolName);
+        // parts keeps the suggestions separate so the split menu can grant ONE of them; rules
+        // stays flat for the merged button and the done-text chips.
+        // Both are DEDUPED by rule text: sub-commands of one compound command often need the same
+        // grant (two greps over the same directory), so the CLI sends the identical rule in more
+        // than one suggestion — which rendered as the same chip twice, and would have been two
+        // identical menu rows. Dedupe is display-only: every contributing index is kept, because
+        // the CLI persists a suggestion only if its own index comes back.
+        const txts = s.rules.map(function (r) {
+          return r.ruleContent ? r.ruleContent.replace(/:\*$/, '') : r.toolName;
         });
+        txts.forEach(function (t) { if (ruleEntry.rules.indexOf(t) === -1) ruleEntry.rules.push(t); });
+        const key = txts.join('\u0000');
+        const twin = ruleEntry.parts.filter(function (p) { return p.key === key; })[0];
+        if (twin) twin.idxs.push(idx);
+        else ruleEntry.parts.push({ key: key, idxs: [idx], rules: txts });
       } else if (s.type === 'addDirectories' && s.directories && s.directories.length) {
         out.push({ idxs: [idx], label: 'Allow ' + s.directories.join(', '),
           title: 'Allow file access to ' + s.directories.join(', ') +
@@ -2216,8 +2235,24 @@
     const file = inp.file_path || inp.path || '';
     const suggs = permSuggestions(ev.suggestions, isPlan);
     const suggBtns = suggs.map(function (s, i) {
-      return '<button class="alt" data-s="' + i + '" title="' + escA(s.title) + '">' +
+      const main = '<button class="alt" data-s="' + i + '" title="' + escA(s.title) + '">' +
         SVG_CHECKS + esc(s.label) + '</button>';
+      // One grant stays a plain button — a dropdown holding a single item is noise. With several
+      // (a compound command arrives as one suggestion per sub-command) the main half still grants
+      // the lot, and the caret opens them individually for a deliberate partial grant.
+      if (!s.parts || s.parts.length < 2) return main;
+      return '<span class="split">' + main +
+        '<button class="alt more" data-s="' + i + '" aria-haspopup="true"' +
+        ' title="Allow just one of these">' + SVG_CHEVRON + '</button>' +
+        '<div class="popup card-menu">' + s.parts.map(function (part, j) {
+          const txt = part.rules.join(', ');
+          // The double-check icon carries the meaning, as it already does on the button above:
+          // without a marker a row is a bare command and reads like something about to RUN rather
+          // than a permission about to be granted. Tooltip still spells it out in words.
+          return '<div class="popup-item" data-s="' + i + '" data-p="' + j + '"' +
+            ' title="Always allow ' + escA(txt) + '"><div class="pi-ic">' + SVG_CHECKS + '</div>' +
+            '<div class="pi-body"><div class="pi-title">' + esc(txt) + '</div></div></div>';
+        }).join('') + '</div></span>';
     }).join('');
     const card = document.createElement('div');
     if (isPlan) {
@@ -2247,8 +2282,34 @@
     };
     card.querySelector('.ok').onclick = function () { done(true); };
     card.querySelector('.no').onclick = function () { done(false); };
-    Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt'), function (b) {
+    Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt:not(.more)'), function (b) {
       b.onclick = function () { done(true, suggs[+b.dataset.s]); };
+    });
+    Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt.more'), function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();                       // the document handler would close it again
+        const pop = b.parentNode.querySelector('.card-menu');
+        const wasOpen = pop.classList.contains('show');
+        closeCardMenus(); closeMenus();
+        pop.classList.remove('up');
+        pop.classList.toggle('show', !wasOpen);
+        b.parentNode.classList.toggle('open', !wasOpen);
+        if (!wasOpen) {
+          // flip above the button only when the menu would run under the composer, and cap the
+          // list the same way the history/slash popups are capped
+          const limit = composerEl ? composerEl.getBoundingClientRect().top : window.innerHeight;
+          if (pop.getBoundingClientRect().bottom > limit - 8) pop.classList.add('up');
+          capToRows(pop, 6, '.popup-item');
+        }
+      };
+    });
+    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item'), function (it) {
+      it.onclick = function () {
+        const s = suggs[+it.dataset.s], part = s.parts[+it.dataset.p];
+        // only THIS row's indexes go back, so the CLI persists just the rule that was picked
+        // (several indexes when duplicate suggestions were folded into one row)
+        done(true, { idxs: part.idxs, rules: part.rules, doneText: s.doneText });
+      };
     });
   }
 
@@ -2294,7 +2355,8 @@
     // permission card — Bash with allow-rule + allow-directory suggestions (Kotlin strips these
     // on sandbox escalations, where no grant stops the re-ask; this is the non-sandbox shape).
     // Two addRules entries (one per sub-command, as the CLI sends for compound commands) merge
-    // into a single "Always allow" button that grants both.
+    // into a single "Always allow" SPLIT button: the main half grants both, the caret lists them
+    // individually. This is the case that exercises the split — one entry renders a plain button.
     renderPermission({ tool: 'Bash', id: 'gallery-bash', input: JSON.stringify({
       command: 'mkdir -p /tmp/report && touch /tmp/report/out.txt', description: 'Create the report file' }),
       suggestions: JSON.stringify([

@@ -330,6 +330,15 @@ total 196K
       <div class="msg-user">Create a config file and run the build</div>
 
       <div class="turn-body">
+
+      <!-- permission card — compound command, so the CLI sends several addRules suggestions and
+           "Always allow" becomes a SPLIT button: the main half grants every rule, the caret lists
+           them individually. Click the caret to open the menu. -->
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Bash</b></div>
+        <pre class="cmd">./gradlew buildPlugin -q &amp;&amp; rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains</pre>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Accept</button><span class="split"><button class="alt" title="Allow from now on (saved to .claude/settings.local.json)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>Always allow</button><button class="alt more" aria-haspopup="true" title="Allow just one of these"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button><div class="popup card-menu"><div class="popup-item"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">./gradlew buildPlugin -q</div></div></div><div class="popup-item"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains</div></div></div></div></span><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Reject</button></div>
+      </div>
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Write</b> on <code>config/app.php</code></div>
         <div class="diff fold" title="Show more" onclick="this.classList.toggle('open')"><span class="add"><span class="ln">1</span>+ &lt;?php</span>
@@ -995,6 +1004,25 @@ total 196K
         tabs.forEach(function (t, n) { t.classList.toggle('active', n === idx); });
         panels.forEach(function (p, n) { p.hidden = n !== idx; });
       });
+    });
+  });
+  // Split "Always allow": caret toggles the individual-grant menu (mirrors renderPermission).
+  document.querySelectorAll('.card-b .alt.more').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var pop = b.parentNode.querySelector('.card-menu');
+      var open = pop.classList.contains('show');
+      document.querySelectorAll('.card-menu.show').forEach(function (m) {
+        m.classList.remove('show'); m.parentNode.classList.remove('open');
+      });
+      pop.classList.toggle('show', !open);
+      b.parentNode.classList.toggle('open', !open);
+    });
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.card-menu')) return;
+    document.querySelectorAll('.card-menu.show').forEach(function (m) {
+      m.classList.remove('show'); m.parentNode.classList.remove('open');
     });
   });
 </script>

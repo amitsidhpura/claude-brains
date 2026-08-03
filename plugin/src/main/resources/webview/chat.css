@@ -310,6 +310,58 @@ blockquote > *:last-child { margin-bottom: 0; }
    Accept (.ok) — only the double-check icon tells them apart */
 .card-b .alt { background: var(--ok); color: #fff; }
 .card-b .alt:hover { background: var(--ok-hover); }
+/* Split "Always allow": the main half grants every rule the CLI suggested (what its own TUI
+   does); the caret lists them individually for a deliberate partial grant. The two halves are one
+   control, so the seam is a divider rather than a gap, and the caret inherits .alt's colours. */
+/* Positions its own menu rather than borrowing .menu-anchor: that class also matches
+   `.menu-anchor .popup { bottom: ... }`, which is declared LATER at equal specificity, so `top`
+   and `bottom` both applied and the menu collapsed to 0 height. */
+/* stretch, not center: the caret holds only a 14px icon and no text, so its natural height is
+   short — stretching makes both halves exactly as tall as the labelled one. */
+.card-b .split { position: relative; display: inline-flex; align-items: stretch; }
+/* :not(.more) — the caret is an .alt too, so an unscoped rule here squared ITS right corners as
+   well and the pair lost its rounded outer edge entirely. */
+.card-b .split .alt:not(.more) { border-top-right-radius: 0; border-bottom-right-radius: 0;
+  padding-right: 8px; }
+/* One pill with a hinge, not two buttons welded together. The seam is INSET — it clears the top
+   and bottom edges — because a full-height rule reads as structure and made the caret look like a
+   separate control. The label's right padding also drops from the button default of 12px, which
+   is what actually made the caret look far from the text; a seam only ever masked that gap. */
+.card-b .alt.more { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 4px 8px;
+  position: relative; }
+.card-b .alt.more::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+  width: 1px; background: rgba(255, 255, 255, .22); }
+/* chevron-right rotated to show OPEN/CLOSED, not direction: down at rest, up while the menu is
+   open — the same convention as the thinking block's disclosure, and it stays truthful whichever
+   way the menu had to flip */
+.card-b .alt.more .chev { width: 14px; height: 14px; transform: rotate(90deg); transition: transform .15s ease; }
+.card-b .split.open .alt.more .chev { transform: rotate(-90deg); }
+/* while its menu is open the caret stays lit, so the control reads as active even once the
+   pointer moves down into the list */
+.card-b .split.open .alt.more { background: var(--ok-hover); }
+/* Green like the button it hangs off, not the composer popups' blue --user-bg: it belongs to the
+   Always-allow control, and every item in it is a grant. Items lift to --ok-hover, the same hover
+   the button itself uses.
+   Narrower than the composer popups (min-width 330px would overhang a card), and rules ellipsise
+   rather than wrap since a rule can be a whole shell command. Opens DOWNWARD, unlike the composer
+   popups: a card menu that opened up would cover the command preview being approved. JS flips it
+   to .up only when there is no room below. `.popup.card-menu` (0,2,0) because .popup is declared
+   LATER in this file and would otherwise win overflow on equal specificity. */
+.popup.card-menu { min-width: 0; max-width: 340px; top: calc(100% + 6px); bottom: auto;
+  overflow-y: auto; background: var(--ok); border-color: var(--ok-hover); }
+.card-menu .popup-item:hover, .card-menu .popup-item.sel { background: var(--ok-hover); }
+.card-menu .pi-title { color: #fff; }
+/* Same double-check the button wears, but placed like the history list's delete control: on the
+   RIGHT and only while the row is hovered, so a resting menu is just the rules and the affordance
+   appears where you are pointing. The gutter is reserved on hover only — an unhovered row keeps
+   its full width and the rule ellipsises one step later. */
+.card-menu .pi-ic { position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  display: none; width: auto; padding: 0; color: #fff; }
+.card-menu .popup-item:hover .pi-ic { display: block; }
+.card-menu .popup-item:hover { padding-right: 32px; }
+.card-menu .pi-ic svg { width: 15px; height: 15px; display: block; }
+.popup.card-menu.up { top: auto; bottom: calc(100% + 6px); }
+.card-menu .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 /* pre (not pre-wrap): long lines keep their width and the .diff box scrolls horizontally
