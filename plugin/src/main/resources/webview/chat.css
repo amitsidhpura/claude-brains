@@ -16,7 +16,9 @@
   --green: #4ec26b;       /* tool dot */
   --blue: #4daafc;        /* links */
   --amber: #d7a35f;       /* inline code */
-  --code-bg: #141414;     /* dark code surfaces: IN/OUT, diff, cmd, codeblock body */
+  --code-bg: #141414;     /* dark code surfaces: IN/OUT, diff, cmd, codeblock body, table */
+  --code-head: #202226;   /* header strip on those surfaces: codeblock header, table header */
+  --code-stripe: #1b1c1f; /* alternate table row — a touch lighter than --code-bg */
   --red: #f2827f;
   --raised: #2a2d33;      /* chips, inline code, small raised surfaces */
   --raised-hover: #31343a;
@@ -201,12 +203,21 @@ blockquote > *:last-child { margin-bottom: 0; }
    uses <table>. The tool window is narrow, so a wide table scrolls HORIZONTALLY inside .tbl
    instead of stretching #log — never vertically (a nested vertical scroller traps the wheel).
    width:auto, not 100%: a two-column table shouldn't stretch its cells across the panel. */
-.tbl { overflow-x: auto; margin: .55em 0; }
+/* Wears the code-surface shell: --code-bg on a --border frame with --radius corners, exactly
+   like .codeblock and .io, so the three read as one family. fit-content (not a full-width block)
+   keeps the frame hugging a narrow table instead of trailing empty dark space beside it, and
+   max-width + overflow-x still lets a wide one scroll. Row separation is by STRIPE rather than a
+   grid of rules — the same way .io separates IN from OUT — so the only rule left is under the
+   header. */
+.tbl { overflow-x: auto; margin: .55em 0; width: fit-content; max-width: 100%;
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); }
 .tbl table { border-collapse: collapse; width: auto; max-width: 100%; }
-.tbl th, .tbl td { border: 1px solid var(--border); padding: 4px 9px; text-align: left;
-  vertical-align: top; }
-.tbl th { background: var(--raised); font-weight: 600; white-space: nowrap; }
-.tbl tbody tr:nth-child(even) td { background: rgba(255, 255, 255, .022); }
+.tbl th, .tbl td { border: 0; padding: 5px 10px; text-align: left; vertical-align: top; }
+/* header TEXT matches .cb-h too, not just its background: 11px --muted at normal weight, so the
+   strip reads as a label above the data rather than a heavier row of its own. */
+.tbl th { background: var(--code-head); color: var(--muted); font-size: 11px; font-weight: 400;
+  white-space: nowrap; border-bottom: 1px solid var(--border); }
+.tbl tbody tr:nth-child(even) td { background: var(--code-stripe); }
 .tbl .ta-c { text-align: center; } .tbl .ta-r { text-align: right; }
 
 /* assistant block: plain text with small dot */
@@ -276,7 +287,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 
 /* code block */
 .codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: #202226; color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: var(--code-head); color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
 .codeblock .cb-h button { background: transparent; border: 0; color: var(--muted); border-radius: var(--radius); padding: 2px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; }
 .codeblock .cb-h button:hover { color: var(--fg); }
 .codeblock .cb-h button svg { width: 14px; height: 14px; display: block; }
