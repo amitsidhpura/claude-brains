@@ -199,6 +199,18 @@ total 196K
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span></div>
       </div>
 
+      <!-- COMPACTION BOUNDARY: the marker wears the .status metrics; the CLI's summary hangs under
+           it, FOLDED, because real ones run to 25-41k characters. Before this existed the summary
+           replayed as a .msg-user box — a message the user never typed. -->
+      <div class="compact">
+        <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>Conversation compacted · requested · 376k before</div>
+        <div class="compact-sum fold" title="Show more" onclick="this.classList.toggle('open')">This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+1. Primary request: port the permission card to the new split-button design.
+2. Files changed: chat.html, chat.css, SessionStore.kt.
+3. Open item: the caret button needs the hover state while its menu is open.</div>
+      </div>
+
       <!-- RESULT NOTE (.io-note): what the CLI said ABOUT the result, as against .io-cut's "a cap
            removed this". Same geometry — below the value, outside .io-v, so the fold cannot hide it.
            The grep case is why it exists: without the note the box says only that nothing came back

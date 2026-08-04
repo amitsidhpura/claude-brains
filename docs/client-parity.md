@@ -60,8 +60,8 @@ and the reasoning is in the item.
 |---|------|:--------:|:-------:|:--:|------|--------|
 | 10 | Truncated-output marker | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.io-cut` / `.cmd-cut` |
 | 9 | Bash exit-code explanation (was "failure detail") | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · re-scored P0→P3 | shipped — `.io-note`; premise was measured wrong |
-| 15 | Compaction boundary | ✅ | ✅ | ❌ | **P0** (philosophy) | **S** gauge reset · **M** with the marker |
-| 21 | Model refusal fallback | ? | ✅ | ❌ | **P0** (philosophy) | **M** — needs uuid→DOM removal; no way to test |
+| 15 | Compaction boundary | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — marker + folded summary + gauge reset |
+| 21 | Model refusal fallback | ? | ✅ | ❌ | **P3** ↓ (measured) | **L** not M — needs a uuid→DOM map; 0 records seen |
 | 6 | Non-Bash tool result summaries | ✅ | ✅ | ❌ | P1 | **M** — one guard opens it, per-tool shapes are the work |
 | 2 | Sub-agent final report | ✅ | ⚠️ | ❌ | P1 | **XS** ⇢ free with 6 |
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ❌ | P1 | **M** ⇢ must ship WITH 6 |
@@ -343,14 +343,29 @@ Where the context got compacted, why, and how big it was before.
 - **VS Code:** ✅ `system/compact_boundary` → a compact message built from
   `compact_metadata.trigger` + `pre_tokens`, then the synthetic user summary is attached to it;
   `totalTokens` resets to 0.
-- **Us:** ❌ `/compact` is forwarded and runs, but the subtype isn't handled (`chat.html:1682`
-  handles `init` + `background_tasks_changed`), so the conversation silently loses its history with
-  no marker — and our context gauge doesn't reset either.
-- **Take: P0** (rule 3). The gauge going stale after a compact is a live wrongness, not just a
-  missing feature: the composer keeps showing a context share that no longer exists, and the gauge
-  is glanced at constantly. Note this one is self-inflicted — `/compact` is a command *we* enabled
-  in the slash allowlist, so we own the state it leaves behind. The boundary marker can follow; the
-  gauge reset is the bug.
+- **Us:** ❌ was scored on "the conversation silently loses its history with no marker". **Measured
+  2026-08-05 — 23 genuine `compact_boundary` records across local transcripts — and the truth was
+  the opposite, and worse: the summary was not lost, it was shown and misattributed.** The CLI
+  writes it as a `user` record carrying `isCompactSummary`, not `isMeta`, so the meta filter missed
+  it and it replayed as an ordinary blue user box. Probed on a real session: **two boxes of 25,137
+  and 41,013 characters, presented as messages the user had typed.** Same family as the sidechain
+  finding already in `docs/renderer-parity.md`.
+  The other two claims were narrower than stated: there was indeed no marker (`system` records were
+  skipped entirely), but the gauge was stale for ONE turn rather than permanently — `message_start`
+  usage corrects it on the next request.
+- **Take: DONE 2026-08-05** (was P0). A boundary now replays as a marker —
+  `↺ Conversation compacted · requested · 376k before`, from `compactMetadata.trigger` /
+  `preTokens` — with the summary folded beneath it, paired by `parentUuid == boundary.uuid` (a real
+  link, not adjacency). Both orphan directions are handled: a boundary with no summary still shows
+  its marker, and a summary with no boundary still refuses to become a user box.
+  The gauge resets on the boundary live, which was the item's original complaint and remains the
+  part that matters most — the user has just asked for the context to shrink. **Verified in `runIde`
+  2026-08-05: the chip went 34% → cleared the moment compaction finished, and the marker rendered
+  live too — so `system/compact_boundary` IS on the live wire**, unlike the `toolUseResult` fields
+  behind items 9 and 10.
+  Self-inflicted, as the original take noted: `/compact` is a command we enabled, so we own the
+  state it leaves behind.
+  Before/after on session `42d09b97`: oversized user boxes 2 → 0, compact blocks 0 → 2.
 
 ### 16. Rate-limit warnings
 Approaching / hit a usage limit, and when it resets.
@@ -415,11 +430,22 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 - **VS Code:** ✅ `system/model_refusal_fallback` + `refusal_fallback` message type, with
   `retracted_message_uuids` retracting the already-rendered blocks.
 - **Us:** ❌ unhandled — retracted content would stay on screen.
-- **Take: P0 on severity, low on urgency** (rule 3). Rare, but leaving retracted text on screen
-  means the panel shows content the CLI has explicitly withdrawn — the user reads and may act on
-  something that was taken back. Cheap to handle (drop the blocks named by
-  `retracted_message_uuids`); do it whenever the stream `switch` is next open, not as a project of
-  its own.
+- **Take: P3** (was P0 on severity), **measured 2026-08-05 and not built.** Two reasons, both of
+  which invalidate the original take:
+  1. **Zero genuine records.** Not one `refusal_fallback` or `retracted_message_uuids` exists in any
+     local transcript. A substring grep appears to find ~15, but every hit is this repo's own
+     session transcript containing the *docs text* being written about the feature — the same
+     "merely mentions the token" trap `RenderLimits.persistedOutput` carries a guard for. Check by
+     KEY, not by substring.
+  2. **"Cheap to handle" is wrong.** Dropping blocks by uuid presumes we know which DOM node is
+     which uuid, and **no renderer records one**. Only `reqSeed` — a request's first assistant uuid,
+     kept for the summary verb — survives. Retraction needs a uuid→DOM map threaded through every
+     block type: live text, thinking, tool lines, cards. That is cross-cutting infrastructure, not
+     a branch in the stream `switch`.
+  Building it would mean shipping that infrastructure for an event never observed, verifiable only
+  against a synthetic fixture — speculative, and it rots silently if the wire shape differs from the
+  VS Code bundle we inferred it from. **Revisit if a real one is ever seen**; the severity argument
+  still holds, only the evidence and the cost estimate were wrong.
 
 ### 22. Hook activity
 - **Terminal:** ✅ hook output and blocked-tool reasons.
@@ -516,20 +542,29 @@ The stream, echo and summary of an effort change are suppressed live via `effort
 Four tiers, in order. The first is not a parity exercise — it is fixing things the panel currently
 states incorrectly, and it should go first even though some of it is less visible than tier 2.
 
-**Tier 0 — the panel is wrong (rule 3).** Ship before any new capability.
-- ~~Truncation marker (10)~~ — **done 2026-08-05**, and it left two things the rest of this tier
-  can reuse: `RenderLimits.cut` + `cutInfo` as the pattern for a rule that must hold in both
-  languages, and a balloon on a failed `open` so no click in the log is silent.
-- The `/compact` gauge reset (15) `S` — small, and it stops the composer showing a context share
-  that no longer exists. Self-inflicted: we enabled the command, so we own its aftermath.
-- ~~Bash `interrupted` / `stderr` (9)~~ — **measured, re-scored P0→P3, and the real part shipped
-  2026-08-05.** The premise did not survive contact with the data: `stderr` was never dropped (the
-  CLI merges it into the content), failures already rendered, and `interrupted` has never occurred
-  in any local transcript. Only the exit-code explanation was genuinely missing. Cautionary tale
-  for the rest of this tier — a `P0` justified by "the panel shows a falsehood" is worth measuring
-  before it is worth building.
-- Retraction on `refusal_fallback` (21) `M` — fold in whenever the stream `switch` is next open
-  rather than as a project; it can't be verified against local data anyway.
+**Tier 0 — the panel is wrong (rule 3). CLEARED 2026-08-05.** All four items are resolved, but only
+two of them turned out to be the bug the tier claimed. Worth reading before scoring anything `P0`
+again:
+
+- ~~Truncation marker (10)~~ — **real, and shipped.** Left two things the rest of the doc can reuse:
+  `RenderLimits.cut` + `cutInfo` as the pattern for a rule that must hold in both languages, and a
+  balloon on a failed `open` so no click in the log is silent.
+- ~~Compaction boundary (15)~~ — **real, shipped, and worse than described.** The claim was that
+  history vanished silently; in fact the CLI's summary was being SHOWN, as a 25k–41k character blue
+  user box the human never typed. The gauge reset — the part the original take called "the bug" —
+  was the smaller half.
+- ~~Bash `interrupted` / `stderr` (9)~~ — **premise was wrong; re-scored P0→P3.** `stderr` was never
+  dropped (the CLI merges it into the content), failures already rendered, `interrupted` has never
+  occurred. Only the exit-code explanation was genuinely missing, and that shipped.
+- ~~Retraction on `refusal_fallback` (21)~~ — **premise was wrong; re-scored P0→P3, not built.**
+  Zero genuine records, and "cheap to handle" presumed a uuid→DOM map that does not exist.
+
+**The lesson, in one line: two of the four `P0`s described bugs that were not there, and the one
+that was real was mis-described.** A rule-3 score says "the panel states a falsehood" — that is a
+factual claim about behaviour, and it is cheap to check against `~/.claude/projects/*/*.jsonl`
+before it is expensive to build against. Check by KEY, not substring: item 21's phantom evidence was
+this repo's own transcript quoting the field names, and item 9's "no failures" reading came from
+filtering on a `stdout` key that failed results do not have.
 
 **Tier 1 — the review loop (many times an hour).** The panel's core job: seeing what Claude did.
 - **Start with item 5** `XS` — three strings into `RenderLimits.DESC_KEYS` and both paths stop

@@ -161,6 +161,16 @@ object SessionStore {
 
     private fun computeContextTokens(f: File): Long {
         for (line in tailLines(f).asReversed()) {
+            // A compaction resets the context, and scanning BACKWARDS we meet the boundary before
+            // the request that preceded it — a request whose usage is the PRE-compact size. Reading
+            // past it re-seeded a resumed session with the very figure the compaction removed (34%
+            // of a 1M window, observed after compacting at 345k). Live already clears the chip on
+            // this event; stopping here is the same rule for replay. 0 = unknown, and the chip stays
+            // hidden until the next turn's message_start reports the real post-compact prompt.
+            if (line.contains("compact_boundary")) {
+                val o = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull()
+                if (o?.get("subtype")?.jsonPrimitive?.contentOrNull == "compact_boundary") return 0
+            }
             if (!line.contains("\"usage\"")) continue
             val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
             if (obj["type"]?.jsonPrimitive?.content != "assistant") continue
@@ -296,6 +306,7 @@ object SessionStore {
         var outFile: String? = null
         var note: String? = null           // the CLI's exit-code explanation ("No matches found")
         var interrupted: Boolean = false   // the command was killed rather than finishing
+        var trigger: String? = null        // compaction: "auto" (context ran out) or "manual" (/compact)
         var isError: Boolean = false
         var patch: JsonElement? = null     // structuredPatch hunks (authoritative diff + line numbers)
         var content: String? = null        // Write body (no patch available)
@@ -333,6 +344,7 @@ object SessionStore {
             outFile?.let { put("outFile", it) }
             note?.let { put("note", it) }
             if (interrupted) put("interrupted", true)
+            trigger?.let { put("trigger", it) }
             if (isError) put("isError", true)
             patch?.let { put("patch", it) }
             content?.let { put("content", it) }
@@ -367,6 +379,11 @@ object SessionStore {
         var reqWork = false
         var reqSeed: String? = null            // first assistant uuid of the request (verb seed)
         val reqMsgIds = HashSet<String>()      // message.ids already counted — see the "assistant" branch
+        // A compaction boundary awaiting its summary. The CLI writes the marker and the summary as
+        // two records, linked by parentUuid; holding the marker here lets the summary fold into it
+        // instead of becoming a message the user never sent.
+        var openCompact: Item? = null
+        var openCompactUuid: String? = null
         // Seed of the previous summary, so the renderer can refuse to draw the same verb twice in a
         // row. It travels on the item rather than being inferred from render order, because windowed
         // replay renders earlier chunks LAST (prepended) — document order isn't render order.
@@ -430,6 +447,28 @@ object SessionStore {
                                 continue
                             }
                             if (obj["isMeta"]?.jsonPrimitive?.content == "true") continue // caveat wrapper
+                            // The CLI's post-compaction summary is written as a `user` record — but the
+                            // user never typed it. It carries isCompactSummary rather than isMeta, so
+                            // the filter above misses it and a resumed session showed a 25k–41k char
+                            // blue message box attributed to the human. It belongs to the boundary
+                            // that precedes it (parentUuid == that record's uuid — a real link, not
+                            // adjacency), folded under the marker.
+                            if (obj["isCompactSummary"]?.jsonPrimitive?.content == "true") {
+                                val body = userTextFull(obj)?.takeIf { it.isNotBlank() }
+                                val parent = obj["parentUuid"]?.jsonPrimitive?.contentOrNull
+                                val marker = openCompact   // local: the var is captured by flushSummary
+                                if (marker != null && parent != null && parent == openCompactUuid) {
+                                    marker.text = body ?: ""
+                                } else {
+                                    // Orphaned — its boundary was never written, or sits in a file we
+                                    // are not reading. Still not a user message: show it as a compact
+                                    // block with no metadata rather than misattributing it again.
+                                    flushSummary()
+                                    out.add(Item("compact").apply { text = body ?: "" })
+                                }
+                                openCompact = null; openCompactUuid = null
+                                continue
+                            }
                             val text = userTextFull(obj)?.let { cleanInjected(it) }?.takeIf { it.isNotBlank() }
                             val atts = attachmentsOf(content)
                             if (text == null && atts.isEmpty()) continue
@@ -487,6 +526,22 @@ object SessionStore {
                                     }
                                 }
                             }
+                        }
+                        // Where the context was compacted. `system` records were skipped entirely, so
+                        // a compaction left no trace at all — while its summary leaked through as a
+                        // user message (see the isCompactSummary branch above). The marker is emitted
+                        // here and the summary folded into it when the next record claims this uuid.
+                        "system" -> {
+                            if (obj["subtype"]?.jsonPrimitive?.content != "compact_boundary") continue
+                            val meta = obj["compactMetadata"] as? JsonObject
+                            flushSummary()   // close the previous request, exactly as a user turn does
+                            val item = Item("compact").apply {
+                                trigger = (meta?.get("trigger") as? JsonPrimitive)?.contentOrNull
+                                tokens = (meta?.get("preTokens") as? JsonPrimitive)?.longOrNull
+                            }
+                            out.add(item)
+                            openCompact = item
+                            openCompactUuid = obj["uuid"]?.jsonPrimitive?.contentOrNull
                         }
                     }
                 }

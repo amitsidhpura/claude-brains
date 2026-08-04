@@ -138,6 +138,107 @@ class SessionStoreTest {
         }
     }
 
+    /**
+     * The CLI writes its post-compaction summary as a `user` record carrying `isCompactSummary`
+     * rather than `isMeta`, so the meta filter missed it and a resumed session showed a 25k-41k
+     * character blue message box the human never typed (measured in two real local sessions). It
+     * belongs to the boundary before it — linked by `parentUuid`, not by adjacency — folded under
+     * the marker. Both orphan directions are covered because either can fall at a file boundary.
+     */
+    @Test
+    fun `a compaction replays as one marker with its summary, never as a user message`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-08-05T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"real question"}]}}""",
+            // boundary + its summary: must collapse into ONE compact block
+            """{"type":"system","subtype":"compact_boundary","uuid":"b1","timestamp":"2026-08-05T10:01:00.000Z","content":"Conversation compacted","compactMetadata":{"trigger":"manual","preTokens":375909,"durationMs":178900}}""",
+            """{"type":"user","uuid":"s1","parentUuid":"b1","isCompactSummary":true,"isVisibleInTranscriptOnly":true,"timestamp":"2026-08-05T10:01:01.000Z","message":{"role":"user","content":[{"type":"text","text":"SUMMARY-BODY"}]}}""",
+            // a boundary whose summary never arrived — the marker still stands
+            """{"type":"system","subtype":"compact_boundary","uuid":"b2","timestamp":"2026-08-05T10:02:00.000Z","content":"Conversation compacted","compactMetadata":{"trigger":"auto","preTokens":167204}}""",
+            """{"type":"user","timestamp":"2026-08-05T10:03:00.000Z","message":{"role":"user","content":[{"type":"text","text":"another real question"}]}}""",
+            // a summary whose boundary is missing — still must NOT become a blue user box
+            """{"type":"user","uuid":"s3","parentUuid":"gone","isCompactSummary":true,"timestamp":"2026-08-05T10:04:00.000Z","message":{"role":"user","content":[{"type":"text","text":"ORPHAN-SUMMARY"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-compact", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "compact.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "compact")
+            val users = out.filter { it["role"]?.jsonPrimitive?.content == "user" }
+            val compacts = out.filter { it["role"]?.jsonPrimitive?.content == "compact" }
+
+            assertEquals(
+                listOf("real question", "another real question"),
+                users.map { it["text"]!!.jsonPrimitive.content },
+                "only messages the user actually typed may replay as user blocks",
+            )
+            users.forEach {
+                assertFalse(
+                    it["text"]!!.jsonPrimitive.content.contains("SUMMARY"),
+                    "a compaction summary must never be attributed to the user",
+                )
+            }
+
+            assertEquals(3, compacts.size, "two boundaries and one orphaned summary")
+            assertEquals("manual", compacts[0]["trigger"]?.jsonPrimitive?.content)
+            assertEquals(375909L, compacts[0]["tokens"]?.jsonPrimitive?.long)
+            assertEquals("SUMMARY-BODY", compacts[0]["text"]?.jsonPrimitive?.content,
+                "the summary folds into the boundary that claims it")
+
+            assertEquals("auto", compacts[1]["trigger"]?.jsonPrimitive?.content)
+            assertEquals("", compacts[1]["text"]?.jsonPrimitive?.content,
+                "a boundary with no summary still renders its marker")
+
+            assertNull(compacts[2]["trigger"], "an orphaned summary has no metadata to show")
+            assertEquals("ORPHAN-SUMMARY", compacts[2]["text"]?.jsonPrimitive?.content)
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * A resumed session must not re-seed the context gauge with the size the compaction just
+     * removed. Scanning the tail backwards, the boundary is met BEFORE the request that preceded
+     * it — and that request's usage is the pre-compact figure. Observed in `runIde`: compacting at
+     * 345k cleared the chip live, then a resume put 34% (345k of 1M) straight back.
+     */
+    @Test
+    fun `a compaction resets the resumed context gauge`() {
+        fun assistant(t: String, used: Long) =
+            """{"type":"assistant","timestamp":"$t","message":{"id":"m$used","role":"assistant",""" +
+                """"content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":$used,""" +
+                """"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}"""
+        val boundary =
+            """{"type":"system","subtype":"compact_boundary","uuid":"b1","timestamp":"2026-08-05T10:02:00.000Z","compactMetadata":{"trigger":"manual","preTokens":345000}}"""
+
+        val tmpHome = File.createTempFile("claude-home-ctx", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            SessionStore.claudeHome = tmpHome
+
+            // compaction is the newest thing in the file: the gauge must read "unknown", not 345000
+            File(dir, "ctx-a.jsonl").writeText(
+                listOf(assistant("2026-08-05T10:01:00.000Z", 345000), boundary).joinToString("\n"))
+            assertEquals(0L, SessionStore.contextTokens(CWD, "ctx-a"),
+                "the pre-compact request's usage must not survive the compaction")
+
+            // once a real turn follows the boundary, ITS prompt is the context again
+            File(dir, "ctx-b.jsonl").writeText(
+                listOf(assistant("2026-08-05T10:01:00.000Z", 345000), boundary,
+                       assistant("2026-08-05T10:03:00.000Z", 12000)).joinToString("\n"))
+            assertEquals(12000L, SessionStore.contextTokens(CWD, "ctx-b"),
+                "the newest post-compact request is the current context")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     /** Diffs come from toolUseResult.structuredPatch — real hunks, not a prefix/suffix guess. */
     @Test
     fun `Edit replays from the structured patch`() {

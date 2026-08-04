@@ -1127,6 +1127,9 @@
         case 'status':
           statusLine(it.text, it.icon === 'stop' ? SVG_STOP : null);
           break;
+        case 'compact':
+          compactBlock(it.text || '', it.trigger, it.tokens || 0);
+          break;
         case 'done': {
           const d = el('done', '');
           d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0, it.seed, it.prevSeed);
@@ -1772,6 +1775,16 @@
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }
+        } else if (ev.subtype === 'compact_boundary') {
+          // Read defensively: whether the live stream carries this subtype is unprobed (toolUseResult
+          // turned out not to be), so if it never arrives replay still draws the marker and nothing
+          // here breaks. The gauge reset is the part that MUST happen live — the user just asked for
+          // the context to shrink and the chip was still showing the pre-compact figure until the
+          // next turn's message_start corrected it. renderContext treats 0 as "clear the chip
+          // entirely", and the chip's own click handler already no-ops while ctxUsed is 0.
+          const cm = ev.compact_metadata || ev.compactMetadata || {};
+          compactBlock('', cm.trigger, cm.pre_tokens || cm.preTokens || 0);
+          ctxUsed = 0; renderContext();
         } else if (ev.subtype === 'background_tasks_changed') {
           // A background subagent suspends the turn: each suspension emits a `result`, and the
           // CLI resumes with another once the task reports back. Track how many are still running
@@ -1970,6 +1983,30 @@
   }
   // Timeline status line with an optional leading glyph that hangs in the dot column
   // (so icon + text align with .blk / .think / .retry). Text is set safely (textContent).
+  // Where the context was compacted. One builder for live and replay, like every other block, so
+  // the two cannot drift. The summary is the CLI's own text and runs to 25-41k characters in real
+  // sessions — it used to render as a blue USER box, i.e. a message the human never typed — so it
+  // folds to three lines under the marker and expands on click.
+  function compactBlock(summary, trigger, preTokens) {
+    const wrap = el('compact', '');
+    const head = document.createElement('div');
+    head.className = 'status';
+    const ic = document.createElement('span'); ic.className = 's-ic'; ic.innerHTML = SVG_HISTORY;
+    head.appendChild(ic);
+    const bits = ['Conversation compacted'];
+    if (trigger) bits.push(trigger === 'auto' ? 'ran out of context' : 'requested');
+    if (preTokens) bits.push(fmtTok(preTokens) + ' before');
+    head.appendChild(document.createTextNode(bits.join(' · ')));
+    wrap.appendChild(head);
+    if (summary) {
+      const body = document.createElement('div');
+      body.className = 'compact-sum';
+      body.textContent = summary;
+      wrap.appendChild(body);
+      foldBlock(body);   // mounted same-tick by el(), so the post-insert measure lands
+    }
+    return wrap;
+  }
   function statusLine(text, icon, cls) {
     const d = el(cls || 'status');
     if (icon) {
@@ -2467,6 +2504,16 @@
       ['IN', cutInfo(longCmd, LIM.cmdMax).shown, cutInfo(longCmd, LIM.cmdMax)],
       ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax)],
     ]));
+    // compaction boundary — the summary is the CLI's, folded, and NOT a user message. Real ones run
+    // to 25-41k characters; this stub is long enough to exercise the fold.
+    compactBlock(
+      'This session is being continued from a previous conversation that ran out of context. ' +
+      'The summary below covers the earlier portion of the conversation.\n\n' +
+      '1. Primary request: port the permission card to the new split-button design.\n' +
+      '2. Files changed: chat.html, chat.css, SessionStore.kt.\n' +
+      '3. Open item: the caret button needs the hover state while its menu is open.',
+      'manual', 375909);
+
     // result NOTES — what the CLI said about the result, not what a cap removed. The grep case is
     // the one that matters: without the note the box says only "(Bash completed with no output)"
     // and the reason is gone. `interrupted` has never been seen in a real transcript.

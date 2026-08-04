@@ -238,6 +238,26 @@ Mostly deliberate; listed so nothing is silently forgotten.
       result text to parse — the field simply is not on the wire live. **Accepted:** the alternative
       is suppressing it on replay too, which would hide real information to make the two paths match.
       Same shape as `interrupted`, which is carried but has never been seen in any local record.
+- [x] **The compaction summary replayed as a USER message** — found and FIXED 2026-08-05 (item 15).
+      The CLI writes its post-compaction summary as a `user` record flagged `isCompactSummary`
+      (plus `isVisibleInTranscriptOnly`), NOT `isMeta` — so `cleanInjected`'s meta filter missed it
+      and a resumed session showed a blue message box the human never typed. Measured on session
+      `42d09b97`: **two boxes of 25,137 and 41,013 characters.** Exactly the shape of the sidechain
+      finding below, and the reason that one is worth re-reading: "a resumed session appears to
+      contain a message the human never typed" is a recurring failure mode of replaying a
+      CLI-authored `user` record verbatim.
+      · **Fix:** the summary folds under its `compact_boundary` marker, paired by
+        `parentUuid == boundary.uuid` — a real link, not adjacency, so interleaved records cannot
+        mis-pair. Both orphan directions are handled (boundary with no summary; summary with no
+        boundary), since either can fall at a file boundary or outside the replay window.
+      · **The live stream DOES carry `system/compact_boundary`** — probed in `runIde` 2026-08-05 by
+        running `/compact`: the marker appeared live (`requested · 345k before`) and the context
+        chip went 34% → cleared in the same moment. Unlike `toolUseResult` (items 9/10), this one
+        is on the wire, so live and replay agree on the marker itself.
+      · One benign asymmetry left: live draws the marker with NO summary, because the summary is not
+        echoed as a live event — it exists only as the transcript record. So a resumed session is
+        RICHER than the live render here, which is the opposite of the usual lossy-on-resume shape
+        and needs no fix: nothing is claimed falsely either way.
 - [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
       neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
       with the parent turn; the parent's Task result still attaches to the Task tool line, not to a

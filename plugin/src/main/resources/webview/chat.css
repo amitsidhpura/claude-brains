@@ -569,6 +569,14 @@ blockquote > *:last-child { margin-bottom: 0; }
   display: inline-flex; align-items: center; justify-content: center; }
 .status .s-ic svg { width: 12px; height: 12px; display: block; }
 .status.err { color: var(--red); }
+/* Compaction boundary: the marker wears the plain status metrics, and the CLI's summary hangs
+   beneath it at the same 22px indent — folded, because it runs to 25-41k characters in real
+   sessions. It used to replay as a .msg-user box, i.e. as something the user had typed; the muted
+   code surface is what says "this is the transcript talking, not you". */
+.compact .compact-sum { margin: 4px 0 0 22px; padding: 8px 10px; background: var(--code-bg);
+  border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted);
+  font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.compact .compact-sum.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
 .ok-t { color: var(--green); font-size: 13px; }
 .no-t { color: var(--red); font-size: 13px; }
 /* granted rules on a resolved card: one chip per rule, so compound-command rules stay separable */
