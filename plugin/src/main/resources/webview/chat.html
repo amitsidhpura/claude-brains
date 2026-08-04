@@ -920,22 +920,35 @@
     e.textContent = cutText(cut, total, path);
     return e;
   }
+  // What the CLI said about the result itself, as against what the result WAS: an exit-code
+  // explanation ("No matches found" for a grep that matched nothing), or that the command was
+  // killed. Same geometry as the truncation marker — below the value, outside .io-v — because it is
+  // the same kind of thing: one line of prose about the row. Replay-only; the live stream carries no
+  // toolUseResult (probed 2026-08-05), and unlike the spill wrapper there is no prose fallback.
+  function noteEl(note, interrupted) {
+    const e = document.createElement('span');
+    e.className = 'io-note';
+    // ⏹ is the stop glyph statusLine() already uses for an interrupted turn; ↳ reads as "which means"
+    e.textContent = interrupted ? '⏹ Interrupted' : '↳ ' + note;
+    return e;
+  }
   // `cut` is a {lines, bytes} from cutInfo() (live) or the identically-shaped one Kotlin puts on the
-  // wire (replay). The marker is a SIBLING of .io-v, never a child: foldBlock collapses .io-v to
-  // three lines, so a marker inside it would itself be folded away — the notice that content was
-  // cut, cut.
-  function ioRow(kind, text, cut, total, path) {
+  // wire (replay). Marker and note are both SIBLINGS of .io-v, never children: foldBlock collapses
+  // .io-v to three lines, so either one inside it would itself be folded away — the notice that
+  // content was cut, cut.
+  function ioRow(kind, text, cut, total, path, note, interrupted) {
     const row = document.createElement('div'); row.className = 'io-row';
     row.innerHTML = '<span class="io-k"></span><span class="io-v"></span>';
     row.querySelector('.io-k').textContent = kind;
     row.querySelector('.io-v').textContent = text;
     foldBlock(row.querySelector('.io-v'));   // measured on the post-insert frame (callers mount same-tick)
     if (cut || total) row.appendChild(cutEl(cut || { lines: 0, bytes: 0 }, total, path));
+    if (note || interrupted) row.appendChild(noteEl(note, interrupted));
     return row;
   }
   function ioBox(rows) {
     const io = document.createElement('div'); io.className = 'io';
-    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1], r[2], r[3], r[4])); });
+    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1], r[2], r[3], r[4], r[5], r[6])); });
     return io;
   }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
@@ -1142,7 +1155,7 @@
             // cut metadata rides the same rows into the same builder as live, so a truncated result
             // reads identically whether it is streaming now or replayed from the transcript
             if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut]);
-            if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile]);
+            if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile, it.note, it.interrupted]);
             t.after(ioBox(rows));
           }
           replayCard(it);
@@ -2454,6 +2467,19 @@
       ['IN', cutInfo(longCmd, LIM.cmdMax).shown, cutInfo(longCmd, LIM.cmdMax)],
       ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax)],
     ]));
+    // result NOTES — what the CLI said about the result, not what a cap removed. The grep case is
+    // the one that matters: without the note the box says only "(Bash completed with no output)"
+    // and the reason is gone. `interrupted` has never been seen in a real transcript.
+    const tn = el('tool-line', '');
+    tn.innerHTML = '<b>Bash</b><span class="t-desc">Search for the old class name</span>';
+    tn.after(ioBox([
+      ['IN', 'grep -rn "ClaudeCodeSyncroze" src/'],
+      ['OUT', '(Bash completed with no output)', null, null, null, 'No matches found'],
+    ]));
+    const ti = el('tool-line', ''); ti.classList.add('fail');
+    ti.innerHTML = '<b>Bash</b><span class="t-desc">Wait for the port to open</span>';
+    ti.after(ioBox([['OUT', 'waiting for 127.0.0.1:8080…', null, null, null, null, true]]));
+
     const t5 = el('tool-line', '');
     t5.innerHTML = '<b>Bash</b><span class="t-desc">Dump one long line, and a spilled result</span>';
     t5.after(ioBox([

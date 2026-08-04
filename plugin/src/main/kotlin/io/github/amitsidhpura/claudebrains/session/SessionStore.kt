@@ -294,6 +294,8 @@ object SessionStore {
         // outFile is set ONLY when the path still exists, so the marker can never be a dead link.
         var outTotal: Long? = null
         var outFile: String? = null
+        var note: String? = null           // the CLI's exit-code explanation ("No matches found")
+        var interrupted: Boolean = false   // the command was killed rather than finishing
         var isError: Boolean = false
         var patch: JsonElement? = null     // structuredPatch hunks (authoritative diff + line numbers)
         var content: String? = null        // Write body (no patch available)
@@ -329,6 +331,8 @@ object SessionStore {
             outCut?.let { put("outCut", cutJson(it)) }
             outTotal?.let { put("outTotal", it) }
             outFile?.let { put("outFile", it) }
+            note?.let { put("note", it) }
+            if (interrupted) put("interrupted", true)
             if (isError) put("isError", true)
             patch?.let { put("patch", it) }
             content?.let { put("content", it) }
@@ -602,6 +606,19 @@ object SessionStore {
             item.outFile = ((res?.get("persistedOutputPath") as? JsonPrimitive)?.contentOrNull
                 ?: spill?.path)
                 ?.takeIf { it.isNotBlank() && File(it).isFile }
+
+            // The CLI's explanation of a non-obvious exit code ("No matches found" for a grep that
+            // matched nothing). Measured across local transcripts: 35 records carry one and 33 of
+            // them say something the result text does NOT — including the case that matters most,
+            // where the content is only "(Bash completed with no output)" and this is the sole
+            // reason given. Suppressed when the content already says it, on the same
+            // no-duplication rule the <persisted-output> unwrap follows.
+            item.note = (res?.get("returnCodeInterpretation") as? JsonPrimitive)?.contentOrNull
+                ?.takeIf { it.isNotBlank() && !shown.contains(it, ignoreCase = true) }
+            // Built blind: `interrupted` is true in ZERO of 5673 local records, so this path has
+            // never been seen in real data and cannot be verified against it. Cheap enough to carry
+            // rather than leave a killed command indistinguishable from one that simply finished.
+            item.interrupted = (res?.get("interrupted") as? JsonPrimitive)?.contentOrNull == "true"
         }
     }
 

@@ -231,6 +231,13 @@ Mostly deliberate; listed so nothing is silently forgotten.
         mirror both yield a 2000-char preview with identical head and identical path. The first
         run disagreed by ONE byte (402.7 × 1024 = 412364.8 — JS rounded, Kotlin truncated); Kotlin
         now rounds too, and the exact value is pinned in `RenderLimitsTest` so it cannot drift back.
+- [~] **Bash exit-code explanation is replay-only** (2026-08-05, item 9). `returnCodeInterpretation`
+      lives on `toolUseResult`, which the live stream does not carry at all, so a resumed session
+      shows `↳ No matches found` under a grep that matched nothing while the live render of the same
+      command does not. Unlike the `<persisted-output>` spill there is NO prose fallback in the
+      result text to parse — the field simply is not on the wire live. **Accepted:** the alternative
+      is suppressing it on replay too, which would hide real information to make the two paths match.
+      Same shape as `interrupted`, which is carried but has never been seen in any local record.
 - [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
       neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
       with the parent turn; the parent's Task result still attaches to the Task tool line, not to a

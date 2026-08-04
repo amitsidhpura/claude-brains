@@ -59,7 +59,7 @@ and the reasoning is in the item.
 | # | Item | Terminal | VS Code | Us | Take | Effort |
 |---|------|:--------:|:-------:|:--:|------|--------|
 | 10 | Truncated-output marker | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.io-cut` / `.cmd-cut` |
-| 9 | Bash failure detail (stderr / interrupted) | ✅ | ✅ | ⚠️ | **P0** (philosophy) | **S** — replay-only; live has no `toolUseResult` (probed) |
+| 9 | Bash exit-code explanation (was "failure detail") | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · re-scored P0→P3 | shipped — `.io-note`; premise was measured wrong |
 | 15 | Compaction boundary | ✅ | ✅ | ❌ | **P0** (philosophy) | **S** gauge reset · **M** with the marker |
 | 21 | Model refusal fallback | ? | ✅ | ❌ | **P0** (philosophy) | **M** — needs uuid→DOM removal; no way to test |
 | 6 | Non-Bash tool result summaries | ✅ | ✅ | ❌ | P1 | **M** — one guard opens it, per-tool shapes are the work |
@@ -226,12 +226,29 @@ We show the concatenated `tool_result` text and colour the dot.
 
 - **Terminal:** ✅ error output distinguished, exit status implied.
 - **VS Code:** ✅ error styling plus `stderr` handling.
-- **Us:** ⚠️ `stderr`, `interrupted`, `returnCodeInterpretation` and `noOutputExpected` are present
-  in `toolUseResult` and read for nothing (`SessionStore.kt:558` uses stdout/stderr only as a
-  fallback). A command killed by a timeout reads like a quiet success.
-- **Take: P0** (rule 3). `interrupted` especially — a hung-then-killed command currently renders as
-  a quiet success. Approving commands and reading their results is the highest-frequency thing the
-  panel does, so a false "that worked" is the most expensive wrong thing we can show.
+- **Us:** ⚠️ was scored on the assumption that all four fields were being dropped. **Measured
+  2026-08-05 across 2892 local Bash results, that was wrong on three of the four:**
+
+  | Field | Records | Actually visible before this work? |
+  |---|---|---|
+  | `stderr` non-empty | 151 | **Yes** — the CLI merges stderr into the `tool_result` content, 151/151 |
+  | failures (`is_error`) | 223 | **Yes** — red dot + the error text |
+  | `noOutputExpected` | 29 | **Yes** — content reads `(Bash completed with no output)` |
+  | `interrupted: true` | **0** | never observed on any line of any local transcript |
+  | `returnCodeInterpretation` | 35 | **No** — 33 of 35 said something the output did not |
+
+  The trap that produced the wrong score: a FAILED result stores `toolUseResult` as a **string**,
+  not an object, so any survey filtering on a `stdout` key misses every failure and concludes
+  failures aren't handled. They are.
+
+- **Take: P3** (was P0), and **the real gap is DONE 2026-08-05.** The rule-3 justification does not
+  survive the measurement — nothing here rendered a failure as a success, so this was never a
+  "panel is wrong" item. What was genuinely missing is the CLI's exit-code explanation: shipped as
+  `.io-note` (`↳ No matches found`), suppressed when the output already says it, which fires on 2
+  real records. `interrupted` is carried too but is **built blind** — zero local records, so it has
+  never been exercised against real data, only a synthetic fixture.
+  Remaining and deliberately not built: distinguishing the stderr span inside the merged content.
+  It is already on screen, so that is styling, not recovery — and it would risk duplicating text.
 
 ### 10. Truncated-output marker
 We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
@@ -505,8 +522,12 @@ states incorrectly, and it should go first even though some of it is less visibl
   languages, and a balloon on a failed `open` so no click in the log is silent.
 - The `/compact` gauge reset (15) `S` — small, and it stops the composer showing a context share
   that no longer exists. Self-inflicted: we enabled the command, so we own its aftermath.
-- Bash `interrupted` / `stderr` (9) `M` — a killed command reads as a success. Probe the live
-  shape first (see the soft-estimate note); the answer may make this replay-only.
+- ~~Bash `interrupted` / `stderr` (9)~~ — **measured, re-scored P0→P3, and the real part shipped
+  2026-08-05.** The premise did not survive contact with the data: `stderr` was never dropped (the
+  CLI merges it into the content), failures already rendered, and `interrupted` has never occurred
+  in any local transcript. Only the exit-code explanation was genuinely missing. Cautionary tale
+  for the rest of this tier — a `P0` justified by "the panel shows a falsehood" is worth measuring
+  before it is worth building.
 - Retraction on `refusal_fallback` (21) `M` — fold in whenever the stream `switch` is next open
   rather than as a project; it can't be verified against local data anyway.
 

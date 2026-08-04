@@ -284,6 +284,75 @@ class RenderLimitsTest {
         }
     }
 
+    /**
+     * `returnCodeInterpretation` is the CLI explaining a non-obvious exit code. Measured across
+     * local transcripts: 35 records carry one, and 33 say something the result text does not — the
+     * important shape being a grep whose whole output is "(Bash completed with no output)" and
+     * whose only explanation is this field. The other 2 repeat what the content already says, so
+     * they must NOT be echoed underneath it.
+     *
+     * `interrupted` is true in ZERO of 5673 local records, so the flag is carried but has never
+     * been exercised against real data — asserted here on a synthetic record only.
+     */
+    @Test
+    fun `replay carries the exit-code explanation, unless the output already says it`() {
+        val home = File.createTempFile("claude-home", "").let { it.delete(); it.mkdirs(); it }
+        val cwd = "/home/dev/Sites/note-fixture"
+        val dir = File(home, ".claude/projects/${cwd.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+        dir.mkdirs()
+
+        fun call(i: Int, id: String) =
+            """{"type":"assistant","uuid":"u$i","timestamp":"2026-08-05T10:00:0$i.000Z",""" +
+                """"message":{"id":"m$i","role":"assistant","content":[{"type":"tool_use",""" +
+                """"id":"$id","name":"Bash","input":{"command":"grep -rn x ."}}]}}"""
+        fun result(i: Int, id: String, content: String, extra: String) =
+            """{"type":"user","uuid":"r$i","timestamp":"2026-08-05T10:01:0$i.000Z",""" +
+                """"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"$id",""" +
+                """"content":${q(content)}}]},"toolUseResult":{"stdout":${q(content)}$extra}}"""
+
+        File(dir, "note.jsonl").writeText(
+            listOf(
+                // the case that matters: the interpretation is the ONLY explanation
+                call(0, "t0"), result(0, "t0", "(Bash completed with no output)",
+                    ""","returnCodeInterpretation":"No matches found""""),
+                // already in the content — echoing it underneath would just be noise
+                call(1, "t1"), result(1, "t1", "No matches found in 412 files",
+                    ""","returnCodeInterpretation":"No matches found""""),
+                // no interpretation at all
+                call(2, "t2"), result(2, "t2", "ok", ""),
+                // killed rather than finished — synthetic, no real record has ever had this
+                call(3, "t3"), result(3, "t3", "waiting…", ""","interrupted":true"""),
+            ).joinToString("\n")
+        )
+
+        val real = SessionStore.claudeHome
+        try {
+            SessionStore.claudeHome = home
+            val tools = SessionStore.readTranscript(cwd, "note")
+                .filter { it["role"]?.jsonPrimitive?.content == "tool" }
+            assertEquals(4, tools.size)
+            assertEquals(
+                "No matches found", tools[0]["note"]?.jsonPrimitive?.contentOrNull,
+                "an explanation the output does not give must reach the user",
+            )
+            assertEquals(
+                null, tools[1]["note"],
+                "an explanation the output ALREADY states must not be repeated under it",
+            )
+            assertEquals(null, tools[2]["note"])
+            assertEquals(
+                true, tools[3]["interrupted"]?.jsonPrimitive?.contentOrNull?.toBoolean(),
+                "a killed command must be distinguishable from one that finished",
+            )
+            listOf(0, 1, 2).forEach {
+                assertEquals(null, tools[it]["interrupted"], "only a killed command carries the flag")
+            }
+        } finally {
+            SessionStore.claudeHome = real
+            home.deleteRecursively()
+        }
+    }
+
     /** JSON-quote a string for the hand-built fixture lines above. */
     private fun q(s: String) = Json.encodeToString(String.serializer(), s)
 

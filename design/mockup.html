@@ -199,6 +199,20 @@ total 196K
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span></div>
       </div>
 
+      <!-- RESULT NOTE (.io-note): what the CLI said ABOUT the result, as against .io-cut's "a cap
+           removed this". Same geometry — below the value, outside .io-v, so the fold cannot hide it.
+           The grep case is why it exists: without the note the box says only that nothing came back
+           and drops the reason. Replay-only; the live stream carries no toolUseResult. -->
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Search for the old class name</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">grep -rn "ClaudeCodeSyncroze" src/</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">(Bash completed with no output)</span><span class="io-note">↳ No matches found</span></div>
+      </div>
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">Wait for the port to open</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">waiting for 127.0.0.1:8080…</span><span class="io-note">⏹ Interrupted</span></div>
+      </div>
+
       <!-- "Thought" with NO duration: replay path when the transcript has no timestamp gap -->
       <details class="think"><summary>Thought<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">Reconstructed from a record with no measurable gap.</div></details>
 
