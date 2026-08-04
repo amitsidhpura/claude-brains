@@ -4,23 +4,40 @@
     <vendor url="https://github.com/amitsidhpura/claude-brains">Amit Sidhpura</vendor>
 
     <description><![CDATA[
+        <b>Develop in the IDE. Configure in the Terminal.</b>
+
         Claude Code for JetBrains IDEs (unofficial). Runs Anthropic's official
         <code>claude</code> CLI inside PhpStorm and other IntelliJ IDEs, wired to the editor
         through the same IDE-MCP bridge the VS Code extension uses. Opens in a right-side tool
         window. Requires the <code>claude</code> CLI installed and logged in — does not bundle
         or redistribute Anthropic code. Not affiliated with Anthropic or JetBrains.
 
-        <h3>Current limitations — read before installing</h3>
+        <h3>Philosophy</h3>
+        <p>The plugin complements the terminal — it does not replace it. What you reach for
+        constantly while writing code lives in the panel, one keystroke from the file you are
+        looking at: asking, editing, reviewing diffs, approving commands, switching model, mode
+        or effort, resuming past conversations. Everything occasional stays in the CLI, where it
+        already works and is already documented — logging in, MCP servers, hooks, permission
+        rules, agents, and the rest of <code>~/.claude</code>. Nothing is rebuilt in the IDE
+        just to have it there.</p>
+
+        <h3>By design</h3>
         <ul>
-          <li><b>Dark UI only</b> — the panel does not follow light IDE themes yet.</li>
-          <li><b>Login is terminal-only</b> — run <code>claude</code> in a terminal and sign in
-              there first; there is no in-IDE login flow.</li>
-          <li><b>No settings page</b> — the <code>claude</code> binary is resolved from PATH
-              (or the <code>-Dclaude.executable</code> JVM option); nothing is configurable in
-              the IDE yet.</li>
-          <li><b>Few slash commands</b> — only the verified set is enabled (<code>/compact</code>,
-              <code>/clear</code>); the rest are hidden rather than half-working. Model, mode and
-              effort have dedicated controls in the composer instead.</li>
+          <li><b>Login happens in the terminal</b> — sign in once by running <code>claude</code>;
+              the plugin picks up that session. There is no in-IDE login flow.</li>
+          <li><b>Configuration lives in the CLI</b> — settings, MCP servers, hooks and permission
+              rules are managed the way the CLI already documents. The plugin has no settings page
+              of its own; the <code>claude</code> binary is resolved from PATH (or the
+              <code>-Dclaude.executable</code> JVM option).</li>
+          <li><b>Only verified slash commands are enabled</b> (<code>/compact</code>,
+              <code>/clear</code>) — a headless stream has no interactive terminal, so commands
+              that need one are hidden rather than half-working. Model, mode and effort have
+              dedicated composer controls instead.</li>
+        </ul>
+
+        <h3>Not there yet</h3>
+        <ul>
+          <li><b>Dark UI only</b> — the panel does not follow light IDE themes.</li>
           <li><b>Diffs live in the chat</b> — changes are reviewed as line-numbered diffs inside
               the permission card, not in IDE diff tabs.</li>
           <li><b>One conversation at a time</b> — full history with resume and replay exists,

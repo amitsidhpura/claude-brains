@@ -5,6 +5,10 @@
 <h1 align="center">Claude Brains</h1>
 
 <p align="center">
+  <b>Develop in the IDE. Configure in the Terminal.</b>
+</p>
+
+<p align="center">
   <b>Claude Code for JetBrains IDEs — unofficial.</b><br>
   A right-side tool window that runs Anthropic's official <code>claude</code> CLI inside PhpStorm
   and other IntelliJ-platform IDEs, wired to the editor through the same IDE-MCP bridge the
@@ -16,6 +20,25 @@
 > ships an official JetBrains plugin; if you want a supported product, use that one.
 
 ---
+
+## Philosophy
+
+**Develop in the IDE. Configure in the Terminal.**
+
+The plugin complements the terminal — it does not replace it.
+
+What you reach for constantly while writing code belongs in the panel, one keystroke from the
+file you are looking at: asking, editing, reviewing diffs, approving commands, switching model,
+mode or effort, resuming past conversations.
+
+Everything occasional stays in the CLI, where it already works and is already documented —
+logging in, MCP servers, hooks, permission rules, agents, and the rest of `~/.claude`. Nothing
+is rebuilt in the IDE just to have it there, and no feature exists in two places waiting to
+disagree.
+
+That is why login is terminal-only, why there is no settings page, and why the slash-command
+menu is a short allowlist rather than the full CLI roster. Those aren't gaps waiting to be
+filled — they're the other half of the sentence.
 
 ## What it does
 
@@ -118,7 +141,10 @@ as you scroll.
 
 ## Status
 
-Working end to end and used daily. Deliberately deferred: a settings page, non-terminal login,
-conversation tabs, usage/token display, auto-include selection, and voice input.
+Working end to end and used daily.
+
+By design, and not planned: a settings page and an in-IDE login — both are the terminal's half
+of the split above. Deferred but wanted: conversation tabs, usage/token display, auto-include
+selection, and voice input.
 
 Personal project — issues and PRs aren't actively solicited, but you're welcome to fork it.

@@ -136,7 +136,11 @@ only read about behaviour they can see.
 ## Identity
 
 - Plugin id: `io.github.amitsidhpura.claude-brains` (never change after first install).
-- Display name: **Claude Brains** — tagline "Claude Code for JetBrains IDEs (unofficial)".
+- Display name: **Claude Brains**.
+- Slogan: **"Develop in the IDE. Configure in the Terminal."** — opens the description
+  everywhere (plugin.xml, README, updatePlugins.xml, Marketplace). It is also the scope rule,
+  see CLAUDE.md § Philosophy.
+- Descriptive tagline, one line under it: "Claude Code for JetBrains IDEs (unofficial)".
 - No syncroze references in the plugin (renamed 2026-07-31; packages are
   `io.github.amitsidhpura.claudebrains.*`).
 - `since-build = 242`, `until-build` open.
@@ -151,9 +155,10 @@ hard way:
   lines become hard `<br>`s. Edit it with Markdown, one line per paragraph. `plugin.xml` keeps the
   HTML version (whitespace collapses there, so wrapping is fine) — keep the two in sync, since a
   new zip upload re-reads plugin.xml.
-- The description carries an honest **"Current limitations"** list (dark-only UI, terminal login,
-  no settings page, slash allowlist, in-chat diffs, no tabs, no auto-context). Update it when a
-  limitation falls.
+- The description splits its honest list in TWO, and they must not blur:
+  **"By design"** (terminal login, no settings page, slash allowlist) states the philosophy —
+  those never move; and **"Not there yet"** (dark-only UI, in-chat diffs, no tabs, no
+  auto-context) is the real gap list — update it when one falls.
 - Screenshots live in `design/marketplace/` (2400×1520 = 1200×760 @2x), composed from the real
   renderer by driving chat.html state-by-state.
 - Uploads are manual via the web form; JetBrains signs Marketplace builds themselves. Run

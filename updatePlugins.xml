@@ -9,9 +9,11 @@
             url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.3.3/claude-brains-0.3.3.zip">
         <idea-version since-build="242"/>
         <name>Claude Brains</name>
-        <description>Claude Code for JetBrains IDEs (unofficial). Runs Anthropic's official
-            claude CLI inside PhpStorm and other IntelliJ IDEs. Requires the claude CLI
-            installed and logged in; does not bundle or redistribute Anthropic code.
-            Not affiliated with Anthropic or JetBrains.</description>
+        <description>Develop in the IDE. Configure in the Terminal. Claude Code for JetBrains
+            IDEs (unofficial). Runs Anthropic's official claude CLI inside PhpStorm and other
+            IntelliJ IDEs. Complements the terminal rather than replacing it: what you reach for
+            constantly while writing code lives in the panel, everything occasional stays in the
+            CLI. Requires the claude CLI installed and logged in; does not bundle or redistribute
+            Anthropic code. Not affiliated with Anthropic or JetBrains.</description>
     </plugin>
 </plugins>

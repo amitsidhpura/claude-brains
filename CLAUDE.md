@@ -8,6 +8,20 @@ packages `io.github.amitsidhpura.claudebrains.*`, no syncroze references in the 
 Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude-brains`
 (NOT the JetBrains Marketplace); process in `docs/release.md`.
 
+## Philosophy — "Develop in the IDE. Configure in the Terminal."
+The slogan, and the scope rule. The plugin COMPLEMENTS the terminal; it does not replace it.
+Ask of any proposed feature: *is this reached for many times an hour while writing code?*
+- **Yes → the panel.** Asking, editing, reviewing diffs, approving commands, model/mode/effort,
+  session resume, file references. These must be one keystroke from the file in the editor.
+- **No → the terminal.** Login, MCP servers, hooks, permission rules, agents, and everything else
+  under `~/.claude`. It already works there and is already documented; rebuilding it in the IDE
+  buys a second implementation that can only drift out of sync with the first.
+This is why login is terminal-only, why there is no settings page, and why the slash menu is a
+short allowlist — those are DELIBERATE, not a backlog. Say so in that vocabulary: the release
+description splits "By design" from "Not there yet", and the two lists must not blur. Deferred
+items in the status section below are the "wanted, not built yet" kind (tabs, usage display,
+auto-include selection, voice) — the settings page and non-terminal login are NOT among them.
+
 ## Repo layout
 - `plugin/` — Kotlin source + Gradle root (IntelliJ Platform Gradle Plugin 2.x, JCEF
   webview UI); every `./gradlew` command runs from here
@@ -189,8 +203,10 @@ tweak can't eat a real turn). Both verified in `runIde` 2026-07-30: `/clear` fro
 and the effort mute holds live; resumed sessions DO show the `/effort` turn (transcript records it,
 replay doesn't filter) — accepted as an honest audit trail, no filter planned.
 
-DEFERRED (user's choice, do last): settings page, non-terminal login, conversation tabs,
-usage/tokens display, auto-include selection / Alt+K, voice input.
+BY DESIGN, not a backlog (see Philosophy): settings page, non-terminal login — both are the
+terminal's half of the split. Don't build them; don't list them as gaps.
+DEFERRED (user's choice, do last): conversation tabs, usage/tokens display,
+auto-include selection / Alt+K, voice input.
 
 UI: chat.html is fully ported to the mockup design (Phase 1 chrome + Phase 2 renderer, see
 docs/port-plan.md). Styles live ONLY in webview/chat.css (spliced at `<!--CSS-->`; mockup links
