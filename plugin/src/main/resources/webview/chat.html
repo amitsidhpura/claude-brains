@@ -222,6 +222,10 @@
   // File references open in the editor. Delegated from #log so it covers live, replayed and
   // gallery-rendered paths without every render site wiring its own handler.
   log.addEventListener('click', function (e) {
+    // A truncation marker carries its path in a data attribute, not its text: what it SHOWS is
+    // prose ("… open full output"), so textContent would send nonsense as a path.
+    const cutRef = e.target.closest('.io-cut[data-path]');
+    if (cutRef) { bridge({ kind: 'open', path: cutRef.dataset.path }); return; }
     const ref = e.target.closest('.t-desc.path, .card-h code');
     if (!ref) return;
     const p = (ref.textContent || '').trim();
@@ -854,17 +858,57 @@
      Live and replay draw the same structures through these, so the two paths cannot drift —
      several renderer-parity findings were exactly that drift. */
   // one IN/OUT row; kind is "IN" | "OUT", text set safely
-  function ioRow(kind, text) {
+  // THE cut rule, mirrored from RenderLimits.cut (RenderLimits.kt) — that Kotlin doc comment owns
+  // it. Live truncates in JS and replay in Kotlin, so the ALGORITHM has to match, not just the cap:
+  // otherwise the same output reports a different amount dropped while streaming than after a
+  // resume. `lines` counts WHOLE dropped lines; the first fragment after the cut is the tail of the
+  // last line still on screen, not a line of its own. RenderLimitsTest pins the cases.
+  function cutInfo(text, max) {
+    if (text.length <= max) return null;                 // nothing dropped, no marker
+    const rest = text.slice(max);
+    // a single trailing newline ends the last dropped line, it does not begin another
+    const body = rest.charAt(rest.length - 1) === '\n' ? rest.slice(0, -1) : rest;
+    let lines = 0;
+    for (let i = 0; i < body.length; i++) if (body.charCodeAt(i) === 10) lines++;
+    // `shown` is live-only convenience; the wire shape Kotlin sends for replay is {lines, bytes},
+    // because there the truncated text already travels as `out`/`cmd`.
+    return { shown: text.slice(0, max), lines: lines, bytes: rest.length };
+  }
+  // "this much was thrown away", NOT the fold's "click to see the rest" — the fold keeps its content
+  // and this content is gone, so the two must read differently. `total`/`path` describe the CLI's
+  // own earlier truncation (it caps stdout and spills the whole result to a file).
+  // One wording, two builders: the DOM one below and previewHtml's string one, which cannot drift.
+  function cutText(cut, total, path) {
+    // lines is 0 for output with no newlines at all (minified JSON, one long line) — size alone is
+    // the honest thing to show there rather than a meaningless "+0 lines"
+    const s = total
+      ? '⋯ ' + fmtSize(total) + ' total, not shown here'
+      : '⋯ +' + (cut.lines ? cut.lines.toLocaleString() + ' lines · ' : '') + fmtSize(cut.bytes) + ' not shown';
+    return s + (path ? ' — open full output' : '');
+  }
+  function cutEl(cut, total, path) {
+    const e = document.createElement('span');
+    e.className = 'io-cut';
+    if (path) { e.dataset.path = path; e.classList.add('click'); }
+    e.textContent = cutText(cut, total, path);
+    return e;
+  }
+  // `cut` is a {lines, bytes} from cutInfo() (live) or the identically-shaped one Kotlin puts on the
+  // wire (replay). The marker is a SIBLING of .io-v, never a child: foldBlock collapses .io-v to
+  // three lines, so a marker inside it would itself be folded away — the notice that content was
+  // cut, cut.
+  function ioRow(kind, text, cut, total, path) {
     const row = document.createElement('div'); row.className = 'io-row';
     row.innerHTML = '<span class="io-k"></span><span class="io-v"></span>';
     row.querySelector('.io-k').textContent = kind;
     row.querySelector('.io-v').textContent = text;
     foldBlock(row.querySelector('.io-v'));   // measured on the post-insert frame (callers mount same-tick)
+    if (cut || total) row.appendChild(cutEl(cut || { lines: 0, bytes: 0 }, total, path));
     return row;
   }
   function ioBox(rows) {
     const io = document.createElement('div'); io.className = 'io';
-    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1])); });
+    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1], r[2], r[3], r[4])); });
     return io;
   }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
@@ -1068,8 +1112,10 @@
           }
           if (it.cmd || it.out) {
             const rows = [];
-            if (it.cmd) rows.push(['IN', it.cmd]);
-            if (it.out) rows.push(['OUT', it.out]);
+            // cut metadata rides the same rows into the same builder as live, so a truncated result
+            // reads identically whether it is streaming now or replayed from the transcript
+            if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut]);
+            if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile]);
             t.after(ioBox(rows));
           }
           replayCard(it);
@@ -1789,7 +1835,8 @@
               if (LIM.pathKeys.indexOf(descKey) !== -1) dEl.classList.add('path');
             }
             if (openTool.name === 'Bash' && inp.command) {
-              const io = ioBox([['IN', String(inp.command).slice(0, LIM.cmdMax)]]);
+              const full = String(inp.command), cut = cutInfo(full, LIM.cmdMax);
+              const io = ioBox([['IN', cut ? cut.shown : full, cut]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
           } catch (_) {}
@@ -1824,7 +1871,12 @@
       txt = (txt || '').trim();
       if (!txt) return;
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
-      t.io.appendChild(ioRow('OUT', txt.slice(0, LIM.outMax)));
+      // The CLI's own truncation, above ours. `toolUseResult` is documented on the TRANSCRIPT record
+      // shape; whether the live stream event carries it too is read defensively rather than assumed,
+      // so live matches replay when it is there and degrades to our-cut-only when it is not.
+      const tur = ev.toolUseResult || {};
+      const cut = cutInfo(txt, LIM.outMax);
+      t.io.appendChild(ioRow('OUT', cut ? cut.shown : txt, cut, tur.persistedOutputSize, tur.persistedOutputPath));
       maybeScroll();
     });
   }
@@ -2140,7 +2192,13 @@
     const cmd = inp.command || inp.description;
     // slice BEFORE escaping: slicing the escaped string can cut an entity (&amp;) in half and
     // makes the real limit depend on how many specials the command happens to contain
-    if (cmd !== undefined) return '<pre class="cmd">' + esc(String(cmd).slice(0, LIM.cmdMax)) + '</pre>';
+    if (cmd !== undefined) {
+      const cut = cutInfo(String(cmd), LIM.cmdMax);
+      // This card is a CONSENT surface — approving a command whose tail is hidden is the worst case
+      // of a silent cut, so the marker sits outside .cmd (which .card .cmd.fold also collapses).
+      return '<pre class="cmd">' + esc(cut ? cut.shown : String(cmd)) + '</pre>' +
+        (cut ? '<div class="io-cut cmd-cut">' + esc(cutText(cut)) + '</div>' : '');
+    }
     return '';
   }
 
@@ -2352,6 +2410,27 @@
     const t3 = el('tool-line', ''); t3.classList.add('fail');
     t3.innerHTML = '<b>Bash</b><span class="t-desc">Lint the project</span>';
 
+    // truncation markers — every shape, built through cutInfo() so the gallery shows what the real
+    // rule produces rather than hand-written numbers. The marker must stay visible while .io-v is
+    // folded; that is the whole point of it being a sibling.
+    const t4 = el('tool-line', '');
+    t4.innerHTML = '<b>Bash</b><span class="t-desc">List every file (truncated both ways)</span>';
+    const longCmd = 'find / -type f -name "*.log" ' + '-o -name "*.tmp" '.repeat(400);
+    const longOut = Array.from({ length: 900 }, function (_, i) { return '/var/log/app-' + i + '.log'; }).join('\n');
+    const oneLine = '{"rows":[' + '{"id":1,"v":"x"},'.repeat(400) + ']}';   // no newlines → size only
+    t4.after(ioBox([
+      ['IN', cutInfo(longCmd, LIM.cmdMax).shown, cutInfo(longCmd, LIM.cmdMax)],
+      ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax)],
+    ]));
+    const t5 = el('tool-line', '');
+    t5.innerHTML = '<b>Bash</b><span class="t-desc">Dump one long line, and a spilled result</span>';
+    t5.after(ioBox([
+      ['OUT', cutInfo(oneLine, LIM.outMax).shown, cutInfo(oneLine, LIM.outMax)],
+      // the CLI spilled the whole result to a file: true size + a clickable link
+      ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax), 772297,
+        '/home/dev/.claude/projects/demo/tool-results/bdsvs72t4.txt'],
+    ]));
+
     // permission card — Edit diff, with the CLI's accept-all-edits suggestion
     renderPermission({ tool: 'Edit', id: 'gallery-edit', lineStart: 42, input: JSON.stringify({
       file_path: 'src/util/math.ts', old_string: 'export const rate = 0.1;', new_string: 'export const rate = 0.15;' }),
@@ -2369,6 +2448,12 @@
         { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'touch:*' }], behavior: 'allow', destination: 'localSettings' },
         { type: 'addDirectories', directories: ['/tmp'], destination: 'session' },
         { type: 'setMode', mode: 'acceptEdits', destination: 'session' } ]) });
+
+    // permission card — command longer than CMD_MAX. The consent case: without the marker you
+    // approve a command whose tail the card never showed you.
+    renderPermission({ tool: 'Bash', id: 'gallery-bash-cut', input: JSON.stringify({
+      command: 'rsync -av --delete ' + '/srv/data/chunk-000/ /mnt/backup/chunk-000/ && '.repeat(120) + 'echo done',
+      description: 'Sync every chunk to the backup volume' }) });
 
     // plan card
     renderPermission({ tool: 'ExitPlanMode', id: 'gallery-plan', input: JSON.stringify({

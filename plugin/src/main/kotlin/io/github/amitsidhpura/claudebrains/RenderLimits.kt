@@ -43,6 +43,35 @@ object RenderLimits {
     /** Of [DESC_KEYS], the ones whose value is a file path — rendered clickable (`.t-desc.path`). */
     val PATH_KEYS = setOf("file_path", "path")
 
+    /**
+     * What a cap threw away, so the renderer can say so instead of presenting a slice as the whole
+     * thing. `null` from [cut] means nothing was dropped and no marker is drawn.
+     *
+     * [lines] counts WHOLE dropped lines only. The first fragment after the cut is the tail of the
+     * last line still on screen, not a line of its own, so it is deliberately not counted — a cut
+     * landing mid-line would otherwise always over-report by one. It is 0 for output with no
+     * newlines at all (minified JSON, a single long line), which is why the renderer falls back to
+     * size alone rather than printing "+0 lines".
+     */
+    data class Cut(val shown: String, val bytes: Int, val lines: Int)
+
+    /**
+     * THE cut rule. The live renderer runs its own copy in JS (`cutInfo` in chat.html) because the
+     * two paths truncate in different languages, so the algorithm — not just the caps — has to be
+     * stated once and mirrored exactly, or the same output reports a different amount dropped
+     * while streaming than it does after a resume. `RenderLimitsTest` pins the cases.
+     *
+     * [bytes] is a count of UTF-16 code units, which is what `String.length` means in Kotlin AND in
+     * JS — the two agree by construction, including on emoji and other astral characters.
+     */
+    fun cut(text: String, max: Int): Cut? {
+        if (text.length <= max) return null
+        val rest = text.substring(max)
+        // A single trailing newline ends the last dropped line; it does not begin another one.
+        val body = rest.removeSuffix("\n")
+        return Cut(text.substring(0, max), rest.length, body.count { it == '\n' })
+    }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }

@@ -307,6 +307,23 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* pre (no wrap): long lines scroll horizontally like .diff / codeblock pre; min-width lets the
    flex item shrink so the scrollbar appears instead of the row growing */
 .io-v { white-space: pre; flex: 1; min-width: 0; overflow-x: auto; }
+/* Truncation marker: what a cap PERMANENTLY dropped, as opposed to .fold, which only hides content
+   it still holds. It is a sibling of .io-v rather than a child precisely because foldBlock collapses
+   .io-v to three lines — inside it, the notice that content was cut would itself be cut. flex-basis
+   100% wraps it onto its own line under the value; the 32px indent is .io-k's 22px min-width plus
+   the row's 10px gap, so it aligns with .io-v (keep the three in step if any of them changes). */
+/* row-gap overrides the shorthand's 10px for the wrapped line only — the 10px column gap between
+   .io-k and .io-v is still what the label alignment depends on. */
+.io-row { flex-wrap: wrap; row-gap: 4px; }
+/* UI font, not the box's monospace: this is prose ABOUT the output, not more output — the switch
+   is what keeps it from reading as a last line of the result. */
+.io-cut { flex: 0 0 100%; margin-left: 32px; color: var(--muted); font-size: 11px;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+.io-cut.click { cursor: pointer; }
+.io-cut.click:hover { color: var(--fg); text-decoration: underline; }
+/* Same marker under a permission card's command preview — the consent case. Outside <pre class="cmd">
+   for the fold reason above; margin matches .cmd's own text edge rather than the io-row grid. */
+.cmd-cut { margin-left: 0; padding: 4px 0 0; }
 
 /* code block */
 .codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }

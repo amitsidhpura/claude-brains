@@ -13,6 +13,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.io.File
 
@@ -273,6 +274,12 @@ object SessionStore {
         return aiTitle ?: firstUser?.take(80)?.ifBlank { null } ?: "(untitled session)"
     }
 
+    /** A [RenderLimits.Cut] on the wire — the same `{lines, bytes}` shape the live path builds. */
+    private fun cutJson(c: RenderLimits.Cut): JsonObject = buildJsonObject {
+        put("lines", c.lines)
+        put("bytes", c.bytes)
+    }
+
     /** One replayable block. Mirrors what the live renderer draws; serialized straight to the webview. */
     private class Item(val role: String) {
         var text: String = ""              // user text / assistant markdown / thinking / tool name
@@ -280,6 +287,13 @@ object SessionStore {
         var isPath: Boolean = false
         var cmd: String? = null            // Bash IN
         var out: String? = null            // Bash OUT
+        var cmdCut: RenderLimits.Cut? = null   // what CMD_MAX dropped from cmd, if anything
+        var outCut: RenderLimits.Cut? = null   // what OUT_MAX dropped from out, if anything
+        // The CLI truncates before we do: it caps stdout around 30k and spills the whole result to
+        // a file, recording the true size. outTotal is that size (honest even when the file is gone);
+        // outFile is set ONLY when the path still exists, so the marker can never be a dead link.
+        var outTotal: Long? = null
+        var outFile: String? = null
         var isError: Boolean = false
         var patch: JsonElement? = null     // structuredPatch hunks (authoritative diff + line numbers)
         var content: String? = null        // Write body (no patch available)
@@ -311,6 +325,10 @@ object SessionStore {
             if (isPath) put("isPath", true)
             cmd?.let { put("cmd", it) }
             out?.let { put("out", it) }
+            cmdCut?.let { put("cmdCut", cutJson(it)) }
+            outCut?.let { put("outCut", cutJson(it)) }
+            outTotal?.let { put("outTotal", it) }
+            outFile?.let { put("outFile", it) }
             if (isError) put("isError", true)
             patch?.let { put("patch", it) }
             content?.let { put("content", it) }
@@ -522,7 +540,10 @@ object SessionStore {
                     isPath = descKey in RenderLimits.PATH_KEYS
                 }
                 file = path
-                if (name == "Bash") cmd = str("command")?.take(RenderLimits.CMD_MAX)
+                if (name == "Bash") str("command")?.let { full ->
+                    cmdCut = RenderLimits.cut(full, RenderLimits.CMD_MAX)
+                    cmd = cmdCut?.shown ?: full
+                }
                 if (name == "ExitPlanMode") plan = inp?.get("plan")?.jsonPrimitive?.content
                 oldStr = inp?.get("old_string")?.jsonPrimitive?.content
                 newStr = inp?.get("new_string")?.jsonPrimitive?.content
@@ -563,7 +584,17 @@ object SessionStore {
             val stdout = res?.get("stdout")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val stderr = res?.get("stderr")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val txt = fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n")
-            item.out = txt.trim().takeIf { it.isNotBlank() }?.take(RenderLimits.OUT_MAX)
+            txt.trim().takeIf { it.isNotBlank() }?.let { full ->
+                item.outCut = RenderLimits.cut(full, RenderLimits.OUT_MAX)
+                item.out = item.outCut?.shown ?: full
+            }
+            // The CLI's OWN truncation, above ours: it spills the full result to a file and records
+            // the real size. Report the size whether or not the file survived — it is the honest
+            // total either way — but only offer the link when the path still resolves, since
+            // sessions outlive their tool-results dir (and a project rename orphans every path).
+            item.outTotal = (res?.get("persistedOutputSize") as? JsonPrimitive)?.longOrNull
+            item.outFile = (res?.get("persistedOutputPath") as? JsonPrimitive)?.contentOrNull
+                ?.takeIf { it.isNotBlank() && File(it).isFile }
         }
     }
 

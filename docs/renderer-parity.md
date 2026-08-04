@@ -210,6 +210,18 @@ Mostly deliberate; listed so nothing is silently forgotten.
       Inverse of the usual lossy-on-resume shape. **Accepted 2026-07-30** — user verified in the
       `runIde` sandbox and chose to keep the visible `/effort` box on resume as an honest audit
       trail; no replay filter will be added.
+- [ ] **CLI spill metadata is replay-only** (probed in `runIde` 2026-08-05, `seq 1 200000`). When a
+      Bash result is too big the CLI writes it to a file and the transcript record carries
+      `toolUseResult.persistedOutputPath` / `persistedOutputSize` — so REPLAY's truncation marker
+      reads `1.2 MB total, not shown here — open full output`. The LIVE stream event carries no
+      `toolUseResult` at all, so live falls back to our-cut-only (`⋯ +58 lines · 251 B not shown`).
+      Same record, two different markers.
+      · The information IS present live, but as PROSE inside the `tool_result` content: the CLI
+        substitutes a `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>
+        \n\nPreview (first 2KB):\n…` wrapper (2253 chars in the sampled record, hence our 2000-char
+        cut nibbling its tail). Parsing that wrapper live would close the divergence AND stop the
+        raw `<persisted-output>` tag rendering to the user — it is an injected wrapper of the same
+        family `cleanInjected()` already strips. Not yet done; see docs/client-parity.md item 10.
 - [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
       neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
       with the parent turn; the parent's Task result still attaches to the Task tool line, not to a

@@ -1,8 +1,13 @@
 package io.github.amitsidhpura.claudebrains
 
 import io.github.amitsidhpura.claudebrains.session.SessionStore
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -86,6 +91,127 @@ class RenderLimitsTest {
     fun `path keys are part of the description order`() {
         assertTrue(RenderLimits.DESC_KEYS.containsAll(RenderLimits.PATH_KEYS))
     }
+
+    /**
+     * The cut rule is implemented TWICE — here and as `cutInfo` in chat.html — because live
+     * truncates in JS and replay in Kotlin. These cases are the contract between the two: the same
+     * output must report the same amount dropped whether it is streaming or replayed. The
+     * mid-line and trailing-newline rows are the ones that disagree if either side counts naively.
+     */
+    @Test
+    fun `cut counts whole dropped lines only`() {
+        // text                                cap  expect lines, bytes
+        val cases = listOf(
+            // cut lands MID-line: "cde" is the tail of a line still on screen, not a dropped line
+            Triple("ab\ncde", 3, 0 to 3),
+            // cut lands exactly ON a newline, one whole line follows
+            Triple("abc\ndef", 3, 1 to 4),
+            // trailing newline ends the dropped line, it does not begin another
+            Triple("abc\ndef\n", 3, 1 to 5),
+            // nothing but a newline dropped — closes the shown line, no line lost
+            Triple("abc\n", 3, 0 to 1),
+            // no newlines anywhere: the renderer shows size alone rather than "+0 lines"
+            Triple("abcdefghij", 4, 0 to 6),
+            // blank lines count
+            Triple("a\n\n\nb", 1, 3 to 4),
+        )
+        cases.forEach { (text, cap, want) ->
+            val c = RenderLimits.cut(text, cap)!!
+            assertEquals(want.first, c.lines, "lines for ${text.replace("\n", "\\n")} @ $cap")
+            assertEquals(want.second, c.bytes, "bytes for ${text.replace("\n", "\\n")} @ $cap")
+            assertEquals(cap, c.shown.length, "shown length for ${text.replace("\n", "\\n")} @ $cap")
+            assertEquals(text, c.shown + text.substring(cap), "shown must be a prefix of the input")
+        }
+    }
+
+    @Test
+    fun `cut returns null when nothing is dropped`() {
+        assertEquals(null, RenderLimits.cut("abc", 3), "a text exactly at the cap is not truncated")
+        assertEquals(null, RenderLimits.cut("ab", 3))
+        assertEquals(null, RenderLimits.cut("", 3))
+    }
+
+    /**
+     * Replay has to put the cut on the wire, or a resumed session shows the slice with no marker
+     * while the live render showed one. Also pins the spill fields: `outFile` is emitted ONLY when
+     * the path still resolves, because the marker is clickable and a dead click reads as a bug —
+     * of four such records in local transcripts, three point at files that no longer exist.
+     */
+    @Test
+    fun `replay carries what the caps dropped, and only a spill file that exists`() {
+        val home = File.createTempFile("claude-home", "").let { it.delete(); it.mkdirs(); it }
+        val cwd = "/home/dev/Sites/cut-fixture"
+        val dir = File(home, ".claude/projects/${cwd.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+        dir.mkdirs()
+        val spill = File(home, "spilled.txt").apply { writeText("the whole output") }
+        val gone = File(home, "vanished.txt").absolutePath
+
+        val cmd = "echo start\n" + "run --step\n".repeat(RenderLimits.CMD_MAX)   // well over the cap
+        val out = "line 0\n" + "line n\n".repeat(RenderLimits.OUT_MAX)
+        fun call(i: Int, id: String) =
+            """{"type":"assistant","uuid":"u$i","timestamp":"2026-08-05T10:00:0$i.000Z",""" +
+                """"message":{"id":"m$i","role":"assistant","content":[{"type":"tool_use",""" +
+                """"id":"$id","name":"Bash","input":{"command":${q(cmd)}}}]}}"""
+        fun result(i: Int, id: String, path: String?) =
+            """{"type":"user","uuid":"r$i","timestamp":"2026-08-05T10:01:0$i.000Z",""" +
+                """"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"$id",""" +
+                """"content":${q(out)}}]},"toolUseResult":{"stdout":${q(out)}""" +
+                (path?.let { ""","persistedOutputPath":${q(it)},"persistedOutputSize":772297""" } ?: "") + "}}"
+
+        File(dir, "cut.jsonl").writeText(
+            listOf(
+                call(0, "t0"), result(0, "t0", spill.absolutePath),   // spill file EXISTS
+                call(1, "t1"), result(1, "t1", gone),                 // spill file is GONE
+                call(2, "t2"), result(2, "t2", null),                 // no spill at all
+            ).joinToString("\n")
+        )
+
+        val real = SessionStore.claudeHome
+        try {
+            SessionStore.claudeHome = home
+            val tools = SessionStore.readTranscript(cwd, "cut")
+                .filter { it["role"]?.jsonPrimitive?.content == "tool" }
+            assertEquals(3, tools.size)
+
+            // both caps report what they dropped, on every record
+            tools.forEach { t ->
+                assertEquals(
+                    RenderLimits.CMD_MAX, t["cmd"]?.jsonPrimitive?.contentOrNull?.length,
+                    "cmd was not capped at CMD_MAX",
+                )
+                assertEquals(
+                    RenderLimits.cut(cmd, RenderLimits.CMD_MAX)!!.lines,
+                    t["cmdCut"]?.jsonObject?.get("lines")?.jsonPrimitive?.int,
+                    "cmdCut must match the rule the live path runs",
+                )
+                assertTrue(
+                    (t["outCut"]?.jsonObject?.get("bytes")?.jsonPrimitive?.int ?: 0) > 0,
+                    "an over-cap result must say how much it dropped",
+                )
+                assertEquals(772297L.takeIf { t !== tools[2] }, t["outTotal"]?.jsonPrimitive?.longOrNull)
+            }
+
+            assertEquals(
+                spill.absolutePath, tools[0]["outFile"]?.jsonPrimitive?.contentOrNull,
+                "an existing spill file must be offered",
+            )
+            assertEquals(
+                null, tools[1]["outFile"],
+                "a spill path that no longer resolves must NOT become a clickable dead link",
+            )
+            assertEquals(null, tools[2]["outFile"])
+            assertEquals(
+                null, tools[2]["outTotal"],
+                "no spill metadata means no size to report",
+            )
+        } finally {
+            SessionStore.claudeHome = real
+            home.deleteRecursively()
+        }
+    }
+
+    /** JSON-quote a string for the hand-built fixture lines above. */
+    private fun q(s: String) = Json.encodeToString(String.serializer(), s)
 
     /**
      * Replay must resolve a tool description exactly as the live renderer does. These are the same

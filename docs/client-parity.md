@@ -22,45 +22,110 @@ CLI+extension `2.1.220`.
 
 **Legend** `✅` shows it · `⚠️` shows part of it · `❌` doesn't show it · `?` unverified · `—` n/a
 
-**Take** is my recommendation, not a decision: `P1` do next · `P2` worth doing · `P3` skip, or
-already deliberate.
+**Take** is my recommendation, not a decision: `P0` fix, the panel is currently wrong ·
+`P1` do next · `P2` worth doing · `P3` skip, or already deliberate.
+
+## How these are prioritised
+
+Scored against the project philosophy — *Develop in the IDE. Configure in the Terminal.*
+(CLAUDE.md § Philosophy). Parity with the official clients is NOT the goal by itself; matching
+them item-for-item would rebuild the terminal inside the IDE, which is the thing we said we
+wouldn't do. The question for each row is the philosophy's own test: **is this reached for many
+times an hour while writing code?**
+
+Three rules fall out of that, and they are what moved the takes below:
+
+1. **No terminal fallback → the panel must carry it.** Some information exists only inside our
+   process while a turn is running: CLI stderr, rate-limit events, a hook that blocked a tool, the
+   reason a session died. You cannot go and type `/status` for these — the terminal isn't running
+   this session. Anything in this class outranks its raw frequency, because the alternative to
+   showing it is nobody ever seeing it.
+2. **The terminal already answers it → don't rebuild it.** `/mcp`, `/cost`, `/context`, `/status`
+   are a few keystrokes away, already documented, and consulted occasionally rather than
+   constantly. A second implementation in the IDE can only drift out of sync with the first.
+   Note the shape this argues for: a *failure notice* is a during-work signal, a *management UI*
+   is configuration. We take the first and decline the second.
+3. **Wrong beats missing.** The panel is where the user reviews what Claude did. If it reports a
+   truncated result as complete, or a killed command as a success, the core loop is broken in a
+   way a missing feature never is. These are promoted to `P0` regardless of frequency.
+
+Where this doc's take now disagrees with plain client parity, the row is marked **(philosophy)**
+and the reasoning is in the item.
 
 ---
 
 ## Summary
 
-| # | Item | Terminal | VS Code | Us | Take |
-|---|------|:--------:|:-------:|:--:|------|
-| 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 |
-| 2 | Sub-agent final report | ✅ | ⚠️ | ❌ | P1 |
-| 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P1 |
-| 4 | Background task roster | ✅ | ✅ | ❌ | P2 |
-| 5 | Blank Task/Skill tool lines | ✅ | ✅ | ❌ | P1 |
-| 6 | Non-Bash tool result summaries | ✅ | ✅ | ❌ | P1 |
-| 7 | Tool input beyond one key | ✅ | ✅ | ⚠️ | P1 |
-| 8 | Tool-returned images | ⚠️ | ✅ | ❌ | P2 |
-| 9 | Bash failure detail (stderr / interrupted) | ✅ | ✅ | ⚠️ | P1 |
-| 10 | Truncated-output marker | ✅ | ✅ | ❌ | P1 |
-| 11 | "File was modified by the user" | ? | ✅ | ❌ | P2 |
-| 12 | Server-side tools (web search blocks) | ✅ | ✅ | ❌ | P2 |
-| 13 | MCP server status | ✅ | ✅ | ❌ | P1 |
-| 14 | Todo / task checklist | ✅ | ✅ | ❌ | P1 |
-| 15 | Compaction boundary | ✅ | ✅ | ❌ | P1 |
-| 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 |
-| 17 | Cost | ✅ | ✅ | ❌ | P3 |
-| 18 | Token breakdown / usage panel | ✅ | ✅ | ⚠️ | P3 |
-| 19 | Real thinking-token count | ✅ | ✅ | ⚠️ | P2 |
-| 20 | Account / plan / auth | ✅ | ✅ | ❌ | P3 |
-| 21 | Model refusal fallback | ? | ✅ | ❌ | P2 |
-| 22 | Hook activity | ✅ | ? | ❌ | P2 |
-| 23 | CLI stderr | — | ? | ❌ | P2 |
-| 24 | Queued messages | ✅ | ❌ | ❌ | P3 |
-| 25 | Bookkeeping records on replay | ❌ | ❌ | ❌ | P3 |
-| 26 | Per-record metadata (effort/branch/model) | ⚠️ | ⚠️ | ❌ | P3 |
-| 27 | Injected IDE context | ❌ | ❌ | ❌ | P3 |
-| 28 | Off-window history | ✅ | ✅ | ⚠️ | P3 |
-| 29 | Non-Bash tool output on replay | ✅ | ✅ | ❌ | P1 |
-| 30 | Silent `/effort` turns | — | — | ❌ | P3 |
+| # | Item | Terminal | VS Code | Us | Take | Effort |
+|---|------|:--------:|:-------:|:--:|------|--------|
+| 10 | Truncated-output marker | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.io-cut` / `.cmd-cut` |
+| 9 | Bash failure detail (stderr / interrupted) | ✅ | ✅ | ⚠️ | **P0** (philosophy) | **S** — replay-only; live has no `toolUseResult` (probed) |
+| 15 | Compaction boundary | ✅ | ✅ | ❌ | **P0** (philosophy) | **S** gauge reset · **M** with the marker |
+| 21 | Model refusal fallback | ? | ✅ | ❌ | **P0** (philosophy) | **M** — needs uuid→DOM removal; no way to test |
+| 6 | Non-Bash tool result summaries | ✅ | ✅ | ❌ | P1 | **M** — one guard opens it, per-tool shapes are the work |
+| 2 | Sub-agent final report | ✅ | ⚠️ | ❌ | P1 | **XS** ⇢ free with 6 |
+| 29 | Non-Bash tool output on replay | ✅ | ✅ | ❌ | P1 | **M** ⇢ must ship WITH 6 |
+| 7 | Tool input beyond one key | ✅ | ✅ | ⚠️ | P1 | **M** — bespoke per tool; generic chain won't do |
+| 5 | Blank Task/Skill tool lines | ✅ | ✅ | ❌ | P1 | **XS** — 3 strings into `DESC_KEYS` |
+| 14 | Todo / task checklist | ✅ | ✅ | ❌ | P1 | **M** — new renderer, but self-contained |
+| 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
+| 23 | CLI stderr | — | ? | ❌ | **P1** ↑ (philosophy) | **S** — buffer it, print on non-zero exit |
+| 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ❌ | **P1** ↑ (philosophy) | **XS** — one branch, one message |
+| 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P2 | **S** — `ioRow('IN', …)` already exists |
+| 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
+| 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
+| 12 | Server-side tools (web search blocks) | ✅ | ✅ | ❌ | P2 | **S** — one `content_block_start` branch |
+| 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
+| 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ❌ | **P2** ↓ (philosophy) | **S** — data already in the init payload |
+| 22 | Hook activity | ✅ | ? | ❌ | P2 | **?** — probe the empty-ack first; unknown until then |
+| 8 | Tool-returned images | ⚠️ | ✅ | ❌ | P2 | **S** ⇢ with 6; image renderer exists |
+| 19 | Real thinking-token count | ✅ | ✅ | ⚠️ | P2 | **XS** — swap estimate for the event |
+| 11 | "File was modified by the user" | ? | ✅ | ❌ | P2 | **XS** ⇢ free with 6 |
+| 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ❌ | P2 | **S** — retires the `[1m]` sniffing |
+| 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
+| 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
+| 17 | Cost | ✅ | ✅ | ❌ | P3 | S |
+| 18 | Token breakdown / usage panel | ✅ | ✅ | ⚠️ | P3 | L |
+| 26 | Per-record metadata (effort/branch/model) | ⚠️ | ⚠️ | ❌ | P3 | S |
+| 25 | Bookkeeping records on replay | ❌ | ❌ | ❌ | P3 | — keep as is |
+| 27 | Injected IDE context | ❌ | ❌ | ❌ | P3 | — keep as is |
+| 28 | Off-window history | ✅ | ✅ | ⚠️ | P3 | — keep as is |
+| 30 | Silent `/effort` turns | — | — | ❌ | P3 | — keep as is |
+
+Sorted by take, not by item number — the numbered sections below keep their original order.
+`↑`/`↓` mark a take the philosophy moved; **by design** means it is now ruled out rather than
+deferred, and belongs in the release description's "By design" list, not its gap list.
+
+**Effort scale.** Sized against this codebase, not in the abstract — what makes something `M` here
+is usually that it has to land in the live renderer AND the replay parser without the two drifting,
+which is the failure mode `RenderLimits` and `docs/renderer-parity.md` exist to prevent.
+
+| | Meaning |
+|---|---|
+| **XS** | A few lines through an idiom that already exists. No new UI, no new state. |
+| **S** | One branch, one existing helper. Fits in a sitting, testable in the gallery. |
+| **M** | A new renderer, or one change that must land in both paths and stay in sync. |
+| **L** | Needs a design pass or new state that outlives a single event. |
+| **?** | Can't be sized until something is probed. |
+
+`⇢` marks **coupling**: that item is cheap only if it rides along with the one named. Items 2, 8, 11
+and 29 all hang off the same guard as item 6 (`chat.html:1819`, `if (t.name !== 'Bash') return;`),
+so doing 6 alone and the rest later means opening the same two code paths twice — five items for
+roughly the cost of one and a half. Conversely 29 is not optional: ship it with 6 or replay silently
+drops what live now shows.
+
+**Where the estimates are soft**, so nobody treats them as measured:
+- ~~**9**~~ — **resolved 2026-08-05 while shipping item 10.** `interrupted` / `stderr` /
+  `returnCodeInterpretation` are on `toolUseResult`, and the live stream event carries no
+  `toolUseResult` at all (probed in `runIde`). So live can only colour the dot; the honest fix is
+  replay-side, which makes this `S` rather than `M`. Anything else wanting live tool-result
+  metadata now has its answer too — read the result TEXT or do without.
+- **21** — sizing assumes retraction means removing already-rendered blocks by uuid. We have the
+  uuid handle, but no local session has ever produced a `refusal_fallback`, so this can be built
+  and not verifiable against real data.
+- **22** — `?` on purpose. The doc's own note is that the empty ack at `ClaudeCli.kt:216` may be
+  answering `hook_callback` with something the CLI reads as consent. That is a behaviour question,
+  possibly a bug, and it has to be settled before any UI is worth sizing.
 
 ---
 
@@ -97,8 +162,10 @@ What the sub-agent was actually asked to do.
 - **VS Code:** ✅ `class tme … name="Agent"` renders header `Agent: <description>` plus an `IN` row
   containing the full `prompt`, click-to-open in an editor tab.
 - **Us:** ❌ only `description` reaches the tool line; `prompt` is dropped.
-- **Take: P1.** We already have the `IN` box idiom from Bash (`ioRow('IN', …)`); this is one branch
-  in `content_block_stop`.
+- **Take: P2** (down from P1). Cheap — we already have the `IN` box idiom from Bash
+  (`ioRow('IN', …)`) and this is one branch in `content_block_stop` — but cheapness is a reason to
+  bundle it, not a reason to rank it. Sub-agents don't appear in most turns, so this doesn't clear
+  the many-times-an-hour bar the tool-result items do. Ride it along with 1 and 4.
 
 ### 4. Background task roster
 Which background tasks are running while the turn is suspended.
@@ -162,7 +229,9 @@ We show the concatenated `tool_result` text and colour the dot.
 - **Us:** ⚠️ `stderr`, `interrupted`, `returnCodeInterpretation` and `noOutputExpected` are present
   in `toolUseResult` and read for nothing (`SessionStore.kt:558` uses stdout/stderr only as a
   fallback). A command killed by a timeout reads like a quiet success.
-- **Take: P1.** `interrupted` especially — a hung-then-killed command currently looks fine.
+- **Take: P0** (rule 3). `interrupted` especially — a hung-then-killed command currently renders as
+  a quiet success. Approving commands and reading their results is the highest-frequency thing the
+  panel does, so a false "that worked" is the most expensive wrong thing we can show.
 
 ### 10. Truncated-output marker
 We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
@@ -171,9 +240,30 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
 - **VS Code:** ✅ click-to-open shows the whole thing.
 - **Us:** ❌ silent cut; `persistedOutputPath`/`persistedOutputSize` (the CLI spilling a big result
   to a file) is ignored too.
-- **Take: P1.** A silent truncation is a correctness problem, not a cosmetic one — the user can't
-  tell a short result from a clipped one. `docs/limits.md` already treats "no silent caps" as the
-  house rule.
+- **DONE 2026-08-05** (was P0, rule 3). A silent truncation was a correctness problem, not a
+  cosmetic one — the user could not tell a short result from a clipped one, so the panel was
+  actively asserting something false. Measured before the fix: 79 blocks in one local session.
+  Shipped: `.io-cut` under the OUT and IN boxes and `.cmd-cut` under the permission card's command
+  preview, reading `⋯ +312 lines · 12.4 KB not shown`. The counting rule lives once in
+  `RenderLimits.cut` and is mirrored by `cutInfo` in chat.html, pinned by `RenderLimitsTest`.
+  The CLI's own layer came with it: `persistedOutputSize` gives the true total and
+  `persistedOutputPath` opens the spilled file, emitted only when the path still resolves.
+  Details and the fold-vs-marker distinction in `docs/limits.md`.
+- **Live/replay symmetry — PROBED 2026-08-05 in `runIde` (`seq 1 200000`): the live stream carries
+  NO `toolUseResult`.** So the spill layer is replay-only, and the two paths disagree on exactly
+  those records: replay says `1.2 MB total, not shown here — open full output`, live falls back to
+  our-cut-only. The core marker was never at risk — both paths hold the full text when they cut —
+  and the live code reads `ev.toolUseResult` defensively, so it will pick the fields up for free if
+  the CLI ever sends them.
+  · **This also answers item 9**, which carried the same unknown: `interrupted` / `stderr` /
+    `returnCodeInterpretation` live on `toolUseResult` too, so an interrupted-command indicator is
+    likewise replay-only unless it can be read from the result text. Re-size item 9 as `S`
+    (replay-only) rather than `M`.
+  · **The information IS available live, as prose.** The CLI replaces an oversized result with a
+    `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>\n\nPreview (first
+    2KB):\n…` wrapper. Parsing it in `onUserEvent` would close the divergence and stop the raw
+    `<persisted-output>` tag being rendered to the user — it is an injected wrapper of the family
+    `cleanInjected()` already strips. Recorded in `docs/renderer-parity.md`; not built.
 
 ### 11. "File was modified by the user"
 `toolUseResult.userModified`.
@@ -202,8 +292,18 @@ Which MCP servers connected, which failed.
   servers appear in the usage-attribution panel.
 - **Us:** ❌ the `initialize` response is destructured at `ChatPanel.kt:339` for `commands` and
   `models` only; everything else is discarded.
-- **Take: P1.** We already *receive* this. A server that failed to connect is currently invisible,
-  which reads as "the model ignored my tools" — the worst kind of bug report.
+- **Take: split by the philosophy.**
+  - **13a — a failure notice: P2** (down from P1). We already *receive* this in the `initialize`
+    response. A server that failed to connect is currently invisible, which reads as "the model
+    ignored my tools" — the worst kind of bug report. That is a during-work signal with no
+    terminal fallback (rule 1), so it earns a place: one status line at session start naming the
+    servers that didn't come up. Not P1, because it fires once per session, not many times an
+    hour, and the user can already run `/mcp`.
+  - **13b — the server list with enable/disable: by design, don't build.** VS Code's
+    `get_mcp_servers` / `setMcpServerEnabled` UI is configuration, and configuration is the
+    terminal's half. Rebuilding it buys a second implementation that can only drift from
+    `~/.claude`. This is the clearest case in the document of parity pointing one way and the
+    philosophy the other.
 
 ### 14. Todo / task checklist
 `TodoWrite`-style planning state.
@@ -213,8 +313,10 @@ Which MCP servers connected, which failed.
   (`todoListContainer`/`todoItem`/`completed` styles), and mirrors `input.todos` into a panel-level
   `todos` signal.
 - **Us:** ❌ would render as a blank tool line (no matching desc key).
-- **Take: P1.** High visible value for a modest renderer; the checklist is how the user follows a
-  long turn.
+- **Take: P1**, and the philosophy raises confidence rather than changing the number. The checklist
+  is how you follow a long turn without reading every tool line — glanced at continuously while the
+  work runs, which is the panel's case exactly. It has no terminal equivalent you'd switch windows
+  for. Modest renderer, high visible value.
 
 ### 15. Compaction boundary
 Where the context got compacted, why, and how big it was before.
@@ -226,8 +328,11 @@ Where the context got compacted, why, and how big it was before.
 - **Us:** ❌ `/compact` is forwarded and runs, but the subtype isn't handled (`chat.html:1682`
   handles `init` + `background_tasks_changed`), so the conversation silently loses its history with
   no marker — and our context gauge doesn't reset either.
-- **Take: P1.** The gauge going stale after a compact is a live wrongness, not just a missing
-  feature.
+- **Take: P0** (rule 3). The gauge going stale after a compact is a live wrongness, not just a
+  missing feature: the composer keeps showing a context share that no longer exists, and the gauge
+  is glanced at constantly. Note this one is self-inflicted — `/compact` is a command *we* enabled
+  in the slash allowlist, so we own the state it leaves behind. The boundary marker can follow; the
+  gauge reset is the bug.
 
 ### 16. Rate-limit warnings
 Approaching / hit a usage limit, and when it resets.
@@ -247,9 +352,14 @@ Approaching / hit a usage limit, and when it resets.
 - **VS Code:** ✅ `total_cost_usd` → `usageData.totalCost`, with `modelUsage[model]` supplying the
   context window and max output tokens.
 - **Us:** ❌ `onResult` (`chat.html:2000`) uses wall-clock + output tokens only.
-- **Take: P3.** "usage/tokens display" is already on the DEFERRED list in `CLAUDE.md` by your call.
-  Worth noting we could take `modelUsage[].contextWindow` for free — it would replace the
-  `[1m]`-tag sniffing the context gauge currently relies on.
+- **Take: P3**, and the philosophy agrees with the existing deferral: cost is checked occasionally,
+  `/cost` answers it, and a spend dashboard is not something you reach for while writing a line of
+  code. Keep it on the DEFERRED list rather than promoting it.
+- **17a — `modelUsage[].contextWindow`: P2, and separate from the above.** This is not a usage
+  display; it is a correctness fix for a feature we already ship. The context gauge currently
+  derives its denominator by sniffing `[1m]` tags on the model id, with a promote-on-overflow
+  guard for unknown models. The CLI hands us the real window in `modelUsage`. Taking it removes a
+  heuristic from a number the user glances at constantly — which is exactly the panel's job.
 
 ### 18. Token breakdown / usage panel
 Input vs. cache-read vs. cache-creation vs. output, and what's eating the window.
@@ -272,16 +382,26 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 - **VS Code:** ✅ shows login state; handles `assistant` events with `error === "authentication_failed"`
   by opening the login flow.
 - **Us:** ❌ `account` from the `initialize` response is dropped at `ChatPanel.kt:339`.
-- **Take: P3** for the display (settings/non-terminal login is deferred), but the
-  `authentication_failed` branch is worth stealing — right now an auth failure is an opaque error
-  block with no route out of it.
+- **Take: split by the philosophy.**
+  - **20a — the `authentication_failed` branch: P1** (up from a P3 aside). Right now an auth
+    failure is an opaque error block with no route out of it, and the route out is *precisely*
+    what the philosophy prescribes: catch the branch and say "run `claude` in a terminal and sign
+    in". VS Code opens its own login flow here; we deliberately don't, so the message carries the
+    whole fix. Being terminal-only makes this MORE important to handle, not less — an unexplained
+    auth error in a plugin with no login UI is a dead end.
+  - **20b — account / plan display: by design, don't build.** `/status` answers it, it is read
+    occasionally, and it is the login half of the split.
 
 ### 21. Model refusal fallback
 - **Terminal:** ? not confirmed.
 - **VS Code:** ✅ `system/model_refusal_fallback` + `refusal_fallback` message type, with
   `retracted_message_uuids` retracting the already-rendered blocks.
 - **Us:** ❌ unhandled — retracted content would stay on screen.
-- **Take: P2.** Rare, but leaving retracted text visible is actively misleading.
+- **Take: P0 on severity, low on urgency** (rule 3). Rare, but leaving retracted text on screen
+  means the panel shows content the CLI has explicitly withdrawn — the user reads and may act on
+  something that was taken back. Cheap to handle (drop the blocks named by
+  `retracted_message_uuids`); do it whenever the stream `switch` is next open, not as a project of
+  its own.
 
 ### 22. Hook activity
 - **Terminal:** ✅ hook output and blocked-tool reasons.
@@ -295,9 +415,11 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 - **Terminal:** — it *is* the terminal.
 - **VS Code:** ? extension-side.
 - **Us:** ❌ `ClaudeCli.kt:138` sends it to the IDE log only.
-- **Take: P2.** At minimum, surface stderr alongside the existing `__exit` status line on a non-zero
-  exit — today a CLI crash reads as "claude process exited (1)" with the actual reason buried in
-  idea.log.
+- **Take: P1** (up from P2). Textbook rule 1: this is the one row where the Terminal column is `—`
+  because *we are the terminal* for this session. There is no `/command` that recovers it and no
+  other client to defer to — if we don't print it, the reason is gone. Today a CLI crash reads as
+  "claude process exited (1)" with the actual cause buried in idea.log, which a normal user will
+  never open. Surface stderr alongside the existing `__exit` status line on a non-zero exit.
 
 ### 24. Queued messages
 Messages typed while a turn is in flight.
@@ -305,7 +427,13 @@ Messages typed while a turn is in flight.
 - **Terminal:** ✅ queued and displayed; the CLI writes `queue-operation` records.
 - **VS Code:** ❌ no queue UI in the bundle (every `queue` hit is React internals).
 - **Us:** ❌ no queue at all.
-- **Take: P3.** VS Code doesn't do it either; not parity-critical.
+- **Take: P2** (up from P3). The old reasoning was "VS Code doesn't do it either" — but parity is
+  not the rule, the philosophy is, and this is the row where the two most clearly part company.
+  Having a follow-up thought while Claude works is a many-times-an-hour event for anyone actually
+  coding, which is exactly the test. The terminal queues; we drop the keystrokes on the floor. The
+  CLI already writes `queue-operation` records, so the concept exists on the wire.
+  Not P1 only because it needs real composer state (a pending list, edit/cancel before it sends),
+  not a renderer branch.
 
 ## D. Replay-only gaps
 
@@ -340,8 +468,13 @@ so browser find can't see them.
 
 - **Terminal / VS Code:** ✅ full scrollback.
 - **Us:** ⚠️ deliberate — it's what makes a big session open fast (`docs/limits.md`).
-- **Take: P3.** Keep. Revisit only if we add find-in-conversation, which would need to drive the
-  chunk loader.
+- **Take: P3.** Keep — the windowing is what makes a big session open fast, and scrolling back
+  through old turns is not an hourly act.
+  Worth flagging the adjacent feature, though: **find-in-conversation** *would* pass the
+  philosophy's test (searching what Claude just did, mid-task, with no terminal equivalent — the
+  CLI can't search our rendered view). It isn't listed as its own row because no client-parity gap
+  drove it, but if it is ever built, this row becomes its blocker: the finder has to drive the
+  chunk loader or it will only ever search the visible tail.
 
 ### 29. Non-Bash tool output on replay
 Replay keeps `structuredPatch` (edits) and `answers` (ask cards); `stdout` is kept for Bash alone
@@ -362,12 +495,47 @@ The stream, echo and summary of an effort change are suppressed live via `effort
 
 ## Suggested order
 
-1. **One edit, five items:** open the non-Bash tool-result path at `chat.html:1819` and mirror it in
-   `SessionStore.applyToolResult` → items 2, 6, 29, and the hooks for 8/11. Add the truncation
-   marker (10) in the same pass.
-2. **`RenderLimits` additions:** `activeForm` / `skill` / `task_id` for the blank lines (5), plus
-   per-tool input suffixes (7).
-3. **Free from data we already receive:** MCP server status (13), compaction boundary + gauge reset
-   (15), rate-limit warnings (16), real thinking tokens (19).
-4. **Then the todo checklist (14)**, which is a new renderer but a self-contained one.
-5. **Then sub-agent nesting (1, 3, 4)** — the only item here that needs a design pass.
+Four tiers, in order. The first is not a parity exercise — it is fixing things the panel currently
+states incorrectly, and it should go first even though some of it is less visible than tier 2.
+
+**Tier 0 — the panel is wrong (rule 3).** Ship before any new capability.
+- ~~Truncation marker (10)~~ — **done 2026-08-05**, and it left two things the rest of this tier
+  can reuse: `RenderLimits.cut` + `cutInfo` as the pattern for a rule that must hold in both
+  languages, and a balloon on a failed `open` so no click in the log is silent.
+- The `/compact` gauge reset (15) `S` — small, and it stops the composer showing a context share
+  that no longer exists. Self-inflicted: we enabled the command, so we own its aftermath.
+- Bash `interrupted` / `stderr` (9) `M` — a killed command reads as a success. Probe the live
+  shape first (see the soft-estimate note); the answer may make this replay-only.
+- Retraction on `refusal_fallback` (21) `M` — fold in whenever the stream `switch` is next open
+  rather than as a project; it can't be verified against local data anyway.
+
+**Tier 1 — the review loop (many times an hour).** The panel's core job: seeing what Claude did.
+- **Start with item 5** `XS` — three strings into `RenderLimits.DESC_KEYS` and both paths stop
+  drawing blank tool lines. Highest ratio in the document; do it before anything else here.
+- **Then the item-6 bundle** `M`, and take all of it in one pass: open the guard at
+  `chat.html:1819`, mirror it in `SessionStore.applyToolResult`, and land 2, 8, 11 and 29 in the
+  same change (`⇢` in the table). Splitting this means opening the same two paths twice, and
+  shipping 6 without 29 puts live and replay out of sync immediately. Match VS Code's shape — a
+  one-line count with click-to-open, not content dumped into the conversation.
+- Per-tool input suffixes (7) `M` — bespoke per tool, so it does not ride along with the above.
+- Todo checklist (14) `M` — a new renderer, but self-contained and independently shippable.
+
+**Tier 2 — signals with no terminal fallback (rule 1).** All small, and each converts a dead end
+into something actionable. Together they are less work than item 6 alone; a good tier to take when
+there isn't a long sitting available.
+- Auth failure → "sign in from a terminal" (20a) `XS` — the whole fix is the message.
+- Rate-limit warnings (16) `S` — one status line through the existing `statusLine()`.
+- CLI stderr on non-zero exit (23) `S` — today the cause is only in idea.log.
+- MCP connection failures (13a) `S` — a notice, explicitly not a server-management UI (13b).
+
+**Tier 3 — depth.** Ordered cheapest-first, since none of it is urgent:
+real thinking tokens (19) `XS`, `modelUsage[].contextWindow` (17a) `S` to retire the `[1m]`
+sniffing, server-side tool blocks (12) `S`, the sub-agent prompt (3) `S`, a "2 tasks running" chip
+(4) `S`. Then the two genuinely large ones, each needing a design pass before any code: sub-agent
+nesting (1) `L`, which 3 and the full roster (4) should ride on, and queued messages (24) `L`,
+which is composer state rather than a renderer. Hook activity (22) is unsized — settle the
+empty-ack question first, because it may be a protocol bug rather than a display gap.
+
+**Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
+release description mentions them, they belong under "By design". Items 17, 18, 25–28 and 30 stay
+P3 for the reasons in their sections.

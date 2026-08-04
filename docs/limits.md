@@ -105,14 +105,42 @@ this cap is future-proofing rather than a live fix.
 
 ## Truncated (data is dropped)
 
-| what | limit | where |
-|---|---|---|
-| diff rows | 400 | `MAX_DIFF_ROWS`, live + replay; appends "… diff truncated" |
-| Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number |
-| Bash output | 2000 chars | `RenderLimits.OUT_MAX` (live + replay) |
-| card command preview | 4000 chars | `RenderLimits.CMD_MAX` — same cap as the IN box, by construction |
-| tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) |
-| session title fallback | 80 chars | `SessionStore.titleOf` |
+| what | limit | where | says so? |
+|---|---|---|---|
+| diff rows | 400 | `MAX_DIFF_ROWS`, live + replay | ✅ "… diff truncated" |
+| Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number | ✅ `.io-cut` |
+| Bash output | 2000 chars | `RenderLimits.OUT_MAX` (live + replay) | ✅ `.io-cut` |
+| card command preview | 4000 chars | `RenderLimits.CMD_MAX` — same cap as the IN box, by construction | ✅ `.cmd-cut` |
+| tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) | ❌ one line, accepted |
+| session title fallback | 80 chars | `SessionStore.titleOf` | ❌ a title, not content |
+
+### Every cap that drops CONTENT announces it (2026-08-05)
+
+Closed `docs/client-parity.md` item 10. A cut used to be indistinguishable from a short result: the
+panel showed a slice and nothing said so, which made the fold actively misleading — expanding a
+truncated OUT box yields the 2000-char slice, not the whole output, so the fold read as "you have
+now seen everything". Measured scale before the fix: **79 blocks in a single local session** were
+being cut with no indication.
+
+- **The rule lives once**, in `RenderLimits.cut` — the doc comment there owns it, and `cutInfo` in
+  chat.html is the mirror. Live truncates in JS and replay in Kotlin, so the ALGORITHM has to match,
+  not just the cap. `RenderLimitsTest.cut counts whole dropped lines only` pins the cases; the
+  mid-line and trailing-newline ones are what a naive count gets wrong.
+- **Lines counted are WHOLE dropped lines.** The first fragment after the cut is the tail of a line
+  still on screen, so it is not counted — otherwise a mid-line cut always over-reports by one.
+  `lines == 0` (minified JSON, one long line) falls back to size alone rather than "+0 lines".
+- **The marker is a SIBLING of `.io-v`, never a child.** `foldBlock` collapses `.io-v` to three
+  lines, so a marker inside it would itself be folded away. Same reason `.cmd-cut` sits outside
+  `<pre class="cmd">`. Verified headless: it has non-zero height while `.io-v` still carries `.fold`.
+- **Fold ≠ marker.** The fold hides content it still holds ("click to expand"); the marker reports
+  content that is gone ("+312 lines · 12.4 KB not shown"). It wears the UI font rather than the
+  box's monospace so it does not read as one more line of output.
+- **The CLI truncates before we do.** It caps `stdout` around 30 000 chars and spills the whole
+  result to `toolUseResult.persistedOutputPath`, with the real size in `persistedOutputSize`. When
+  present the marker reports that true total and offers to open the file. `outFile` is emitted
+  **only when the path still resolves** — sessions outlive the tool-results dir, and a project
+  rename orphans every path (of 4 such records locally, only 1 file survives). A click that opens
+  nothing raises a balloon instead of doing nothing at all.
 
 ## Volume (how much is loaded at all)
 

@@ -183,6 +183,22 @@ total 196K
 -rw-r--r-- 1 dev dev 141K Jul 31 14:02 vendor-Ck9wQx1n.js</span></div>
       </div>
 
+      <!-- TRUNCATION MARKER (.io-cut): what a cap PERMANENTLY dropped, as against .fold above,
+           which still holds everything it hides. Sibling of .io-v, never a child — inside it the
+           fold would hide the very notice that content was cut. Second row: no newlines at all, so
+           it reports size only; third: the CLI spilled the whole result to a file, so the true
+           total is shown and the marker opens it. -->
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Index every log file</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v fold" title="Show more" onclick="this.classList.toggle('open')">/var/log/app-0.log
+/var/log/app-1.log
+/var/log/app-2.log
+/var/log/app-3.log
+/var/log/app-4.log</span><span class="io-cut">⋯ +842 lines · 19 KB not shown</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">{"rows":[{"id":1,"v":"x"},{"id":2,"v":"y"},…</span><span class="io-cut">⋯ +4.8 KB not shown</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span></div>
+      </div>
+
       <!-- "Thought" with NO duration: replay path when the transcript has no timestamp gap -->
       <details class="think"><summary>Thought<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">Reconstructed from a record with no measurable gap.</div></details>
 
@@ -338,6 +354,10 @@ total 196K
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Bash</b></div>
         <pre class="cmd">./gradlew buildPlugin -q &amp;&amp; rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains</pre>
+        <!-- The consent case for .io-cut: a command over CMD_MAX. Approving what the card only
+             half-showed is the worst silent cut in the app, so the marker sits outside .cmd
+             (which .card .cmd.fold collapses) and always renders. -->
+        <div class="io-cut cmd-cut">⋯ +118 lines · 5.2 KB not shown</div>
         <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Accept</button><span class="split"><button class="alt" title="Allow from now on (saved to .claude/settings.local.json)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>Always allow</button><button class="alt more" aria-haspopup="true" title="Allow just one of these"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button><div class="popup card-menu"><div class="popup-item"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">./gradlew buildPlugin -q</div></div></div><div class="popup-item"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains</div></div></div></div></span><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Reject</button></div>
       </div>
       <div class="card warn">

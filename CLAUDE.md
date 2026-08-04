@@ -138,6 +138,13 @@ zip in `build/distributions/`.
   hardcoded back, if the marker stops appearing exactly once, or if script tags stop balancing —
   both of those silently truncate the whole script block and look like a dead webview.
   Anything loading chat.html outside the IDE (headless probes) must splice LIMITS too.
+  It also owns the CUT RULE (`RenderLimits.cut`, mirrored by `cutInfo` in chat.html): every cap that
+  drops content now says so (`.io-cut` / `.cmd-cut`, "⋯ +312 lines · 12.4 KB not shown"). Splicing
+  the numbers isn't enough when the two paths truncate in different languages — the ALGORITHM has to
+  match too, so the rule is stated once in that doc comment and pinned by `RenderLimitsTest`. The
+  marker is a SIBLING of `.io-v`, never a child: `foldBlock` collapses `.io-v`, so a marker inside it
+  would itself be folded away. Fold ≠ marker — the fold hides content it still holds, the marker
+  reports content that is gone. Details in docs/limits.md.
 - Plugin Verifier hygiene (0 warnings on 242→262, achieved post-0.2.0): blocking reads go
   through `readLocked {}` (Threads.kt) — `ReadAction.compute` AND Kotlin's `runReadAction {}`
   are both deprecated on 2026.1, `Application.runReadAction(Computable)` is the one blocking-read
