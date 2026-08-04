@@ -128,6 +128,16 @@ img { max-width: 100%; height: auto; }
   background: var(--user-raised); color: var(--user-muted);
   border: 1px solid var(--user-border); white-space: nowrap; }
 .w-ver:empty { display: none; }
+/* The slogan, and the project's scope rule (CLAUDE.md § Philosophy). It has to read as a
+   subtitle of the title rather than the first line of the help text below it, so it pulls up
+   out of #welcome's 12px gap to sit closer to the name, and holds --fg weight 500 against
+   .w-sub's muted 400 — hierarchy from spacing and weight, no third colour. */
+.w-slogan { margin-top: -5px; font-size: 13px; font-weight: 500; color: var(--fg); }
+/* One line needs a ~340px panel; a right-anchored tool window is often narrower. Each half is
+   nowrap so the only place it CAN break is the space between the two sentences — it degrades to
+   two balanced lines ("Develop in the IDE." / "Configure in the Terminal.") instead of stranding
+   a word, and the split reads as the point being made. */
+.w-slogan span { white-space: nowrap; }
 .w-sub { font-size: 13px; line-height: 1.65; color: var(--muted); }
 .w-sub kbd { font: 12px ui-monospace, Consolas, monospace; color: var(--fg);
   background: var(--raised); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; }

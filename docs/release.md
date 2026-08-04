@@ -138,8 +138,8 @@ only read about behaviour they can see.
 - Plugin id: `io.github.amitsidhpura.claude-brains` (never change after first install).
 - Display name: **Claude Brains**.
 - Slogan: **"Develop in the IDE. Configure in the Terminal."** — opens the description
-  everywhere (plugin.xml, README, updatePlugins.xml, Marketplace). It is also the scope rule,
-  see CLAUDE.md § Philosophy.
+  everywhere (plugin.xml, README, updatePlugins.xml, Marketplace) and renders in-product on the
+  welcome screen (`.w-slogan`). It is also the scope rule, see CLAUDE.md § Philosophy.
 - Descriptive tagline, one line under it: "Claude Code for JetBrains IDEs (unofficial)".
 - No syncroze references in the plugin (renamed 2026-07-31; packages are
   `io.github.amitsidhpura.claudebrains.*`).
