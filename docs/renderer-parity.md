@@ -5,6 +5,9 @@ Three audits of the chat UI's three render paths:
 - **resume** — `chat.html` replay (`renderBlocks`/`replayCard`/`replayAsk`) fed by `SessionStore.kt`
 - **mockup** — `design/mockup.html`, the static design fixture that mirrors the generated DOM
 
+This is the INTERNAL audit — our own paths against each other. For what the official clients show
+and we don't, see `docs/client-parity.md`.
+
 First run: 2026-07-29. Legend: `[x]` done · `[ ]` open · `[~]` deliberate / documented, no action intended.
 
 When an item is fixed, tick it and add a one-line note (what + where). Keep the finding text so the

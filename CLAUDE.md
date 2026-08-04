@@ -14,6 +14,9 @@ Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
 - `docs/feature-checklist.md` — feature parity checklist + status (the working TODO list)
 - `docs/limits.md` — every size cap (folded / scrolled / truncated / volume) and where it is set
+- `docs/client-parity.md` — CLI data we drop, each item scored against the terminal TUI and the VS
+  Code extension (verified against the installed 2.1.220 bundle), with a suggested order.
+  External parity; `docs/renderer-parity.md` is the internal live-vs-resume-vs-mockup one
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved
   changes get ported into `plugin/src/main/resources/webview/chat.html`
 - `vscode/` — NOT in git. Extracted official VS Code extension (from
