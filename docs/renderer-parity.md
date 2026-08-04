@@ -210,18 +210,27 @@ Mostly deliberate; listed so nothing is silently forgotten.
       Inverse of the usual lossy-on-resume shape. **Accepted 2026-07-30** — user verified in the
       `runIde` sandbox and chose to keep the visible `/effort` box on resume as an honest audit
       trail; no replay filter will be added.
-- [ ] **CLI spill metadata is replay-only** (probed in `runIde` 2026-08-05, `seq 1 200000`). When a
-      Bash result is too big the CLI writes it to a file and the transcript record carries
-      `toolUseResult.persistedOutputPath` / `persistedOutputSize` — so REPLAY's truncation marker
-      reads `1.2 MB total, not shown here — open full output`. The LIVE stream event carries no
-      `toolUseResult` at all, so live falls back to our-cut-only (`⋯ +58 lines · 251 B not shown`).
-      Same record, two different markers.
-      · The information IS present live, but as PROSE inside the `tool_result` content: the CLI
-        substitutes a `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>
-        \n\nPreview (first 2KB):\n…` wrapper (2253 chars in the sampled record, hence our 2000-char
-        cut nibbling its tail). Parsing that wrapper live would close the divergence AND stop the
-        raw `<persisted-output>` tag rendering to the user — it is an injected wrapper of the same
-        family `cleanInjected()` already strips. Not yet done; see docs/client-parity.md item 10.
+- [x] **CLI spill metadata was replay-only** — found and CLOSED 2026-08-05. Probed in `runIde`
+      (`seq 1 200000`): when a Bash result is too big the CLI writes it to a file, and the
+      transcript record carries `toolUseResult.persistedOutputPath` / `persistedOutputSize`, so
+      replay's marker read `1.2 MB total — open full output` while LIVE fell back to our-cut-only
+      (`⋯ +58 lines · 251 B not shown`) because the live stream event carries no `toolUseResult`
+      at all. Same record, two different markers.
+      · **Fix:** the facts ARE present live, as prose — the CLI substitutes a
+        `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>\n\nPreview
+        (first 2KB):\n…\n</persisted-output>` wrapper. `RenderLimits.persistedOutput` parses it,
+        mirrored by `persistedOutput` in chat.html, so live now reports the same total and offers
+        the same link. Both paths also UNWRAP it, which fixes a second bug the audit surfaced: the
+        raw `<persisted-output>` tag and an unclickable path were being rendered to the user, in
+        live AND replay. It is an injected wrapper of the family `cleanInjected()` already strips.
+      · **Guard:** both tags must bound the whole text. One local record is a Bash result that
+        greps FOR the tag, so its output merely contains the string — eating its body would delete
+        real output and invent a spill link. Pinned by `text that merely mentions the wrapper is
+        not a spill`.
+      · **Cross-language equality verified on real records**, not just asserted: Kotlin and the JS
+        mirror both yield a 2000-char preview with identical head and identical path. The first
+        run disagreed by ONE byte (402.7 × 1024 = 412364.8 — JS rounded, Kotlin truncated); Kotlin
+        now rounds too, and the exact value is pinned in `RenderLimitsTest` so it cannot drift back.
 - [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
       neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
       with the parent turn; the parent's Task result still attaches to the Task tool line, not to a

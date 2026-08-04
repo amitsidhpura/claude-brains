@@ -72,6 +72,61 @@ object RenderLimits {
         return Cut(text.substring(0, max), rest.length, body.count { it == '\n' })
     }
 
+    /**
+     * The CLI's own truncation, which happens BEFORE ours: an oversized Bash result is replaced
+     * wholesale by a wrapper naming the file it was spilled to.
+     *
+     *     <persisted-output>
+     *     Output too large (402.7KB). Full output saved to: /…/tool-results/byb19giot.txt
+     *
+     *     Preview (first 2KB):
+     *     …preview…
+     *     ...
+     *     </persisted-output>
+     *
+     * Replay gets the same facts as real fields (`toolUseResult.persistedOutputSize` / `Path`), but
+     * the LIVE stream event carries no `toolUseResult` at all (probed in runIde 2026-08-05), so
+     * parsing this wrapper is the only way live can match replay. It also stops the raw tag being
+     * rendered to the user — it is an injected wrapper of the family `cleanInjected()` strips.
+     */
+    data class Spill(val preview: String, val bytes: Long?, val path: String?)
+
+    private val SPILL_PATH = Regex("""saved to:[ \t]*(\S.*?)[ \t]*(?:\r?\n|$)""")
+    private val SPILL_SIZE = Regex("""\(([\d.]+)\s*([KMGT]?)B\)""", RegexOption.IGNORE_CASE)
+    private val SPILL_PREVIEW_HEAD = Regex("""(?m)^Preview\b[^\n]*:[ \t]*\r?\n""")
+
+    /**
+     * Parse the wrapper above, or `null` when [text] is ordinary output.
+     *
+     * Both tags are REQUIRED, at the very start and very end. A Bash result that merely mentions
+     * `<persisted-output>` — grepping for it, or dumping a transcript, which is exactly what one
+     * local record does — must not be mistaken for the real thing and have its body eaten.
+     */
+    fun persistedOutput(text: String): Spill? {
+        val t = text.trim()
+        if (!t.startsWith("<persisted-output>") || !t.endsWith("</persisted-output>")) return null
+        val body = t.removePrefix("<persisted-output>").removeSuffix("</persisted-output>")
+        val path = SPILL_PATH.find(body)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
+        val size = SPILL_SIZE.find(body)?.let { m ->
+            val n = m.groupValues[1].toDoubleOrNull() ?: return@let null
+            // Binary units: 412387 bytes is reported as "402.7KB" (412387 / 1024), not 412.4KB.
+            val mult = when (m.groupValues[2].uppercase()) {
+                "K" -> 1L shl 10; "M" -> 1L shl 20; "G" -> 1L shl 30; "T" -> 1L shl 40
+                else -> 1L
+            }
+            // ROUND, not truncate: JS's Math.round is the mirror, and 402.7 * 1024 = 412364.8 lands
+            // either side of the boundary depending on which you pick. Same rendered size either
+            // way, but the two languages must produce the same NUMBER or this drifts by definition.
+            Math.round(n * mult)
+        }
+        // Everything after the "Preview (first 2KB):" line is real output; the CLI's own trailing
+        // "..." elision goes, because our marker is the canonical statement of what is missing.
+        val head = SPILL_PREVIEW_HEAD.find(body)
+        val preview = (if (head != null) body.substring(head.range.last + 1) else body)
+            .trim().removeSuffix("...").trimEnd()
+        return Spill(preview, size, path)
+    }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }

@@ -874,6 +874,33 @@
     // because there the truncated text already travels as `out`/`cmd`.
     return { shown: text.slice(0, max), lines: lines, bytes: rest.length };
   }
+  // Mirror of RenderLimits.persistedOutput (RenderLimits.kt owns the rule). The CLI truncates before
+  // we do: an oversized Bash result is replaced by a wrapper naming the file it was spilled to.
+  // Replay gets the same facts as real fields on toolUseResult, but the LIVE event carries no
+  // toolUseResult at all (probed 2026-08-05), so parsing this is the only way live can match replay.
+  // BOTH tags are required at the very start and end: a Bash result that merely MENTIONS the tag
+  // (grepping for it, dumping a transcript) must not have its body eaten.
+  const SPILL_PATH = /saved to:[ \t]*(\S.*?)[ \t]*(?:\r?\n|$)/;
+  const SPILL_SIZE = /\(([\d.]+)\s*([KMGT]?)B\)/i;
+  const SPILL_PREVIEW_HEAD = /^Preview\b[^\n]*:[ \t]*\r?\n/m;
+  function persistedOutput(text) {
+    const t = (text || '').trim();
+    if (t.indexOf('<persisted-output>') !== 0) return null;
+    if (t.lastIndexOf('</persisted-output>') !== t.length - 19) return null;
+    const body = t.slice(18, t.length - 19);
+    const p = SPILL_PATH.exec(body), sz = SPILL_SIZE.exec(body);
+    // binary units: 412387 bytes is reported as "402.7KB" (412387/1024), not 412.4KB
+    const mult = { '': 1, K: 1024, M: 1048576, G: 1073741824, T: 1099511627776 };
+    const head = SPILL_PREVIEW_HEAD.exec(body);
+    let preview = (head ? body.slice(head.index + head[0].length) : body).trim();
+    // the CLI's own trailing "..." goes — our marker is the canonical statement of what is missing
+    if (preview.slice(-3) === '...') preview = preview.slice(0, -3).replace(/\s+$/, '');
+    return {
+      preview: preview,
+      bytes: sz ? Math.round(parseFloat(sz[1]) * mult[sz[2].toUpperCase()]) : null,
+      path: p ? p[1] : null,
+    };
+  }
   // "this much was thrown away", NOT the fold's "click to see the rest" — the fold keeps its content
   // and this content is gone, so the two must read differently. `total`/`path` describe the CLI's
   // own earlier truncation (it caps stdout and spills the whole result to a file).
@@ -1871,12 +1898,17 @@
       txt = (txt || '').trim();
       if (!txt) return;
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
-      // The CLI's own truncation, above ours. `toolUseResult` is documented on the TRANSCRIPT record
-      // shape; whether the live stream event carries it too is read defensively rather than assumed,
-      // so live matches replay when it is there and degrades to our-cut-only when it is not.
+      // The CLI's own truncation, above ours. Its facts live on `toolUseResult` for replay, but the
+      // live event carries none (probed 2026-08-05) — so read that if it ever appears, and otherwise
+      // parse the <persisted-output> wrapper out of the result text, which is where live gets them.
+      // Unwrapping also keeps the raw tag off screen and makes what we cut real output.
       const tur = ev.toolUseResult || {};
-      const cut = cutInfo(txt, LIM.outMax);
-      t.io.appendChild(ioRow('OUT', cut ? cut.shown : txt, cut, tur.persistedOutputSize, tur.persistedOutputPath));
+      const spill = persistedOutput(txt);
+      const shown = spill ? spill.preview : txt;
+      const cut = cutInfo(shown, LIM.outMax);
+      t.io.appendChild(ioRow('OUT', cut ? cut.shown : shown, cut,
+        tur.persistedOutputSize || (spill && spill.bytes),
+        tur.persistedOutputPath || (spill && spill.path)));
       maybeScroll();
     });
   }

@@ -584,16 +584,23 @@ object SessionStore {
             val stdout = res?.get("stdout")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val stderr = res?.get("stderr")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val txt = fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n")
-            txt.trim().takeIf { it.isNotBlank() }?.let { full ->
+            // The CLI's OWN truncation, above ours: an oversized result arrives as a wrapper naming
+            // the file it was spilled to. Unwrap it so the box shows the preview rather than the raw
+            // <persisted-output> tag, and so what we then cut is real output.
+            val spill = RenderLimits.persistedOutput(txt)
+            val shown = spill?.preview ?: txt
+            shown.trim().takeIf { it.isNotBlank() }?.let { full ->
                 item.outCut = RenderLimits.cut(full, RenderLimits.OUT_MAX)
                 item.out = item.outCut?.shown ?: full
             }
-            // The CLI's OWN truncation, above ours: it spills the full result to a file and records
-            // the real size. Report the size whether or not the file survived — it is the honest
-            // total either way — but only offer the link when the path still resolves, since
-            // sessions outlive their tool-results dir (and a project rename orphans every path).
+            // Structured fields first — they are exact, where the wrapper's "402.7KB" is rounded.
+            // Report the size whether or not the file survived (it is the honest total either way),
+            // but only offer the LINK when the path still resolves: sessions outlive their
+            // tool-results dir, and a project rename orphans every path.
             item.outTotal = (res?.get("persistedOutputSize") as? JsonPrimitive)?.longOrNull
-            item.outFile = (res?.get("persistedOutputPath") as? JsonPrimitive)?.contentOrNull
+                ?: spill?.bytes
+            item.outFile = ((res?.get("persistedOutputPath") as? JsonPrimitive)?.contentOrNull
+                ?: spill?.path)
                 ?.takeIf { it.isNotBlank() && File(it).isFile }
         }
     }

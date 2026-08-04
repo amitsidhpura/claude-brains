@@ -132,6 +132,80 @@ class RenderLimitsTest {
     }
 
     /**
+     * The `<persisted-output>` wrapper, verbatim from a real transcript record (402.7KB / 412387
+     * bytes). Live has no `toolUseResult`, so parsing this is how the live path learns the true
+     * size and the spill path at all.
+     */
+    private val spillText = """
+        <persisted-output>
+        Output too large (402.7KB). Full output saved to: /home/dev/.claude/projects/p/s/tool-results/byb19giot.txt
+
+        Preview (first 2KB):
+        227215:updatedPermissions
+        227216:updatedPermissionsDropped
+        ...
+        </persisted-output>
+    """.trimIndent()
+
+    @Test
+    fun `persisted-output wrapper yields size, path and the preview alone`() {
+        val s = RenderLimits.persistedOutput(spillText)!!
+        assertEquals(
+            "/home/dev/.claude/projects/p/s/tool-results/byb19giot.txt", s.path,
+            "the spill path is what makes the marker clickable",
+        )
+        // 402.7 KB in BINARY units — the CLI divides by 1024, so this must land within a rounding
+        // step of the 412387 the structured field reports for the same record. The exact value is
+        // pinned because chat.html's `persistedOutput` must produce the SAME number: 402.7 * 1024
+        // = 412364.8, so truncating there and rounding here would silently disagree by a byte
+        // (measured against the real record in headless Chrome, 2026-08-05).
+        assertEquals(412365L, s.bytes)
+        assertTrue(
+            kotlin.math.abs(s.bytes!! - 412387L) < 1024,
+            "parsed size must agree with the structured persistedOutputSize to within its rounding",
+        )
+        assertEquals(
+            "227215:updatedPermissions\n227216:updatedPermissionsDropped", s.preview,
+            "the box shows the preview only — no wrapper tags, no header, no trailing ellipsis",
+        )
+    }
+
+    /**
+     * The guard that matters: one local record is a Bash result that GREPS for the tag, so its
+     * output merely contains the string. Eating its body would delete real output and invent a
+     * spill link. Both tags must bound the whole text.
+     */
+    @Test
+    fun `text that merely mentions the wrapper is not a spill`() {
+        listOf(
+            "grep -n persisted-output found:\n<persisted-output>\nnot really\n",
+            "<persisted-output>\nno closing tag, so not the real thing",
+            "prefix <persisted-output>\nOutput too large (1KB). Full output saved to: /x\n</persisted-output>",
+            "ordinary output\nwith no tags at all",
+            "",
+        ).forEach {
+            assertEquals(null, RenderLimits.persistedOutput(it), "must not treat as a spill: ${it.take(40)}")
+        }
+    }
+
+    @Test
+    fun `spill size parses the unit, or survives its absence`() {
+        fun bytes(s: String) = RenderLimits.persistedOutput(
+            "<persisted-output>\nOutput too large ($s). Full output saved to: /x/y.txt\n\nPreview (first 2KB):\nbody\n</persisted-output>"
+        )!!.bytes
+        assertEquals(900L, bytes("900B"))
+        assertEquals(1024L, bytes("1KB"))
+        assertEquals(1258291L, bytes("1.2MB"))
+        assertEquals(1610612736L, bytes("1.5GB"))
+        // a wrapper with no parsable size still yields its path — the link is the useful half
+        val noSize = RenderLimits.persistedOutput(
+            "<persisted-output>\nFull output saved to: /x/y.txt\n\nPreview (first 2KB):\nbody\n</persisted-output>"
+        )!!
+        assertEquals(null, noSize.bytes)
+        assertEquals("/x/y.txt", noSize.path)
+    }
+
+    /**
      * Replay has to put the cut on the wire, or a resumed session shows the slice with no marker
      * while the live render showed one. Also pins the spill fields: `outFile` is emitted ONLY when
      * the path still resolves, because the marker is clickable and a dead click reads as a bug —

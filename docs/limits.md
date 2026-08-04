@@ -135,12 +135,24 @@ being cut with no indication.
 - **Fold ≠ marker.** The fold hides content it still holds ("click to expand"); the marker reports
   content that is gone ("+312 lines · 12.4 KB not shown"). It wears the UI font rather than the
   box's monospace so it does not read as one more line of output.
-- **The CLI truncates before we do.** It caps `stdout` around 30 000 chars and spills the whole
-  result to `toolUseResult.persistedOutputPath`, with the real size in `persistedOutputSize`. When
-  present the marker reports that true total and offers to open the file. `outFile` is emitted
-  **only when the path still resolves** — sessions outlive the tool-results dir, and a project
-  rename orphans every path (of 4 such records locally, only 1 file survives). A click that opens
-  nothing raises a balloon instead of doing nothing at all.
+- **The CLI truncates before we do**, and it does NOT send us the big output at all — it replaces
+  the whole result with a wrapper naming the file it spilled to:
+  `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>\n\nPreview (first
+  2KB):\n…\n</persisted-output>`. The preview is exactly 2000 chars, so `OUT_MAX` never even bites
+  on these; the marker reports the CLI's true total instead.
+  - **Replay** reads the exact fields (`toolUseResult.persistedOutputSize` / `Path`); **live** has
+    no `toolUseResult` at all (probed in `runIde` 2026-08-05) and parses the wrapper instead —
+    `RenderLimits.persistedOutput`, mirrored in chat.html. Both paths then UNWRAP it, which fixed a
+    second bug: the raw tag and an unclickable path used to be rendered to the user.
+  - **Both tags must bound the whole text.** A Bash result that greps FOR the tag merely contains
+    the string; eating its body would delete real output and invent a spill link. One local record
+    does exactly this.
+  - `outFile` is emitted **only when the path still resolves** — sessions outlive the tool-results
+    dir, and a project rename orphans every path (of 4 such records locally, only 1 file survives).
+    A click that opens nothing now raises a balloon instead of doing nothing at all.
+  - The two languages were verified equal on real records, not just assumed: identical 2000-char
+    preview, identical path. The first run disagreed by ONE byte on the size — 402.7 × 1024 =
+    412364.8, JS rounded and Kotlin truncated — so Kotlin rounds now and the value is pinned.
 
 ## Volume (how much is loaded at all)
 

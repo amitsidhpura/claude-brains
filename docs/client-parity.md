@@ -259,11 +259,12 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
     `returnCodeInterpretation` live on `toolUseResult` too, so an interrupted-command indicator is
     likewise replay-only unless it can be read from the result text. Re-size item 9 as `S`
     (replay-only) rather than `M`.
-  · **The information IS available live, as prose.** The CLI replaces an oversized result with a
-    `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>\n\nPreview (first
-    2KB):\n…` wrapper. Parsing it in `onUserEvent` would close the divergence and stop the raw
-    `<persisted-output>` tag being rendered to the user — it is an injected wrapper of the family
-    `cleanInjected()` already strips. Recorded in `docs/renderer-parity.md`; not built.
+  · **Closed the same day.** The facts ARE available live, as prose: the CLI replaces an oversized
+    result with a `<persisted-output>\nOutput too large (402.7KB). Full output saved to: <path>\n\n
+    Preview (first 2KB):\n…\n</persisted-output>` wrapper. `RenderLimits.persistedOutput` parses it
+    (mirrored in chat.html), so live now reports the same total and the same link as replay. Both
+    paths unwrap it too, which fixed a second bug the probe surfaced: the raw tag and an unclickable
+    path were being shown to the user on BOTH paths. Details in `docs/renderer-parity.md`.
 
 ### 11. "File was modified by the user"
 `toolUseResult.userModified`.
