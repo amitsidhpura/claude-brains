@@ -120,13 +120,30 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 else session.newConversation()
                 pushTitle(id)
             }
-            "open" -> msg["path"]?.jsonPrimitive?.content?.let { session.openFile(it) }
+            // openFile returns false when the path no longer resolves, and a click that does
+            // NOTHING reads as a broken panel. Truncation markers make this reachable — a session
+            // outlives the CLI's tool-results dir — but it covers every file reference in the log.
+            "open" -> msg["path"]?.jsonPrimitive?.content?.let {
+                if (!session.openFile(it)) notifyMissing(it)
+            }
             "more" -> pushEarlier()
             "history" -> pushSessions()
             "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
                 session.deleteSession(it); pushSessions()
             }
         }
+    }
+
+    /** Same balloon group DiffReview uses, so a failed open is reported the one way the plugin reports. */
+    private fun notifyMissing(path: String) {
+        com.intellij.notification.NotificationGroupManager.getInstance()
+            .getNotificationGroup("Claude Brains")
+            .createNotification(
+                "File not found",
+                path,
+                com.intellij.notification.NotificationType.WARNING,
+            )
+            .notify(project)
     }
 
     private fun frameOf(type: String, items: JsonElement): String =
