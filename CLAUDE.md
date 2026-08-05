@@ -82,6 +82,15 @@ auto-include selection, voice) — the settings page and non-terminal login are 
   Dropping the env var also stops the CLI writing file-history snapshots into every transcript.
 - Tool inputs stream via `input_json_delta`; tool results arrive as `user` events with
   `tool_result` blocks (used for Bash IN/OUT boxes).
+- Hooks NEVER reach us as a control request. `hook_callback` carries a `callback_id` and is only
+  sent to a client that registered SDK `type:"function"` hooks via the initialize payload; we send
+  none, so `ClaudeCli`'s empty ack for unknown control requests is unreachable for ordinary
+  settings-defined hooks (probed 2.1.222 — they fire, zero control requests). A hook DENYING a tool
+  arrives as a plain `tool_result` with `is_error` — already rendered. A hook blocking a NON-tool
+  event (e.g. UserPromptSubmit exiting 2) emits `system/informational` with
+  `prevent_continuation` and NOTHING else — no assistant turn — so unhandled it reads as a dead
+  panel. `informational` is general-purpose (`level`: info/notice/suggestion/warning, optional
+  `tool_use_id` which DEDUPES rather than stacking) and is persisted, so both paths render it.
 - Every stream line carries a `uuid`, and the `assistant` event's uuid is the SAME uuid the CLI writes
   into the transcript record (timestamp too) — verified by diffing a live run against its own JSONL.
   That is the only handle for tying a live render to its replayed twin; the completion-summary verb

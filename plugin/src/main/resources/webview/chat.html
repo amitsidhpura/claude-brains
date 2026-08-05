@@ -926,6 +926,7 @@
     // toolsById pins removed DOM for the page lifetime, and a leftover lastUser would let a
     // first-turn Retry resend the PREVIOUS session's message (images included)
     openTool = null; toolsById = {}; lastUser = null;
+    infoByTool = {};   // detached lines from the old session would otherwise be updated in place
     // retraction state is per-session too: a leftover evicted uuid would delete a NEW session's
     // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
@@ -1125,6 +1126,53 @@
     holder.io.appendChild(ioRow('OUT', cut ? cut.shown : res.text, cut));
     maybeScroll();
   }
+  /**
+   * `system/informational` — the CLI's own notices (client-parity item 22). The one that made this
+   * worth building is a hook denying a non-tool event: probed on 2.1.222, a `UserPromptSubmit` hook
+   * exiting 2 emits
+   *
+   *   {subtype:"informational", level:"warning", prevent_continuation:true,
+   *    content:"UserPromptSubmit operation blocked by hook:\n[…]: REASON\n\nOriginal prompt: …"}
+   *
+   * and NOTHING else — no assistant turn, no text. Unhandled, the user pressed Enter and the panel
+   * simply sat there. There is no terminal to check either; this CLI is ours (rule 1).
+   *
+   * `level` is the CLI's own prominence scale, described as: "'info' shows only in transcript mode;
+   * 'notice' renders in inactive gray; 'suggestion' and 'warning' are more prominent." We have no
+   * second mode to hide `info` in, and silently dropping a message is the exact failure this audit
+   * exists to correct, so it renders muted rather than not at all.
+   *
+   * `tool_use_id` is documented as "Dedupes progress messages for the same tool use", so repeats
+   * REPLACE their predecessor instead of stacking — otherwise a chatty tool would paper the
+   * timeline with near-identical lines.
+   */
+  const INFO_LEVELS = Object.assign(Object.create(null), {
+    warning:    { cls: 'status err', icon: true },
+    suggestion: { cls: 'status',     icon: true },
+    notice:     { cls: 'status',     icon: false },
+    info:       { cls: 'status',     icon: false },
+  });
+  let infoByTool = {};   // tool_use_id -> the line to update in place; reset per session
+  function infoLine(content, level, toolUseId) {
+    const text = String(content == null ? '' : content).trim();
+    if (!text) return;   // an empty notice is not a notice
+    const lv = INFO_LEVELS[level] || INFO_LEVELS.notice;   // unknown level degrades to the quiet one
+    const prev = toolUseId ? infoByTool[toolUseId] : null;
+    if (prev && prev.isConnected) {
+      // Replace the text, keep the element: re-appending would scroll the timeline for what is
+      // logically the same message saying something new.
+      prev.className = lv.cls;
+      prev.textContent = '';
+      if (lv.icon) {
+        const s = document.createElement('span'); s.className = 's-ic';
+        s.innerHTML = SVG_ALERT; prev.appendChild(s);
+      }
+      prev.appendChild(document.createTextNode(text));
+      return;
+    }
+    const el2 = statusLine(text, lv.icon ? SVG_ALERT : null, lv.cls);
+    if (toolUseId) infoByTool[toolUseId] = el2;
+  }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
   function toolLine(name) {
     const t = el('tool-line', '');
@@ -1297,6 +1345,13 @@
         // never seeds — a resumed failed turn genuinely can't be retried.
         case 'error':
           errorBlock(it.text);
+          break;
+        // Item 22 — the CLI's own notices, replayed through the SAME level table the live path
+        // uses, so a hook-blocked prompt reads identically on resume. No tool_use_id here: dedupe
+        // is a live concern (repeated progress for one running tool); the transcript already
+        // holds whichever message won.
+        case 'info':
+          infoLine(it.text, it.level, null);
           break;
         case 'status':
           statusLine(it.text, it.icon === 'stop' ? SVG_STOP : (it.icon === 'alert' ? SVG_ALERT : null),
@@ -2053,6 +2108,12 @@
             SVG_ALERT, 'status err');
         } else if (ev.subtype === 'model_refusal_fallback') {
           onRefusalFallback(ev);
+        } else if (ev.subtype === 'informational') {
+          infoLine(ev.content, ev.level, ev.tool_use_id || ev.toolUseId);
+          // prevent_continuation means the turn stops HERE. A `result` does still follow (probed),
+          // so this is belt-and-braces — but a spinner left running after the CLI has given up is
+          // the worst of the failure modes, so it is not left to that.
+          if (ev.prevent_continuation || ev.preventContinuation) setBusy(false);
         } else if (ev.subtype === 'model_refusal_no_fallback') {
           onRefusalNoFallback(ev);
         } else if (ev.subtype === 'compact_boundary') {
@@ -3083,6 +3144,14 @@
     });
     // The refusal with NO retry: nothing is coming, so nothing follows this line.
     onRefusalNoFallback({ original_model: 'claude-opus-5', content: '' });
+
+    // CLI notices (item 22), one per level so the prominence ladder is visible side by side. The
+    // warning is the real text a UserPromptSubmit hook produces when it denies a prompt — that turn
+    // emits this and nothing else, so without it the panel just sits there.
+    infoLine('UserPromptSubmit operation blocked by hook:\n[./guard.sh]: commit messages must ' +
+      'reference an issue\n\nOriginal prompt: commit this', 'warning');
+    infoLine('Consider running the test suite before committing.', 'suggestion');
+    infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
 
     // background-task roster (item 4) — chip + popup, driven through the real renderer so the
     // gallery cannot drift from it. Click the chip to open the roster.

@@ -340,6 +340,58 @@ class SessionStoreTest {
     }
 
     /**
+     * `system/informational` — the CLI's own notices (client-parity item 22).
+     *
+     * The first record below is REAL, copied verbatim from a transcript produced by driving 2.1.222
+     * with a `UserPromptSubmit` hook that exits 2. That turn emits this record **and nothing else**:
+     * no assistant message, no text. Unhandled, a resumed session showed the prompt vanishing into
+     * silence, exactly as the live panel did.
+     *
+     * Note the spelling split the wire/transcript pair carries yet again — the stream says
+     * `prevent_continuation`, the transcript `preventContinuation`.
+     */
+    @Test
+    fun `the CLI's own notices replay instead of vanishing`() {
+        val jsonl = listOf(
+            // verbatim from a real run (uuid/session trimmed, nothing else changed)
+            """{"parentUuid":null,"isSidechain":false,"type":"system","subtype":"informational",""" +
+                """"content":"UserPromptSubmit operation blocked by hook:\n[echo UPS-BLOCK-REASON >&2; exit 2]: UPS-BLOCK-REASON\n\n\nOriginal prompt: say ok",""" +
+                """"isMeta":false,"timestamp":"2026-08-05T19:20:48.101Z","uuid":"i1","level":"warning",""" +
+                """"preventContinuation":true,"sessionId":"s","version":"2.1.222"}""",
+            """{"type":"system","subtype":"informational","uuid":"i2","level":"notice",""" +
+                """"content":"a quieter notice","timestamp":"2026-08-05T19:20:49.000Z","sessionId":"s"}""",
+            // blank content is not a notice, and must not leave an empty line behind
+            """{"type":"system","subtype":"informational","uuid":"i3","level":"warning",""" +
+                """"content":"   ","timestamp":"2026-08-05T19:20:50.000Z","sessionId":"s"}""",
+            // an unrelated system subtype must still be ignored, as before
+            """{"type":"system","subtype":"some_future_thing","uuid":"i4",""" +
+                """"content":"ignore me","timestamp":"2026-08-05T19:20:51.000Z","sessionId":"s"}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-info", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "info.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val infos = SessionStore.readTranscript(CWD, "info")
+                .filter { it["role"]?.jsonPrimitive?.contentOrNull == "info" }
+            assertEquals(2, infos.size, "blank content and unknown subtypes must not become blocks")
+
+            assertTrue(infos[0]["text"]?.jsonPrimitive?.contentOrNull
+                ?.startsWith("UserPromptSubmit operation blocked by hook:") == true)
+            assertEquals("warning", infos[0]["level"]?.jsonPrimitive?.contentOrNull,
+                "level rides along so replay maps prominence through the same table as live")
+            assertEquals("notice", infos[1]["level"]?.jsonPrimitive?.contentOrNull)
+            assertNull(infos[0]["uuid"], "nothing retracts a notice, so it advertises no uuid")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * What a sub-agent was ASKED (client-parity item 3). The tool line already carried `description`
      * — a handful of words — while the `prompt` it actually ran on was dropped, so "what did it just
      * go off and do?" was unanswerable from the panel. Measured 2026-08-06: local `Agent` prompts

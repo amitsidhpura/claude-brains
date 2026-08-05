@@ -78,7 +78,7 @@ and the reasoning is in the item.
 | 12 | Server-side tools (web search blocks) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — but replay needed it too, and the rule is shared |
 | 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · probe corrected the source | `S` held; the "already in the init payload" claim did not |
-| 22 | Hook activity | ✅ | ? | ❌ | P2 | **?** — probe the empty-ack first; unknown until then |
+| 22 | Hook activity | ✅ | ? | ✅ | **DONE** 2026-08-06 · probe changed the work | ack was fine; blocked tools already shown; `informational` was the gap |
 | 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
@@ -816,10 +816,53 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 ### 22. Hook activity
 - **Terminal:** ✅ hook output and blocked-tool reasons.
 - **VS Code:** ? no `hook_` markers in the webview bundle; likely handled extension-side.
-- **Us:** ❌ `ClaudeCli.kt:216` acks *every* non-`can_use_tool` control request with an empty
-  response. A hook that fires, blocks, or errors is invisible.
-- **Take: P2.** Note this isn't purely a display gap — the empty ack may be answering
-  `hook_callback` with something the CLI reads as "no opinion". Worth probing before building UI.
+- **Us:** ❌ was scored as "a hook that fires, blocks, or errors is invisible". **Two thirds of that
+  was wrong**, and one third was a real dead stop.
+- **Take: P2. PROBED then DONE 2026-08-06.** The probe was the whole point of this item, and it
+  changed the work completely — what shipped is not hook UI at all.
+
+  **1. The empty-ack worry is a non-issue.** `ClaudeCli` acks every non-`can_use_tool` control
+  request with `{}`, and the concern was that this answers `hook_callback` with "no opinion".
+  Probed by running 2.1.222 against real settings-defined hooks (`UserPromptSubmit`, `PreToolUse`,
+  `Stop`): they fired, and **zero control requests were sent**. `hook_callback` carries a
+  `callback_id`, which only means something to a client that REGISTERED callbacks — SDK
+  `type:"function"` hooks, supplied via `hooks` in the initialize payload. We send none, so the CLI
+  never asks. The ack is unreachable for ordinary hooks. **No protocol bug.**
+
+  **2. A blocked TOOL was already visible.** A `PreToolUse` hook returning
+  `permissionDecision:"deny"` does not produce any hook-specific event: it comes back as an
+  ordinary `tool_result` with `is_error:true` whose content is the hook's reason. Item 6 already
+  renders exactly that — red dot on the tool line, reason in the OUT box. Nothing to build.
+
+  **3. The real gap: a blocked NON-tool event, which stops the turn dead.** A `UserPromptSubmit`
+  hook exiting 2 emits one record and *nothing else* — no assistant message, no text:
+
+      {"type":"system","subtype":"informational","level":"warning","prevent_continuation":true,
+       "content":"UserPromptSubmit operation blocked by hook:\n[…]: REASON\n\nOriginal prompt: …"}
+
+  We handled no `informational` subtype, so it fell through the `case 'system'` chain in silence:
+  the user pressed Enter and the panel sat there. No terminal to check either — this CLI is ours
+  (rule 1). It is **persisted too**, verified against a real transcript, so a resume showed the same
+  nothing.
+
+  **`informational` is general-purpose, not hook-specific**, which is why fixing it is worth more
+  than the item asked for. Its schema: `content`, `level` (`info`/`notice`/`suggestion`/`warning` —
+  *"'info' shows only in transcript mode; 'notice' renders in inactive gray; 'suggestion' and
+  'warning' are more prominent"*), optional `tool_use_id` (*"Dedupes progress messages for the same
+  tool use"* — so repeats REPLACE rather than stack), and optional `prevent_continuation`. We render
+  `info` muted rather than hiding it, because we have no second mode to hide it in and dropping a
+  message silently is the failure this audit exists to correct. Spelling split again: wire
+  `prevent_continuation`, transcript `preventContinuation`.
+
+  **Still invisible, because there is no data:** a hook's non-blocking output (a `UserPromptSubmit`
+  `systemMessage` appears in the CLI's debug log and never reaches the stream) and a hook that fails
+  to execute (a `PreToolUse` hook pointing at a missing binary leaves no stream trace at all). Those
+  are not display gaps and cannot be closed from this side.
+
+  **A claim in an earlier draft of this item was wrong and is retracted:** `stop_hook_summary`
+  records with `hookCount`/`hookInfos`/`hookErrors`/`preventedContinuation` do **not** exist locally
+  — the count is zero, for every one of those keys. The item was called "sizeable now" on that
+  basis; it was never measured.
 
 ### 23. CLI stderr
 - **Terminal:** — it *is* the terminal.
@@ -1015,8 +1058,8 @@ feature is downstream of a design pass.**
 
 That leaves the two genuinely large ones, each needing a design pass before any code: sub-agent
 nesting (1) `L`, and queued messages (24) `L`, which is composer state rather than a renderer.
-Hook activity (22) is unsized — settle the empty-ack question first, because it may be a protocol
-bug rather than a display gap.
+~~Hook activity (22)~~ **done** — the empty-ack question turned out to be no bug at all, and the
+real gap (`system/informational`) was neither hook-specific nor what the item described.
 
 **Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
 release description mentions them, they belong under "By design". Items 17, 18, 25–28 and 30 stay

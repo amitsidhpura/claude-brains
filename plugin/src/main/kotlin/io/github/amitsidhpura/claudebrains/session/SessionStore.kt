@@ -386,6 +386,8 @@ object SessionStore {
         var note: String? = null           // the CLI's exit-code explanation ("No matches found")
         var interrupted: Boolean = false   // the command was killed rather than finishing
         var trigger: String? = null        // compaction: "auto" (context ran out) or "manual" (/compact)
+        // `system/informational` prominence: info | notice | suggestion | warning (item 22)
+        var level: String? = null
         // Appended after the description and OUTSIDE its cap — a Read's "(lines 40-80)" is what
         // distinguishes reading a slice from reading the whole file, so a long path must not eat it.
         var suffix: String? = null
@@ -444,6 +446,7 @@ object SessionStore {
             note?.let { put("note", it) }
             if (interrupted) put("interrupted", true)
             trigger?.let { put("trigger", it) }
+            level?.let { put("level", it) }
             if (isError) put("isError", true)
             patch?.let { put("patch", it) }
             content?.let { put("content", it) }
@@ -797,6 +800,27 @@ object SessionStore {
                                     text = body ?: ((orig ?: "The model") +
                                         " declined to answer, and no fallback model was available.")
                                 })
+                                continue
+                            }
+                            // The CLI's own notices (item 22). These ARE persisted — verified
+                            // against a real transcript — and the one that matters is a hook
+                            // denying a non-tool event, which produces this record and no turn at
+                            // all. Note the spelling split, again: the wire says
+                            // `prevent_continuation`, the transcript `preventContinuation`.
+                            // `level` rides along so replay maps prominence through the SAME
+                            // INFO_LEVELS table the live path uses.
+                            if (obj["subtype"]?.jsonPrimitive?.content == "informational") {
+                                val body = obj["content"]?.jsonPrimitive?.contentOrNull
+                                    ?.takeIf { it.isNotBlank() }
+                                if (body != null) {
+                                    flushSummary()
+                                    // No uuid: nothing retracts a notice, so recording one would
+                                    // advertise a capability the block does not have.
+                                    out.add(Item("info").apply {
+                                        text = body
+                                        level = obj["level"]?.jsonPrimitive?.contentOrNull
+                                    })
+                                }
                                 continue
                             }
                             if (obj["subtype"]?.jsonPrimitive?.content != "compact_boundary") continue
