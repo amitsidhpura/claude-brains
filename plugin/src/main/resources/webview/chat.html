@@ -1148,6 +1148,11 @@
         case 'status':
           statusLine(it.text, it.icon === 'stop' ? SVG_STOP : null);
           break;
+        case 'tasks':
+          // A reconstructed snapshot of the Task* list at this point in the turn. Same renderer as
+          // TodoWrite's, because it is the same thing — only the source differs.
+          todoList(it.todos || []);
+          break;
         case 'compact':
           compactBlock(it.text || '', it.trigger, it.tokens || 0);
           break;
@@ -1831,6 +1836,7 @@
           pendingBgTasks = (ev.tasks || []).length;
         }
         return;
+      case '__tasks':            return void todoList(ev.items || []);
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
@@ -2074,6 +2080,12 @@
       // live event carries none (probed 2026-08-05) — so read that if it ever appears, and otherwise
       // parse the <persisted-output> wrapper out of the result text, which is where live gets them.
       // Unwrapping also keeps the raw tag off screen and makes what we cut real output.
+      // A Task* call changed the list; ask Kotlin for the current one (the CLI keeps it on disk).
+      // Live reads the STORE, replay reconstructs from increments — different sources because the
+      // store holds only the current state, but both render through the same checklist.
+      if (t.name === 'TaskCreate' || t.name === 'TaskUpdate' || t.name === 'TaskList') {
+        bridge({ kind: 'tasks' });
+      }
       const tur = ev.toolUseResult || {};
       const spill = persistedOutput(txt);
       const shown = spill ? spill.preview : txt;

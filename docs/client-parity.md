@@ -67,7 +67,7 @@ and the reasoning is in the item.
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped WITH 6, one shared skip list |
 | 7 | Tool input beyond one key | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — one case, not a matrix: Read line ranges |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
-| 14 | Todo / task checklist | ✅ | ✅ | ⚠️ | **PARTLY DONE** 2026-08-05 | `.todos` ships, but `TodoWrite` is RETIRED — replay only |
+| 14 | Todo / task checklist | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | `TodoWrite` (replay) + the live `Task*` list |
 | 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
 | 23 | CLI stderr | — | ? | ❌ | **P1** ↑ (philosophy) | **S** — buffer it, print on non-zero exit |
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ❌ | **P1** ↑ (philosophy) | **XS** — one branch, one message |
@@ -416,8 +416,19 @@ Which MCP servers connected, which failed.
   structured, authoritative, and under the same `~/.claude` root `SessionStore` already reads
   (so `SessionStore.claudeHome` makes it testable against a temp tree, same as everything else).
   It also carries `blocks`/`blockedBy`, which the old `TodoWrite` had no way to express.
-  Sized `S` for the read and the render — the open question is WHERE a always-current list belongs
-  in a linear thread, not how to obtain it.
+  **Shipped inline**, redrawn wherever a `Task*` call lands, so the list reads as that call's own
+  content — the same placement everything else in the log uses.
+  The two paths take DIFFERENT sources on purpose, and it is not drift:
+  - **Live** asks Kotlin for the store after any `TaskCreate`/`TaskUpdate`/`TaskList`, because the
+    file is the authoritative current state at that instant.
+  - **Replay reconstructs** from the transcript's increments, because the store is overwritten in
+    place and cannot say what the list looked like *earlier in the turn*. `TaskCreate`'s result
+    carries the id the CLI assigned ("Task #3 created successfully: …"), `TaskUpdate`'s input
+    carries `taskId`+`status`, and a `TaskList` result is a full authoritative resync that also
+    repairs drift from records the replay window never shipped.
+  Both feed the SAME `todoList` builder that `TodoWrite` uses, so provenance differs and rendering
+  cannot. Verified on the real session `4f520694`: 8 snapshots reconstructed, the first showing one
+  task, the middle all five pending, the last with task 2 completed — matching the live run exactly.
 
 ### 15. Compaction boundary
 Where the context got compacted, why, and how big it was before.

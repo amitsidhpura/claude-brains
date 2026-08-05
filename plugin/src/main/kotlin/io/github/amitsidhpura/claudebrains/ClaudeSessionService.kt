@@ -206,6 +206,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         io.github.amitsidhpura.claudebrains.session.SessionStore.readTranscript(cwd.path, id)
 
 
+    /** The session's current task list, from the store the CLI keeps at ~/.claude/tasks/<id>/. */
+    fun tasks(id: String): kotlinx.serialization.json.JsonArray =
+        io.github.amitsidhpura.claudebrains.session.SessionStore.tasks(id)
+
     /** Send a user turn with attachments (images / pdf / text). */
     fun sendUser(text: String, attachments: List<io.github.amitsidhpura.claudebrains.cli.Attachment>) =
         cli?.sendUserMessage(text, attachments)

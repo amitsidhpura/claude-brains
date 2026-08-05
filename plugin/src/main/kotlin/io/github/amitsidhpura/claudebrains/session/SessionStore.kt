@@ -220,6 +220,32 @@ object SessionStore {
         return File(File(claudeHome, ".claude/projects"), enc)
     }
 
+    /**
+     * The session's task list, read from the store the CLI keeps on disk:
+     * `~/.claude/tasks/<sessionId>/<n>.json`, one file per task, each carrying
+     * `{id, subject, description, activeForm, status, blocks, blockedBy}`.
+     *
+     * This is the CURRENT state and nothing else — the store is overwritten in place, so it can
+     * answer "what does the list look like now" but never "what did it look like at that point in
+     * the turn". Replay therefore reconstructs its own snapshots from the transcript's increments
+     * (see the `Task*` handling in [readTranscript]); this is the LIVE source.
+     *
+     * Sorted numerically, because `10.json` sorts before `2.json` as text and a checklist that
+     * jumps its own order reads as a bug.
+     */
+    fun tasks(sessionId: String): JsonArray {
+        if (!sessionId.matches(Regex("[A-Za-z0-9_-]{1,128}"))) return JsonArray(emptyList())
+        val dir = File(File(claudeHome, ".claude/tasks"), sessionId)
+        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".json") }
+            ?: return JsonArray(emptyList())
+        val items = files
+            .sortedBy { it.nameWithoutExtension.toIntOrNull() ?: Int.MAX_VALUE }
+            .mapNotNull { f ->
+                runCatching { json.parseToJsonElement(f.readText()).jsonObject }.getOrNull()
+            }
+        return JsonArray(items)
+    }
+
     fun list(cwd: String, limit: Int = 40): List<SessionInfo> {
         val files = projectDir(cwd).listFiles { f -> f.isFile && f.name.endsWith(".jsonl") }
             ?: return emptyList()
@@ -284,6 +310,59 @@ object SessionStore {
         return aiTitle ?: firstUser?.take(80)?.ifBlank { null } ?: "(untitled session)"
     }
 
+    /**
+     * Fold a `Task*` result into the reconstructed list. `TaskCreate` is the only one whose id is
+     * not knowable until here ("Task #3 created successfully: Build the endpoints"); `TaskList`
+     * returns the whole list ("#1 [pending] Subject") and is treated as authoritative, which also
+     * repairs any drift from records the replay window never shipped.
+     */
+    private val CREATED = Regex("""Task #(\S+) created successfully:\s*(.*)""")
+    private val LISTED = Regex("""(?m)^#(\S+)\s+\[([^]]+)]\s+(.*)$""")
+
+    private fun applyTaskResult(
+        item: Item,
+        result: String,
+        state: LinkedHashMap<String, MutableMap<String, String>>,
+    ) {
+        if (item.text == "TaskList") {
+            val rows = LISTED.findAll(result).toList()
+            if (rows.isEmpty()) return
+            state.clear()
+            rows.forEach { m ->
+                state[m.groupValues[1]] = linkedMapOf(
+                    "id" to m.groupValues[1],
+                    "status" to m.groupValues[2].trim(),
+                    "subject" to m.groupValues[3].trim(),
+                )
+            }
+            return
+        }
+        if (item.text != "TaskCreate") return
+        val m = CREATED.find(result) ?: return
+        val id = m.groupValues[1]
+        val inp = item.pendingCreate
+        state[id] = linkedMapOf(
+            "id" to id,
+            "status" to "pending",
+            "subject" to (m.groupValues[2].trim().ifBlank {
+                (inp?.get("subject") as? JsonPrimitive)?.contentOrNull.orEmpty()
+            }),
+        ).also { t ->
+            (inp?.get("activeForm") as? JsonPrimitive)?.contentOrNull?.let { t["activeForm"] = it }
+        }
+        item.pendingCreate = null
+    }
+
+    /** The reconstructed list in the shape the checklist renderer takes. */
+    private fun taskSnapshot(state: LinkedHashMap<String, MutableMap<String, String>>): JsonArray =
+        JsonArray(state.values.map { t ->
+            buildJsonObject {
+                put("content", t["subject"] ?: "")
+                put("status", t["status"] ?: "pending")
+                t["activeForm"]?.let { put("activeForm", it) }
+            }
+        })
+
     /** A [RenderLimits.Cut] on the wire — the same `{lines, bytes}` shape the live path builds. */
     private fun cutJson(c: RenderLimits.Cut): JsonObject = buildJsonObject {
         put("lines", c.lines)
@@ -318,6 +397,8 @@ object SessionStore {
         // TodoWrite's whole list, straight from the tool input. It arrives complete on every call,
         // so the checklist needs no aggregation — unlike TaskCreate/TaskUpdate, which are increments.
         var todos: JsonElement? = null
+        /** TaskCreate's input, held until its result reveals the id the CLI assigned. */
+        var pendingCreate: JsonObject? = null
         // Record uuid this block came from. Only needed so a refusal fallback (or an assistant
         // `supersedes` list) can withdraw it — nothing else reads it, and it never reaches the wire.
         var uuid: String? = null
@@ -402,6 +483,13 @@ object SessionStore {
         // instead of becoming a message the user never sent.
         var openCompact: Item? = null
         var openCompactUuid: String? = null
+        // Reconstructed task list. The on-disk store ([tasks]) holds only the CURRENT state, so the
+        // only way to show what the list looked like at each point in a resumed turn is to replay
+        // the increments the transcript already records: TaskCreate's RESULT carries the id the CLI
+        // assigned ("Task #3 created successfully: …"), TaskUpdate's INPUT carries taskId+status,
+        // and TaskList's result is a full authoritative resync.
+        val taskState = LinkedHashMap<String, MutableMap<String, String>>()
+        var pendingTaskItem: Item? = null
         // Seed of the previous summary, so the renderer can refuse to draw the same verb twice in a
         // row. It travels on the item rather than being inferred from render order, because windowed
         // replay renders earlier chunks LAST (prepended) — document order isn't render order.
@@ -455,6 +543,25 @@ object SessionStore {
                                             denied = obj["toolDenialKind"] != null,
                                         )
                                     }
+                                }
+                            }
+                            // Task* results complete the reconstruction and emit the snapshot. Done
+                            // here rather than in applyToolResult because the snapshot is a BLOCK in
+                            // the stream, not a field on the tool it follows.
+                            pendingTaskItem?.let { ti ->
+                                val txt = content?.let { c ->
+                                    (c as? JsonArray)?.mapNotNull { blk ->
+                                        (blk as? JsonObject)?.takeIf {
+                                            it["type"]?.jsonPrimitive?.contentOrNull == "tool_result"
+                                        }?.let { resultText(it["content"]) }
+                                    }?.joinToString("\n")
+                                }.orEmpty()
+                                if (txt.isNotBlank()) {
+                                    applyTaskResult(ti, txt, taskState)
+                                    if (taskState.isNotEmpty()) {
+                                        out.add(Item("tasks").apply { todos = taskSnapshot(taskState) })
+                                    }
+                                    pendingTaskItem = null
                                 }
                             }
                             // an interrupt ends the request with "⏹ Stopped" and no summary,
@@ -548,7 +655,34 @@ object SessionStore {
                                             text = b["thinking"]?.jsonPrimitive?.content ?: ""
                                             durMs = sincePrev
                                         })
-                                        "tool_use" -> out.add(toolItem(b, byToolId))
+                                        "tool_use" -> {
+                                            val ti = toolItem(b, byToolId)
+                                            out.add(ti)
+                                            // Task* increments rebuild the checklist. TaskUpdate is
+                                            // complete from its INPUT; TaskCreate needs the id the
+                                            // CLI assigns, which only its result carries — so that
+                                            // one is applied in applyToolResult and both then emit
+                                            // the snapshot through pendingTaskItem.
+                                            val tn = ti.text
+                                            if (tn == "TaskUpdate" || tn == "TaskCreate" || tn == "TaskList") {
+                                                val binp = b["input"] as? JsonObject
+                                                if (tn == "TaskUpdate") {
+                                                    val id = (binp?.get("taskId") as? JsonPrimitive)?.contentOrNull
+                                                    val st = (binp?.get("status") as? JsonPrimitive)?.contentOrNull
+                                                    if (id != null) {
+                                                        val t = taskState.getOrPut(id) { linkedMapOf("id" to id) }
+                                                        if (st != null) t["status"] = st
+                                                        (binp["subject"] as? JsonPrimitive)?.contentOrNull
+                                                            ?.let { t["subject"] = it }
+                                                    }
+                                                }
+                                                if (tn == "TaskCreate") {
+                                                    // stash the input; the id arrives with the result
+                                                    ti.pendingCreate = binp
+                                                }
+                                                pendingTaskItem = ti
+                                            }
+                                        }
                                     }
                                 }
                             }

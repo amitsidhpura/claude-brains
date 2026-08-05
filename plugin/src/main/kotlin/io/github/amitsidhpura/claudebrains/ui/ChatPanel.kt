@@ -131,12 +131,36 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val endLine = msg["endLine"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
                 if (!session.openFile(it, line, endLine)) notifyMissing(it)
             }
+            // The CLI keeps the task list on disk, keyed by session id; the webview asks after
+            // any Task* call rather than us parsing the stream for them.
+            "tasks" -> pushTasks()
             "more" -> pushEarlier()
             "history" -> pushSessions()
             "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
                 session.deleteSession(it); pushSessions()
             }
         }
+    }
+
+    /**
+     * Current task list for the live session, mapped into the shape the checklist renderer takes
+     * (`content`/`status`/`activeForm`) so live and replay feed the SAME builder.
+     */
+    private fun pushTasks() {
+        val id = session.currentSessionId() ?: return
+        val items = session.tasks(id).map { t ->
+            val o = t.jsonObject
+            buildJsonObject {
+                put("content", o["subject"]?.jsonPrimitive?.contentOrNull ?: "")
+                put("status", o["status"]?.jsonPrimitive?.contentOrNull ?: "pending")
+                o["activeForm"]?.jsonPrimitive?.contentOrNull?.let { put("activeForm", it) }
+            }
+        }
+        if (items.isEmpty()) return
+        pushFrame(buildJsonObject {
+            put("type", "__tasks")
+            put("items", JsonArray(items))
+        })
     }
 
     /** Same balloon group DiffReview uses, so a failed open is reported the one way the plugin reports. */
