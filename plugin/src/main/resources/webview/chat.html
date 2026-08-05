@@ -861,6 +861,20 @@
      Live and replay draw the same structures through these, so the two paths cannot drift —
      several renderer-parity findings were exactly that drift. */
   // one IN/OUT row; kind is "IN" | "OUT", text set safely
+  // Mirror of RenderLimits.descSuffix — that Kotlin doc comment owns the rule. A Read of lines
+  // 40-80 rendered identically to a Read of the whole file, which is the difference between
+  // "Claude read this" and "Claude read a slice of this". Deliberately not a per-tool matrix:
+  // Grep/Glob never occur locally, and Bash's command and Edit's strings are already on screen.
+  function descSuffix(tool, offset, limit) {
+    if (tool !== 'Read') return '';
+    const o = (typeof offset === 'number') ? offset : null;
+    const l = (typeof limit === 'number') ? limit : null;
+    // -1 because `limit` counts lines: 40 + 80 ends at 119, not 120
+    if (o !== null && l !== null) return ' (lines ' + o + '-' + (o + l - 1) + ')';
+    if (o !== null) return ' (from line ' + o + ')';
+    if (l !== null) return ' (first ' + l + ' lines)';
+    return '';
+  }
   // THE cut rule, mirrored from RenderLimits.cut (RenderLimits.kt) — that Kotlin doc comment owns
   // it. Live truncates in JS and replay in Kotlin, so the ALGORITHM has to match, not just the cap:
   // otherwise the same output reports a different amount dropped while streaming than after a
@@ -1155,6 +1169,11 @@
             const d = t.querySelector('.t-desc');
             d.textContent = it.desc;
             if (it.isPath) d.classList.add('path');
+            if (it.suffix) {
+              const sEl = document.createElement('span');
+              sEl.className = 't-sfx'; sEl.textContent = it.suffix;
+              d.after(sEl);
+            }
           }
           if (it.cmd || it.out) {
             const rows = [];
@@ -1986,6 +2005,14 @@
               const dEl = openTool.el.querySelector('.t-desc');
               dEl.textContent = String(inp[descKey]).slice(0, LIM.descMax);
               if (LIM.pathKeys.indexOf(descKey) !== -1) dEl.classList.add('path');
+              // Outside the cap and outside .t-desc.path: the range must survive a truncated path,
+              // and it is not part of the filename the click handler sends to the editor.
+              const sfx = descSuffix(openTool.name, inp.offset, inp.limit);
+              if (sfx) {
+                const sEl = document.createElement('span');
+                sEl.className = 't-sfx'; sEl.textContent = sfx;
+                dEl.after(sEl);
+              }
             }
             if (openTool.name === 'Bash' && inp.command) {
               const full = String(inp.command), cut = cutInfo(full, LIM.cmdMax);

@@ -294,6 +294,10 @@ blockquote > *:last-child { margin-bottom: 0; }
 .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
 /* file references open in the editor — only the ones that ARE paths (.path), not free-text
    descriptions, so nothing invites a click that would do nothing */
+/* Range suffix on a Read ("(lines 40-80)"). Its own span, dimmer than the path and OUTSIDE
+   .t-desc.path — the click handler sends that element's text to the editor, so a range folded into
+   it would be sent as part of the filename. */
+.tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: 12px; }
 .tool-line .t-desc.path, .card-h code { cursor: pointer; }
 .tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
 .path { font-family: ui-monospace, Consolas, monospace; }

@@ -307,6 +307,9 @@ object SessionStore {
         var note: String? = null           // the CLI's exit-code explanation ("No matches found")
         var interrupted: Boolean = false   // the command was killed rather than finishing
         var trigger: String? = null        // compaction: "auto" (context ran out) or "manual" (/compact)
+        // Appended after the description and OUTSIDE its cap — a Read's "(lines 40-80)" is what
+        // distinguishes reading a slice from reading the whole file, so a long path must not eat it.
+        var suffix: String? = null
         // Record uuid this block came from. Only needed so a refusal fallback (or an assistant
         // `supersedes` list) can withdraw it — nothing else reads it, and it never reaches the wire.
         var uuid: String? = null
@@ -338,6 +341,7 @@ object SessionStore {
             seed?.let { put("seed", it) }
             prevSeed?.let { put("prevSeed", it) }
             desc?.let { put("desc", it) }
+            suffix?.let { put("suffix", it) }
             if (isPath) put("isPath", true)
             cmd?.let { put("cmd", it) }
             out?.let { put("out", it) }
@@ -639,6 +643,14 @@ object SessionStore {
                 if (descKey != null) {
                     desc = str(descKey)!!.take(RenderLimits.DESC_MAX)
                     isPath = descKey in RenderLimits.PATH_KEYS
+                    // A Read of lines 40-80 used to render exactly like a Read of the whole file.
+                    // Appended AFTER the cap so the range survives a long path being truncated —
+                    // it is the part that changes what the line means.
+                    suffix = RenderLimits.descSuffix(
+                        name,
+                        (inp?.get("offset") as? JsonPrimitive)?.longOrNull,
+                        (inp?.get("limit") as? JsonPrimitive)?.longOrNull,
+                    ).ifBlank { null }
                 }
                 file = path
                 if (name == "Bash") str("command")?.let { full ->

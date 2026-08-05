@@ -65,7 +65,7 @@ and the reasoning is in the item.
 | 6 | Non-Bash tool result summaries | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — structural skip rule, not per-tool shapes |
 | 2 | Sub-agent final report | ✅ | ⚠️ | ✅ | **DONE** 2026-08-05 | free with 6, as predicted |
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped WITH 6, one shared skip list |
-| 7 | Tool input beyond one key | ✅ | ✅ | ⚠️ | P1 | **M** — bespoke per tool; generic chain won't do |
+| 7 | Tool input beyond one key | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — one case, not a matrix: Read line ranges |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
 | 14 | Todo / task checklist | ✅ | ✅ | ❌ | P1 | **M** — new renderer, but self-contained |
 | 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
@@ -232,8 +232,17 @@ Read / Grep / Glob / Search / WebFetch / WebSearch / MCP calls all render a bare
   `Read` appends `(lines 12-40)` from `offset`/`limit` and links the filename to that exact range.
 - **Us:** ⚠️ a Grep shows its pattern but not path/glob/type; a Read shows the path but not the
   line range (`chat.html:1780`, `SessionStore.kt:519`).
-- **Take: P1.** Same edit as item 6, and it stays honest across live + replay because both walk
-  `RenderLimits`. Needs per-tool suffixes rather than the generic chain.
+- **Take: DONE 2026-08-05**, and it is ONE case, not the per-tool matrix this line assumed.
+  Measured: **`Grep` and `Glob` — the examples above — do not occur in local transcripts at all.**
+  Bash's `command` and Edit's `old_string`/`new_string` are already on screen in the IN box and the
+  diff, and `prompt` on Agent/WebFetch is item 3. What was genuinely lost is `Read`'s line range:
+  **347 of 719 Reads carry `offset`/`limit`**, and without it a Read of lines 40-80 rendered
+  identically to a Read of the whole file — the difference between "Claude read this" and "Claude
+  read a slice of this".
+  Shipped as `RenderLimits.descSuffix` (mirrored by `descSuffix` in chat.html), rendered in its own
+  `.t-sfx` span: OUTSIDE the `DESC_MAX` cap so a long path cannot eat the range, and outside
+  `.t-desc.path` so the click handler does not send "(lines 40-80)" to the editor as part of the
+  filename. Verified on session `42d09b97`: 95 of 105 Reads gained a range, 0 other tools did.
 
 ### 8. Tool-returned images
 Playwright screenshots, `Read` on a PNG — `toolUseResult.isImage`.

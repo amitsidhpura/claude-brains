@@ -159,6 +159,30 @@ object RenderLimits {
         return Spill(preview, size, path)
     }
 
+    /**
+     * What a tool line's description leaves out, when leaving it out changes the meaning. Today
+     * that is exactly one case: a `Read` of lines 40-80 rendered identically to a Read of the whole
+     * file, which is the difference between "Claude read this" and "Claude read a slice of this".
+     * 347 of 719 local Reads carry a range.
+     *
+     * Deliberately NOT a per-tool matrix, which is what the audit assumed. Measured 2026-08-05:
+     * `Grep`/`Glob` — the item's headline examples — do not occur in local transcripts at all;
+     * Bash's `command` and Edit's `old_string`/`new_string` are already shown in the IN box and the
+     * diff; and `prompt` on Agent/WebFetch is client-parity item 3, scored on its own.
+     *
+     * Mirrored by `descSuffix` in chat.html — same two-language contract as [cut], pinned by tests.
+     */
+    fun descSuffix(tool: String, offset: Long?, limit: Long?): String {
+        if (tool != "Read") return ""
+        return when {
+            // both: an exact window. -1 because `limit` counts lines, so 40+80 ends at 119, not 120.
+            offset != null && limit != null -> " (lines $offset-${offset + limit - 1})"
+            offset != null -> " (from line $offset)"
+            limit != null -> " (first $limit lines)"
+            else -> ""
+        }
+    }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }

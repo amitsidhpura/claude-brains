@@ -91,6 +91,24 @@ class RenderLimitsTest {
         )
     }
 
+    /**
+     * A Read of lines 40-80 used to render exactly like a Read of the whole file. Mirrored by
+     * `descSuffix` in chat.html, so the arithmetic has to match: `limit` COUNTS lines, which is why
+     * the end is offset+limit-1 and not offset+limit — the off-by-one that would misreport every
+     * range by a line.
+     */
+    @Test
+    fun `a Read's line range reaches the tool line`() {
+        assertEquals(" (lines 40-119)", RenderLimits.descSuffix("Read", 40, 80))
+        assertEquals(" (from line 40)", RenderLimits.descSuffix("Read", 40, null))
+        assertEquals(" (first 80 lines)", RenderLimits.descSuffix("Read", null, 80))
+        assertEquals("", RenderLimits.descSuffix("Read", null, null), "a whole-file Read says nothing")
+        // no other tool has a range worth appending — Grep/Glob never occur locally, and Bash's
+        // command and Edit's strings are already on screen in the IN box and the diff
+        assertEquals("", RenderLimits.descSuffix("Bash", 40, 80))
+        assertEquals("", RenderLimits.descSuffix("Edit", 40, 80))
+    }
+
     @Test
     fun `path keys are part of the description order`() {
         assertTrue(RenderLimits.DESC_KEYS.containsAll(RenderLimits.PATH_KEYS))
