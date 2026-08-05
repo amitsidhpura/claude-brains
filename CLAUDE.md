@@ -172,7 +172,12 @@ mode/model popups, top+bottom scroll fades), tool-window icon (grey/white on sel
 completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resume aware),
 dev gallery (Ctrl+Alt+G renders every transient state in the live webview),
 context gauge in the composer (share of the window the next request carries — latest request's
-input+cache_read+cache_creation, NOT a sum; orange ≥50%; click sends /compact via `sendTurn`).
+input+cache_read+cache_creation, NOT a sum; orange ≥50%; click sends /compact via `sendTurn`),
+background-task roster beside it (`bgChip`/`bgMenu`: count on the face, `{description, task_type}`
+rows in a popup, hidden when empty). `background_tasks_changed` has REPLACE semantics — assign the
+set, never merge, or finished tasks live forever — and is a LEVEL signal, which is why it is a chip
+reflecting the present rather than timeline entries that accumulate. Rows are read-only: killing a
+task is the terminal's half.
 The denominator comes from `result.modelUsage[<model>].contextWindow` — the CLI's own number
 (`windowFromUsage`). Two traps, both measured: `modelUsage` is a MAP that routinely includes side
 models the user never picked (one turn returned `claude-opus-5[1m]` at 1M AND

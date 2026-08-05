@@ -624,6 +624,17 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* context gauge: share of the window the next request will carry. Click to /compact.
    Wears .chip-btn (same as the model selector); only the over-threshold tint is its own. */
 .ctx.warn, .ctx.warn:hover { color: var(--accent); }
+/* background-task roster (client-parity item 4): a LEVEL signal, so it is a chip that reflects what
+   is running now, not a timeline entry. Wears .chip-btn like the rest; the pulsing dot is the only
+   thing of its own, and it marks the roster as live rather than historical. */
+.bg::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  flex: none; animation: bg-pulse 1.6s ease-in-out infinite; }
+@keyframes bg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+/* Rows are read-only — there is no "kill task" here, that is the terminal's half (§ Philosophy) —
+   so they must not offer the hover affordance the other popup items use to say "clickable".
+   Qualified with .popup-item deliberately: a bare .bg-row ties on specificity and LOSES, because
+   .popup-item is declared further down this file. Measured headless, not assumed. */
+.popup-item.bg-row, .popup-item.bg-row:hover { background: transparent; cursor: default; }
 #inputbar .icon-btn { color: var(--user-muted); }
 #inputbar .icon-btn:hover { color: var(--fg); }
 #send { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;

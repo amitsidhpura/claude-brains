@@ -598,6 +598,18 @@ total 196K
           <!-- context gauge: % of the window the next request will carry; orange past 50%,
                click sends /compact. devbar "ctx" toggles the warn state. -->
           <button id="ctxChip" class="chip-btn ctx">24%</button>
+          <!-- background-task roster: a LEVEL signal (what is running NOW), so a chip rather than
+               timeline lines. Hidden whenever the set is empty; rows are read-only. -->
+          <span class="menu-anchor">
+            <button id="bgChip" class="chip-btn bg" title="Background tasks">2 tasks</button>
+            <div id="bgMenu" class="popup">
+              <div class="popup-h"><span>Background tasks</span></div>
+              <div id="bgList">
+                <div class="popup-item bg-row"><div class="pi-body"><div class="pi-title">Audit chat.css for optimization</div><div class="pi-desc">Explore</div></div></div>
+                <div class="popup-item bg-row"><div class="pi-body"><div class="pi-title">Run the full test suite</div><div class="pi-desc">general-purpose</div></div></div>
+              </div>
+            </div>
+          </span>
         </div>
         <div class="right">
           <span class="menu-anchor">

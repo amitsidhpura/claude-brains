@@ -74,7 +74,7 @@ and the reasoning is in the item.
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · **VERIFIED against 2.1.222** | field confirmed; 1 dead check dropped, 1 code added, wording corrected |
 | 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — one branch, and a SHARED one (`IN_KEYS`) |
 | 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
-| 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
+| 4 | Background task roster | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · full roster | was `M` "rides on 1" — actually `S`, the event carries names |
 | 12 | Server-side tools (web search blocks) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — but replay needed it too, and the rule is shared |
 | 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · probe corrected the source | `S` held; the "already in the init payload" claim did not |
@@ -196,9 +196,40 @@ Which background tasks are running while the turn is suspended.
 - **Terminal:** ✅ live list; `/bashes` for shells.
 - **VS Code:** ✅ `subagentTasks` map driven by `system/task_started`, `task_progress`,
   `task_notification`.
-- **Us:** ❌ `background_tasks_changed` sets a *count only* (`chat.html:1692`) so `onResult` can tell
-  a suspend from the true end of a request. No names, no progress, no output.
-- **Take: P2.** Ships naturally with item 1; a "2 tasks running" chip is a cheap interim.
+- **Us:** ❌ `background_tasks_changed` set a *count only*, so `onResult` could tell a suspend from
+  the true end of a request. No names, no progress, no output.
+- **Take: P2. DONE 2026-08-06 — the real roster, not the "cheap interim" chip.**
+
+  **"Ships naturally with item 1" was wrong, and checking cost one grep.** The roster needs nothing
+  from sub-agent nesting: the event already carries everything, per the 2.1.222 wire schema —
+
+      tasks: w.array(w.object({ task_id: w.string(), task_type: w.string(), description: w.string() }))
+        .describe("Every live background task after the change. REPLACE semantics: swap your set for this payload.")
+
+  We were receiving that array and keeping `.length`. The names were in our hands the whole time.
+  This was an `S`, not the `M` the table carried, and it did not need to wait behind an `L`.
+
+  **The schema also settled the SHAPE of the feature**, in its own words: *"A level signal, unlike
+  the task_started/task_notification edge bookends"*. A level signal describes what is running NOW
+  and changes membership repeatedly within a turn; rendered as timeline entries it would be a run of
+  near-duplicate lines. So it is a chip beside the context gauge — count on the face, roster in a
+  popup, gone entirely when nothing is running. VS Code builds its map from the *edge* events
+  (`task_started` / `task_progress` / `task_notification`); the level event is strictly less
+  bookkeeping for the same answer, so we take that instead of mirroring their approach.
+
+  **REPLACE semantics is load-bearing** and is why the handler assigns rather than merges — a
+  merging roster would keep finished tasks forever. Pinned by a test that shrinks the set and
+  asserts rows disappear. `clearLogUI` clears it too: the roster describes a live process, and a new
+  conversation must not advertise the previous session's tasks.
+
+  Rows are deliberately **read-only** — no kill, no restart. Process control is the terminal's half
+  (`/bashes`, § Philosophy); this answers "what is running?", which is the during-work question.
+  That required qualifying the CSS as `.popup-item.bg-row`: a bare `.bg-row` ties on specificity and
+  loses to `.popup-item` declared later in the file, so the rows kept a pointer cursor and looked
+  clickable. Caught by measuring in headless Chrome, not by reading the rule.
+
+  Still not built, and honestly out of scope for a roster: per-task **progress** and **output**.
+  Those ride on the `task_progress` / `task_notification` edge events and on item 1's nesting work.
 
 ### 5. Blank Task/Skill tool lines
 `TaskUpdate`, `TaskOutput`, `TaskStop`, `Skill` have none of `RenderLimits.DESC_KEYS`, so they draw
@@ -973,11 +1004,19 @@ an argument for probing the wire before writing the branch, not for padding the 
 
 **Tier 3 — depth.** Ordered cheapest-first, since none of it is urgent:
 real thinking tokens (19) `XS`, ~~`modelUsage[].contextWindow` (17a)~~ **done** — retired the `[1m]`
-sniffing, ~~server-side tool blocks (12)~~ **done**, ~~the sub-agent prompt (3)~~ **done**, a "2 tasks running" chip
-(4) `S`. Then the two genuinely large ones, each needing a design pass before any code: sub-agent
-nesting (1) `L`, which the full roster (4) should ride on, and queued messages (24) `L`,
-which is composer state rather than a renderer. Hook activity (22) is unsized — settle the
-empty-ack question first, because it may be a protocol bug rather than a display gap.
+sniffing, ~~server-side tool blocks (12)~~ **done**, ~~the sub-agent prompt (3)~~ **done**,
+~~the background roster (4)~~ **done** — the full roster, not the interim chip.
+
+**Both of the "rides on 1" predictions were wrong.** 3 and 4 were each expected to wait for
+sub-agent nesting; neither needed anything from it. 3 was one shared branch (`IN_KEYS`), and 4's
+names were already sitting in a payload we were reading for its `.length`. Worth remembering before
+sequencing anything else behind an `L`: **check what the event already carries before assuming a
+feature is downstream of a design pass.**
+
+That leaves the two genuinely large ones, each needing a design pass before any code: sub-agent
+nesting (1) `L`, and queued messages (24) `L`, which is composer state rather than a renderer.
+Hook activity (22) is unsized — settle the empty-ack question first, because it may be a protocol
+bug rather than a display gap.
 
 **Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
 release description mentions them, they belong under "By design". Items 17, 18, 25–28 and 30 stay

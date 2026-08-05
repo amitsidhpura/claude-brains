@@ -59,6 +59,13 @@
           </span>
           <button id="slashBtn" class="icon-btn" title="Slash commands"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" x2="15" y1="15" y2="9"/></svg></button>
           <button id="ctxChip" class="chip-btn ctx" hidden></button>
+          <span class="menu-anchor">
+            <button id="bgChip" class="chip-btn bg" hidden title="Background tasks"></button>
+            <div id="bgMenu" class="popup">
+              <div class="popup-h"><span>Background tasks</span></div>
+              <div id="bgList"></div>
+            </div>
+          </span>
         </div>
         <div class="right">
           <span class="menu-anchor">
@@ -572,7 +579,7 @@
   };
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */
-  const MENUS = ['modeMenu', 'modelMenu', 'slashMenu', 'attachMenu'];
+  const MENUS = ['modeMenu', 'modelMenu', 'slashMenu', 'attachMenu', 'bgMenu'];
   function menuEl(id) { return document.getElementById(id); }
   function tg(id, e) {
     if (e) e.stopPropagation();
@@ -1635,6 +1642,9 @@
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null;
+    // The roster describes a LIVE process: a new conversation inherits none of it, and leaving the
+    // chip up would advertise tasks belonging to a session that is no longer on screen.
+    bgTasks = []; renderBgTasks();
     bridge({ kind: 'user', text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
     stopping = false;
     setBusy(true);
@@ -1909,6 +1919,48 @@
   }
   let openTool = null;        // tool block currently streaming its input
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
+  let bgTasks = [];           // and WHICH ones: [{task_id, task_type, description}] — item 4's roster
+  /**
+   * The background-task roster (client-parity item 4). The event already carries
+   * `{task_id, task_type, description}` per task, so this needed nothing from item 1 — the doc's
+   * "the real roster rides on 1" was wrong, checked against the 2.1.222 wire schema before building.
+   *
+   * A chip rather than timeline lines, because the CLI calls this "a LEVEL signal, unlike the
+   * task_started/task_notification edge bookends": it describes what is running NOW, and membership
+   * changes repeatedly within one turn. Printed as events it would be a stream of near-duplicate
+   * lines; as a chip it answers "what is running?" at a glance and disappears when nothing is.
+   */
+  function renderBgTasks() {
+    const chip = document.getElementById('bgChip'), list = document.getElementById('bgList');
+    if (!chip || !list) return;
+    if (!bgTasks.length) {
+      chip.hidden = true;
+      const m = document.getElementById('bgMenu');
+      if (m) m.classList.remove('show');   // an open roster must not outlive its last task
+      list.textContent = '';
+      return;
+    }
+    chip.hidden = false;
+    chip.textContent = bgTasks.length + (bgTasks.length === 1 ? ' task' : ' tasks');
+    list.textContent = '';
+    bgTasks.forEach(function (t) {
+      const row = document.createElement('div');
+      row.className = 'popup-item bg-row';
+      const body = document.createElement('div'); body.className = 'pi-body';
+      const title = document.createElement('div'); title.className = 'pi-title';
+      // `description` is the human-readable one; task_id is opaque and only useful as a fallback.
+      title.textContent = (t && (t.description || t.task_id)) || 'background task';
+      body.appendChild(title);
+      const type = t && t.task_type;
+      if (type) {
+        const d = document.createElement('div'); d.className = 'pi-desc';
+        d.textContent = String(type);
+        body.appendChild(d);
+      }
+      row.appendChild(body);
+      list.appendChild(row);
+    });
+  }
   let reqTokens = 0;          // output tokens summed across every result turn in one user request
   // uuid of this request's FIRST assistant record. The CLI writes the very same uuid into the
   // transcript, so seeding the summary verb on it is what makes a turn keep its verb across resumes
@@ -2015,9 +2067,17 @@
           ctxUsed = 0; renderContext();
         } else if (ev.subtype === 'background_tasks_changed') {
           // A background subagent suspends the turn: each suspension emits a `result`, and the
-          // CLI resumes with another once the task reports back. Track how many are still running
-          // so onResult can tell an intermediate suspend from the request's true end.
-          pendingBgTasks = (ev.tasks || []).length;
+          // CLI resumes with another once the task reports back. `pendingBgTasks` is what lets
+          // onResult tell an intermediate suspend from the request's true end.
+          //
+          // REPLACE semantics, in the schema's own words: "Every live background task after the
+          // change. REPLACE semantics: swap your set for this payload." So this assigns — it must
+          // never merge, or a finished task would stay on the roster forever. It is a LEVEL signal,
+          // not an edge one, which is why the roster is a chip that reflects the present rather
+          // than a timeline entry that accumulates.
+          bgTasks = Array.isArray(ev.tasks) ? ev.tasks : [];
+          pendingBgTasks = bgTasks.length;
+          renderBgTasks();
         }
         return;
       case '__tasks':            return void todoList(ev.items || []);
@@ -2577,6 +2637,10 @@
     if (busy || !ctxUsed) return;     // request in flight, or nothing to compact yet
     sendTurn('/compact', []);
   };
+  // The roster opens through the same dropdown system as the other menus, so it closes on Escape,
+  // on an outside click, and whenever another menu opens — without repeating any of that here.
+  { const bgChip = document.getElementById('bgChip');
+    if (bgChip) bgChip.onclick = function (e) { tg('bgMenu', e); }; }
 
   /**
    * Display name for any tool: drop an `mcp_`/`mcp__` prefix, then Pascal-case what remains,
@@ -3019,6 +3083,14 @@
     });
     // The refusal with NO retry: nothing is coming, so nothing follows this line.
     onRefusalNoFallback({ original_model: 'claude-opus-5', content: '' });
+
+    // background-task roster (item 4) — chip + popup, driven through the real renderer so the
+    // gallery cannot drift from it. Click the chip to open the roster.
+    bgTasks = [
+      { task_id: 'bg_01', task_type: 'Explore', description: 'Audit chat.css for optimization' },
+      { task_id: 'bg_02', task_type: 'general-purpose', description: 'Run the full test suite' },
+    ];
+    renderBgTasks();
 
     // sub-agent brief (item 3) — the description names the errand, the IN box is the errand itself.
     // Same box and same cut marker as a Bash command, because it is the same idea: what it was ASKED.
