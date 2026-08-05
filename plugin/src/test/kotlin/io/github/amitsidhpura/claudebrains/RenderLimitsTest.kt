@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -109,6 +110,37 @@ class RenderLimitsTest {
         // command and Edit's strings are already on screen in the IN box and the diff
         assertEquals("", RenderLimits.descSuffix("Bash", 40, 80))
         assertEquals("", RenderLimits.descSuffix("Edit", 40, 80))
+    }
+
+    /**
+     * The `(note: …)` caveat the CLI appends to an otherwise-successful result (item 11), mirrored
+     * by `resultNote` in chat.html. The anchoring is the part that matters: a parenthetical inside
+     * ordinary output must NOT be mistaken for the CLI's own caveat, or a compiler message or a
+     * quoted log line would surface as one.
+     */
+    @Test
+    fun `a result caveat is read only from the end`() {
+        val real = "The file /home/x/timestamp.txt has been updated successfully. (note: the file " +
+            "had been modified on disk since you last read it — the edit applied cleanly, but the " +
+            "file contains other changes not in your context. Read it before edits that depend on " +
+            "surrounding content.)"
+        val got = RenderLimits.resultNote(real)
+        assertTrue(got!!.startsWith("the file had been modified on disk since you last read it"))
+        assertFalse(got.contains("updated successfully"), "the caveat only, not the whole sentence")
+        assertFalse(got.endsWith(")"), "the closing paren is the delimiter, not content")
+
+        // newlines inside the caveat collapse, so it stays one line in a 11px note
+        assertEquals("a b c", RenderLimits.resultNote("done. (note: a\n  b\n\nc)"))
+        // trailing whitespace after the paren still counts as the end
+        assertEquals("x", RenderLimits.resultNote("done. (note: x)   \n"))
+
+        // NOT the end -> not the CLI's caveat
+        assertNull(RenderLimits.resultNote("(note: early) and then more output follows"))
+        assertNull(RenderLimits.resultNote("no parenthetical here at all"))
+        assertNull(RenderLimits.resultNote("mismatched (note: unclosed"))
+        assertNull(RenderLimits.resultNote("(NOTE: uppercase is not the CLI's spelling)"))
+        assertNull(RenderLimits.resultNote("done. (note:   )"), "an empty caveat is not a caveat")
+        assertNull(RenderLimits.resultNote(""))
     }
 
     @Test

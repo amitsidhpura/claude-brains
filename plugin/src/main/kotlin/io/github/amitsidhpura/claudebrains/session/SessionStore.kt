@@ -973,6 +973,16 @@ object SessionStore {
         // restatement of a success, so it shows whatever the tool. The stdout/stderr, spill and
         // exit-code handling below is keyed on fields only Bash-shaped results carry, so it costs
         // nothing for the others.
+        // A caveat appended to an otherwise-successful result (item 11): "the file had been modified
+        // on disk since you last read it". Read ABOVE the skip below, because the tools it applies
+        // to — Edit, Write — are precisely the ones whose result text RESULT_SKIP drops. The skip is
+        // still right ("updated successfully" restates the diff); the parenthetical is not, since
+        // the card reads ✓ Applied and nothing else says the file moved under us.
+        //
+        // Taken from the TEXT, not from `toolUseResult.staleRecovered`, so live and replay share one
+        // rule — the flag exists only on the persisted record.
+        RenderLimits.resultNote(resultText(block["content"]))?.let { item.note = it }
+
         if (item.text !in RenderLimits.RESULT_SKIP || item.isError) {
             // Match the live path (onUserEvent): show the tool_result block's content — the
             // model-facing result text — so a resumed OUT box reads identically. stdout/stderr are
@@ -1006,8 +1016,12 @@ object SessionStore {
             // where the content is only "(Bash completed with no output)" and this is the sole
             // reason given. Suppressed when the content already says it, on the same
             // no-duplication rule the <persisted-output> unwrap follows.
+            // `?: item.note` so this does not CLOBBER a `(note: …)` caveat already taken from the
+            // result text (item 11) when the tool has no exit-code interpretation. Bash's own
+            // explanation still wins when it has one — it is the more specific of the two.
             item.note = (res?.get("returnCodeInterpretation") as? JsonPrimitive)?.contentOrNull
                 ?.takeIf { it.isNotBlank() && !shown.contains(it, ignoreCase = true) }
+                ?: item.note
             // Built blind: `interrupted` is true in ZERO of 5673 local records, so this path has
             // never been seen in real data and cannot be verified against it. Cheap enough to carry
             // rather than leave a killed command indistinguishable from one that simply finished.

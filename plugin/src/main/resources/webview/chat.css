@@ -334,6 +334,11 @@ blockquote > *:last-child { margin-bottom: 0; }
    than width — a full-page screenshot is tall, and letting it run would push the rest of the turn
    off screen; the lightbox is there for the full size. `height:auto` overrides the intrinsic
    height attribute, which is set only so the box is reserved before the data URI decodes. */
+/* A caveat on an otherwise-successful tool result (client-parity item 11) — "the file had been
+   modified on disk since you last read it". Standalone because the tools it applies to (Edit,
+   Write) have no IN/OUT box for it to ride in; same 22px column and ↳ glyph as .io-note so the two
+   read as one idiom. Amber rather than red: the edit DID apply, so this is a caveat, not a failure. */
+.t-note { margin: 2px 0 0 22px; color: var(--amber); font-size: 11px; }
 .tool-imgs { margin: 2px 0 0 22px; display: flex; flex-direction: column; gap: 6px; }
 .tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 320px; object-fit: contain;
   object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);

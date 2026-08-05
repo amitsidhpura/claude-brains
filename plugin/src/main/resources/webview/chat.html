@@ -1284,6 +1284,24 @@
     });
     return box.childNodes.length ? box : null;
   }
+  /**
+   * The `(note: …)` the CLI appends to an otherwise-successful tool result (item 11). Mirror of
+   * `RenderLimits.resultNote` — same two-language contract as `cut`/`cutInfo`, pinned by tests.
+   * Anchored to the END so a parenthetical inside ordinary output cannot be mistaken for it.
+   */
+  function resultNote(text) {
+    const m = /\(note:\s*([\s\S]+?)\)\s*$/.exec(String(text || '').trim());
+    const s = m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    return s || null;
+  }
+  /** Standalone caveat line, for tools whose result is otherwise skipped (Edit, Write). */
+  function noteLine(note) {
+    if (!note) return null;
+    const d = document.createElement('div');
+    d.className = 't-note';
+    d.textContent = '↳ ' + note;   // same "which means" glyph as the IN/OUT note from item 9
+    return d;
+  }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
   function toolLine(name) {
     const t = el('tool-line', '');
@@ -1514,6 +1532,12 @@
             if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut]);
             if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile, it.note, it.interrupted]);
             t.after(ioBox(rows));
+          } else if (it.note) {
+            // No IN/OUT box to carry it — an Edit or Write, whose result text RESULT_SKIP drops —
+            // so the caveat gets its own line (item 11). With a box, the note already rides in the
+            // OUT row and must not be drawn twice.
+            const n = noteLine(it.note);
+            if (n) t.after(n);
           }
           // Tool-returned images (item 8), through the same builder live uses. Kotlin already
           // applied the replay image budget, so an over-budget screenshot arrives without `data`
@@ -2685,6 +2709,17 @@
       // (LIM.resultSkip, shared with the replay parser). Rendering ALL of them would have added
       // ~2000 boxes saying "The file … has been updated successfully" under the diff that just
       // showed the change. An error is never skipped: a failure is not a restatement of a success.
+      // A caveat the CLI appended to an otherwise-successful result (item 11) — "the file had been
+      // modified on disk since you last read it". RESULT_SKIP drops Edit/Write text because
+      // "updated successfully" restates the diff, but this parenthetical restates nothing: the card
+      // still says ✓ Applied and nothing else on screen says the file moved under us. Mirrors
+      // RenderLimits.resultNote; read from the TEXT because `staleRecovered` rides on
+      // toolUseResult, which the live stream does not carry.
+      { let raw = '';
+        if (typeof b.content === 'string') raw = b.content;
+        else if (Array.isArray(b.content)) raw = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
+        const note = resultNote(raw);
+        if (note) { const n = noteLine(note); if (n) (t.io || t.el).after(n); } }
       if (LIM.resultSkip.indexOf(t.name) !== -1 && !b.is_error) return;
       // Images the tool returned (item 8). Drawn BEFORE the text early-return below, because an
       // image-only result has no text at all — which is exactly how a screenshot used to vanish.
@@ -3378,6 +3413,15 @@
       'reference an issue\n\nOriginal prompt: commit this', 'warning');
     infoLine('Consider running the test suite before committing.', 'suggestion');
     infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
+
+    // stale-edit caveat (item 11) — the file changed on disk between the read and the write. The
+    // card still says Applied, because it did apply; the note is the part nothing else says.
+    { const te = track(toolLine('Edit'));
+      te.querySelector('.t-desc').textContent = '/home/you/project/timestamp.txt';
+      te.querySelector('.t-desc').classList.add('path');
+      const n = noteLine('the file had been modified on disk since you last read it — the edit ' +
+        'applied cleanly, but the file contains other changes not in your context.');
+      if (n) te.after(n); }
 
     // tool-returned image (item 8) — a Read on a PNG or a Playwright screenshot. Two states:
     // the image itself, and the budget-trimmed chip a replay shows when the bytes were dropped.

@@ -82,7 +82,7 @@ and the reasoning is in the item.
 | 8 | Tool-returned images | ⚠️ | ✅ | ✅ | **DONE** 2026-08-06 | item named the wrong field; `isImage` is a Bash field |
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
-| 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
+| 11 | "File was modified by the user" | ? | ✅ | ✅ | **DONE** 2026-08-06 | right field, wrong sibling: `staleRecovered` is what fires |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
 | 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
 | 17 | Cost | ✅ | ✅ | ❌ | **by design** | not wanted — `/cost` answers it |
@@ -96,9 +96,8 @@ and the reasoning is in the item.
 Sorted by take, not by item number — the numbered sections below keep their original order, so the
 table is the index and the sections are the archive. Four groups, in this order:
 
-1. **DONE** (24) — everything shipped.
-2. **P3, still open** (1): **11**, and only its evidence is in question — see below.
-3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
+1. **DONE** (25) — everything shipped. **Nothing is open.**
+2. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
 
 `↑`/`↓` mark a take the philosophy moved. **By design** means ruled out rather than postponed, and
 belongs in the release description's "By design" list, never its gap list. Group 3 grew from 2 to 9
@@ -449,20 +448,46 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
     path were being shown to the user on BOTH paths. Details in `docs/renderer-parity.md`.
 
 ### 11. "File was modified by the user"
-`toolUseResult.userModified`.
+`toolUseResult.userModified` — and its sibling `staleRecovered`, which the audit missed.
 
 - **Terminal:** ? not confirmed.
 - **VS Code:** ✅ present in the result model.
 - **Us:** ❌ read for nothing.
-- **Take: P3** (was P2), **measured 2026-08-05: `userModified` is set on ZERO local records.**
-  Item 6 has now opened the path it was waiting on, so it remains cheap — but a flag never
-  once observed is not worth rendering on speculation. Same call as items 8 and 21's evidence.
+- **Take: was P3. DONE 2026-08-06**, once the case finally occurred in a live session — and the
+  caution added earlier that day paid off, though not the way it expected.
 
-  **Caution added 2026-08-06:** this row's evidence is a zero-count on a single field name, which is
-  exactly what item 8 had — and item 8's field turned out to be the wrong one, making the zero
-  meaningless. Before acting on "0 local records" here, confirm against a real record that
-  `userModified` is the field the CLI actually writes for this, rather than inferring it from the
-  audit. Zero is only evidence once you know you measured the right key.
+  **The field name was RIGHT; the field was the wrong one to watch.** `userModified` is real, is
+  spelled correctly, and sits on every Edit result: **2091 records locally, every one `false`.** It
+  has genuinely never fired. What fired instead is a sibling the audit never mentioned —
+  **`staleRecovered`, true in 25 records** — which is the case that actually happens: the file
+  changed on disk between Claude's read and its write, and the edit anchored and applied anyway.
+
+  So the original zero-count was an accurate measurement of a real field that simply never triggers,
+  and it still hid a live gap, because it was the wrong field to have been measuring. Unlike item 8
+  — where the name was wrong outright — here both are true at once, which is a subtler trap: **a
+  correctly-named field returning zero does not mean the behaviour does not occur.**
+
+  **What the user saw before this:** a green Edit line and a `✓ Applied` diff card, with no
+  indication the file had moved underneath. The only reason anyone knew was that the model happened
+  to mention it in prose afterwards.
+
+  **Built from the TEXT, not the flag**, because the flag is replay-only (`toolUseResult` never
+  reaches the live stream) while the sentence is on both paths — the CLI appends it to the result
+  content itself:
+
+      The file /…/timestamp.txt has been updated successfully. (note: the file had been modified on
+      disk since you last read it — the edit applied cleanly, but the file contains other changes
+      not in your context. Read it before edits that depend on surrounding content.)
+
+  `RenderLimits.resultNote` extracts that parenthetical and `resultNote` in chat.html mirrors it,
+  pinned by tests on both sides against identical cases. It is anchored to the END of the text so a
+  `(note: …)` inside ordinary output — a compiler message, a quoted log line — cannot be mistaken
+  for the CLI's own caveat.
+
+  **This adds a companion to the RESULT_SKIP rule.** Edit and Write are skipped because "updated
+  successfully" restates the diff above them; that stays correct. But the caveat restates nothing,
+  so alongside "an error is never skipped" the rule is now **"a caveat is never skipped either"**.
+  It renders as a standalone amber `.t-note` — amber rather than red because the edit *did* apply.
 
 ### 12. Server-side tools
 `server_tool_use` content blocks (web search executed API-side).
@@ -1169,20 +1194,19 @@ real gap (`system/informational`) was neither hook-specific nor what the item de
 **Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
 release description mentions them, they belong under "By design".
 
-**Everything still open, in one place — and it is now one item.**
+**Nothing is open.** Item 11 was the last row with work in it and shipped on 2026-08-06, closing
+the audit: 25 items done, 9 ruled out by design, none deferred.
 
-**11** ("file was modified by the user") is all that remains, and what it needs first is a
-measurement rather than a feature. Its P3 rests on a zero-count for a single field name,
-`userModified`, and item 8 has since shown such a zero means nothing until you have confirmed the
-CLI writes that key — item 8's field turned out to belong to Bash results, so its zero was
-guaranteed regardless of the truth. **Confirm the field against a real record before re-scoring or
-building.**
+The final item is also the sharpest lesson in the document. Its evidence was a zero-count on
+`userModified` — a field that is real, correctly spelled, present on 2091 local records and `false`
+on every one of them. The measurement was right. The conclusion was still wrong, because the case
+that actually occurs sets a sibling the audit never named, `staleRecovered`, true 25 times. Item 8
+had taught that a zero means nothing when the field name is wrong; item 11 adds the harder version:
+**a correctly-named field returning zero does not mean the behaviour does not occur.** Both were
+only caught because someone exercised the feature and looked at the panel.
 
-Everything else was declined on 2026-08-06. Cost (17), the token/usage panel (18) and per-record
-metadata (26) moved from P3 to **by design**, joining 25, 27, 28 and 30, which were already
-deliberate non-features. That is a decision, not a backlog: they belong under "By design" in any
-release description, and picking one up again needs a reason to reverse the call rather than an
-opening in the schedule.
+Anything reopened from the by-design group needs a reason to reverse the decision, not an opening in
+the schedule.
 
 ---
 

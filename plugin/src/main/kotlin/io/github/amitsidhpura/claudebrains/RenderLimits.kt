@@ -240,6 +240,35 @@ object RenderLimits {
         return SearchOut("$head\n\n$body", false)
     }
 
+    /**
+     * A caveat the CLI appends to an otherwise-successful tool result (client-parity item 11).
+     * Real example, from a live Edit whose file changed on disk between the read and the write:
+     *
+     *     The file /…/timestamp.txt has been updated successfully. (note: the file had been
+     *     modified on disk since you last read it — the edit applied cleanly, but the file contains
+     *     other changes not in your context. Read it before edits that depend on surrounding
+     *     content.)
+     *
+     * This matters because [RESULT_SKIP] drops Edit/Write result text wholesale — correctly, since
+     * "has been updated successfully" restates the diff above it. But the parenthetical is NOT a
+     * restatement: nothing else on screen says the file moved under us, and the card still reads
+     * `✓ Applied`. So the skip rule gains a companion, in the same structural spirit as "an error is
+     * never skipped": **a caveat is never skipped either.**
+     *
+     * Extracted from the TEXT rather than from `toolUseResult.staleRecovered`, deliberately: the
+     * flag exists only on the replayed record (the live stream carries no `toolUseResult` at all,
+     * probed 2026-08-05), whereas this sentence is in the result content on BOTH paths. One rule,
+     * both renderers, no divergence.
+     *
+     * Anchored to the END so a `(note: …)` occurring inside ordinary output — a compiler message, a
+     * quoted log line — cannot be mistaken for the CLI's own caveat.
+     */
+    private val RESULT_NOTE = Regex("""\(note:\s*(.+?)\)\s*$""", RegexOption.DOT_MATCHES_ALL)
+
+    fun resultNote(text: String): String? =
+        RESULT_NOTE.find(text.trim())?.groupValues?.get(1)
+            ?.replace(Regex("""\s+"""), " ")?.trim()?.takeIf { it.isNotEmpty() }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
