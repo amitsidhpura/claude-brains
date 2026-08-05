@@ -199,6 +199,17 @@ total 196K
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span></div>
       </div>
 
+      <!-- TODO CHECKLIST (TodoWrite). Whole list arrives on every call, so no aggregation: the
+           newest call is the state. Completed dims and strikes; the one in flight takes the accent
+           and shows `activeForm`, because "which of these is happening now" is why you glance. -->
+      <div class="tool-line"><b>Update Todos</b></div>
+      <div class="todos">
+        <div class="todo completed"><span class="todo-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="todo-t">Add the canonical cut rule</span></div>
+        <div class="todo completed"><span class="todo-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="todo-t">Emit cut metadata from the parser</span></div>
+        <div class="todo in_progress"><span class="todo-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></span><span class="todo-t">Wiring the marker into the webview</span></div>
+        <div class="todo pending"><span class="todo-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span><span class="todo-t">Tests, probe and docs</span></div>
+      </div>
+
       <!-- COMPACTION BOUNDARY: the marker wears the .status metrics; the CLI's summary hangs under
            it, FOLDED, because real ones run to 25-41k characters. Before this existed the summary
            replayed as a .msg-user box — a message the user never typed. -->

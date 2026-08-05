@@ -567,6 +567,21 @@ blockquote > *:last-child { margin-bottom: 0; }
 .retry a:hover { color: var(--fg); }
 .retry svg { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px; }
 
+/* Todo checklist (TodoWrite). Sits at the same 22px indent as the tool line it answers, so it
+   reads as that call's content rather than a new topic. Completed items dim and strike; the one
+   in flight takes the accent, because "which of these is happening now" is the question the list
+   is glanced at to answer. */
+.todos { margin: 2px 0 0 22px; display: flex; flex-direction: column; gap: 3px; }
+.todo { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: var(--fg); }
+.todo-ic { flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--dot); }
+.todo-ic svg { width: 13px; height: 13px; display: block; }
+.todo.completed { color: var(--muted); }
+.todo.completed .todo-t { text-decoration: line-through; text-decoration-color: var(--border); }
+.todo.completed .todo-ic { color: var(--green); }
+.todo.in_progress { color: var(--fg); }
+.todo.in_progress .todo-ic { color: var(--accent); }
+.todo.pending { color: var(--muted); }
+
 /* status lines (⏹ Stopped, — resumed —, …): glyph in the dot column, text at the shared indent */
 .status { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px; }
 .status .s-ic { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px;

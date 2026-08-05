@@ -133,6 +133,9 @@
   /* ---------- shared icons ---------- */
   // plain check (lucide check) — confirm buttons, selection marks, copy flash (circled variants retired 2026-07-31)
   const SVG_CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  // checklist glyphs (lucide circle / circle-dot) — SVG_CHECK above covers `completed`
+  const SVG_CIRCLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
+  const SVG_DOT_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>';
   // double check (lucide check-check) — the permission-suggestion buttons ("accept all")
   const SVG_CHECKS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>';
   const SVG_X = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
@@ -1178,6 +1181,7 @@
               if (it.endLine) d.dataset.endLine = it.endLine;
             }
           }
+          if (it.todos) todoList(it.todos);
           if (it.cmd || it.out) {
             const rows = [];
             // cut metadata rides the same rows into the same builder as live, so a truncated result
@@ -2022,6 +2026,9 @@
                 if (typeof inp.limit === 'number') dEl.dataset.endLine = o + inp.limit - 1;
               }
             }
+            if (openTool.name === 'TodoWrite' && Array.isArray(inp.todos)) {
+              todoList(inp.todos); maybeScroll();
+            }
             if (openTool.name === 'Bash' && inp.command) {
               const full = String(inp.command), cut = cutInfo(full, LIM.cmdMax);
               const io = ioBox([['IN', cut ? cut.shown : full, cut]]);
@@ -2122,6 +2129,28 @@
   }
   // Timeline status line with an optional leading glyph that hangs in the dot column
   // (so icon + text align with .blk / .think / .retry). Text is set safely (textContent).
+  // The todo checklist — how you follow a long turn without reading every tool line. TodoWrite
+  // sends its WHOLE list on every call, so this needs no aggregation: the newest call is the state.
+  // (TaskCreate/TaskUpdate are increments and would need real state; TaskList already renders its
+  // list through the ordinary OUT box, so neither is handled here.)
+  // `activeForm` is the CLI's present-continuous phrasing ("Writing the parser"), which is exactly
+  // right for the one item in flight and wrong for the rest — so it is used only there.
+  function todoList(items) {
+    const box = el('todos', '');
+    (items || []).forEach(function (t) {
+      if (!t || typeof t !== 'object') return;
+      const st = t.status === 'completed' || t.status === 'in_progress' ? t.status : 'pending';
+      const row = document.createElement('div');
+      row.className = 'todo ' + st;
+      const ic = document.createElement('span'); ic.className = 'todo-ic';
+      ic.innerHTML = st === 'completed' ? SVG_CHECK : (st === 'in_progress' ? SVG_DOT_OPEN : SVG_CIRCLE);
+      const tx = document.createElement('span'); tx.className = 'todo-t';
+      tx.textContent = (st === 'in_progress' && t.activeForm) ? t.activeForm : (t.content || '');
+      row.appendChild(ic); row.appendChild(tx);
+      box.appendChild(row);
+    });
+    return box;
+  }
   // Where the context was compacted. One builder for live and replay, like every other block, so
   // the two cannot drift. The summary is the CLI's own text and runs to 25-41k characters in real
   // sessions — it used to render as a blue USER box, i.e. a message the human never typed — so it
@@ -2651,6 +2680,17 @@
       content: "Safeguards flagged this message. This sometimes happens with safe, normal conversations.",
       retracted_message_uuids: [],
     });
+
+    // todo checklist — TodoWrite sends the whole list every call, so the newest call IS the state.
+    // The in-flight item wears activeForm ("Wiring…"), which is what it is for.
+    const tt = el('tool-line', '');
+    tt.innerHTML = '<b>Update Todos</b>';
+    todoList([
+      { content: 'Add the canonical cut rule', status: 'completed', activeForm: 'Adding the cut rule' },
+      { content: 'Emit cut metadata from the parser', status: 'completed', activeForm: 'Emitting metadata' },
+      { content: 'Wire the marker into the webview', status: 'in_progress', activeForm: 'Wiring the marker into the webview' },
+      { content: 'Tests, probe and docs', status: 'pending', activeForm: 'Writing tests' },
+    ]);
 
     // compaction boundary — the summary is the CLI's, folded, and NOT a user message. Real ones run
     // to 25-41k characters; this stub is long enough to exercise the fold.

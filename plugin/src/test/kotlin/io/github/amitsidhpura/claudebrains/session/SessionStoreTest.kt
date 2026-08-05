@@ -366,6 +366,62 @@ class SessionStoreTest {
         }
     }
 
+    /**
+     * The checklist is how a long turn is followed without reading every tool line. TodoWrite sends
+     * its WHOLE list on every call, so the newest call is the state and no aggregation is needed —
+     * unlike TaskCreate/TaskUpdate, which are increments. Its RESULT is boilerplate addressed to the
+     * model ("Ensure that you continue to use the todo list"), which is why the tool is in
+     * `RESULT_SKIP`: the list lives in the INPUT.
+     */
+    @Test
+    fun `TodoWrite replays as a checklist, not as its boilerplate result`() {
+        // ONE line: JSONL is one record per line, and a pretty-printed literal here silently
+        // splits the record so the parser skips it and the assertions fail for the wrong reason.
+        val todos = """[{"content":"Parse the transcript","status":"completed","activeForm":"Parsing the transcript"},""" +
+            """{"content":"Render the checklist","status":"in_progress","activeForm":"Rendering the checklist"},""" +
+            """{"content":"Write the tests","status":"pending","activeForm":"Writing the tests"}]"""
+        val jsonl = listOf(
+            """{"type":"assistant","uuid":"u1","timestamp":"2026-08-05T10:00:00.000Z","message":{"id":"m1",""" +
+                """"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"TodoWrite",""" +
+                """"input":{"todos":$todos}}]}}""",
+            """{"type":"user","uuid":"r1","timestamp":"2026-08-05T10:00:01.000Z","message":{"role":"user",""" +
+                """"content":[{"type":"tool_result","tool_use_id":"t1","content":""" +
+                """"Todos have been modified successfully. Ensure that you continue to use the todo list"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-todo", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "todo.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val tw = SessionStore.readTranscript(CWD, "todo")
+                .first { it["text"]?.jsonPrimitive?.contentOrNull == "TodoWrite" }
+            val list = tw["todos"]?.jsonArray
+            assertNotNull(list, "the checklist never reached the wire")
+            assertEquals(3, list!!.size)
+            assertEquals(
+                listOf("completed", "in_progress", "pending"),
+                list.map { it.jsonObject["status"]!!.jsonPrimitive.content },
+                "every status must survive — the renderer draws a different glyph for each",
+            )
+            assertEquals(
+                "Rendering the checklist",
+                list[1].jsonObject["activeForm"]?.jsonPrimitive?.content,
+                "activeForm is what the in-flight row shows, so it has to travel with the item",
+            )
+            assertNull(
+                tw["out"],
+                "TodoWrite is in RESULT_SKIP: its result is boilerplate aimed at the model, and " +
+                    "printing it under the checklist would restate nothing useful",
+            )
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     /** JSON-quote a string for the hand-built fixture lines above. */
     private fun q(s: String) = Json.encodeToString(String.serializer(), s)
 

@@ -67,7 +67,7 @@ and the reasoning is in the item.
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped WITH 6, one shared skip list |
 | 7 | Tool input beyond one key | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — one case, not a matrix: Read line ranges |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
-| 14 | Todo / task checklist | ✅ | ✅ | ❌ | P1 | **M** — new renderer, but self-contained |
+| 14 | Todo / task checklist | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.todos`; TaskList already rode item 6 |
 | 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
 | 23 | CLI stderr | — | ? | ❌ | **P1** ↑ (philosophy) | **S** — buffer it, print on non-zero exit |
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ❌ | **P1** ↑ (philosophy) | **XS** — one branch, one message |
@@ -373,11 +373,25 @@ Which MCP servers connected, which failed.
 - **VS Code:** ✅ `class ime … name="TodoWrite"` renders header `Update Todos` + a real checklist
   (`todoListContainer`/`todoItem`/`completed` styles), and mirrors `input.todos` into a panel-level
   `todos` signal.
-- **Us:** ❌ would render as a blank tool line (no matching desc key).
-- **Take: P1**, and the philosophy raises confidence rather than changing the number. The checklist
-  is how you follow a long turn without reading every tool line — glanced at continuously while the
-  work runs, which is the panel's case exactly. It has no terminal equivalent you'd switch windows
-  for. Modest renderer, high visible value.
+- **Us:** ✅ since 2026-08-05 — was a blank tool line with the list nowhere on screen.
+- **Take: DONE 2026-08-05.** The philosophy case was right — the checklist is how you follow a long
+  turn without reading every tool line, glanced at continuously, with no terminal equivalent you
+  would switch windows for. Measuring narrowed it to ONE tool rather than a family:
+  - The `Task*` family (TaskCreate 27, TaskUpdate 54) outnumbers `TodoWrite` (11) locally and looks
+    like the newer generation of the same idea — but those are increments, not a list, and a
+    checklist for them needs real aggregated state. Left as its own future item.
+  - **`TaskList` needed nothing:** it returns the whole list in its RESULT (`#1 [completed] …`), and
+    since it is not in `RESULT_SKIP`, item 6 already renders it.
+  - `TodoWrite` was the genuine gap: the list is in the INPUT, and the result is boilerplate aimed
+    at the model, so the tool line was blank and the list invisible.
+  It sends the COMPLETE list on every call, so the newest call is the state — no aggregation, which
+  is what made this self-contained exactly as the audit predicted.
+  Rendered as `.todos` at the tool line's own 22px indent: completed dims and strikes, pending is a
+  hollow circle, and the one in flight takes the accent and shows `activeForm` ("Wiring the marker
+  into the webview") — the CLI's present-continuous phrasing, right for the item happening now and
+  wrong for every other row.
+  Verified against 11 real records in session `85174406`: all 11 now carry a checklist, 25 completed
+  / 9 in-progress / 16 pending items across them.
 
 ### 15. Compaction boundary
 Where the context got compacted, why, and how big it was before.
@@ -657,10 +671,17 @@ Items 5, 6, 2 and 29 shipped 2026-08-05; 8 and 11 were re-scored out on zero evi
   Items 8 and 11 were supposed to ride along free. They can't: `isImage` and `userModified` are set
   on **zero** local records. The guard they need is now open, so they stay cheap whenever a real one
   appears.
-- Per-tool input suffixes (7) `M` — bespoke per tool, so it does not ride along with the above.
-  **The last unshipped P1 in this tier alongside 14.**
-- Todo checklist (14) `M` — a new renderer, but self-contained and independently shippable. It is
-  also what the 11 remaining blank `TodoWrite` lines are waiting for.
+- ~~Per-tool input suffixes (7)~~ — **done.** One case, not a matrix: `Grep`/`Glob` never occur
+  locally, and only `Read`'s line range was genuinely lost. Clicking the path now selects it.
+- ~~Todo checklist (14)~~ — **done.** Narrowed to one tool by measuring: `TaskList` already rendered
+  through item 6, the `Task*` family needs aggregated state and is now its own future item, and
+  `TodoWrite` was the real gap.
+
+**TIER 1 IS CLEAR.** Every P1 in the audit is shipped. What the tier taught, twice over: the
+coupling estimates held, the SHAPE estimates did not. Item 6 would have printed 2033 lines of
+boilerplate if built to spec, item 7 was sized as a per-tool matrix and was one case, and item 14's
+family turned out to be three tools with three different answers. Measure the shape, not just the
+size.
 
 **Tier 2 — signals with no terminal fallback (rule 1).** All small, and each converts a dead end
 into something actionable. Together they are less work than item 6 alone; a good tier to take when

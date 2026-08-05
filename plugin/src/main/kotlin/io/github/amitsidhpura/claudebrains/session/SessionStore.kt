@@ -315,6 +315,9 @@ object SessionStore {
         // would be a second encoding of the same fact.
         var line: Long? = null
         var endLine: Long? = null
+        // TodoWrite's whole list, straight from the tool input. It arrives complete on every call,
+        // so the checklist needs no aggregation — unlike TaskCreate/TaskUpdate, which are increments.
+        var todos: JsonElement? = null
         // Record uuid this block came from. Only needed so a refusal fallback (or an assistant
         // `supersedes` list) can withdraw it — nothing else reads it, and it never reaches the wire.
         var uuid: String? = null
@@ -347,6 +350,7 @@ object SessionStore {
             prevSeed?.let { put("prevSeed", it) }
             desc?.let { put("desc", it) }
             suffix?.let { put("suffix", it) }
+            todos?.let { put("todos", it) }
             line?.let { put("line", it) }
             endLine?.let { put("endLine", it) }
             if (isPath) put("isPath", true)
@@ -667,6 +671,11 @@ object SessionStore {
                     cmd = cmdCut?.shown ?: full
                 }
                 if (name == "ExitPlanMode") plan = inp?.get("plan")?.jsonPrimitive?.content
+                // The checklist is how you follow a long turn without reading every tool line.
+                // TodoWrite's result is boilerplate telling the MODEL to keep using the list
+                // (hence RESULT_SKIP); the list itself is in the input.
+                if (name == "TodoWrite") todos = (inp?.get("todos") as? JsonArray)
+                    ?.takeIf { it.isNotEmpty() }
                 oldStr = inp?.get("old_string")?.jsonPrimitive?.content
                 newStr = inp?.get("new_string")?.jsonPrimitive?.content
                 if (name == "Write") content = inp?.get("content")?.jsonPrimitive?.content
