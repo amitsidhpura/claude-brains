@@ -340,6 +340,53 @@
     oauth_org_not_allowed:
       'Your organization has disabled OAuth. Use an API key or ask your admin — signing in again will not help.',
   });
+  /**
+   * The UNHEALTHY half of the CLI's MCP status enum, which is
+   * `["connected","failed","needs-auth","pending","disabled"]` (from the wire schema, and confirmed
+   * live: a `--mcp-config` naming a missing binary reports `status:"failed"`).
+   *
+   * `pending` is still connecting and `disabled` is a deliberate choice, so neither is a problem to
+   * announce; `connected` plainly isn't. That leaves two — and they get DIFFERENT sentences because
+   * they have different fixes, which is why this is a table rather than a boolean.
+   *
+   * Null-prototype for the same reason as AUTH_BLOCKED: an unfamiliar status must miss, not match
+   * an inherited key. Statuses added by a future CLI therefore stay silent, which is the right
+   * default for a notice — a wrong alarm about tooling is worse than a missing one.
+   */
+  const MCP_BAD = Object.assign(Object.create(null), {
+    failed: 'failed to start',
+    'needs-auth': 'needs authentication',
+  });
+  let mcpNoticeKey = null;   // last set announced, so a re-init with the same failures is not restated
+  /**
+   * Item 13a: say when MCP tools are missing. Explicitly a NOTICE and not a server-management UI —
+   * 13b is the terminal's half of the split (CLAUDE.md § Philosophy), so this names what broke and
+   * points at `claude mcp`, and offers no buttons.
+   *
+   * Servers are grouped BY FAULT rather than listed one per line: five dead servers from one bad
+   * config file is one fact, and five red lines would read as five separate incidents.
+   */
+  function mcpNotice(list) {
+    if (!Array.isArray(list)) return;
+    const byFault = Object.create(null);
+    let bad = 0;
+    list.forEach(function (s) {
+      const fault = s && typeof s.status === 'string' ? MCP_BAD[s.status] : null;
+      if (!fault || !s.name) return;
+      (byFault[fault] || (byFault[fault] = [])).push(String(s.name));
+      bad++;
+    });
+    const faults = Object.keys(byFault).sort();
+    if (!faults.length) { mcpNoticeKey = null; return; }   // recovered: allow a later relapse to speak
+    // Keyed on the SET, not the count, so a re-init announces a genuinely different failure and
+    // stays quiet about an identical one.
+    const key = faults.map(function (f) { return f + ':' + byFault[f].slice().sort().join(','); }).join('|');
+    if (key === mcpNoticeKey) return;
+    mcpNoticeKey = key;
+    const parts = faults.map(function (f) { return byFault[f].join(', ') + ' ' + f; });
+    statusLine('MCP ' + (bad === 1 ? 'server' : 'servers') + ': ' + parts.join(' · ') +
+      ' — those tools are unavailable. Check with `claude mcp` in a terminal.', SVG_ALERT, 'status err');
+  }
   function fmtResets(secs) {
     const ms = secs * 1000 - Date.now();
     if (ms <= 0) return 'soon';
@@ -877,6 +924,10 @@
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
     turnTokens = 0; msgTokens = 0; reqSeed = null;
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
+    // The MCP notice was cleared off screen with everything else, so the next init must be free to
+    // state the same failures again — otherwise a new conversation silently inherits the old one's
+    // "already said that" and never mentions its dead servers at all.
+    mcpNoticeKey = null;
     // a fresh conversation carries no context; a resume re-seeds it from the __transcript frame,
     // which Kotlin pushes straight after this clear
     ctxUsed = 0; renderContext();
@@ -1887,6 +1938,12 @@
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }
+          // Item 13a. `mcp_servers: [{name, status}]` rides on the init EVENT — NOT on the
+          // initialize control response, which the audit assumed and which was probed against
+          // 2.1.222 and does not carry it (see docs/client-parity.md § 13a). The practical
+          // consequence of that correction: this can only speak from the first turn onward,
+          // because that is when the CLI emits `system/init`.
+          mcpNotice(ev.mcp_servers);
         } else if (ev.subtype === 'thinking_tokens') {
           // The CLI's own count, replacing our chars/4 guess for as long as it keeps sending them.
           const n = ev.estimated_tokens;
@@ -2918,6 +2975,14 @@
     // reviewable without actually being signed out.
     statusLine(AUTH_BLOCKED.authentication_failed, SVG_ALERT, 'status err');
     statusLine(AUTH_BLOCKED.oauth_org_not_allowed, SVG_ALERT, 'status err');
+    // MCP notice (item 13a), drawn through mcpNotice itself so the gallery exercises the real
+    // grouping — including that healthy servers are silent and both faults share one line.
+    mcpNoticeKey = null;
+    mcpNotice([
+      { name: 'ide', status: 'connected' }, { name: 'brokenstdio', status: 'failed' },
+      { name: 'brokenhttp', status: 'failed' }, { name: 'linear', status: 'needs-auth' },
+      { name: 'slow', status: 'pending' }, { name: 'off', status: 'disabled' },
+    ]);
 
     // ---- replayed transcript blocks (the resume path, drawn by renderTranscript itself) ----
     renderTranscript([

@@ -77,7 +77,7 @@ and the reasoning is in the item.
 | 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
 | 12 | Server-side tools (web search blocks) | ✅ | ✅ | ❌ | P2 | **S** — one `content_block_start` branch |
 | 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
-| 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ❌ | **P2** ↓ (philosophy) | **S** — data already in the init payload |
+| 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · probe corrected the source | `S` held; the "already in the init payload" claim did not |
 | 22 | Hook activity | ✅ | ? | ❌ | P2 | **?** — probe the empty-ack first; unknown until then |
 | 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
@@ -355,12 +355,37 @@ Which MCP servers connected, which failed.
 - **Us:** ❌ the `initialize` response is destructured at `ChatPanel.kt:339` for `commands` and
   `models` only; everything else is discarded.
 - **Take: split by the philosophy.**
-  - **13a — a failure notice: P2** (down from P1). We already *receive* this in the `initialize`
-    response. A server that failed to connect is currently invisible, which reads as "the model
-    ignored my tools" — the worst kind of bug report. That is a during-work signal with no
-    terminal fallback (rule 1), so it earns a place: one status line at session start naming the
-    servers that didn't come up. Not P1, because it fires once per session, not many times an
-    hour, and the user can already run `/mcp`.
+  - **13a — a failure notice: P2** (down from P1). **DONE 2026-08-05.** A server that failed to
+    connect was invisible, which reads as "the model ignored my tools" — the worst kind of bug
+    report. That is a during-work signal with no terminal fallback (rule 1), so it earned a place:
+    one status line naming the servers that didn't come up. Not P1, because it fires once per
+    session, not many times an hour, and the user can already run `/mcp`.
+
+    **The line above this one used to say "we already receive this in the `initialize` response".
+    That was wrong, and the probe was worth running before the code.** Driving 2.1.222 with a
+    `--mcp-config` naming a missing binary, the initialize *control response* contains no MCP data
+    of any kind — its keys are exactly:
+
+        account · agents · available_output_styles · commands · fast_mode_disabled_reason
+        fast_mode_state · ide_rc_auto_enable_gate · models · output_style · pid
+        remote_control_auto_enable · remote_control_auto_on_by_default
+
+    The data is on the `system/init` **event** instead — `mcp_servers: e.mcpClients.map(o => ({name:
+    o.name, status: rVt(o.type)}))` — which the same probe confirmed end to end, returning
+    `[{name:"brokenstdio",status:"failed"},{name:"brokenhttp",status:"failed"}, …]`.
+    **The correction changes the feature, not just the sourcing:** `system/init` is not emitted
+    until the first user turn, so the notice cannot appear "at session start" as this item
+    specified. It appears from the first turn onward. There is no earlier hook to hang it on.
+
+    Status vocabulary is the wire enum `["connected","failed","needs-auth","pending","disabled"]`.
+    Only `failed` and `needs-auth` are reported, and they carry different sentences because they
+    have different fixes; `pending` is still connecting and `disabled` is deliberate, so announcing
+    either would be a false alarm. Servers are grouped by fault rather than listed one per line —
+    five dead servers from one bad config file is one fact, not five incidents. `MCP_BAD` is
+    null-prototype, so an unfamiliar future status stays silent rather than matching an inherited
+    key. The notice is keyed on the failing SET, so a re-init restates a genuinely different failure
+    and keeps quiet about an identical one, and `clearLogUI` resets that key — otherwise a new
+    conversation would inherit the old one's "already said that" and never mention its dead servers.
   - **13b — the server list with enable/disable: by design, don't build.** VS Code's
     `get_mcp_servers` / `setMcpServerEnabled` UI is configuration, and configuration is the
     terminal's half. Rebuilding it buys a second implementation that can only drift from
@@ -816,9 +841,17 @@ into something actionable. Together they are less work than item 6 alone; a good
 there isn't a long sitting available.
 - Auth failure → "sign in from a terminal" (20a) `XS` — the whole fix is the message. `XS` held up
   for the code; the *verification* cost more than the branch did, and found two defects in it.
-- Rate-limit warnings (16) `S` — one status line through the existing `statusLine()`.
-- CLI stderr on non-zero exit (23) `S` — today the cause is only in idea.log.
-- MCP connection failures (13a) `S` — a notice, explicitly not a server-management UI (13b).
+- ~~Rate-limit warnings (16)~~ — **done**, one status line through the existing `statusLine()`, but
+  only after the first cut cried wolf on `status:"allowed"`, the routine case. Caught in use.
+- ~~CLI stderr on non-zero exit (23)~~ — **done.** The cause used to be in idea.log only.
+- ~~MCP connection failures (13a)~~ — **done.** A notice, explicitly not a server-management UI
+  (13b). `S` was right; the *sourcing* in the item was not, and only a probe could tell — see 13a.
+
+**TIER 2 IS CLEAR.** Its size estimates were the most accurate in the document — every item came in
+at `S` or `XS`, and none grew in the building. What they got wrong was consistently the *source*:
+16 guessed the field name, 20a guessed a second field that does not exist, and 13a named the wrong
+payload entirely. Three of four small items were sized correctly and sourced incorrectly, which is
+an argument for probing the wire before writing the branch, not for padding the estimate.
 
 **Tier 3 — depth.** Ordered cheapest-first, since none of it is urgent:
 real thinking tokens (19) `XS`, `modelUsage[].contextWindow` (17a) `S` to retire the `[1m]`
