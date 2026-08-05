@@ -211,7 +211,11 @@ always-allow / allow-directory; stripped on `blocked_path` cards where no grant 
 ALL `addRules` suggestions merge into ONE "Always allow" button that echoes every rule index at
 once (compound commands arrive as one suggestion per sub-command — granting half would re-prompt;
 the wire `sugg` field is a comma-separated index list, done-text names the granted rules).
-Sub-agent progress rides `task_started`/`task_progress`/`task_notification` onto a
+Queued messages: typing while a turn runs holds the text in `#queue` above the composer (click a
+row to edit it back, `×` to drop it) and it sends when the request ENDS — drained from `onResult`,
+never mid-turn, and NOT after a Stop. There is no CLI queue to drive: `queue-operation` records are
+the CLI's own pipeline bookkeeping (enqueue/dequeue in matched pairs, one per turn), so the queue is
+client-side. Sub-agent progress rides `task_started`/`task_progress`/`task_notification` onto a
 `.t-prog` line under the Agent tool line ("Explore · Reading words.txt · 1 tool use · 8.1k tokens");
 `subagent_type` must be remembered because `task_notification` omits it. That line is LIVE-ONLY —
 none of those events is ever persisted, and child `assistant`/`user` events (`parent_tool_use_id`)

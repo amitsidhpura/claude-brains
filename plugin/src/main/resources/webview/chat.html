@@ -46,6 +46,10 @@
 
   <div id="composer">
     <div id="inputcard">
+      <!-- Messages typed while a turn is in flight (client-parity item 24). Held here rather than
+           sent, because a mid-turn send corrupts the running request's accounting. Click a row to
+           edit it back into the composer; the × drops it. -->
+      <div id="queue" hidden></div>
       <div id="chips" style="display:none"></div>
       <textarea id="input" rows="1" placeholder="Ask Claude…  (Ctrl+Enter to send, Enter for newline)"></textarea>
       <div id="inputbar">
@@ -928,6 +932,7 @@
     openTool = null; toolsById = {}; lastUser = null;
     infoByTool = {};   // detached lines from the old session would otherwise be updated in place
     taskProg = {};     // same: a stale task_id must not resurrect a removed progress line
+    queue = []; renderQueue();   // typed-ahead messages belong to the conversation that is going away
     // retraction state is per-session too: a leftover evicted uuid would delete a NEW session's
     // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
@@ -1765,6 +1770,69 @@
 
   function clearComposer() { input.value = ''; pending = []; renderAttachments(); autoGrow(); closeMenus(); hideMenu(); }
 
+  /**
+   * Messages typed while a turn is in flight (client-parity item 24).
+   *
+   * Held CLIENT-side, deliberately. There is no CLI queue to drive: `queue-operation` records exist
+   * (2287 locally) but they are the CLI's own message-pipeline bookkeeping — `enqueue` and
+   * `dequeue` come in matched pairs, one per turn, whether or not anything was ever queued by a
+   * human. The only user-facing operation is `remove` (5 records). So the terminal's queue is a
+   * client feature too, and ours holds the text until the turn ends.
+   *
+   * Sending mid-turn was not merely unsupported, it was HARMFUL: `submit()` had no busy check, so
+   * Ctrl+Enter during a turn called `sendTurn`, which resets `reqTokens`, `reqSeed` and the
+   * background roster — corrupting the accounting of the request still running, and mis-seeding its
+   * completion summary.
+   */
+  let queue = [];
+  function renderQueue() {
+    const q = document.getElementById('queue');
+    if (!q) return;
+    q.hidden = !queue.length;
+    q.textContent = '';
+    queue.forEach(function (item, i) {
+      const row = document.createElement('div');
+      row.className = 'q-row';
+      const txt = document.createElement('span');
+      txt.className = 'q-text';
+      // One line each: the composer is not the place to re-read a long draft, and the row is
+      // clickable to bring it back for editing anyway.
+      txt.textContent = (item.text || '').replace(/\s+/g, ' ');
+      txt.title = 'Click to edit';
+      txt.onclick = function () {
+        // Editing takes the item OUT of the queue: leaving a copy behind would send it twice.
+        queue.splice(i, 1);
+        input.value = item.text;
+        pending = (item.images || []).slice();
+        renderAttachments(); renderQueue(); autoGrow(); input.focus();
+      };
+      const n = (item.images || []).length;
+      if (n) {
+        const c = document.createElement('span');
+        c.className = 'q-att'; c.textContent = n === 1 ? '1 image' : n + ' images';
+        txt.appendChild(c);
+      }
+      const x = document.createElement('button');
+      x.className = 'q-x'; x.type = 'button'; x.title = 'Remove'; x.textContent = '×';
+      x.onclick = function () { queue.splice(i, 1); renderQueue(); };
+      row.appendChild(txt); row.appendChild(x);
+      q.appendChild(row);
+    });
+  }
+  /**
+   * Send the next queued message once the turn that was running has finished.
+   *
+   * NOT after a Stop: interrupting is a request for everything to stop, and firing the queue into
+   * that would be the opposite. The messages stay queued and visible, so nothing typed is lost —
+   * dropping them silently is the failure this item exists to fix.
+   */
+  function drainQueue(interrupted) {
+    if (interrupted || busy || !queue.length) return;
+    const next = queue.shift();
+    renderQueue();
+    sendTurn(next.text, next.images || []);
+  }
+
   function submit() {
     const t = input.value.trim();
     if (!t && !pending.length) return;
@@ -1786,6 +1854,8 @@
     }
     const imgs = pending;
     clearComposer();
+    // A turn is already running: hold this one instead of racing it (item 24).
+    if (busy) { queue.push({ text: t, images: imgs }); renderQueue(); smoothToBottom(); return; }
     sendTurn(t, imgs);
   }
   send.onclick = function () { if (busy) { stopping = true; bridge({ kind: 'stop' }); } else submit(); };
@@ -2865,7 +2935,12 @@
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
       done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero
     }
+    // The queue waits for the request to END, not for the stream to go quiet: draining here means
+    // a follow-up never lands mid-turn. `stopping` is still true for an interrupted turn, which is
+    // exactly when the queue must NOT fire — read it before it is cleared.
+    const wasStopped = stopping;
     stopping = false;
+    drainQueue(wasStopped);
   }
 
   /* ---------- permission / plan cards ---------- */
@@ -3235,6 +3310,11 @@
       'reference an issue\n\nOriginal prompt: commit this', 'warning');
     infoLine('Consider running the test suite before committing.', 'suggestion');
     infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
+
+    // queued messages (item 24) — the composer's pending list, drawn through the real renderer.
+    queue = [{ text: 'also add a test for the empty case', images: [] },
+             { text: 'and update the changelog', images: [{ kind: 'image' }] }];
+    renderQueue();
 
     // sub-agent progress (item 1), driven through the real handler with the REAL frames a
     // synchronous Explore sub-agent emitted. Live-only by nature: none of these persist.

@@ -76,7 +76,7 @@ and the reasoning is in the item.
 | 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · live progress line | `L`→`S` once probed; nesting is unbuildable on replay |
 | 4 | Background task roster | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · full roster | was `M` "rides on 1" — actually `S`, the event carries names |
 | 12 | Server-side tools (web search blocks) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — but replay needed it too, and the rule is shared |
-| 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
+| 24 | Queued messages | ✅ | ❌ | ✅ | **DONE** 2026-08-06 | `L`→`M`; it was hiding an active bug, not just a gap |
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · probe corrected the source | `S` held; the "already in the init payload" claim did not |
 | 22 | Hook activity | ✅ | ? | ✅ | **DONE** 2026-08-06 · probe changed the work | ack was fine; blocked tools already shown; `informational` was the gap |
 | 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
@@ -912,14 +912,34 @@ Messages typed while a turn is in flight.
 
 - **Terminal:** ✅ queued and displayed; the CLI writes `queue-operation` records.
 - **VS Code:** ❌ no queue UI in the bundle (every `queue` hit is React internals).
-- **Us:** ❌ no queue at all.
-- **Take: P2** (up from P3). The old reasoning was "VS Code doesn't do it either" — but parity is
-  not the rule, the philosophy is, and this is the row where the two most clearly part company.
-  Having a follow-up thought while Claude works is a many-times-an-hour event for anyone actually
-  coding, which is exactly the test. The terminal queues; we drop the keystrokes on the floor. The
-  CLI already writes `queue-operation` records, so the concept exists on the wire.
-  Not P1 only because it needs real composer state (a pending list, edit/cancel before it sends),
-  not a renderer branch.
+- **Us:** ❌ no queue at all — and worse than nothing, see below.
+- **Take: P2** (up from P3). **DONE 2026-08-06.** The old reasoning was "VS Code doesn't do it
+  either" — but parity is not the rule, the philosophy is, and this is the row where the two most
+  clearly part company. Having a follow-up thought while Claude works is a many-times-an-hour event
+  for anyone actually coding, which is exactly the test.
+
+  **"We drop the keystrokes on the floor" was wrong, and the truth was worse.** `submit()` had no
+  busy check, so Ctrl+Enter mid-turn went straight to `sendTurn` — which resets `reqTokens`,
+  `reqSeed` and the background roster. A follow-up typed during a turn silently corrupted the
+  accounting of the request still running and mis-seeded its completion summary. Not a missing
+  feature: an active bug behind one.
+
+  **There is no CLI queue to drive.** `queue-operation` records exist — 2287 locally — but measuring
+  them shows they are the CLI's own message-pipeline bookkeeping, not an API: `enqueue` (1128) and
+  `dequeue` (1124) arrive in matched pairs, one per turn, whether or not a human ever queued
+  anything. The only genuinely user-driven operation is `remove`, with **5** records across every
+  local session. So the terminal's queue is a client feature too, and ours is client-side by the
+  same necessity — the item's "the concept exists on the wire" was true but not useful.
+
+  **Shipped:** typing while busy holds the message in a pending list above the composer instead of
+  racing the turn. Rows are one line each, ellipsised; clicking one edits it back into the composer
+  (removing it from the queue, so it cannot send twice, and restoring its images); `×` drops it. The
+  next message sends when the request ENDS — drained from `onResult`, not from the stream going
+  quiet, so a follow-up can never land mid-turn.
+
+  **A Stop does NOT drain the queue.** Interrupting is a request for everything to stop, and firing
+  queued messages into that would be the opposite. They stay queued and visible instead, because
+  discarding typed text silently is the failure this item exists to fix.
 
 ## D. Replay-only gaps
 
@@ -1089,10 +1109,12 @@ names were already sitting in a payload we were reading for its `.length`. Worth
 sequencing anything else behind an `L`: **check what the event already carries before assuming a
 feature is downstream of a design pass.**
 
-~~Sub-agent nesting (1)~~ is **done**, and shrank once probed: it was an `L` for a nested DOM tree,
-but the tree is unbuildable on replay (the CLI persists none of it) and the useful signal — what the
-sub-agent is doing, and its tool/token tail — was an `S` off the task lifecycle. That leaves queued
-messages (24) `L`, which is composer state rather than a renderer.
+~~Sub-agent nesting (1)~~ and ~~queued messages (24)~~ are **done** too, and both shrank once
+probed. 1 was an `L` for a nested DOM tree; the tree turned out to be unbuildable on replay (the CLI
+persists none of it) and the useful signal — what the sub-agent is doing, and its tool/token tail —
+was an `S` off the task lifecycle. 24 was an `L` for a composer state machine and came in at `M`,
+having first revealed an active bug: mid-turn sends were corrupting the running request's
+accounting. **Every `L` in this document shrank when measured. Not one grew.**
 ~~Hook activity (22)~~ **done** — the empty-ack question turned out to be no bug at all, and the
 real gap (`system/informational`) was neither hook-specific nor what the item described.
 

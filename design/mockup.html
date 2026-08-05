@@ -586,6 +586,12 @@ total 196K
 
   <div id="composer">
     <div id="inputcard">
+      <!-- queued messages (item 24): typed while a turn was running, waiting their turn.
+           Click a row to edit it back into the composer; the × drops it. -->
+      <div id="queue">
+        <div class="q-row"><span class="q-text">also add a test for the empty case</span><button class="q-x" type="button" title="Remove">&times;</button></div>
+        <div class="q-row"><span class="q-text">and update the changelog<span class="q-att">1 image</span></span><button class="q-x" type="button" title="Remove">&times;</button></div>
+      </div>
       <div id="chips">
         <span class="att click" onclick="openLB('image.png')"><span class="thumb"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></span>image.png<span class="meta">62 KB</span><button class="rm" title="Remove" onclick="rmAtt(this, event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
         <span class="att click"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>.gitignore<span class="meta">312 B</span><button class="rm" title="Remove" onclick="rmAtt(this, event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
