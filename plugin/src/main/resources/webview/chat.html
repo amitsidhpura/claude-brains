@@ -2065,6 +2065,15 @@
       const t = toolsById[b.tool_use_id];
       if (!t) return;
       if (b.is_error) t.el.classList.add('fail');
+      // A Task* call changed the list; ask Kotlin for the current one (the CLI keeps it on disk).
+      // MUST be above the RESULT_SKIP return below: TaskCreate/TaskUpdate/TaskList are all in that
+      // set, so asking afterwards means never asking at all — which is exactly what happened, and
+      // is why only TaskList (skipped later than the others) ever drew a checklist.
+      // Live reads the STORE, replay reconstructs from increments — different sources because the
+      // store holds only the current state, but both render through the same checklist.
+      if (t.name === 'TaskCreate' || t.name === 'TaskUpdate' || t.name === 'TaskList') {
+        bridge({ kind: 'tasks' });
+      }
       // Every tool's result, not just Bash's — except the ones whose outcome is already on screen
       // (LIM.resultSkip, shared with the replay parser). Rendering ALL of them would have added
       // ~2000 boxes saying "The file … has been updated successfully" under the diff that just
@@ -2080,12 +2089,6 @@
       // live event carries none (probed 2026-08-05) — so read that if it ever appears, and otherwise
       // parse the <persisted-output> wrapper out of the result text, which is where live gets them.
       // Unwrapping also keeps the raw tag off screen and makes what we cut real output.
-      // A Task* call changed the list; ask Kotlin for the current one (the CLI keeps it on disk).
-      // Live reads the STORE, replay reconstructs from increments — different sources because the
-      // store holds only the current state, but both render through the same checklist.
-      if (t.name === 'TaskCreate' || t.name === 'TaskUpdate' || t.name === 'TaskList') {
-        bridge({ kind: 'tasks' });
-      }
       const tur = ev.toolUseResult || {};
       const spill = persistedOutput(txt);
       const shown = spill ? spill.preview : txt;
