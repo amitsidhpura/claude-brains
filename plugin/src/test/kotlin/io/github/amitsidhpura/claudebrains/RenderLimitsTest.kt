@@ -63,7 +63,8 @@ class RenderLimitsTest {
         ).forEach {
             assertTrue(!html.contains(it), "chat.html hardcodes `$it` — read it from LIM instead")
         }
-        listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.descKeys", "LIM.pathKeys").forEach {
+        listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.descKeys", "LIM.pathKeys",
+            "LIM.resultSkip").forEach {
             assertTrue(html.contains(it), "chat.html no longer uses $it")
         }
     }
@@ -83,7 +84,9 @@ class RenderLimitsTest {
                 "descKeys:[\"description\",\"file_path\",\"path\",\"pattern\",\"query\",\"url\"," +
                 "\"element\",\"filename\",\"target\",\"skill\",\"status\",\"taskId\",\"task_id\"," +
                 "\"function\",\"uri\"]," +
-                "pathKeys:[\"file_path\",\"path\"]}",
+                "pathKeys:[\"file_path\",\"path\"]," +
+                "resultSkip:[\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\",\"ExitPlanMode\"," +
+                "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\"]}",
             RenderLimits.asJs(),
         )
     }

@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains.session
 
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
@@ -306,6 +307,67 @@ class SessionStoreTest {
             tmpHome.deleteRecursively()
         }
     }
+
+    /**
+     * Every tool's result gets an OUT box now, not just Bash's — except the ones whose outcome the
+     * panel already shows. Measured before building: rendering all of them would have added ~2100
+     * boxes, 2033 of which said "The file … has been updated successfully" directly under the diff
+     * that had just shown the change. The exception to the exception is an ERROR, which shows
+     * whatever the tool: a failure is not a restatement of a success.
+     */
+    @Test
+    fun `non-Bash results render, unless the panel already shows the outcome`() {
+        fun call(i: Int, id: String, name: String, input: String) =
+            """{"type":"assistant","uuid":"u$i","timestamp":"2026-08-05T10:0$i:00.000Z",""" +
+                """"message":{"id":"m$i","role":"assistant","content":[{"type":"tool_use",""" +
+                """"id":"$id","name":"$name","input":$input}]}}"""
+        fun result(i: Int, id: String, text: String, isError: Boolean = false) =
+            """{"type":"user","uuid":"r$i","timestamp":"2026-08-05T10:0$i:30.000Z",""" +
+                """"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"$id",""" +
+                (if (isError) """"is_error":true,""" else "") +
+                """"content":${q(text)}}]}}"""
+
+        val jsonl = listOf(
+            call(1, "t1", "Read", """{"file_path":"/tmp/a.txt"}"""),
+            result(1, "t1", "line one\nline two"),
+            call(2, "t2", "Edit", """{"file_path":"/tmp/a.txt"}"""),
+            result(2, "t2", "The file /tmp/a.txt has been updated successfully."),
+            call(3, "t3", "Agent", """{"description":"audit the docs"}"""),
+            result(3, "t3", "AGENT-REPORT: four findings."),
+            // an Edit that FAILED still speaks — skipping it would hide the reason
+            call(4, "t4", "Edit", """{"file_path":"/tmp/b.txt"}"""),
+            result(4, "t4", "String to replace not found in file.", isError = true),
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-results", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "results.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val tools = SessionStore.readTranscript(CWD, "results")
+                .filter { it["role"]?.jsonPrimitive?.content == "tool" }
+            fun outOf(name: String, idx: Int = 0) =
+                tools.filter { it["text"]?.jsonPrimitive?.content == name }[idx]["out"]
+                    ?.jsonPrimitive?.contentOrNull
+
+            assertEquals("line one\nline two", outOf("Read"),
+                "a Read result is real content and was being dropped entirely")
+            assertEquals("AGENT-REPORT: four findings.", outOf("Agent"),
+                "the sub-agent's report (item 2) falls out of the same guard")
+            assertNull(outOf("Edit", 0),
+                "an Edit's success text restates the diff already on screen")
+            assertEquals("String to replace not found in file.", outOf("Edit", 1),
+                "but a FAILED Edit must still say why — an error is never a restatement")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /** JSON-quote a string for the hand-built fixture lines above. */
+    private fun q(s: String) = Json.encodeToString(String.serializer(), s)
 
     /** Diffs come from toolUseResult.structuredPatch — real hunks, not a prefix/suffix guess. */
     @Test

@@ -2017,7 +2017,11 @@
       const t = toolsById[b.tool_use_id];
       if (!t) return;
       if (b.is_error) t.el.classList.add('fail');
-      if (t.name !== 'Bash') return;
+      // Every tool's result, not just Bash's — except the ones whose outcome is already on screen
+      // (LIM.resultSkip, shared with the replay parser). Rendering ALL of them would have added
+      // ~2000 boxes saying "The file … has been updated successfully" under the diff that just
+      // showed the change. An error is never skipped: a failure is not a restatement of a success.
+      if (LIM.resultSkip.indexOf(t.name) !== -1 && !b.is_error) return;
       let txt = '';
       if (typeof b.content === 'string') txt = b.content;
       else if (Array.isArray(b.content)) txt = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');

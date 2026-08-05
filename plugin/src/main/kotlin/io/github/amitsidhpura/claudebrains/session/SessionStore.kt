@@ -677,7 +677,12 @@ object SessionStore {
         res?.get("structuredPatch")?.takeIf { it is JsonArray && it.jsonArray.isNotEmpty() }
             ?.let { item.patch = it }
 
-        if (item.text == "Bash") {
+        // Every tool's result, not just Bash's — EXCEPT the ones whose outcome the panel already
+        // shows (RenderLimits.RESULT_SKIP). An error is never skipped: a failure is not a
+        // restatement of a success, so it shows whatever the tool. The stdout/stderr, spill and
+        // exit-code handling below is keyed on fields only Bash-shaped results carry, so it costs
+        // nothing for the others.
+        if (item.text !in RenderLimits.RESULT_SKIP || item.isError) {
             // Match the live path (onUserEvent): show the tool_result block's content — the
             // model-facing result text — so a resumed OUT box reads identically. stdout/stderr are
             // only a fallback for the rare record whose content block is empty.

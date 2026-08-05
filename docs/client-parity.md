@@ -62,9 +62,9 @@ and the reasoning is in the item.
 | 9 | Bash exit-code explanation (was "failure detail") | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · re-scored P0→P3 | shipped — `.io-note`; premise was measured wrong |
 | 15 | Compaction boundary | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — marker + folded summary + gauge reset |
 | 21 | Model refusal fallback | ? | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | shipped — banner, model follow, both eviction lanes |
-| 6 | Non-Bash tool result summaries | ✅ | ✅ | ❌ | P1 | **M** — one guard opens it, per-tool shapes are the work |
-| 2 | Sub-agent final report | ✅ | ⚠️ | ❌ | P1 | **XS** ⇢ free with 6 |
-| 29 | Non-Bash tool output on replay | ✅ | ✅ | ❌ | P1 | **M** ⇢ must ship WITH 6 |
+| 6 | Non-Bash tool result summaries | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — structural skip rule, not per-tool shapes |
+| 2 | Sub-agent final report | ✅ | ⚠️ | ✅ | **DONE** 2026-08-05 | free with 6, as predicted |
+| 29 | Non-Bash tool output on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped WITH 6, one shared skip list |
 | 7 | Tool input beyond one key | ✅ | ✅ | ⚠️ | P1 | **M** — bespoke per tool; generic chain won't do |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
 | 14 | Todo / task checklist | ✅ | ✅ | ❌ | P1 | **M** — new renderer, but self-contained |
@@ -78,9 +78,9 @@ and the reasoning is in the item.
 | 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ❌ | **P2** ↓ (philosophy) | **S** — data already in the init payload |
 | 22 | Hook activity | ✅ | ? | ❌ | P2 | **?** — probe the empty-ack first; unknown until then |
-| 8 | Tool-returned images | ⚠️ | ✅ | ❌ | P2 | **S** ⇢ with 6; image renderer exists |
+| 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
 | 19 | Real thinking-token count | ✅ | ✅ | ⚠️ | P2 | **XS** — swap estimate for the event |
-| 11 | "File was modified by the user" | ? | ✅ | ❌ | P2 | **XS** ⇢ free with 6 |
+| 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ❌ | P2 | **S** — retires the `[1m]` sniffing |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
 | 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
@@ -153,7 +153,8 @@ The summary the sub-agent hands back.
 - **VS Code:** ⚠️ the `Agent` renderer returns `renderOutput(){return null}` — it shows the prompt,
   not the report (the report arrives as parent text anyway).
 - **Us:** ❌ parsed and thrown away by `chat.html:1819` — `if (t.name !== 'Bash') return;`.
-- **Take: P1.** Falls out of item 6 for free.
+- **Take: DONE 2026-08-05.** Fell out of item 6 for free exactly as predicted — `Agent` is not in
+  the skip set, so its report renders. 3 in the verified session, up to 7.4k characters.
 
 ### 3. Sub-agent prompt
 What the sub-agent was actually asked to do.
@@ -207,9 +208,21 @@ Read / Grep / Glob / Search / WebFetch / WebSearch / MCP calls all render a bare
   `N lines of output`, click opens the full output in an editor tab; `WebFetch` → `Fetched from
   <url>`; `Read` → header only, deliberately (`body(){return null}`).
 - **Us:** ❌ `chat.html:1819` again.
-- **Take: P1, do this first.** One `return` guards it. Match VS Code's shape — a one-line count with
-  click-to-open beats dumping content into the conversation, and we already have `kind:"open"`
-  plumbing for file references.
+- **Take: DONE 2026-08-05**, though not in the shape this line proposed. Measuring first showed why
+  "match VS Code" would have been wrong here: of ~2100 non-Bash results in local transcripts,
+  **2033 are Edit/Write success boilerplate** — "The file … has been updated successfully" — which
+  would have printed directly beneath the diff that had just shown the change.
+  So the rule is STRUCTURAL rather than per-tool: **if a tool renders its own card, diff or
+  description, its result text is a restatement** and is skipped (`RenderLimits.RESULT_SKIP`, shared
+  by both paths through the same splice as the caps). Everything else gets an OUT box through the
+  existing `ioRow`, capped by `OUT_MAX` with the truncation marker from item 10.
+  **An error is never skipped** — a failure is not a restatement of a success. That exception earns
+  its place: on one real session it surfaced 3 failed Edits whose reasons were being dropped
+  ("String to replace not found in file"), while all 489 successful ones stayed quiet. Zero false
+  either way.
+  Verified on session `42d09b97`: Read 105 boxes, playwright 30, Agent 3 — all previously dropped.
+  This also avoids VS Code's own oddity of showing NOTHING for `Read` (`body(){return null}`), which
+  is the single most common result worth reading.
 
 ### 7. Tool input beyond one key
 `RenderLimits.DESC_KEYS` picks exactly one field for the whole line.
@@ -228,8 +241,11 @@ Playwright screenshots, `Read` on a PNG — `toolUseResult.isImage`.
 - **Terminal:** ⚠️ can't render images inline.
 - **VS Code:** ✅ image results render.
 - **Us:** ❌ dropped entirely.
-- **Take: P2.** We already decode base64 images for user attachments, so the renderer exists; this
-  is wiring, not new UI. Watch the transcript budget (`IMAGE_BUDGET`) if it also lands in replay.
+- **Take: P3** (was P2), **measured 2026-08-05: `isImage` is set on ZERO local records.** The
+  wiring claim still holds — we already decode base64 for user attachments — but there is
+  nothing to wire it to, and it would be a third feature built blind. Revisit when a
+  screenshot-returning tool is actually used; the guard it rides on (item 6) is now open, so
+  it stays cheap.
 
 ### 9. Bash failure detail
 We show the concatenated `tool_result` text and colour the dot.
@@ -299,7 +315,9 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
 - **Terminal:** ? not confirmed.
 - **VS Code:** ✅ present in the result model.
 - **Us:** ❌ read for nothing.
-- **Take: P2.** Cheap once item 6 opens the non-Bash result path.
+- **Take: P3** (was P2), **measured 2026-08-05: `userModified` is set on ZERO local records.**
+  Item 6 has now opened the path it was waiting on, so it remains cheap — but a flag never
+  once observed is not worth rendering on speculation. Same call as items 8 and 21's evidence.
 
 ### 12. Server-side tools
 `server_tool_use` content blocks (web search executed API-side).
@@ -567,8 +585,9 @@ so browser find can't see them.
 Replay keeps `structuredPatch` (edits) and `answers` (ask cards); `stdout` is kept for Bash alone
 (`SessionStore.kt:558`).
 
-- **Take: P1.** Whatever item 6 shows live has to be mirrored here or the two paths drift — which
-  `RenderLimits` and `docs/renderer-parity.md` exist specifically to prevent.
+- **Take: DONE 2026-08-05**, shipped in the same change as item 6 — the skip list lives in
+  `RenderLimits.RESULT_SKIP` and is spliced into the webview, so the two paths agree by
+  construction rather than by discipline.
 
 ## E. Deliberate mutes
 
@@ -610,15 +629,23 @@ this repo's own transcript quoting the field names, and item 9's "no failures" r
 filtering on a `stdout` key that failed results do not have.
 
 **Tier 1 — the review loop (many times an hour).** The panel's core job: seeing what Claude did.
-- **Start with item 5** `XS` — three strings into `RenderLimits.DESC_KEYS` and both paths stop
-  drawing blank tool lines. Highest ratio in the document; do it before anything else here.
-- **Then the item-6 bundle** `M`, and take all of it in one pass: open the guard at
-  `chat.html:1819`, mirror it in `SessionStore.applyToolResult`, and land 2, 8, 11 and 29 in the
-  same change (`⇢` in the table). Splitting this means opening the same two paths twice, and
-  shipping 6 without 29 puts live and replay out of sync immediately. Match VS Code's shape — a
-  one-line count with click-to-open, not content dumped into the conversation.
+Items 5, 6, 2 and 29 shipped 2026-08-05; 8 and 11 were re-scored out on zero evidence.
+
+- ~~Item 5~~ — **done.** Six keys into `RenderLimits.DESC_KEYS`, 74 blank tool lines fixed, and the
+  note describing it turned out to be wrong twice (see the item). Best ratio in the document, as
+  claimed.
+- ~~The item-6 bundle~~ — **done, but NOT as this line planned it.** The coupling claim held (6, 2
+  and 29 landed in one pass through one shared skip list), the *shape* claim did not: "match VS
+  Code" would have printed ~2033 lines of Edit/Write success boilerplate under diffs that had just
+  shown the change. The rule that survived measurement is structural — skip the tools whose outcome
+  is already on screen, show everything else, and never skip an error.
+  Items 8 and 11 were supposed to ride along free. They can't: `isImage` and `userModified` are set
+  on **zero** local records. The guard they need is now open, so they stay cheap whenever a real one
+  appears.
 - Per-tool input suffixes (7) `M` — bespoke per tool, so it does not ride along with the above.
-- Todo checklist (14) `M` — a new renderer, but self-contained and independently shippable.
+  **The last unshipped P1 in this tier alongside 14.**
+- Todo checklist (14) `M` — a new renderer, but self-contained and independently shippable. It is
+  also what the 11 remaining blank `TodoWrite` lines are waiting for.
 
 **Tier 2 — signals with no terminal fallback (rule 1).** All small, and each converts a dead end
 into something actionable. Together they are less work than item 6 alone; a good tier to take when

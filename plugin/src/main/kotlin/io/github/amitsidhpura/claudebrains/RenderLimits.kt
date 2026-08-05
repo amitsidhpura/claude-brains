@@ -56,6 +56,26 @@ object RenderLimits {
     val PATH_KEYS = setOf("file_path", "path")
 
     /**
+     * Tools whose RESULT text is not worth an OUT box, because the panel already shows the outcome
+     * another way. Measured across local transcripts 2026-08-05: rendering every non-Bash result
+     * would have added ~2100 boxes, and 2033 of those said things like "The file … has been updated
+     * successfully" directly beneath the diff that had just shown the change.
+     *
+     * The rule is structural, not a taste list: **if a tool renders its own card, diff or
+     * description, its result text is a restatement.**
+     *   Edit/Write/NotebookEdit → the diff card · ExitPlanMode → the plan card ·
+     *   AskUserQuestion → the answered card · TaskCreate/TaskUpdate → the description
+     *   ("in_progress" already says it) · TodoWrite → boilerplate telling the MODEL to keep using
+     *   the list; its real fix is the checklist renderer, client-parity item 14.
+     *
+     * An ERROR always shows, whatever the tool: a failure is never a restatement of success.
+     */
+    val RESULT_SKIP = setOf(
+        "Edit", "Write", "MultiEdit", "NotebookEdit",
+        "ExitPlanMode", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TodoWrite",
+    )
+
+    /**
      * What a cap threw away, so the renderer can say so instead of presenting a slice as the whole
      * thing. `null` from [cut] means nothing was dropped and no marker is drawn.
      *
@@ -143,6 +163,6 @@ object RenderLimits {
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
         return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX," +
-            "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)}}"
+            "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}}"
     }
 }
