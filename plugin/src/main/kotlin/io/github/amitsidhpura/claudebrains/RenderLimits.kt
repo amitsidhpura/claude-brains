@@ -43,9 +43,9 @@ object RenderLimits {
      *
      * Tools that are STILL blank are blank BY DESIGN, not by omission: Bash (458 — the command is
      * in the IN box), AskUserQuestion (49 — the card is the content), ExitPlanMode (11 — the plan
-     * card), TodoWrite (11 — needs the real checklist renderer, client-parity item 14). `todos` and
-     * `plan` are deliberately NOT in the chain: both are structures, and stringifying one into a
-     * 140-char description would be worse than the blank it replaces.
+     * card), TodoWrite (11 — the checklist below it IS the content, item 14). `todos` and `plan` are
+     * deliberately NOT in the chain: both are structures, and stringifying one into a 140-char
+     * description would be worse than the blank it replaces.
      */
     val DESC_KEYS = listOf(
         "description", "file_path", "path", "pattern", "query", "url", "element", "filename", "target",
@@ -73,6 +73,11 @@ object RenderLimits {
     val RESULT_SKIP = setOf(
         "Edit", "Write", "MultiEdit", "NotebookEdit",
         "ExitPlanMode", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TodoWrite",
+        // TaskList earned its place the moment the checklist shipped (item 14b): its result is the
+        // same list as plain text, folded to three of five lines, directly above the checklist that
+        // renders all of it with glyphs and strikethrough. Same rule as the rest — the panel shows
+        // the outcome another way, so the raw text is a restatement.
+        "TaskList",
     )
 
     /**

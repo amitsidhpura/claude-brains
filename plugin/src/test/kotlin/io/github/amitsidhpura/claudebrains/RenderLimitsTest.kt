@@ -86,7 +86,7 @@ class RenderLimitsTest {
                 "\"function\",\"uri\"]," +
                 "pathKeys:[\"file_path\",\"path\"]," +
                 "resultSkip:[\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\",\"ExitPlanMode\"," +
-                "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\"]}",
+                "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\",\"TaskList\"]}",
             RenderLimits.asJs(),
         )
     }
