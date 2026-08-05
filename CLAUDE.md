@@ -270,11 +270,18 @@ NB: many sessions store `thinking` blocks with an EMPTY body and only a `signatu
 replay as nothing at all; ~2.1k of 6.6k local thinking blocks carry text.
 Known gaps deliberately left:
 - sidechain/subagent ordering untested (no `isSidechain` records in local sessions yet)
-- tool lines still blank for tools whose input has none of the desc-chain keys (now ONE list,
-  `RenderLimits.DESC_KEYS`, spliced into the webview — see below): `TaskUpdate` (has `activeForm`,
-  ~308 local occurrences — the biggest), `Skill` (`skill`), `TaskOutput`/`TaskStop` (`task_id`).
-  Each needs a bespoke key, so the generic chain won't do it. Bash and AskUserQuestion are blank
-  BY DESIGN.
+- ~~tool lines blank for tools with none of the desc-chain keys~~ — **CLOSED 2026-08-05** (parity
+  item 5) by extending `RenderLimits.DESC_KEYS`, which needed no bespoke per-tool code after all.
+  The old note here was wrong twice, both corrected by measuring: `TaskUpdate` carries `taskId` +
+  `status`, NOT `activeForm` (that is `TaskCreate`, which was never blank — it has `description`),
+  and there were 54 of them locally, not ~308. 74 blank lines fixed in total: TaskUpdate 54 (via
+  `status` — "in_progress" beats an opaque id, which is why it precedes `taskId`), playwright
+  `browser_evaluate` 15 (`function`), TaskStop 2 (`task_id`), Skill 2 (`skill`), getDiagnostics 1
+  (`uri`). Every added key was collision-checked first: the chain is GLOBAL, so a generic key would
+  hijack other tools' lines. Still blank BY DESIGN: Bash (458 — command is in the IN box),
+  AskUserQuestion (49 — the card is the content), ExitPlanMode (11 — the plan card), TodoWrite
+  (11 — wants the real checklist renderer, parity item 14). `todos`/`plan` stay OUT of the chain:
+  both are structures, and stringifying one into 140 chars is worse than the blank it replaces.
 - windowed replay: DOM search (browser find, any future find-in-conversation) only sees loaded
   blocks.
 

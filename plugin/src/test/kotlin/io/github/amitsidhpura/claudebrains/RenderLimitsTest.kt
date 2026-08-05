@@ -81,7 +81,8 @@ class RenderLimitsTest {
         assertEquals(
             "{descMax:140,cmdMax:4000,outMax:2000," +
                 "descKeys:[\"description\",\"file_path\",\"path\",\"pattern\",\"query\",\"url\"," +
-                "\"element\",\"filename\",\"target\"]," +
+                "\"element\",\"filename\",\"target\",\"skill\",\"status\",\"taskId\",\"task_id\"," +
+                "\"function\",\"uri\"]," +
                 "pathKeys:[\"file_path\",\"path\"]}",
             RenderLimits.asJs(),
         )
@@ -376,6 +377,13 @@ class RenderLimitsTest {
             Triple("Read", """{"description":"   ","file_path":"/tmp/y.txt"}""", "/tmp/y.txt" to true),
             Triple("mcp__x", """{"element":"the Submit button","target":"ref=42"}""", "the Submit button" to false),
             Triple("mcp__x", """{"target":"ref=42"}""", "ref=42" to false),
+            // the blank-tool-line tail: each key is owned by exactly one tool, and `status` wins
+            // over `taskId` on purpose — "in_progress" says what happened, an id does not
+            Triple("TaskUpdate", """{"taskId":"t-42","status":"in_progress"}""", "in_progress" to false),
+            Triple("TaskStop", """{"task_id":"t-42"}""", "t-42" to false),
+            Triple("Skill", """{"skill":"pdf","args":"x"}""", "pdf" to false),
+            Triple("mcp__playwright__browser_evaluate", """{"function":"() => document.title"}""",
+                "() => document.title" to false),
         )
         val lines = cases.mapIndexed { i, (name, input, _) ->
             """{"type":"assistant","uuid":"u$i","timestamp":"2026-08-02T10:00:0$i.000Z",""" +

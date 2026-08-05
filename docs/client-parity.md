@@ -66,7 +66,7 @@ and the reasoning is in the item.
 | 2 | Sub-agent final report | ✅ | ⚠️ | ❌ | P1 | **XS** ⇢ free with 6 |
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ❌ | P1 | **M** ⇢ must ship WITH 6 |
 | 7 | Tool input beyond one key | ✅ | ✅ | ⚠️ | P1 | **M** — bespoke per tool; generic chain won't do |
-| 5 | Blank Task/Skill tool lines | ✅ | ✅ | ❌ | P1 | **XS** — 3 strings into `DESC_KEYS` |
+| 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
 | 14 | Todo / task checklist | ✅ | ✅ | ❌ | P1 | **M** — new renderer, but self-contained |
 | 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
 | 23 | CLI stderr | — | ? | ❌ | **P1** ↑ (philosophy) | **S** — buffer it, print on non-zero exit |
@@ -184,8 +184,18 @@ an empty description — a tool line with nothing on it.
 - **Terminal:** ✅ named and described.
 - **VS Code:** ✅ bespoke renderers for `TaskOutput` (`task: "<task_id>"`) and `Skill`.
 - **Us:** ❌ blank. `TaskUpdate` is the most frequent offender in local transcripts.
-- **Take: P1.** Cheapest fix in the document: add `activeForm`, `skill`, `task_id` to
-  `RenderLimits.DESC_KEYS` and both paths get it at once.
+- **Take: DONE 2026-08-05.** Cheapest fix in the document, and it held: six keys into
+  `RenderLimits.DESC_KEYS` and both paths got it at once, no per-tool code.
+  **Measuring first corrected the item twice.** `TaskUpdate` carries `taskId` + `status`, not
+  `activeForm` — that belongs to `TaskCreate`, which was never blank because it has `description`.
+  And there were 54 locally, not the ~308 claimed. Added: `skill`, `status`, `taskId`, `task_id`,
+  `function`, `uri`, with `status` before `taskId` because "in_progress" says what happened where an
+  opaque id does not. **Every key was collision-checked first** — the chain is global, so a generic
+  key would hijack other tools' lines; each of these is owned by exactly one tool.
+  74 blank lines fixed: TaskUpdate 54, playwright `browser_evaluate` 15, TaskStop 2, Skill 2,
+  getDiagnostics 1. Still blank BY DESIGN: Bash 458, AskUserQuestion 49, ExitPlanMode 11,
+  TodoWrite 11 (wants item 14's checklist). `todos`/`plan` stay out — stringifying a structure into
+  140 characters is worse than the blank it replaces.
 
 ## B. Tool results
 

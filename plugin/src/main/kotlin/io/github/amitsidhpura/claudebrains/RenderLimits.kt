@@ -33,11 +33,23 @@ object RenderLimits {
      * human-readable element description so it reads best, while `target` is the machine ref
      * ("exact target element reference from the page snapshot") and is the last resort.
      *
-     * Tools whose input has none of these keys render a blank tool line — see the known gaps in
-     * CLAUDE.md (TaskUpdate, Skill, TaskOutput/TaskStop each need a bespoke key).
+     * The tail of the chain closes the blank-tool-line gap, measured across local transcripts
+     * 2026-08-05. Every one of these keys is owned by exactly ONE tool — checked for collisions
+     * before adding, because the chain is global and a generic key would hijack other tools' lines:
+     *   `skill` Skill · `status`+`taskId` TaskUpdate · `task_id` TaskStop ·
+     *   `function` mcp__playwright__browser_evaluate · `uri` mcp__ide__getDiagnostics
+     * `status` precedes `taskId` deliberately: "in_progress" says what happened, an opaque id does
+     * not. Together they account for the 74 tool lines that rendered blank and shouldn't have.
+     *
+     * Tools that are STILL blank are blank BY DESIGN, not by omission: Bash (458 — the command is
+     * in the IN box), AskUserQuestion (49 — the card is the content), ExitPlanMode (11 — the plan
+     * card), TodoWrite (11 — needs the real checklist renderer, client-parity item 14). `todos` and
+     * `plan` are deliberately NOT in the chain: both are structures, and stringifying one into a
+     * 140-char description would be worse than the blank it replaces.
      */
     val DESC_KEYS = listOf(
         "description", "file_path", "path", "pattern", "query", "url", "element", "filename", "target",
+        "skill", "status", "taskId", "task_id", "function", "uri",
     )
 
     /** Of [DESC_KEYS], the ones whose value is a file path — rendered clickable (`.t-desc.path`). */
