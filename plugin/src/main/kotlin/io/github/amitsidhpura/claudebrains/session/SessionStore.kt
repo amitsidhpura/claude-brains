@@ -310,6 +310,11 @@ object SessionStore {
         // Appended after the description and OUTSIDE its cap — a Read's "(lines 40-80)" is what
         // distinguishes reading a slice from reading the whole file, so a long path must not eat it.
         var suffix: String? = null
+        // The same range as NUMBERS (1-based), so clicking the path can select it in the editor.
+        // The formatted suffix is for reading; these are for navigating — parsing the string back
+        // would be a second encoding of the same fact.
+        var line: Long? = null
+        var endLine: Long? = null
         // Record uuid this block came from. Only needed so a refusal fallback (or an assistant
         // `supersedes` list) can withdraw it — nothing else reads it, and it never reaches the wire.
         var uuid: String? = null
@@ -342,6 +347,8 @@ object SessionStore {
             prevSeed?.let { put("prevSeed", it) }
             desc?.let { put("desc", it) }
             suffix?.let { put("suffix", it) }
+            line?.let { put("line", it) }
+            endLine?.let { put("endLine", it) }
             if (isPath) put("isPath", true)
             cmd?.let { put("cmd", it) }
             out?.let { put("out", it) }
@@ -646,11 +653,13 @@ object SessionStore {
                     // A Read of lines 40-80 used to render exactly like a Read of the whole file.
                     // Appended AFTER the cap so the range survives a long path being truncated —
                     // it is the part that changes what the line means.
-                    suffix = RenderLimits.descSuffix(
-                        name,
-                        (inp?.get("offset") as? JsonPrimitive)?.longOrNull,
-                        (inp?.get("limit") as? JsonPrimitive)?.longOrNull,
-                    ).ifBlank { null }
+                    val off = (inp?.get("offset") as? JsonPrimitive)?.longOrNull
+                    val lim = (inp?.get("limit") as? JsonPrimitive)?.longOrNull
+                    suffix = RenderLimits.descSuffix(name, off, lim).ifBlank { null }
+                    if (suffix != null) {
+                        line = off ?: 1L
+                        endLine = if (off != null && lim != null) off + lim - 1 else lim
+                    }
                 }
                 file = path
                 if (name == "Bash") str("command")?.let { full ->

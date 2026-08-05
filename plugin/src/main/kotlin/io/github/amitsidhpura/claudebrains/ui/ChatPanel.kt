@@ -18,6 +18,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -123,8 +124,12 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             // openFile returns false when the path no longer resolves, and a click that does
             // NOTHING reads as a broken panel. Truncation markers make this reachable — a session
             // outlives the CLI's tool-results dir — but it covers every file reference in the log.
+            // line/endLine are optional and 1-based: a Read that named a range selects it, anything
+            // else opens at the top exactly as before.
             "open" -> msg["path"]?.jsonPrimitive?.content?.let {
-                if (!session.openFile(it)) notifyMissing(it)
+                val line = msg["line"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+                val endLine = msg["endLine"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+                if (!session.openFile(it, line, endLine)) notifyMissing(it)
             }
             "more" -> pushEarlier()
             "history" -> pushSessions()

@@ -229,7 +229,8 @@
     const ref = e.target.closest('.t-desc.path, .card-h code');
     if (!ref) return;
     const p = (ref.textContent || '').trim();
-    if (p) bridge({ kind: 'open', path: p });
+    // A Read that named a range selects it; everything else opens at the top exactly as before.
+    if (p) bridge({ kind: 'open', path: p, line: ref.dataset.line, endLine: ref.dataset.endLine });
   });
   log.addEventListener('scroll', function () { pinned = atBottom(); updateScrollBtn(); maybeLoadEarlier(); });
   if (scrollBtn) scrollBtn.onclick = function () { smoothToBottom(); input.focus(); };
@@ -1173,6 +1174,8 @@
               const sEl = document.createElement('span');
               sEl.className = 't-sfx'; sEl.textContent = it.suffix;
               d.after(sEl);
+              if (it.line) d.dataset.line = it.line;
+              if (it.endLine) d.dataset.endLine = it.endLine;
             }
           }
           if (it.cmd || it.out) {
@@ -2012,6 +2015,11 @@
                 const sEl = document.createElement('span');
                 sEl.className = 't-sfx'; sEl.textContent = sfx;
                 dEl.after(sEl);
+                // the NUMBERS ride on the path element, so clicking it selects the slice Claude
+                // read rather than dropping you at line 1 of a file it only read the middle of
+                const o = (typeof inp.offset === 'number') ? inp.offset : 1;
+                dEl.dataset.line = o;
+                if (typeof inp.limit === 'number') dEl.dataset.endLine = o + inp.limit - 1;
               }
             }
             if (openTool.name === 'Bash' && inp.command) {

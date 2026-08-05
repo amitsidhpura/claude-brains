@@ -139,14 +139,35 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * MCP-facing; paths from the transcript are usually absolute, but a relative one is resolved
      * against the project root so @-mention style references work too.
      */
-    fun openFile(rawPath: String): Boolean {
+    /**
+     * Open a file reference from the panel. [line]/[endLine] are 1-BASED line numbers (the shape
+     * `Read`'s `offset`/`limit` use); when present the editor lands on that line and SELECTS the
+     * range, so clicking "chat.css (lines 40-119)" shows exactly the slice Claude read rather than
+     * the top of a 683-line file.
+     */
+    fun openFile(rawPath: String, line: Int? = null, endLine: Int? = null): Boolean {
         val p = rawPath.trim().replace('\\', '/')
         if (p.isEmpty()) return false
         val vf = findVFile(p)
             ?: project.basePath?.let { findVFile("$it/${p.trimStart('/')}") }
             ?: return false
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
-            com.intellij.openapi.fileEditor.OpenFileDescriptor(project, vf).navigate(true)
+            // OpenFileDescriptor takes a 0-BASED line; the wire carries 1-based, so convert once here
+            val zero = line?.let { maxOf(0, it - 1) } ?: 0
+            com.intellij.openapi.fileEditor.OpenFileDescriptor(project, vf, zero, 0).navigate(true)
+            if (line == null) return@invokeLater
+            val editor = com.intellij.openapi.fileEditor.FileEditorManager
+                .getInstance(project).selectedTextEditor ?: return@invokeLater
+            val doc = editor.document
+            // Clamp both ends: a transcript outlives the file it names, so a range recorded against
+            // an older, longer version must not throw — it just selects what is still there.
+            val startLine = zero.coerceIn(0, maxOf(0, doc.lineCount - 1))
+            val lastLine = (endLine?.let { maxOf(0, it - 1) } ?: startLine)
+                .coerceIn(startLine, maxOf(0, doc.lineCount - 1))
+            editor.selectionModel.setSelection(
+                doc.getLineStartOffset(startLine),
+                doc.getLineEndOffset(lastLine),
+            )
         }
         return true
     }

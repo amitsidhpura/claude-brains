@@ -243,6 +243,12 @@ Read / Grep / Glob / Search / WebFetch / WebSearch / MCP calls all render a bare
   `.t-sfx` span: OUTSIDE the `DESC_MAX` cap so a long path cannot eat the range, and outside
   `.t-desc.path` so the click handler does not send "(lines 40-80)" to the editor as part of the
   filename. Verified on session `42d09b97`: 95 of 105 Reads gained a range, 0 other tools did.
+  **Clicking the path navigates to the range and SELECTS it** — showing a range but landing at line
+  1 of a file Claude only read the middle of is half a feature, and VS Code links the filename to
+  the exact range too. The numbers ride on the element as `data-line`/`data-end-line` rather than
+  being parsed back out of the formatted string, so there is one encoding of the fact, not two.
+  Both ends are clamped to the document: a transcript outlives the file it names, so a range
+  recorded against a longer version selects what still exists instead of throwing.
 
 ### 8. Tool-returned images
 Playwright screenshots, `Read` on a PNG — `toolUseResult.isImage`.
