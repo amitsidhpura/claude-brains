@@ -131,7 +131,9 @@ zip in `build/distributions/`.
   The sandbox can't catch this class of bug; smoke-test installs in the real snap IDE.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
 - Caps/key-orders shared by the LIVE renderer and the REPLAY parser live in ONE place,
-  `RenderLimits.kt` (tool-description cap + key order, Bash IN/OUT cap). `ChatPanel.loadUi` splices
+  `RenderLimits.kt` (tool-description cap + key order, IN/OUT caps, and `IN_KEYS` — the IN box is
+  keyed on the INPUT (`command`, `prompt`), never on the tool name, so a sub-agent's brief and a
+  Bash command land in the same box). `ChatPanel.loadUi` splices
   them into chat.html as `window.LIMITS` (the `LIMITS` marker, same idiom as `<!--CSS-->` and the
   version); the webview reads `LIM.*` and THROWS on load if unspliced, since a JS-side default
   would just be the second copy again. `RenderLimitsTest` fails the build if a literal is

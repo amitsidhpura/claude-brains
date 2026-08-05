@@ -72,7 +72,7 @@ and the reasoning is in the item.
 | 16 | Rate-limit warnings | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · seen live, then corrected | first guess cried wolf on the routine case |
 | 23 | CLI stderr | — | ? | ✅ | **DONE** 2026-08-05 | tail buffered, shown under the exit line |
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · **VERIFIED against 2.1.222** | field confirmed; 1 dead check dropped, 1 code added, wording corrected |
-| 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P2 | **S** — `ioRow('IN', …)` already exists |
+| 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — one branch, and a SHARED one (`IN_KEYS`) |
 | 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
 | 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
 | 12 | Server-side tools (web search blocks) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — but replay needed it too, and the rule is shared |
@@ -163,11 +163,32 @@ What the sub-agent was actually asked to do.
 - **Terminal:** ✅ shown on expand.
 - **VS Code:** ✅ `class tme … name="Agent"` renders header `Agent: <description>` plus an `IN` row
   containing the full `prompt`, click-to-open in an editor tab.
-- **Us:** ❌ only `description` reaches the tool line; `prompt` is dropped.
-- **Take: P2** (down from P1). Cheap — we already have the `IN` box idiom from Bash
-  (`ioRow('IN', …)`) and this is one branch in `content_block_stop` — but cheapness is a reason to
-  bundle it, not a reason to rank it. Sub-agents don't appear in most turns, so this doesn't clear
-  the many-times-an-hour bar the tool-result items do. Ride it along with 1 and 4.
+- **Us:** ❌ only `description` reached the tool line; `prompt` was dropped.
+- **Take: P2** (down from P1). **DONE 2026-08-06** — it did not need to wait for 1 and 4 after all;
+  the estimate was right that it is one branch, and it turned out to be one branch *shared*, which
+  is cheaper still. Sub-agents don't appear in most turns, so this never cleared the
+  many-times-an-hour bar; it ships because it was nearly free once the IN box was generalised.
+
+  **Measured 2026-08-06.** Only two tools carry a `prompt` locally — `Agent` ×4 and `WebFetch` ×4 —
+  but the gap they leave is wide: an `Agent` description is four or five words ("Find flagged API
+  usages") while its prompt reaches **2121 characters**, and none of it was on screen. "What did it
+  just go off and do?" could not be answered from the panel at all.
+
+  **Built as a KEY list, not a tool list.** `RenderLimits.IN_KEYS = ["command", "prompt"]` replaces
+  the old `if (name == "Bash")` on both paths: Bash's command and a sub-agent's brief are the same
+  idea — the instruction the tool received, which the description only summarises — so they belong
+  in the same box under the same cap and the same cut marker. Same structural reasoning as
+  `RESULT_SKIP`: a future tool that takes a prompt gets an IN box without anyone remembering to add
+  it. First NON-blank wins, so a whitespace-only prompt is correctly not an instruction.
+
+  Verified against real data rather than only a fixture: `./gradlew probe --json` on a local session
+  shows all three of its real `Agent` records now carrying `cmd` (the full prompt) beside `desc`
+  (the short description), where before they carried `desc` alone.
+
+  One thing VS Code does that we do not: its IN row is click-to-open-in-an-editor-tab. Ours folds
+  like every other IN box. That is a deliberate hold, not an oversight — the fold already handles
+  long prompts, and an editor tab for a transient string is a heavier affordance than the content
+  warrants.
 
 ### 4. Background task roster
 Which background tasks are running while the turn is suspended.
@@ -952,9 +973,9 @@ an argument for probing the wire before writing the branch, not for padding the 
 
 **Tier 3 — depth.** Ordered cheapest-first, since none of it is urgent:
 real thinking tokens (19) `XS`, ~~`modelUsage[].contextWindow` (17a)~~ **done** — retired the `[1m]`
-sniffing, ~~server-side tool blocks (12)~~ **done**, the sub-agent prompt (3) `S`, a "2 tasks running" chip
+sniffing, ~~server-side tool blocks (12)~~ **done**, ~~the sub-agent prompt (3)~~ **done**, a "2 tasks running" chip
 (4) `S`. Then the two genuinely large ones, each needing a design pass before any code: sub-agent
-nesting (1) `L`, which 3 and the full roster (4) should ride on, and queued messages (24) `L`,
+nesting (1) `L`, which the full roster (4) should ride on, and queued messages (24) `L`,
 which is composer state rather than a renderer. Hook activity (22) is unsized — settle the
 empty-ack question first, because it may be a protocol bug rather than a display gap.
 

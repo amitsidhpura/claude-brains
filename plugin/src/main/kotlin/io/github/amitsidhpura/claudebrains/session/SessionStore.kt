@@ -876,10 +876,14 @@ object SessionStore {
                     }
                 }
                 file = path
-                if (name == "Bash") str("command")?.let { full ->
-                    cmdCut = RenderLimits.cut(full, RenderLimits.CMD_MAX)
-                    cmd = cmdCut?.shown ?: full
-                }
+                // What the tool was ASKED — Bash's command, or a sub-agent's prompt (item 3). The
+                // order is RenderLimits.IN_KEYS, which chat.html walks through the same splice, so
+                // the two cannot drift into showing different boxes for the same call.
+                RenderLimits.IN_KEYS.firstNotNullOfOrNull { k -> str(k)?.takeIf { it.isNotBlank() } }
+                    ?.let { full ->
+                        cmdCut = RenderLimits.cut(full, RenderLimits.CMD_MAX)
+                        cmd = cmdCut?.shown ?: full
+                    }
                 if (name == "ExitPlanMode") plan = inp?.get("plan")?.jsonPrimitive?.content
                 // The checklist is how you follow a long turn without reading every tool line.
                 // TodoWrite's result is boilerplate telling the MODEL to keep using the list

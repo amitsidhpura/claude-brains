@@ -340,6 +340,61 @@ class SessionStoreTest {
     }
 
     /**
+     * What a sub-agent was ASKED (client-parity item 3). The tool line already carried `description`
+     * — a handful of words — while the `prompt` it actually ran on was dropped, so "what did it just
+     * go off and do?" was unanswerable from the panel. Measured 2026-08-06: local `Agent` prompts
+     * reach 2121 characters against descriptions of four or five words.
+     *
+     * The IN box is keyed off `RenderLimits.IN_KEYS`, not off the tool name, so this also covers
+     * `WebFetch`'s extraction instruction and any future tool that takes a prompt. Verified against
+     * the three real `Agent` records in a local transcript before being pinned here.
+     */
+    @Test
+    fun `a sub-agent's prompt fills the IN box, not just its description`() {
+        fun toolUse(id: String, name: String, input: String) =
+            """{"type":"assistant","uuid":"$id","timestamp":"2026-08-06T10:00:00.000Z","message":""" +
+                """{"id":"m$id","role":"assistant","content":[{"type":"tool_use","id":"$id",""" +
+                """"name":"$name","input":$input}]}}"""
+
+        val jsonl = listOf(
+            toolUse("t1", "Agent", """{"description":"Find flagged API usages","prompt":"Search the repo for deprecated calls and report each with a file:line.","subagent_type":"Explore"}"""),
+            toolUse("t2", "WebFetch", """{"url":"https://example.com/doc","prompt":"Extract the rate limit table."}"""),
+            // neither key: must stay boxless rather than growing an empty IN
+            toolUse("t3", "Read", """{"file_path":"/tmp/x.kt"}"""),
+            // a blank prompt is not an instruction — same "first NON-BLANK wins" rule as DESC_KEYS
+            toolUse("t4", "Agent", """{"description":"Empty brief","prompt":"   "}"""),
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-prompt", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "prompt.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val tools = SessionStore.readTranscript(CWD, "prompt")
+                .filter { it["role"]?.jsonPrimitive?.contentOrNull == "tool" }
+            assertEquals(4, tools.size)
+
+            assertEquals("Find flagged API usages", tools[0]["desc"]?.jsonPrimitive?.contentOrNull,
+                "the description still describes the line")
+            assertEquals("Search the repo for deprecated calls and report each with a file:line.",
+                tools[0]["cmd"]?.jsonPrimitive?.contentOrNull,
+                "and the prompt is what it was actually asked")
+
+            assertEquals("https://example.com/doc", tools[1]["desc"]?.jsonPrimitive?.contentOrNull)
+            assertEquals("Extract the rate limit table.", tools[1]["cmd"]?.jsonPrimitive?.contentOrNull,
+                "the rule is keyed on the input, not on the tool being Agent")
+
+            assertNull(tools[2]["cmd"], "a tool with no command and no prompt gets no IN box")
+            assertNull(tools[3]["cmd"], "a whitespace-only prompt is not an instruction")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * A web search the API ran server-side (client-parity item 12). It arrives as a `server_tool_use`
      * block plus a `web_search_tool_result` block on the SAME assistant message — there is no
      * `tool_result` user event, because no client-side tool ever ran. Replay dropped both, exactly

@@ -2304,8 +2304,16 @@
             if (openTool.name === 'TodoWrite' && Array.isArray(inp.todos)) {
               todoList(inp.todos); maybeScroll();
             }
-            if (openTool.name === 'Bash' && inp.command) {
-              const full = String(inp.command), cut = cutInfo(full, LIM.cmdMax);
+            // The IN box: what the tool was ASKED. Bash's `command` and a sub-agent's `prompt` are
+            // the same idea, so the key order lives in RenderLimits.IN_KEYS rather than being a
+            // per-tool branch here — the replay parser walks the same list (item 3).
+            let inKey = '';
+            for (let i = 0; i < LIM.inKeys.length && !inKey; i++) {
+              const v = inp[LIM.inKeys[i]];
+              if (typeof v === 'string' && v.trim()) inKey = LIM.inKeys[i];
+            }
+            if (inKey) {
+              const full = String(inp[inKey]), cut = cutInfo(full, LIM.cmdMax);
               const io = ioBox([['IN', cut ? cut.shown : full, cut]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
@@ -3011,6 +3019,13 @@
     });
     // The refusal with NO retry: nothing is coming, so nothing follows this line.
     onRefusalNoFallback({ original_model: 'claude-opus-5', content: '' });
+
+    // sub-agent brief (item 3) — the description names the errand, the IN box is the errand itself.
+    // Same box and same cut marker as a Bash command, because it is the same idea: what it was ASKED.
+    { const ta = track(toolLine('Agent'));
+      ta.querySelector('.t-desc').textContent = 'Find flagged API usages';
+      ta.after(ioBox([['IN', 'Search the repo for deprecated calls and report each one with a ' +
+        'file:line reference. Do not change anything — this is a survey, not a fix.']])); }
 
     // server-side web search (item 12) — the API ran it, so there is no tool_result user event and
     // no IN box; the query rides on the tool line and the results come back as their own block.

@@ -56,6 +56,23 @@ object RenderLimits {
     val PATH_KEYS = setOf("file_path", "path")
 
     /**
+     * Keys tried IN ORDER for the IN box: what the tool was ASKED, as distinct from the one-line
+     * description above it. First non-blank wins, exactly like [DESC_KEYS].
+     *
+     * `command` is Bash's, and was the only one for a long time. `prompt` joins it for client-parity
+     * item 3 — a sub-agent's brief (`Agent`) and `WebFetch`'s extraction instruction. The
+     * description only *summarises* those: measured across local transcripts 2026-08-06, an `Agent`
+     * description is a handful of words while its prompt runs to 2121 characters, and none of that
+     * reached the screen. "What did it just go off and do?" was unanswerable from the panel.
+     *
+     * Deliberately a KEY list and not a tool list, for the same reason [RESULT_SKIP] is a structural
+     * rule: a future tool that takes a prompt gets an IN box without anyone remembering to add it.
+     * Every key here must be one whose value is the instruction ITSELF — not a reference to it, and
+     * not a structure. Capped by [CMD_MAX], the same box and the same cut marker as the command.
+     */
+    val IN_KEYS = listOf("command", "prompt")
+
+    /**
      * Tools whose RESULT text is not worth an OUT box, because the panel already shows the outcome
      * another way. Measured across local transcripts 2026-08-05: rendering every non-Bash result
      * would have added ~2100 boxes, and 2033 of those said things like "The file … has been updated
@@ -227,6 +244,7 @@ object RenderLimits {
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
         return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX," +
-            "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}}"
+            "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
+            "inKeys:${arr(IN_KEYS)}}"
     }
 }
