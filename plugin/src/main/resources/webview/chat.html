@@ -320,6 +320,26 @@
     overage: 'usage credit limit',
   };
   let rateLimitKey = null;   // last status:type shown, so an unchanged limit is not restated
+  /**
+   * The ACCOUNT half of the CLI's ten-code `error` enum, each with the route out. Wording follows
+   * the CLI's own router (`case "authentication_failed": … needs:"login required — run /login"`,
+   * `case "oauth_org_not_allowed": … needs:"org disabled OAuth — use API key or ask admin"`),
+   * re-pointed at the terminal because this plugin has no login flow by design.
+   *
+   * The other eight codes — rate_limit, overloaded, billing_error, server_error, invalid_request,
+   * model_not_found, max_output_tokens, unknown — are deliberately ABSENT. They are transient or
+   * request-shaped rather than account-shaped: the `result` error block already states them and
+   * offers Retry, which is the correct affordance. Adding them here would replace a specific CLI
+   * message with a vaguer one of ours.
+   */
+  // Null-prototype so an unknown code can only ever miss: a plain literal would answer
+  // AUTH_BLOCKED['constructor'] with a truthy function and render it as the fix.
+  const AUTH_BLOCKED = Object.assign(Object.create(null), {
+    authentication_failed:
+      'Authentication failed. Run `claude` in a terminal, sign in there, then press Refresh.',
+    oauth_org_not_allowed:
+      'Your organization has disabled OAuth. Use an API key or ask your admin — signing in again will not help.',
+  });
   function fmtResets(secs) {
     const ms = secs * 1000 - Date.now();
     if (ms <= 0) return 'soon';
@@ -1817,13 +1837,22 @@
       // is only here for its uuid — the one field that ties a live summary to its replayed twin.
       case 'assistant':
         // An auth failure is a DEAD END here: the plugin has no login flow by design
-        // (CLAUDE.md § Philosophy), so the message has to carry the whole fix. VS Code opens its
-        // own login; we point at the terminal, which is where signing in lives.
-        if (ev.error === 'authentication_failed' || ev.subtype === 'authentication_failed') {
+        // (CLAUDE.md § Philosophy), so the message has to carry the route out. VS Code hangs its
+        // own login off this exact field — `if (e.error === "authentication_failed") showLogin()`
+        // in webview/index.js — and we point at the terminal instead.
+        //
+        // Verified against 2.1.222 (this branch shipped BLIND and two of its three assumptions were
+        // wrong). `error` is the CLI's ten-code enum, serialized verbatim onto EVERY assistant
+        // frame: `yield {type:"assistant", …, timestamp:n.timestamp, error:n.error, …}`. There is no
+        // `subtype` on an assistant frame — the old check for one was a guess and is gone.
+        //
+        // This line is ROUTING, not diagnosis, which is why it no longer opens with "Not signed in":
+        // `authentication_failed` also covers expired AWS/GCP credentials and managed keys, where
+        // signing in is the wrong instruction. The CLI's own specific explanation still lands right
+        // after this, as the `result` error block, so restating the cause here can only contradict it.
+        if (AUTH_BLOCKED[ev.error]) {
           setBusy(false);
-          return void statusLine(
-            'Not signed in. Run `claude` in a terminal and sign in there, then press Refresh.',
-            SVG_ALERT, 'status err');
+          return void statusLine(AUTH_BLOCKED[ev.error], SVG_ALERT, 'status err');
         }
         if (reqSeed == null && ev.uuid) reqSeed = ev.uuid;
         // The uuid the transcript will carry — stamp it on the blocks this message just drew, so a
@@ -2884,6 +2913,11 @@
 
     // status lines
     statusLine('Stopped', SVG_STOP);
+    // Both account-blocked codes. Drawn through the same table the live branch reads, so the
+    // gallery cannot drift from it — and so the one state a signed-out user would be stuck on is
+    // reviewable without actually being signed out.
+    statusLine(AUTH_BLOCKED.authentication_failed, SVG_ALERT, 'status err');
+    statusLine(AUTH_BLOCKED.oauth_org_not_allowed, SVG_ALERT, 'status err');
 
     // ---- replayed transcript blocks (the resume path, drawn by renderTranscript itself) ----
     renderTranscript([

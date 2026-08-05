@@ -71,7 +71,7 @@ and the reasoning is in the item.
 | 14 | Todo / task checklist | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | `TodoWrite` (replay) + the live `Task*` list |
 | 16 | Rate-limit warnings | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · seen live, then corrected | first guess cried wolf on the routine case |
 | 23 | CLI stderr | — | ? | ✅ | **DONE** 2026-08-05 | tail buffered, shown under the exit line |
-| 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | one branch; the message IS the fix |
+| 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · **VERIFIED against 2.1.222** | field confirmed; 1 dead check dropped, 1 code added, wording corrected |
 | 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P2 | **S** — `ioRow('IN', …)` already exists |
 | 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
 | 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
@@ -555,6 +555,41 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
     in". VS Code opens its own login flow here; we deliberately don't, so the message carries the
     whole fix. Being terminal-only makes this MORE important to handle, not less — an unexplained
     auth error in a plugin with no login UI is a dead end.
+
+    **Verified 2026-08-05 against 2.1.222** — it had shipped BLIND, on the same basis that made
+    item 16 cry wolf, and an account claim is the wrong place to guess. The field was right and two
+    details around it were wrong:
+    - ✅ **`ev.error` on the `assistant` event is correct.** The CLI serializes it onto every
+      assistant frame unconditionally — `yield {type:"assistant", …, timestamp:n.timestamp,
+      error:n.error, …}` — and VS Code's shipped consumer reads the identical thing:
+      `if (e.error === "authentication_failed") this.context.showLogin()` in `webview/index.js`.
+      Note the split: `extension.js` has **zero** occurrences, so grepping only the host half of the
+      bundle would have wrongly concluded VS Code doesn't handle this at all.
+    - ❌ **`ev.subtype === 'authentication_failed'` was a guess and is gone.** Assistant frames carry
+      no `subtype`; the wire schema's neighbours are `is_meta`, `is_virtual`, `is_api_error_message`,
+      `api_error_status`, `api_error`, `error_details`.
+    - ❌ **`oauth_org_not_allowed` was missing** — the sibling account-blocked code, sitting directly
+      beside `authentication_failed` in the CLI's own router. Its fix is the opposite of ours:
+      *"org disabled OAuth — use API key or ask admin"*. Telling that user to sign in again is advice
+      that cannot work.
+    - ❌ **The wording asserted a cause it can't know.** `authentication_failed` also covers expired
+      AWS/GCP credentials and managed keys (`Ju({error:"authentication_failed", content: …})` is
+      raised from all of them), where "Not signed in" is simply false. The line is now ROUTING, not
+      diagnosis — the CLI's own specific message still arrives immediately after as the `result`
+      error block, so restating the cause here could only contradict it.
+
+    Scope held deliberately: the other **eight** codes in the enum (`rate_limit`, `overloaded`,
+    `billing_error`, `server_error`, `invalid_request`, `model_not_found`, `max_output_tokens`,
+    `unknown`) are transient or request-shaped, not account-shaped. The `result` error block already
+    states them and offers Retry; routing them through our table would replace a specific CLI
+    message with a vaguer one of ours. `AUTH_BLOCKED` in chat.html holds the two that qualify, and
+    is null-prototype so an unknown code can only miss — a plain literal answers
+    `AUTH_BLOCKED['constructor']` with a truthy function and renders it as the fix.
+
+    Still unverified, and honestly so: **no local transcript contains a single `isApiErrorMessage`
+    record**, so neither this branch nor the replay path at `SessionStore.kt:632` has been observed
+    against real data. What is confirmed is the contract both are written to, which is as far as
+    reading the binary can take it.
   - **20b — account / plan display: by design, don't build.** `/status` answers it, it is read
     occasionally, and it is the login half of the split.
 
@@ -761,10 +796,26 @@ boilerplate if built to spec, item 7 was sized as a per-tool matrix and was one 
 family turned out to be three tools with three different answers. Measure the shape, not just the
 size.
 
+**Verifying a BLIND item is itself a task, and it pays.** Three items shipped flagged BUILT BLIND
+(19, 20a, 21) because the data to check them against does not exist locally. 20a was verified on
+2026-08-05 by reading the 2.1.222 binary instead of the transcripts: the field it reads was right,
+and two other things about it were wrong — a `subtype` check for a field that does not exist, and a
+missing sibling code whose correct advice is the opposite of ours. Neither would have surfaced from
+use, because both fail *silently* in the direction of saying nothing or saying something plausible.
+Two habits that did the work, both worth repeating:
+- **Grep the whole bundle, not the half you expect.** `authentication_failed` appears **zero** times
+  in VS Code's `extension.js` and once in `webview/index.js`. Checking only the host would have
+  "proved" VS Code doesn't handle it.
+- **Prefer the serializer to the schema.** The zod wire schema lists `is_api_error_message` /
+  `api_error_status` / `api_error` / `error_details` and no plain `error`, which reads as though
+  `ev.error` were dead. The emission site settles it — `error:n.error` is written onto every
+  assistant frame. When the two disagree, the code that runs wins.
+
 **Tier 2 — signals with no terminal fallback (rule 1).** All small, and each converts a dead end
 into something actionable. Together they are less work than item 6 alone; a good tier to take when
 there isn't a long sitting available.
-- Auth failure → "sign in from a terminal" (20a) `XS` — the whole fix is the message.
+- Auth failure → "sign in from a terminal" (20a) `XS` — the whole fix is the message. `XS` held up
+  for the code; the *verification* cost more than the branch did, and found two defects in it.
 - Rate-limit warnings (16) `S` — one status line through the existing `statusLine()`.
 - CLI stderr on non-zero exit (23) `S` — today the cause is only in idea.log.
 - MCP connection failures (13a) `S` — a notice, explicitly not a server-management UI (13b).
