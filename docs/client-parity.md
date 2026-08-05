@@ -80,7 +80,7 @@ and the reasoning is in the item.
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ❌ | **P2** ↓ (philosophy) | **S** — data already in the init payload |
 | 22 | Hook activity | ✅ | ? | ❌ | P2 | **?** — probe the empty-ack first; unknown until then |
 | 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
-| 19 | Real thinking-token count | ✅ | ✅ | ⚠️ | P2 | **XS** — swap estimate for the event |
+| 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ❌ | P2 | **S** — retires the `[1m]` sniffing |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
@@ -470,8 +470,9 @@ Approaching / hit a usage limit, and when it resets.
   `status:rateLimitType` and dismissible.
 - **Us:** ❌ the event type isn't in our `switch` at all; we only see the failure once it becomes an
   API error or an `is_error` result.
-- **Take: P1.** Cheap (one status line through the existing `statusLine()`), and it turns a
-  confusing hard failure into an expected one.
+- **Take: DONE 2026-08-05.** Cheap (one status line through the existing `statusLine()`), and it
+  turns a confusing hard failure into an expected one. BUILT BLIND: the event lives in the CLI
+  binary but has never appeared in a local transcript.
 
 ### 17. Cost
 `result.total_cost_usd`, `duration_api_ms`, `num_turns`, `modelUsage`.
@@ -502,8 +503,18 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 - **VS Code:** ✅ `system/thinking_tokens` → `estimated_tokens`, formatted `1.2k tokens`.
 - **Us:** ⚠️ we show a number, but it's our own `chars/4` guess (`chat.html:1761`) — the CLI is
   telling us the real one and we ignore it.
-- **Take: P2.** Strictly an accuracy upgrade; swap the estimate for the event, keep chars/4 as the
-  fallback for when the event doesn't arrive.
+- **Take: DONE 2026-08-05.** `system/thinking_tokens` now sets the count and `chars / 4` remains
+  only as the fallback, through one `paintThinkTokens()` so the real figure and the guess cannot
+  render differently.
+  **BUILT BLIND, but the absence here is not evidence.** Zero genuine records exist locally — yet
+  this is a LIVE event that is never written to the transcript (same class as `rate_limit_event`),
+  so transcript silence says nothing about whether it fires. The binary carries the emission site
+  with the exact shape: `subtype:"thinking_tokens", estimated_tokens, estimated_tokens_delta, uuid`.
+  Contrast `interrupted` / `isImage` / `userModified`, which are transcript FIELDS — there, absence
+  across thousands of records IS evidence. Worth keeping the two cases apart when scoring.
+  The subtle part was the reset: `thinkTokReal` is cleared everywhere `thinkTok` is, or a real count
+  from one block leaks into the next block's fallback and reads as fact. Verified headless — a new
+  block with no event falls back to ~200 rather than inheriting the previous 137.
 
 ### 20. Account / plan / auth
 - **Terminal:** ✅ `/status`, `/login`.

@@ -311,6 +311,18 @@
   // No authoritative usage arrives until message_delta (end of message), so show a live
   // chars/4 estimate as text/thinking streams; message_delta then reconciles to the real count.
   function estimateMsgTokens() { msgTokens = Math.round(msgChars / 4); updateWorkTokens(); }
+  /**
+   * The thinking block's token count. The CLI sends the REAL figure as `system/thinking_tokens`
+   * (estimated_tokens); `thinkChars / 4` is our own guess and stays only as the fallback for when
+   * that event does not arrive — it is a live-only event, never written to the transcript, so its
+   * absence from local records says nothing about whether it fires.
+   */
+  let thinkTokReal = null;
+  function paintThinkTokens() {
+    if (!thinkTok) return;
+    const n = (thinkTokReal != null) ? thinkTokReal : Math.max(1, Math.round(thinkChars / 4));
+    thinkTok.textContent = ' · ' + fmtTok(n) + ' tokens';
+  }
   function hideWorking() {
     workTimers.forEach(clearInterval); workTimers = [];
     if (workingEl) { workingEl.remove(); workingEl = null; }
@@ -816,6 +828,7 @@
     if (welcome) welcome.style.display = '';
     earlierRemaining = 0; earlierInFlight = false;  // never pull a previous session's chunks
     curBubble = null; curRaw = ''; mdPending = false; curThink = null; curThinkRaw = ''; thinkTok = null;
+    thinkTokReal = null;   // a stale real count must not leak into the next block's fallback
     curTurn = null; workingEl = null; activeAsk = null;
     // per-session stream state: a stale openTool would keep appending into a detached element,
     // toolsById pins removed DOM for the page lifetime, and a leftover lastUser would let a
@@ -1747,7 +1760,7 @@
   /* ---------- Kotlin -> page ---------- */
   let curBubble = null, curRaw = '';
   let curThink = null, curThinkRaw = '', thinkStart = 0, thinkChars = 0, thinkTimer = null,
-      thinkTok = null;
+      thinkTok = null; thinkTokReal = null;
 
   /**
    * Markdown re-render throttle: renderMd(curRaw) re-parses (and re-highlights) the WHOLE
@@ -1827,6 +1840,10 @@
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }
+        } else if (ev.subtype === 'thinking_tokens') {
+          // The CLI's own count, replacing our chars/4 guess for as long as it keeps sending them.
+          const n = ev.estimated_tokens;
+          if (typeof n === 'number' && n >= 0) { thinkTokReal = n; paintThinkTokens(); }
         } else if (ev.subtype === 'api_error') {
           // The CLI is retrying a failed request. Without this the panel just stalls, and there is
           // no terminal to check — this session's CLI is ours.
@@ -1891,7 +1908,7 @@
     if (thinkTimer) { clearInterval(thinkTimer); thinkTimer = null; }
     const secs = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
     curThink.replaceWith(thinkBlock(curThinkRaw, secs));
-    curThink = null; curThinkRaw = ''; thinkTok = null;
+    curThink = null; curThinkRaw = ''; thinkTok = null; thinkTokReal = null;
   }
 
   /* ---------- retraction: uuid stamping, so withdrawn content can be found again ----------
@@ -2005,7 +2022,7 @@
           curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
             '<span class="th-el-wrap" hidden> · <span class="th-el"></span></span><span class="tok"></span></div>';
           thinkStart = Date.now(); thinkChars = 0; curThinkRaw = '';
-          thinkTok = curThink.querySelector('.tok');
+          thinkTok = curThink.querySelector('.tok'); thinkTokReal = null;
           const thEl = curThink.querySelector('.th-el'), thWrap = curThink.querySelector('.th-el-wrap');
           thinkTimer = setInterval(function () {
             if (!curThink) { clearInterval(thinkTimer); thinkTimer = null; return; }
@@ -2027,7 +2044,7 @@
           curThinkRaw += (d.thinking || '');
           thinkChars += (d.thinking || '').length;
           msgChars += (d.thinking || '').length; estimateMsgTokens();
-          if (thinkTok) thinkTok.textContent = ' · ' + fmtTok(Math.max(1, Math.round(thinkChars / 4))) + ' tokens';
+          paintThinkTokens();
           maybeScroll();
         } else if (d.type === 'input_json_delta' && openTool) {
           openTool.json += (d.partial_json || '');
