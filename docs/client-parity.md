@@ -73,7 +73,7 @@ and the reasoning is in the item.
 | 23 | CLI stderr | — | ? | ✅ | **DONE** 2026-08-05 | tail buffered, shown under the exit line |
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · **VERIFIED against 2.1.222** | field confirmed; 1 dead check dropped, 1 code added, wording corrected |
 | 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — one branch, and a SHARED one (`IN_KEYS`) |
-| 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
+| 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · live progress line | `L`→`S` once probed; nesting is unbuildable on replay |
 | 4 | Background task roster | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · full roster | was `M` "rides on 1" — actually `S`, the event carries names |
 | 12 | Server-side tools (web search blocks) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — but replay needed it too, and the rule is shared |
 | 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
@@ -140,12 +140,45 @@ The tool calls, thinking and text a `Task`/`Agent` sub-agent produces while it r
 - **VS Code:** ✅ `system/tool_progress` events carrying `parent_tool_use_id` + `repl_call` are fed
   to the parent tool card via `addProgress({innerToolUseId, toolName, toolInput, phase})`; stream
   events are routed with their `parent_tool_use_id` into the assembler.
-- **Us:** ❌ nothing reads `parent_tool_use_id` or `isSidechain` anywhere in the plugin, and
-  `tool_progress` isn't in the `switch` at `chat.html:1658`.
-- **Take: P2.** Real work — needs a nesting model in the DOM and a matching replay path. Do it after
-  the cheap items below, and note the latent hazard: because nothing *filters* on
-  `parent_tool_use_id` either, if the CLI ever streams child text to us it would interleave into the
-  main transcript undistinguished. A one-line guard is worth adding even before the feature.
+- **Us:** ❌ nothing read `parent_tool_use_id` or `isSidechain` anywhere in the plugin.
+- **Take: P2. DONE 2026-08-06**, as a live progress line — NOT the nested tool-call tree this item
+  described. Four probes against 2.1.222 with a real synchronous sub-agent settled the shape:
+
+  **The "latent hazard" cannot occur.** The item warned that unfiltered child text would interleave
+  into the main transcript. It can't: `stream_event` NEVER carries `parent_tool_use_id` (28 stream
+  events from a real sub-agent run, zero with a parent), and our rendering is entirely delta-driven,
+  so child work is excluded structurally rather than by luck. A guard was still added on the
+  `assistant` and `user` cases — the doc was right that it is worth having before the feature — so
+  the exclusion is now intentional, and stamping a child's uuid can never mis-seed a retraction or
+  the completion summary.
+
+  **Replay can never show any of this, and that is the CLI's choice, not ours.** Measured:
+  **zero** `isSidechain:true` across 23,123 records carrying the field; **zero** persisted
+  `task_started` / `task_progress` / `task_notification`; and an async `Agent`'s stored result is
+  only launch metadata (`agentId`, `outputFile`, `status`) rather than the work. So sub-agent
+  internals are a live-only signal by construction.
+
+  **What shipped** is what the terminal itself shows, driven by the lifecycle the probe revealed:
+
+      task_started      {task_id, tool_use_id, description, subagent_type, task_type, prompt}
+      task_progress     {…, description, subagent_type, last_tool_name,
+                         usage:{total_tokens, tool_uses, duration_ms}}
+      task_updated      {task_id, patch:{status, end_time}}
+      task_notification {…, status, summary, output_file, usage}
+
+  → one line under the Agent tool line: `Explore · Reading words.txt · 1 tool use · 8.1k tokens`,
+  which on completion swaps the running commentary for the returned `summary`. `subagent_type` is
+  remembered across the lifecycle because `task_notification` omits it — the finished line would
+  otherwise drop the word saying which agent ran.
+
+  Two bugs the real frames caught that a synthetic fixture would not have: the missing
+  `subagent_type` above, and an empty `.t-prog` div left behind whenever a frame carried nothing
+  worth printing (the element was built before deciding there was anything to say).
+
+  **Accepted divergence**, recorded in `docs/renderer-parity.md`: a resumed session keeps the Agent
+  tool line, its prompt (item 3) and its result (item 2), and loses the progress line. The
+  alternative was showing nothing at all while a sub-agent runs, which is the during-work question
+  with no terminal fallback (rule 1).
 
 ### 2. Sub-agent final report
 The summary the sub-agent hands back.
@@ -1056,8 +1089,10 @@ names were already sitting in a payload we were reading for its `.length`. Worth
 sequencing anything else behind an `L`: **check what the event already carries before assuming a
 feature is downstream of a design pass.**
 
-That leaves the two genuinely large ones, each needing a design pass before any code: sub-agent
-nesting (1) `L`, and queued messages (24) `L`, which is composer state rather than a renderer.
+~~Sub-agent nesting (1)~~ is **done**, and shrank once probed: it was an `L` for a nested DOM tree,
+but the tree is unbuildable on replay (the CLI persists none of it) and the useful signal — what the
+sub-agent is doing, and its tool/token tail — was an `S` off the task lifecycle. That leaves queued
+messages (24) `L`, which is composer state rather than a renderer.
 ~~Hook activity (22)~~ **done** — the empty-ack question turned out to be no bug at all, and the
 real gap (`system/informational`) was neither hook-specific nor what the item described.
 

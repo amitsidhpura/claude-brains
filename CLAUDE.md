@@ -211,6 +211,11 @@ always-allow / allow-directory; stripped on `blocked_path` cards where no grant 
 ALL `addRules` suggestions merge into ONE "Always allow" button that echoes every rule index at
 once (compound commands arrive as one suggestion per sub-command — granting half would re-prompt;
 the wire `sugg` field is a comma-separated index list, done-text names the granted rules).
+Sub-agent progress rides `task_started`/`task_progress`/`task_notification` onto a
+`.t-prog` line under the Agent tool line ("Explore · Reading words.txt · 1 tool use · 8.1k tokens");
+`subagent_type` must be remembered because `task_notification` omits it. That line is LIVE-ONLY —
+none of those events is ever persisted, and child `assistant`/`user` events (`parent_tool_use_id`)
+are deliberately ignored.
 Clickable file references (`.t-desc.path`, `.card-h code`) open in the editor via `kind:"open"`,
 line-numbered Edit/Write diffs with trimmed context (unchanged anchor lines shown as context, not
 ±), ↑/↓ composer message history, animated scroll-to-bottom (button + on submit).

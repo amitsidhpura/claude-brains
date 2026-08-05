@@ -323,6 +323,12 @@ blockquote > *:last-child { margin-bottom: 0; }
    is what keeps it from reading as a last line of the result. .io-note shares the geometry for the
    same reason it exists (one line about the row, below the value, outside the fold) but says a
    different kind of thing: what the CLI reported ABOUT the result, not what a cap removed. */
+/* Sub-agent progress (client-parity item 1). Sits under its Agent tool line, aligned with the IN/OUT
+   box at 22px, and reports what the sub-agent is doing WHILE it runs. LIVE ONLY, unavoidably: the
+   CLI never persists task_started/task_progress/task_notification (measured — zero in any
+   transcript), so a resumed session keeps the tool line and its result and loses this. */
+.t-prog { margin: -2px 0 0 22px; font-size: 12px; color: var(--dot); }
+.t-prog.run { color: var(--muted); }
 .io-cut, .io-note { flex: 0 0 100%; margin-left: 32px; color: var(--muted); font-size: 11px;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
 .io-cut.click { cursor: pointer; }

@@ -927,6 +927,7 @@
     // first-turn Retry resend the PREVIOUS session's message (images included)
     openTool = null; toolsById = {}; lastUser = null;
     infoByTool = {};   // detached lines from the old session would otherwise be updated in place
+    taskProg = {};     // same: a stale task_id must not resurrect a removed progress line
     // retraction state is per-session too: a leftover evicted uuid would delete a NEW session's
     // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
@@ -1172,6 +1173,62 @@
     }
     const el2 = statusLine(text, lv.icon ? SVG_ALERT : null, lv.cls);
     if (toolUseId) infoByTool[toolUseId] = el2;
+  }
+  /**
+   * Sub-agent progress (client-parity item 1) — what a `Task`/`Agent` sub-agent is doing while it
+   * runs, on the tool line that launched it.
+   *
+   * Driven by the CLI's task lifecycle, probed on 2.1.222 with a real synchronous sub-agent:
+   *   task_started      {task_id, tool_use_id, description, subagent_type, task_type, prompt}
+   *   task_progress     {task_id, tool_use_id, description, subagent_type, last_tool_name,
+   *                      usage:{total_tokens, tool_uses, duration_ms}}
+   *   task_updated      {task_id, patch:{status, end_time}}
+   *   task_notification {task_id, tool_use_id, status, summary, output_file, usage}
+   *
+   * DELIBERATELY NOT the nested tool-call tree the item described. The child messages do exist —
+   * `assistant`/`user` events carrying `parent_tool_use_id` — but this line is what the terminal
+   * itself shows ("N tool uses · M tokens"), and it answers the question actually being asked while
+   * a sub-agent runs, which is "is it still going, and on what?".
+   *
+   * LIVE ONLY, and unavoidably so: none of these events is ever persisted (measured — zero
+   * `task_started`/`task_progress`/`task_notification` in any transcript, and zero
+   * `isSidechain:true` across 23,123 records). A resumed session keeps the Agent tool line, its
+   * prompt and its result, and loses this line. Recorded in docs/renderer-parity.md as an accepted
+   * divergence rather than a bug, because the alternative is showing nothing while a sub-agent runs.
+   */
+  let taskProg = {};   // task_id -> {el, type}; reset per session
+  function taskLine(ev, done) {
+    const st = ev.task_id ? (taskProg[ev.task_id] || (taskProg[ev.task_id] = {})) : {};
+    // `subagent_type` rides on task_started/task_progress but NOT on task_notification (checked
+    // against the real frames), so it is remembered — otherwise the finished line drops the one
+    // word that says which kind of agent ran.
+    if (ev.subagent_type) st.type = String(ev.subagent_type);
+    const u = ev.usage || {};
+    const bits = [];
+    if (st.type) bits.push(st.type);
+    // `summary` is the finished answer, `description` the running commentary — so a completed line
+    // stops saying "Reading words.txt" and says what came back instead.
+    const what = done ? (ev.summary || ev.description) : ev.description;
+    if (what) bits.push(String(what).replace(/\s+/g, ' ').slice(0, LIM.descMax));
+    const n = u.tool_uses;
+    if (typeof n === 'number' && n > 0) bits.push(n + (n === 1 ? ' tool use' : ' tool uses'));
+    if (typeof u.total_tokens === 'number' && u.total_tokens > 0) bits.push(fmtTok(u.total_tokens) + ' tokens');
+    if (done && ev.status && ev.status !== 'completed') bits.push(String(ev.status));
+    // Decided BEFORE touching the DOM: building the element first left an empty div behind whenever
+    // a frame carried nothing worth printing (a task_started with no description, zeroed counts).
+    if (!bits.length) return;
+    if (!st.el || !st.el.isConnected) {
+      const t = ev.tool_use_id ? toolsById[ev.tool_use_id] : null;
+      if (!t) return;   // no tool line to hang it on (the Agent line was never opened)
+      st.el = document.createElement('div');
+      st.el.className = 't-prog run';
+      // After the IN box when there is one, so it reads: what it is · what it was asked · how it
+      // is going.
+      (t.io || t.el).after(st.el);
+    }
+    st.el.textContent = bits.join(' · ');
+    st.el.classList.toggle('run', !done);
+    maybeScroll();
   }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
   function toolLine(name) {
@@ -2038,6 +2095,10 @@
       // Rendering is driven entirely by stream_event deltas, so the whole-message `assistant` record
       // is only here for its uuid — the one field that ties a live summary to its replayed twin.
       case 'assistant':
+        // Same guard as the `user` case below: a sub-agent's own assistant messages must not be
+        // stamped as this conversation's, or a retraction aimed at the parent could evict a child's
+        // blocks (and reqSeed would take the child's uuid, mis-seeding the completion summary).
+        if (ev.parent_tool_use_id) return;
         // An auth failure is a DEAD END here: the plugin has no login flow by design
         // (CLAUDE.md § Philosophy), so the message has to carry the route out. VS Code hangs its
         // own login off this exact field — `if (e.error === "authentication_failed") showLogin()`
@@ -2064,7 +2125,19 @@
         // without a refusal event. Same eviction, different door.
         evictUuids(ev.supersedes, 'superseded');
         return;
-      case 'user':               return onUserEvent(ev);
+      // A sub-agent's OWN messages arrive here, tagged with the tool_use that launched them. They
+      // are deliberately ignored: their tool calls and results belong to the sub-agent, not to this
+      // conversation, and the progress line (taskLine) is how that work is reported instead.
+      //
+      // Today this guard is belt-and-braces — rendering is driven entirely by `stream_event`
+      // deltas, and deltas NEVER carry a parent (probed 2.1.222: 28 stream events from a real
+      // sub-agent run, zero with `parent_tool_use_id`), so child work is already excluded
+      // structurally. The guard makes that intentional rather than a happy accident of the
+      // architecture: the moment anything renders from whole messages, child text would otherwise
+      // interleave into the main transcript undistinguished.
+      case 'user':
+        if (ev.parent_tool_use_id) return;
+        return onUserEvent(ev);
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
       case 'files':              files = ev.items || []; return;
@@ -2108,6 +2181,16 @@
             SVG_ALERT, 'status err');
         } else if (ev.subtype === 'model_refusal_fallback') {
           onRefusalFallback(ev);
+        } else if (ev.subtype === 'task_started' || ev.subtype === 'task_progress') {
+          taskLine(ev, false);
+        } else if (ev.subtype === 'task_notification') {
+          taskLine(ev, true);
+        } else if (ev.subtype === 'task_updated') {
+          // Carries only {task_id, patch:{status,…}} — no tool_use_id and no usage — so it can
+          // finalize a line that already exists but can never create one.
+          const p = ev.patch || {};
+          const st = taskProg[ev.task_id];
+          if (p.status && p.status !== 'in_progress' && st && st.el) st.el.classList.remove('run');
         } else if (ev.subtype === 'informational') {
           infoLine(ev.content, ev.level, ev.tool_use_id || ev.toolUseId);
           // prevent_continuation means the turn stops HERE. A `result` does still follow (probed),
@@ -3152,6 +3235,15 @@
       'reference an issue\n\nOriginal prompt: commit this', 'warning');
     infoLine('Consider running the test suite before committing.', 'suggestion');
     infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
+
+    // sub-agent progress (item 1), driven through the real handler with the REAL frames a
+    // synchronous Explore sub-agent emitted. Live-only by nature: none of these persist.
+    { const tg2 = track(toolLine('Agent'));
+      tg2.querySelector('.t-desc').textContent = 'Read second line of words.txt';
+      toolsById['tu-agent'] = { el: tg2, name: 'Agent', io: null };
+      taskProg = {};
+      taskLine({ task_id: 'tk1', tool_use_id: 'tu-agent', description: 'Reading words.txt',
+        subagent_type: 'Explore', usage: { total_tokens: 8063, tool_uses: 1 } }, false); }
 
     // background-task roster (item 4) — chip + popup, driven through the real renderer so the
     // gallery cannot drift from it. Click the chip to open the roster.
