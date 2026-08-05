@@ -400,11 +400,24 @@ Which MCP servers connected, which failed.
   ownership, none of which a whole-list rewrite can express. The string survives in the binary but
   is not offered to the model.
   So what shipped serves **replaying older sessions**, which is legitimate but is not what "follow a
-  long turn at a glance" meant. **The live-relevant checklist is still open**, and the measurement
-  points at a cheap first step: `TaskList` returns the whole list in a fixed format
-  (`#1 [pending] Subject`), so parsing that into the SAME `.todos` renderer would give a real
-  checklist today with no aggregation. The full `TaskCreate`/`TaskUpdate` running list needs real
-  state and a decision about where it belongs in the thread — that is the L-sized part.
+  long turn at a glance" meant.
+
+- **14b — the live checklist, and the CLI hands it to us on a plate.** Found 2026-08-05: the Tasks
+  system PERSISTS TO DISK, one JSON file per task, keyed by the session id we already track:
+
+      ~/.claude/tasks/<sessionId>/<n>.json
+      { "id": "2", "subject": "Write the data model", "description": "…",
+        "activeForm": "Writing the data model", "status": "completed",
+        "blocks": [], "blockedBy": [] }
+
+  Verified against a live session: 13 files matching the task list exactly, updated as the turn ran.
+  This retires both workarounds considered before finding it — parsing `TaskList`'s text output, and
+  aggregating `TaskCreate`/`TaskUpdate` increments. Neither is needed: the file IS the state,
+  structured, authoritative, and under the same `~/.claude` root `SessionStore` already reads
+  (so `SessionStore.claudeHome` makes it testable against a temp tree, same as everything else).
+  It also carries `blocks`/`blockedBy`, which the old `TodoWrite` had no way to express.
+  Sized `S` for the read and the render — the open question is WHERE a always-current list belongs
+  in a linear thread, not how to obtain it.
 
 ### 15. Compaction boundary
 Where the context got compacted, why, and how big it was before.
