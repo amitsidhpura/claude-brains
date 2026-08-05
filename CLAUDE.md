@@ -167,9 +167,15 @@ completion summary (✻ Baked for Ns · ↓ tokens; background-task suspend/resu
 dev gallery (Ctrl+Alt+G renders every transient state in the live webview),
 context gauge in the composer (share of the window the next request carries — latest request's
 input+cache_read+cache_creation, NOT a sum; orange ≥50%; click sends /compact via `sendTurn`).
-The window is not a number in the initialize payload: the 1M variants are tagged `[1m]`, on
-`resolvedModel` for default/opus but on `value` for fable — check both. Usage above the known
-window still promotes to 1M, so an untagged future model can't pin a wrong denominator.
+The denominator comes from `result.modelUsage[<model>].contextWindow` — the CLI's own number
+(`windowFromUsage`). Two traps, both measured: `modelUsage` is a MAP that routinely includes side
+models the user never picked (one turn returned `claude-opus-5[1m]` at 1M AND
+`claude-haiku-4-5-20251001` at 200k), so match the raw key — it carries the `[1m]` tag, like
+`currentModel` — then `canonicalModel`, and on no match change NOTHING. And it rides on the
+`result` event, so it can't speak until the first turn ends. Until then the seed is the old
+heuristic: the 1M variants are tagged `[1m]`, on `resolvedModel` for default/opus but on `value`
+for fable — check both. Usage above the known window still promotes to 1M, so an untagged future
+model can't pin a wrong denominator on its first turn.
 Long-session performance (see docs/limits.md for the measurements and the traps): off-screen
 `.turn-body`s skip layout/paint via `content-visibility` (2000 turns: 151ms→12ms initial, 84ms→13ms
 per reflow), and replay is WINDOWED — Kotlin parses the whole file but ships only the newest ~250

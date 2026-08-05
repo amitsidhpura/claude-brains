@@ -82,7 +82,7 @@ and the reasoning is in the item.
 | 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
-| 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ❌ | P2 | **S** — retires the `[1m]` sniffing |
+| 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
 | 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
 | 17 | Cost | ✅ | ✅ | ❌ | P3 | S |
@@ -536,11 +536,37 @@ Approaching / hit a usage limit, and when it resets.
 - **Take: P3**, and the philosophy agrees with the existing deferral: cost is checked occasionally,
   `/cost` answers it, and a spend dashboard is not something you reach for while writing a line of
   code. Keep it on the DEFERRED list rather than promoting it.
-- **17a — `modelUsage[].contextWindow`: P2, and separate from the above.** This is not a usage
-  display; it is a correctness fix for a feature we already ship. The context gauge currently
-  derives its denominator by sniffing `[1m]` tags on the model id, with a promote-on-overflow
-  guard for unknown models. The CLI hands us the real window in `modelUsage`. Taking it removes a
-  heuristic from a number the user glances at constantly — which is exactly the panel's job.
+- **17a — `modelUsage[].contextWindow`: P2, and separate from the above. DONE 2026-08-06.** This is
+  not a usage display; it is a correctness fix for a feature we already ship. The context gauge
+  derived its denominator by sniffing `[1m]` tags on the model id, with a promote-on-overflow guard
+  for unknown models. The CLI hands us the real window, so the gauge now takes it and the heuristic
+  is demoted to a seed.
+
+  **Probed before building (2.1.222), and the payload had a trap the item did not mention.** The
+  per-model schema is real — `contextWindow: w.number().int()` is a REQUIRED field alongside
+  `maxOutputTokens`, `canonicalModel` and `provider` — but `modelUsage` is a **map, not a value**,
+  and a single ordinary turn came back with two entries:
+
+      "claude-opus-5[1m]":         contextWindow 1000000   canonicalModel "claude-opus-5"
+      "claude-haiku-4-5-20251001": contextWindow  200000   canonicalModel "claude-haiku-4-5"
+
+  The CLI runs small side models for its own errands, so the map routinely describes models the user
+  never selected. Taking "the" window from it — first entry, or max, or last — would have set the
+  denominator to a fifth of the truth on any turn where a side model happened to sort first, and
+  driven the gauge past 100% while looking authoritative. The match is therefore to OUR model
+  specifically: raw key first (it carries the `[1m]` tag exactly as `currentModel` does), then
+  `canonicalModel`. **No match means no update** — the tag heuristic is a reasonable guess and a
+  confident wrong number is worse than a guess.
+
+  Two consequences of the sourcing, both accepted rather than worked around:
+  - `modelUsage` rides on the **`result`** event, so the earliest it can speak is the end of the
+    first turn. There is no window figure in the initialize payload at all (its keys were listed
+    while probing 13a). The `[1m]` seed is what covers the gap until then, which is why it stays.
+  - The read sits ABOVE `onResult`'s background-task early return, so an intermediate result from a
+    suspended turn still refines the window instead of waiting for the turn to finish.
+
+  The promote-on-overflow guard in `ctxWindow()` stays as well: it costs nothing and still covers an
+  untagged future model on its first turn, before any `result` has arrived.
 
 ### 18. Token breakdown / usage panel
 Input vs. cache-read vs. cache-creation vs. output, and what's eating the window.
@@ -890,7 +916,7 @@ payload entirely. Three of four small items were sized correctly and sourced inc
 an argument for probing the wire before writing the branch, not for padding the estimate.
 
 **Tier 3 — depth.** Ordered cheapest-first, since none of it is urgent:
-real thinking tokens (19) `XS`, `modelUsage[].contextWindow` (17a) `S` to retire the `[1m]`
+real thinking tokens (19) `XS`, ~~`modelUsage[].contextWindow` (17a)~~ **done** — retired the `[1m]`
 sniffing, server-side tool blocks (12) `S`, the sub-agent prompt (3) `S`, a "2 tasks running" chip
 (4) `S`. Then the two genuinely large ones, each needing a design pass before any code: sub-agent
 nesting (1) `L`, which 3 and the full roster (4) should ride on, and queued messages (24) `L`,

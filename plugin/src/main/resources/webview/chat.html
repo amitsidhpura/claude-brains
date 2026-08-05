@@ -2461,6 +2461,38 @@
     if (!m) return 0;
     return /\[1m\]/i.test(String(m.resolvedModel || '') + ' ' + String(m.value || '')) ? CTX_1M : CTX_STD;
   }
+  /**
+   * Item 17a: the AUTHORITATIVE window, replacing the `[1m]` tag-sniffing above for as long as the
+   * CLI keeps sending it — the same "real number beats our estimate" arrangement item 19 uses for
+   * thinking tokens, and the tag heuristic stays as the seed because this only arrives later.
+   *
+   * `modelUsage` rides on the `result` event, so the earliest it can speak is the END of the first
+   * turn; there is no window figure in the initialize payload at all (probed 2.1.222 — its keys are
+   * account, agents, available_output_styles, commands, models, output_style, pid and the fast-mode
+   * / remote-control pair, and nothing else).
+   *
+   * It is a MAP, not a value, and that is the whole difficulty. One ordinary turn came back keyed by
+   * BOTH `claude-opus-5[1m]` (contextWindow 1000000) and `claude-haiku-4-5-20251001` (200000),
+   * because the CLI runs small side models for its own errands. Picking the wrong entry would set
+   * the denominator to a fifth of the truth and drive the gauge past 100%, so the match must be to
+   * OUR model specifically: the raw key first (it carries the `[1m]` tag, exactly as `currentModel`
+   * does), then `canonicalModel` for the case where the CLI reports a resolved id we do not hold.
+   * No match means NO update — the seed heuristic is a decent guess and a wrong number is not.
+   */
+  function windowFromUsage(usage, model) {
+    if (!usage || typeof usage !== 'object' || !model) return 0;
+    const exact = Object.prototype.hasOwnProperty.call(usage, model) ? usage[model] : null;
+    let hit = exact;
+    if (!hit) {
+      const k = Object.keys(usage).find(function (key) {
+        const e = usage[key];
+        return e && (e.canonicalModel === model || key.replace(/\[1m\]$/i, '') === model);
+      });
+      hit = k ? usage[k] : null;
+    }
+    const w = hit && hit.contextWindow;
+    return typeof w === 'number' && w > 0 ? w : 0;
+  }
   function setContext(used) {
     if (!(used > 0)) return;
     ctxUsed = used;
@@ -2537,6 +2569,12 @@
   function onResult(ev) {
     const usage = ev.usage || {};
     if (typeof usage.output_tokens === 'number') reqTokens += usage.output_tokens;
+    // Item 17a. Deliberately ABOVE the background-task early return below: an intermediate result
+    // carries modelUsage too, and the window is worth taking from the first one that offers it
+    // rather than waiting for the turn to finish suspending. Only ever widens what we know — a
+    // miss returns 0 and leaves the tag-derived seed alone.
+    { const w = windowFromUsage(ev.modelUsage || ev.model_usage, currentModel);
+      if (w && w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); } }
     flushMd();
     curBubble = null;
     finishThinking();
