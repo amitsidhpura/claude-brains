@@ -817,6 +817,9 @@
     // toolsById pins removed DOM for the page lifetime, and a leftover lastUser would let a
     // first-turn Retry resend the PREVIOUS session's message (images included)
     openTool = null; toolsById = {}; lastUser = null;
+    // retraction state is per-session too: a leftover evicted uuid would delete a NEW session's
+    // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
+    curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
     turnTokens = 0; msgTokens = 0; reqSeed = null;
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // a fresh conversation carries no context; a resume re-seeds it from the __transcript frame,
@@ -1749,7 +1752,15 @@
       case 'stream_event':       return onStream(ev.event || {});
       // Rendering is driven entirely by stream_event deltas, so the whole-message `assistant` record
       // is only here for its uuid — the one field that ties a live summary to its replayed twin.
-      case 'assistant':          if (reqSeed == null && ev.uuid) reqSeed = ev.uuid; return;
+      case 'assistant':
+        if (reqSeed == null && ev.uuid) reqSeed = ev.uuid;
+        // The uuid the transcript will carry — stamp it on the blocks this message just drew, so a
+        // later retraction can find them.
+        stampMessage(ev.uuid);
+        // The SECOND retraction lane: an assistant message can supersede earlier ones directly,
+        // without a refusal event. Same eviction, different door.
+        evictUuids(ev.supersedes, 'superseded');
+        return;
       case 'user':               return onUserEvent(ev);
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
@@ -1775,6 +1786,8 @@
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }
+        } else if (ev.subtype === 'model_refusal_fallback') {
+          onRefusalFallback(ev);
         } else if (ev.subtype === 'compact_boundary') {
           // Read defensively: whether the live stream carries this subtype is unprobed (toolUseResult
           // turned out not to be), so if it never arrives replay still draws the marker and nothing
@@ -1812,11 +1825,98 @@
     curThink = null; curThinkRaw = ''; thinkTok = null;
   }
 
+  /* ---------- retraction: uuid stamping, so withdrawn content can be found again ----------
+     Rendering is driven by stream_event deltas, which carry no record uuid; the whole-message
+     `assistant` record does, and it is the SAME uuid the CLI writes into the transcript. So blocks
+     are collected as they are built and stamped when that record lands. Order is not assumed —
+     a block created after the uuid is known is stamped on creation instead.
+     NOTHING here has ever run against real data: no local transcript contains a refusal fallback or
+     a `supersedes` field. It is written from the VS Code bundle's wire shape, so the failure mode is
+     deliberately "does nothing" rather than "removes the wrong thing". */
+  let curMsgUuid = null;      // record uuid of the message currently streaming
+  let curMsgEls = [];         // blocks built for it, awaiting that uuid
+  const evictedUuids = new Set();   // withdrawn before we had rendered them — drop on arrival
+  function track(node) {
+    if (!node) return node;
+    if (curMsgUuid) {
+      node.dataset.uuid = curMsgUuid;
+      // withdrawn while off-screen or before this block existed: never show it at all
+      if (evictedUuids.has(curMsgUuid)) { node.remove(); return node; }
+    } else curMsgEls.push(node);
+    return node;
+  }
+  function stampMessage(uuid) {
+    if (!uuid) return;
+    curMsgUuid = uuid;
+    curMsgEls.forEach(function (n) { n.dataset.uuid = uuid; });
+    if (evictedUuids.has(uuid)) curMsgEls.forEach(function (n) { n.remove(); });
+    curMsgEls = [];
+  }
+
+  /**
+   * Remove blocks the CLI has withdrawn, and SAY SO. Content vanishing without explanation is the
+   * same defect as a silent truncation (docs/limits.md, "no silent caps") — the user would be left
+   * wondering what they had just read. Two guards, because this is the one path here that can do
+   * harm if the wire shape is not what we inferred:
+   *   · only exact `data-uuid` matches are touched, so an unexpected uuid removes nothing;
+   *   · a `.msg-user` is never removed — the model cannot withdraw something the user typed.
+   */
+  function evictUuids(uuids, reason) {
+    if (!Array.isArray(uuids) || !uuids.length) return 0;
+    let gone = 0;
+    uuids.forEach(function (u) {
+      if (typeof u !== 'string' || !u) return;
+      evictedUuids.add(u);                    // may arrive before the block it names
+      Array.prototype.forEach.call(log.querySelectorAll('[data-uuid="' + CSS.escape(u) + '"]'), function (n) {
+        if (n.classList.contains('msg-user') || n.closest('.msg-user')) return;
+        n.remove(); gone++;
+      });
+    });
+    if (gone) statusLine(gone + (gone === 1 ? ' message' : ' messages') + ' withdrawn' +
+      (reason ? ' (' + reason + ')' : ''), SVG_ALERT);
+    return gone;
+  }
+
+  /**
+   * `system/model_refusal_fallback`: a safety classifier flagged the exchange, so the CLI retries on
+   * a different model and withdraws what it had already sent. VS Code additionally offers a settings
+   * gate ("when off, your session will pause instead") and a prompt dialog behind an experiment
+   * flag; neither is ours to own — configuration is the terminal's half (CLAUDE.md § Philosophy).
+   * We show what happened, follow the model, and drop the retracted blocks.
+   */
+  function onRefusalFallback(ev) {
+    // Both spellings, deliberately: the CLI's emission site writes camelCase keys while the VS Code
+    // validator reads snake_case — the same split compactMetadata/compact_metadata has, handled the
+    // same way. Guessing one spelling is how a built-blind handler dies silently.
+    const orig = ev.original_model || ev.originalModel || '',
+          fb = ev.fallback_model || ev.fallbackModel || '';
+    function label(v) {
+      const m = allModels().find(function (x) { return x.value === v; });
+      return m ? chipName(m) : prettyModel(v);
+    }
+    if (fb) {
+      // FOLLOW the CLI, do not instruct it: it has already switched, so going through setModel()
+      // would bridge a `model` message back telling it what it just told us. Same display-only
+      // path the `__models` handler uses.
+      currentModel = fb;
+      setModelChip(label(fb), fb);
+      renderModels();
+    }
+    const bits = [];
+    bits.push(ev.content ||
+      'Safeguards flagged this message. This sometimes happens with safe, normal conversations.');
+    if (orig && fb) bits.push('Switched from ' + label(orig) + ' to ' + label(fb) + '.');
+    statusLine(bits.join(' '), SVG_ALERT, 'status err');
+    evictUuids(ev.retracted_message_uuids || ev.retractedMessageUuids,
+      'withdrawn by ' + (orig ? label(orig) : 'the model'));
+  }
+
   function onStream(e) {
     switch (e.type) {
       case 'message_start': {
         flushMd();
         curBubble = null; curRaw = '';
+        curMsgUuid = null; curMsgEls = [];
         msgTokens = 0; msgChars = 0;
         const u = (e.message || {}).usage || {};   // prompt side only arrives here
         setContext((u.input_tokens || 0) + (u.cache_read_input_tokens || 0) +
@@ -1826,13 +1926,13 @@
       case 'content_block_start': {
         const cb = e.content_block || {};
         if (cb.type === 'tool_use') {
-          const t = toolLine(cb.name);
+          const t = track(toolLine(cb.name));
           openTool = { el: t, name: cb.name || 'tool', json: '' };
           if (cb.id) toolsById[cb.id] = openTool;
           flushMd();
           curBubble = null; // text after a tool starts a fresh block
         } else if (cb.type === 'thinking') {
-          curThink = el('think-live', '');
+          curThink = track(el('think-live', ''));
           curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
             '<span class="th-el-wrap" hidden> · <span class="th-el"></span></span><span class="tok"></span></div>';
           thinkStart = Date.now(); thinkChars = 0; curThinkRaw = '';
@@ -1850,7 +1950,7 @@
       case 'content_block_delta': {
         const d = e.delta || {};
         if (d.type === 'text_delta') {
-          if (!curBubble) { curBubble = el('blk', ''); }
+          if (!curBubble) { curBubble = track(el('blk', '')); }
           curRaw += d.text;
           if (!mdPending) { mdPending = true; requestAnimationFrame(flushMd); }
           msgChars += d.text.length; estimateMsgTokens();   // live token estimate
@@ -2504,6 +2604,15 @@
       ['IN', cutInfo(longCmd, LIM.cmdMax).shown, cutInfo(longCmd, LIM.cmdMax)],
       ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax)],
     ]));
+    // refusal fallback — a safety classifier flagged the exchange, so the CLI retried on another
+    // model and withdrew what it had sent. Drawn through the real handler; the retracted uuid names
+    // nothing here, so this shows the notice without the eviction (which needs stamped blocks).
+    onRefusalFallback({
+      original_model: 'claude-opus-5', fallback_model: 'claude-sonnet-5',
+      content: "Safeguards flagged this message. This sometimes happens with safe, normal conversations.",
+      retracted_message_uuids: [],
+    });
+
     // compaction boundary — the summary is the CLI's, folded, and NOT a user message. Real ones run
     // to 25-41k characters; this stub is long enough to exercise the fold.
     compactBlock(

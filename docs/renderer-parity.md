@@ -258,6 +258,25 @@ Mostly deliberate; listed so nothing is silently forgotten.
         echoed as a live event — it exists only as the transcript record. So a resumed session is
         RICHER than the live render here, which is the opposite of the usual lossy-on-resume shape
         and needs no fix: nothing is claimed falsely either way.
+- [~] **Retraction (refusal fallback / supersedes) is BUILT BLIND** — 2026-08-05, item 21. Both
+      paths withdraw blocks the CLI has taken back, keyed on the record uuid now stamped on them
+      (`stampMessage` live, `Item.uuid` on replay). **Nothing here has ever run against real data:**
+      no local transcript contains `model_refusal_fallback` or an assistant `supersedes` field, and
+      whether the CLI even emits the event over `--output-format stream-json` is unprobed — the wire
+      shape is inferred from the VS Code webview bundle (2.1.222), whose transport is not ours.
+      · Deliberate failure mode: an unexpected payload matches no uuid and removes NOTHING, which is
+        the pre-existing behaviour. Wrong guess degrades to inert, never to deleting the wrong block.
+      · Two guards on the harmful direction: exact `data-uuid` match only, and a `.msg-user` is never
+        removed. The live probe forces the second one by stamping a uuid onto a user block (production
+        never does), because otherwise the rule would be untested belt-and-braces.
+      · Eviction is ANNOUNCED, not silent — same house rule as `docs/limits.md`'s "no silent caps".
+      · **Verified against the CLI binary (2.1.222), not just the webview:** every wire field is in
+        the binary, and its emission site writes camelCase (`originalModel`) while the webview
+        validates snake_case — both spellings are accepted on both paths, pinned by a camelCase
+        fixture case. The binary's own doc string confirms `supersedes` may name tombstoned
+        tool_result frames; those uuids match nothing we stamp and degrade to no-op.
+      · **Re-verify the moment a real one appears.** If the shape still differs, the symptom will be
+        silence, not an error: the notice simply never renders.
 - [x] Sidechain/subagent record ordering untested (no local fixtures). **Tested 2026-07-30** —
       neither path branches on `isSidechain`, so subagent records replay in FILE ORDER, interleaved
       with the parent turn; the parent's Task result still attaches to the Task tool line, not to a

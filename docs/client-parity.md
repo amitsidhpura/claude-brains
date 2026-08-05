@@ -61,7 +61,7 @@ and the reasoning is in the item.
 | 10 | Truncated-output marker | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.io-cut` / `.cmd-cut` |
 | 9 | Bash exit-code explanation (was "failure detail") | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · re-scored P0→P3 | shipped — `.io-note`; premise was measured wrong |
 | 15 | Compaction boundary | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — marker + folded summary + gauge reset |
-| 21 | Model refusal fallback | ? | ✅ | ❌ | **P3** ↓ (measured) | **L** not M — needs a uuid→DOM map; 0 records seen |
+| 21 | Model refusal fallback | ? | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | shipped — banner, model follow, both eviction lanes |
 | 6 | Non-Bash tool result summaries | ✅ | ✅ | ❌ | P1 | **M** — one guard opens it, per-tool shapes are the work |
 | 2 | Sub-agent final report | ✅ | ⚠️ | ❌ | P1 | **XS** ⇢ free with 6 |
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ❌ | P1 | **M** ⇢ must ship WITH 6 |
@@ -442,10 +442,43 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
      kept for the summary verb — survives. Retraction needs a uuid→DOM map threaded through every
      block type: live text, thinking, tool lines, cards. That is cross-cutting infrastructure, not
      a branch in the stream `switch`.
-  Building it would mean shipping that infrastructure for an event never observed, verifiable only
-  against a synthetic fixture — speculative, and it rots silently if the wire shape differs from the
-  VS Code bundle we inferred it from. **Revisit if a real one is ever seen**; the severity argument
-  still holds, only the evidence and the cost estimate were wrong.
+  **BUILT ANYWAY, 2026-08-05, on your call — and flagged BUILT BLIND wherever it appears.** What
+  changed the calculus: the failure mode of guessing the wire shape wrong is *does nothing*, which
+  is the status quo, not corruption. Shipped:
+  - Blocks carry the record uuid (`stampMessage` in chat.html; `Item.uuid` on replay), which is the
+    infrastructure the old estimate said we lacked. Rendering is driven by stream deltas that have
+    no uuid, so blocks are collected and stamped when the whole-message `assistant` record lands.
+  - `system/model_refusal_fallback` → a notice, and the model chip FOLLOWS `fallback_model` through
+    the display-only path (`setModelChip`), not `setModel` — the CLI has already switched, so
+    bridging a `model` message back would tell it what it just told us.
+  - **Both** eviction lanes: the refusal's `retracted_message_uuids`, and an assistant record's own
+    `supersedes` array — a second door we had not accounted for at all.
+  - Late arrivals: a uuid retracted before its block exists is remembered, so the block never appears.
+  - Two guards on the only path that can do harm: exact `data-uuid` matches only, and **a user's own
+    message is never withdrawn** — the model cannot take back what the human typed.
+  - Withdrawal is ANNOUNCED ("2 messages withdrawn"). Content vanishing unexplained is the same
+    defect as a silent truncation; see `docs/limits.md`.
+
+  **What VS Code does that we deliberately do not:** a settings gate ("when off, your session will
+  pause instead") and a `refusal_fallback_prompt` dialog behind an experiment flag. Both are
+  configuration — the terminal's half (CLAUDE.md § Philosophy). It also repairs `replayInsertIndex`
+  and `teleportedMessageCount` after eviction; we have no equivalent indices.
+
+  **Verification pass (2026-08-05, same day):** grepping the CLI binary itself (2.1.222) found every
+  wire field — `model_refusal_fallback` ×38, `retracted_message_uuids` ×7, `supersedes` ×18 — so the
+  shape is the CLI's own, not just the webview's reading of it. Two findings with teeth:
+  - **Spelling split, fixed:** the CLI's emission site writes camelCase (`originalModel`,
+    `fallbackModel`) while the VS Code validator reads snake_case — the same split
+    `compactMetadata`/`compact_metadata` has. Both paths now accept both spellings, pinned by a
+    camelCase fixture case; guessing one spelling is how a built-blind handler dies silently.
+  - **The CLI's own doc string for `supersedes`** (verbatim from the binary): "Wire uuids of
+    previously-delivered messages that this message replaces (refusal-fallback supersede). The list
+    can include tombstoned tool_result frames from the refused leg, not only assistant frames.
+    Evict the named messages on arrival… Idempotent." Tool-result uuids match nothing we stamp, so
+    those degrade to no-op — benign, and now known rather than discovered.
+
+  **Still never OBSERVED in a live session or transcript**, and that will not change until a refusal
+  actually occurs. Tests are synthetic; the live path was driven headless through `onClaudeEvent`.
 
 ### 22. Hook activity
 - **Terminal:** ✅ hook output and blocked-tool reasons.

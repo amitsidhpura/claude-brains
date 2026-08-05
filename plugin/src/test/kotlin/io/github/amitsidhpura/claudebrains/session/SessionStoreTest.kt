@@ -3,6 +3,7 @@ package io.github.amitsidhpura.claudebrains.session
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -233,6 +234,73 @@ class SessionStoreTest {
                        assistant("2026-08-05T10:03:00.000Z", 12000)).joinToString("\n"))
             assertEquals(12000L, SessionStore.contextTokens(CWD, "ctx-b"),
                 "the newest post-compact request is the current context")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * A safety classifier can make the CLI retry on another model and WITHDRAW what it already sent.
+     * Leaving retracted text on screen would show content the model explicitly took back.
+     *
+     * BUILT BLIND: not one local transcript contains `model_refusal_fallback` or an assistant
+     * `supersedes` field, so this fixture is the only thing it has ever run against. The shape comes
+     * from the VS Code webview bundle (2.1.222). Both retraction lanes are covered, and so is the
+     * guard that matters most — a `user` block is never withdrawn, because the model cannot take
+     * back what the human typed.
+     */
+    @Test
+    fun `retracted assistant messages are withdrawn, but never the user's own`() {
+        fun assistant(uuid: String, text: String, supersedes: String? = null) =
+            """{"type":"assistant","uuid":"$uuid","timestamp":"2026-08-05T10:0${uuid.last()}:00.000Z"""" +
+                (supersedes?.let { ""","supersedes":["$it"]""" } ?: "") +
+                ""","message":{"id":"m$uuid","role":"assistant","content":[{"type":"text","text":"$text"}]}}"""
+
+        val jsonl = listOf(
+            """{"type":"user","uuid":"u1","timestamp":"2026-08-05T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"MY-QUESTION"}]}}""",
+            assistant("a1", "FLAGGED-ANSWER"),
+            assistant("a2", "KEPT-ANSWER"),
+            // the refusal retracts a1 AND tries to retract the user's own message
+            """{"type":"system","subtype":"model_refusal_fallback","uuid":"r1","direction":"retry",""" +
+                """"original_model":"claude-opus-5","fallback_model":"claude-sonnet-5",""" +
+                """"content":"Safeguards flagged this message.","session_id":"s",""" +
+                """"retracted_message_uuids":["a1","u1"],"timestamp":"2026-08-05T10:03:00.000Z"}""",
+            // the second lane: an assistant record superseding an earlier one directly
+            assistant("a3", "SUPERSEDING", supersedes = "a2"),
+            assistant("a4", "CAMEL-FLAGGED"),
+            // camelCase spelling: the CLI's emission site writes originalModel/fallbackModel, the
+            // VS Code validator reads snake_case — a transcript may carry either, so both must work
+            """{"type":"system","subtype":"model_refusal_fallback","uuid":"r2","direction":"retry",""" +
+                """"originalModel":"claude-opus-5","fallbackModel":"claude-haiku-4-5",""" +
+                """"content":"Safeguards flagged this message.","session_id":"s",""" +
+                """"retractedMessageUuids":["a4"],"timestamp":"2026-08-05T10:05:00.000Z"}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-refusal", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "refusal.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "refusal")
+            val texts = out.mapNotNull { it["text"]?.jsonPrimitive?.contentOrNull }
+
+            assertTrue(texts.any { it == "MY-QUESTION" },
+                "the model cannot withdraw a message the user typed, even when it names its uuid")
+            assertFalse(texts.any { it == "FLAGGED-ANSWER" },
+                "a retracted assistant message must not survive the replay")
+            assertFalse(texts.any { it == "SUPERSEDING" && texts.contains("KEPT-ANSWER") },
+                "the supersedes lane must remove what it replaces")
+            assertFalse(texts.any { it == "KEPT-ANSWER" }, "a2 was superseded by a3")
+            assertTrue(texts.any { it == "SUPERSEDING" }, "the superseding message itself stays")
+            assertTrue(texts.any { it.startsWith("Safeguards flagged") && it.contains("claude-sonnet-5") },
+                "the notice must say what happened and which model took over")
+            assertFalse(texts.any { it == "CAMEL-FLAGGED" },
+                "the camelCase spelling the CLI's emission site writes must retract too")
+            assertTrue(texts.any { it.contains("claude-haiku-4-5") },
+                "the camelCase model fields must reach the notice")
         } finally {
             SessionStore.claudeHome = home   // the other tests read the shared fixture from here
             tmpHome.deleteRecursively()

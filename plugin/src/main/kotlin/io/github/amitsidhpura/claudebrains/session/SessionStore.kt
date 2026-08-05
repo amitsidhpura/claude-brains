@@ -307,6 +307,9 @@ object SessionStore {
         var note: String? = null           // the CLI's exit-code explanation ("No matches found")
         var interrupted: Boolean = false   // the command was killed rather than finishing
         var trigger: String? = null        // compaction: "auto" (context ran out) or "manual" (/compact)
+        // Record uuid this block came from. Only needed so a refusal fallback (or an assistant
+        // `supersedes` list) can withdraw it — nothing else reads it, and it never reaches the wire.
+        var uuid: String? = null
         var isError: Boolean = false
         var patch: JsonElement? = null     // structuredPatch hunks (authoritative diff + line numbers)
         var content: String? = null        // Write body (no patch available)
@@ -506,15 +509,23 @@ object SessionStore {
                             // `.error` block, so replay must not render it as prose
                             val role = if (obj["isApiErrorMessage"]?.jsonPrimitive?.content == "true")
                                 "error" else "assistant"
+                            val recUuid = obj["uuid"]?.jsonPrimitive?.contentOrNull
+                            // The SECOND retraction lane: an assistant record can supersede earlier
+                            // ones directly, with no refusal event involved. Never seen locally
+                            // either; guarded the same way (user blocks are untouchable).
+                            (obj["supersedes"] as? JsonArray)
+                                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                                ?.toSet()?.takeIf { it.isNotEmpty() }
+                                ?.let { dead -> out.removeAll { it.uuid in dead && it.role != "user" } }
                             val content = obj["message"]?.jsonObject?.get("content")
                             if (content is JsonPrimitive) {
-                                out.add(Item(role).apply { text = content.content })
+                                out.add(Item(role).apply { text = content.content; uuid = recUuid })
                             } else if (content is JsonArray) {
                                 for (block in content) {
                                     val b = block.jsonObject
                                     when (b["type"]?.jsonPrimitive?.content) {
                                         "text" -> b["text"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-                                            ?.let { out.add(Item(role).apply { text = it }) }
+                                            ?.let { out.add(Item(role).apply { text = it; uuid = recUuid }) }
                                         // emit even when the body is blank — the CLI frequently
                                         // persists only a signature; the block replays as a
                                         // `think no-body` "Thought for Ns" line, matching live
@@ -532,6 +543,37 @@ object SessionStore {
                         // user message (see the isCompactSummary branch above). The marker is emitted
                         // here and the summary folded into it when the next record claims this uuid.
                         "system" -> {
+                            // A safety classifier flagged the exchange: the CLI retried on another
+                            // model and WITHDREW what it had already sent. Replay both halves — the
+                            // notice, and the removal — or a resumed session would show text the
+                            // model took back. NOTE: no local transcript has ever contained one of
+                            // these; the shape is inferred from the VS Code bundle, so an unexpected
+                            // payload must degrade to "no notice" rather than to a wrong removal.
+                            if (obj["subtype"]?.jsonPrimitive?.content == "model_refusal_fallback") {
+                                // Both spellings: the CLI's emission site writes camelCase while the
+                                // VS Code validator reads snake_case — same split as compactMetadata.
+                                val retracted = ((obj["retracted_message_uuids"]
+                                    ?: obj["retractedMessageUuids"]) as? JsonArray)
+                                    ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                                    ?.toSet().orEmpty()
+                                // A user block is never withdrawn: the model cannot take back what
+                                // the human typed. Same guard as the live path.
+                                if (retracted.isNotEmpty()) {
+                                    out.removeAll { it.uuid in retracted && it.role != "user" }
+                                }
+                                val orig = (obj["original_model"] ?: obj["originalModel"])
+                                    ?.jsonPrimitive?.contentOrNull
+                                val fb = (obj["fallback_model"] ?: obj["fallbackModel"])
+                                    ?.jsonPrimitive?.contentOrNull
+                                val body = obj["content"]?.jsonPrimitive?.contentOrNull
+                                    ?: "Safeguards flagged this message."
+                                flushSummary()
+                                out.add(Item("error").apply {
+                                    text = if (orig != null && fb != null)
+                                        "$body Switched from $orig to $fb." else body
+                                })
+                                continue
+                            }
                             if (obj["subtype"]?.jsonPrimitive?.content != "compact_boundary") continue
                             val meta = obj["compactMetadata"] as? JsonObject
                             flushSummary()   // close the previous request, exactly as a user turn does
