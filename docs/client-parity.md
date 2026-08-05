@@ -67,7 +67,7 @@ and the reasoning is in the item.
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped WITH 6, one shared skip list |
 | 7 | Tool input beyond one key | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — one case, not a matrix: Read line ranges |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
-| 14 | Todo / task checklist | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.todos`; TaskList already rode item 6 |
+| 14 | Todo / task checklist | ✅ | ✅ | ⚠️ | **PARTLY DONE** 2026-08-05 | `.todos` ships, but `TodoWrite` is RETIRED — replay only |
 | 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
 | 23 | CLI stderr | — | ? | ❌ | **P1** ↑ (philosophy) | **S** — buffer it, print on non-zero exit |
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ❌ | **P1** ↑ (philosophy) | **XS** — one branch, one message |
@@ -393,6 +393,19 @@ Which MCP servers connected, which failed.
   Verified against 11 real records in session `85174406`: all 11 now carry a checklist, 25 completed
   / 9 in-progress / 16 pending items across them.
 
+  **CAVEAT, confirmed in `runIde` 2026-08-05: `TodoWrite` is RETIRED and cannot be triggered.** Every
+  local `TodoWrite` record is CLI 2.1.178; every `TaskCreate` is 2.1.197/220/222. Asked directly, a
+  2.1.222 session's own `ToolSearch` reports no `TodoWrite` in its roster — the CLI split it into
+  four tools (`TaskCreate`/`TaskList`/`TaskGet`/`TaskUpdate`) with stable ids, dependencies and
+  ownership, none of which a whole-list rewrite can express. The string survives in the binary but
+  is not offered to the model.
+  So what shipped serves **replaying older sessions**, which is legitimate but is not what "follow a
+  long turn at a glance" meant. **The live-relevant checklist is still open**, and the measurement
+  points at a cheap first step: `TaskList` returns the whole list in a fixed format
+  (`#1 [pending] Subject`), so parsing that into the SAME `.todos` renderer would give a real
+  checklist today with no aggregation. The full `TaskCreate`/`TaskUpdate` running list needs real
+  state and a decision about where it belongs in the thread — that is the L-sized part.
+
 ### 15. Compaction boundary
 Where the context got compacted, why, and how big it was before.
 
@@ -673,11 +686,13 @@ Items 5, 6, 2 and 29 shipped 2026-08-05; 8 and 11 were re-scored out on zero evi
   appears.
 - ~~Per-tool input suffixes (7)~~ — **done.** One case, not a matrix: `Grep`/`Glob` never occur
   locally, and only `Read`'s line range was genuinely lost. Clicking the path now selects it.
-- ~~Todo checklist (14)~~ — **done.** Narrowed to one tool by measuring: `TaskList` already rendered
-  through item 6, the `Task*` family needs aggregated state and is now its own future item, and
-  `TodoWrite` was the real gap.
+- ~~Todo checklist (14)~~ — **partly.** `.todos` ships and replays correctly, but the tool it renders
+  is RETIRED: `TodoWrite` is not in a 2.1.222 session's roster at all. It serves old sessions only.
+  The live-relevant checklist is still open — see item 14 for the cheap `TaskList` step and the
+  L-sized `TaskCreate`/`TaskUpdate` running list.
 
-**TIER 1 IS CLEAR.** Every P1 in the audit is shipped. What the tier taught, twice over: the
+**TIER 1 IS CLEAR** — with one asterisk: item 14's renderer works but its TOOL is retired, so the
+live checklist remains open (see the item). Every other P1 is shipped. What the tier taught, twice over: the
 coupling estimates held, the SHAPE estimates did not. Item 6 would have printed 2033 lines of
 boilerplate if built to spec, item 7 was sized as a per-tool matrix and was one case, and item 14's
 family turned out to be three tools with three different answers. Measure the shape, not just the
