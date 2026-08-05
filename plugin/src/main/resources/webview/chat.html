@@ -311,6 +311,24 @@
   // No authoritative usage arrives until message_delta (end of message), so show a live
   // chars/4 estimate as text/thinking streams; message_delta then reconciles to the real count.
   function estimateMsgTokens() { msgTokens = Math.round(msgChars / 4); updateWorkTokens(); }
+  // Rate-limit vocabulary, verbatim from the CLI/VS Code so the panel names a limit the way the
+  // rest of the product does. `resetsAt` is UNIX SECONDS and is shown relatively — an absolute
+  // clock time reads as precision the value does not have.
+  const LIMIT_LABELS = {
+    five_hour: 'session limit', seven_day: 'weekly limit', seven_day_opus: 'weekly Opus limit',
+    seven_day_sonnet: 'weekly Sonnet limit', seven_day_overage_included: 'Fable 5 limit',
+    overage: 'usage credit limit',
+  };
+  let rateLimitKey = null;   // last status:type shown, so an unchanged limit is not restated
+  function fmtResets(secs) {
+    const ms = secs * 1000 - Date.now();
+    if (ms <= 0) return 'soon';
+    const m = Math.floor(ms / 60000);
+    if (m < 1) return 'soon';
+    if (m < 60) return 'in ' + m + 'm';
+    const h = Math.floor(m / 60);
+    return h < 24 ? 'in ' + h + 'h' : 'in ' + Math.floor(h / 24) + 'd';
+  }
   /**
    * The thinking block's token count. The CLI sends the REAL figure as `system/thinking_tokens`
    * (estimated_tokens); `thinkChars / 4` is our own guess and stays only as the fallback for when
@@ -1871,16 +1889,37 @@
         }
         return;
       case '__tasks':            return void todoList(ev.items || []);
-      // A usage limit was hit or is close. One status line — and unlike most things, there is no
-      // terminal to check, because the terminal is not running this session. BUILT DEFENSIVELY:
-      // the event is in the CLI binary but has never appeared in a local transcript, so an
-      // unexpected shape must degrade to no line rather than a wrong one.
+      // A usage limit was hit or is close. No terminal to check — the terminal is not running this
+      // session. Shape read out of the CLI binary and the VS Code validator (2.1.222) after a first
+      // guess fired a FALSE ALARM in a live session: the payload is `rate_limit_info`, not
+      // `rate_limit`, and crucially `status:"allowed"` is the ROUTINE case that must say NOTHING.
+      // Warning on every event told the user they were near a limit when they were not.
       case 'rate_limit_event': {
-        const r = ev.rate_limit || ev;
-        const until = r.resetsAt || r.resets_at;
-        const when = until ? ' — resets ' + new Date(
-          typeof until === 'number' ? (until < 1e12 ? until * 1000 : until) : until).toLocaleTimeString() : '';
-        return void statusLine((r.message || 'Approaching a usage limit') + when, SVG_ALERT, 'status err');
+        // Both spellings: the CLI's emission sites are inconsistent (originalModel vs
+        // original_model bit us on the refusal fallback), and an unknown shape yields no `status`,
+        // which falls through to SILENCE below — the safe direction for a claim about the user's
+        // own account. Announcing a limit that is not there is worse than announcing nothing.
+        const r = ev.rate_limit_info || ev.rateLimitInfo || {};
+        if (!r.status || r.status === 'allowed') { rateLimitKey = null; return; }
+        // VS Code keys the warning by status+type and refuses to repeat it; we append to a log, so
+        // without the same guard an unchanged limit would restate itself on every turn.
+        const key = r.status + ':' + (r.rateLimitType || '');
+        if (key === rateLimitKey) return;
+        rateLimitKey = key;
+        const label = LIMIT_LABELS[r.rateLimitType] || 'usage limit';
+        const when = r.resetsAt ? ' · resets ' + fmtResets(r.resetsAt) : '';
+        const credits = r.rateLimitType === 'seven_day_overage_included'
+          ? ' · continue with usage credits' : '';
+        let msg;
+        if (r.status === 'rejected') {
+          if (!r.rateLimitType) return;          // nothing specific to say; stay quiet
+          msg = "You've hit your " + label + when;
+        } else {
+          const pct = r.utilization ? Math.floor(r.utilization * 100) : 0;
+          msg = pct ? "You've used " + pct + '% of your ' + label + when + credits
+                    : 'Approaching ' + label + when + credits;
+        }
+        return void statusLine(msg, SVG_ALERT, 'status err');
       }
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);

@@ -69,7 +69,7 @@ and the reasoning is in the item.
 | 7 | Tool input beyond one key | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — one case, not a matrix: Read line ranges |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
 | 14 | Todo / task checklist | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | `TodoWrite` (replay) + the live `Task*` list |
-| 16 | Rate-limit warnings | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | one `statusLine()`; event never seen locally |
+| 16 | Rate-limit warnings | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · seen live, then corrected | first guess cried wolf on the routine case |
 | 23 | CLI stderr | — | ? | ✅ | **DONE** 2026-08-05 | tail buffered, shown under the exit line |
 | 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | one branch; the message IS the fix |
 | 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P2 | **S** — `ioRow('IN', …)` already exists |
@@ -470,9 +470,36 @@ Approaching / hit a usage limit, and when it resets.
   `status:rateLimitType` and dismissible.
 - **Us:** ❌ the event type isn't in our `switch` at all; we only see the failure once it becomes an
   API error or an `is_error` result.
-- **Take: DONE 2026-08-05.** Cheap (one status line through the existing `statusLine()`), and it
-  turns a confusing hard failure into an expected one. BUILT BLIND: the event lives in the CLI
-  binary but has never appeared in a local transcript.
+- **Take: DONE 2026-08-05**, and it is the clearest cautionary tale in this document about building
+  from a guessed shape.
+  Shipped first as "one status line", built blind. It fired within the hour in a live session — so
+  the event is real and does reach us — and it was **WRONG**: the panel announced "Approaching a
+  usage limit" on a `status:"allowed"` event, which is the ROUTINE case. It cried wolf about the
+  user's own account.
+  Two mistakes, both from guessing rather than reading: the payload is `rate_limit_info`, not
+  `rate_limit`; and `allowed` must produce NOTHING. Corrected against the CLI binary's emission site
+  (`type:"rate_limit_event",rate_limit_info:…`) and the VS Code validator (2.1.222), which supply
+  the whole vocabulary: `status` (`allowed`/`rejected`/warning), `rateLimitType` keyed into real
+  labels (`five_hour` → "session limit", `seven_day_opus` → "weekly Opus limit", …), `utilization`,
+  and `resetsAt` as UNIX SECONDS shown relatively ("in 4h") because an absolute clock time would
+  imply precision the value does not have.
+  Also deduped by `status:rateLimitType` the way VS Code does — it keeps ONE dismissible warning,
+  while we append to a log, so without the guard an unchanged limit restates itself every turn.
+  Verified: routine event silent · "You've used 82% of your session limit · resets in 4h" ·
+  repeat not restated · "You've hit your weekly Opus limit" · `rejected` with no type stays quiet.
+
+  **It cannot be verified against a record, and that is by the CLI's design**, not an accident of
+  local history: the binary carries `"[sdkMessageAdapter] Ignoring rate_limit_event message"`, and a
+  sweep of the project where it fired live found zero genuine records. So the shape rests on the
+  binary's emission site plus VS Code's validator, and the code is written to fail in the safe
+  direction instead: an unrecognised payload yields no `status`, which produces SILENCE.
+  Confirmed by replaying the exact wrong shape that misfired live — it now renders nothing.
+  Both spellings of the payload key are accepted (`rate_limit_info` / `rateLimitInfo`), because the
+  CLI's emission sites are inconsistent about case; that is the same trap that hid the refusal
+  fallback behind `originalModel` vs `original_model`.
+  **The principle worth keeping:** for a claim about the USER'S OWN ACCOUNT, silence beats a guess.
+  The first version had this backwards — its fallback was a generic warning, so a shape it did not
+  understand became an assertion that was false.
 
 ### 17. Cost
 `result.total_cost_usd`, `duration_api_ms`, `num_turns`, `modelUsage`.
