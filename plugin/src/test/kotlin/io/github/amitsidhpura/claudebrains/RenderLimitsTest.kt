@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -112,6 +113,36 @@ class RenderLimitsTest {
     @Test
     fun `path keys are part of the description order`() {
         assertTrue(RenderLimits.DESC_KEYS.containsAll(RenderLimits.PATH_KEYS))
+    }
+
+    /**
+     * Server-side search results (item 12), mirrored by `searchResultText` in chat.html. The case
+     * that matters most is the ERROR one: the wire discriminator is whether `content` is an ARRAY,
+     * not a `type` field, so reading it the wrong way round prints an object into the transcript.
+     * A `null` list here is that error branch.
+     */
+    @Test
+    fun `search results format identically on both paths`() {
+        val two = RenderLimits.searchResults(
+            listOf("Kotlin docs" to "https://kotlinlang.org", "Gradle" to "https://gradle.org"), null)
+        assertFalse(two.isError)
+        assertEquals("2 results\n\nKotlin docs\nhttps://kotlinlang.org\n\nGradle\nhttps://gradle.org", two.text)
+
+        // singular, because "1 results" is the kind of detail that makes a panel look unfinished
+        assertEquals("1 result\n\nOnly\nhttps://x", RenderLimits.searchResults(listOf("Only" to "https://x"), null).text)
+        assertEquals("No results.", RenderLimits.searchResults(emptyList(), null).text)
+
+        val err = RenderLimits.searchResults(null, "max_uses_exceeded")
+        assertTrue(err.isError, "an error must mark the tool line failed, not read as a result set")
+        assertEquals("Web search error: max_uses_exceeded", err.text)
+        assertEquals("Web search error: unknown", RenderLimits.searchResults(null, null).text)
+
+        // degenerate rows: a missing title falls back to the url, and a row with neither still
+        // occupies a line rather than collapsing the list silently
+        assertEquals("1 result\n\nhttps://only-url", RenderLimits.searchResults(listOf("" to "https://only-url"), null).text)
+        assertEquals("1 result\n\nuntitled", RenderLimits.searchResults(listOf("" to ""), null).text)
+        // title == url must not print the same string twice
+        assertEquals("1 result\n\nhttps://same", RenderLimits.searchResults(listOf("https://same" to "https://same"), null).text)
     }
 
     /**

@@ -188,6 +188,41 @@ object RenderLimits {
         }
     }
 
+    /**
+     * A server-side web search's results, formatted for the OUT box (client-parity item 12).
+     *
+     * The wire shape is stated in only one place — the CLI's own reader — and it is unusual enough
+     * to be worth quoting, because the discriminator is a TYPE CHECK and not a field:
+     *
+     *     if (a.type === "web_search_tool_result") {
+     *       if (!Array.isArray(a.content)) { `Web search error: ${a.content.error_code}` ; continue }
+     *       let l = a.content.map(c => ({title: c.title, url: c.url}))
+     *     }
+     *
+     * So `content` is EITHER an array of results OR an error object. Reading it the other way round
+     * prints `[object Object]` into the transcript, which is why both paths go through here.
+     *
+     * Mirrored by `searchResultText` in chat.html — the same two-language contract [cut] and
+     * [descSuffix] carry, and pinned by `RenderLimitsTest` for the same reason: the caps being equal
+     * does not help if the two sides format the body differently, because then one OUT box says
+     * something the other does not and a resume silently rewrites history.
+     *
+     * @param results title-to-url pairs, or `null` when the search itself failed.
+     */
+    data class SearchOut(val text: String, val isError: Boolean)
+
+    fun searchResults(results: List<Pair<String, String>>?, errorCode: String?): SearchOut {
+        if (results == null) return SearchOut("Web search error: ${errorCode ?: "unknown"}", true)
+        if (results.isEmpty()) return SearchOut("No results.", false)
+        // Title over url, blank line between, so a long list stays scannable inside the fold.
+        val body = results.joinToString("\n\n") { (title, url) ->
+            val t = title.ifBlank { url.ifBlank { "untitled" } }
+            if (url.isNotBlank() && url != t) "$t\n$url" else t
+        }
+        val head = if (results.size == 1) "1 result" else "${results.size} results"
+        return SearchOut("$head\n\n$body", false)
+    }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }

@@ -340,6 +340,64 @@ class SessionStoreTest {
     }
 
     /**
+     * A web search the API ran server-side (client-parity item 12). It arrives as a `server_tool_use`
+     * block plus a `web_search_tool_result` block on the SAME assistant message — there is no
+     * `tool_result` user event, because no client-side tool ever ran. Replay dropped both, exactly
+     * as live did.
+     *
+     * Zero local records, and deliberately noted as such: `server_tool_use` never appears in any
+     * transcript here, but neither does `WebSearch` or `WebFetch` in ANY form, so the absence says
+     * the feature was never exercised — not that the CLI does not emit it. The shape is the CLI
+     * binary's own reader (2.1.222); `content` is an array on success and an object on failure,
+     * which is the discriminator.
+     */
+    @Test
+    fun `a server-side search replays as a tool line with its results`() {
+        val jsonl = listOf(
+            """{"type":"user","uuid":"u1","timestamp":"2026-08-06T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"look it up"}]}}""",
+            """{"type":"assistant","uuid":"a1","timestamp":"2026-08-06T10:00:01.000Z","message":{"id":"m1","role":"assistant","content":[""" +
+                """{"type":"server_tool_use","id":"srv1","name":"web_search","input":{"query":"kotlin coroutines"}},""" +
+                """{"type":"web_search_tool_result","tool_use_id":"srv1","content":[""" +
+                """{"type":"web_search_result","title":"Coroutines basics","url":"https://kotlinlang.org/docs/x.html"},""" +
+                """{"type":"web_search_result","title":"Flow","url":"https://kotlinlang.org/docs/flow.html"}]}]}}""",
+            """{"type":"assistant","uuid":"a2","timestamp":"2026-08-06T10:00:05.000Z","message":{"id":"m2","role":"assistant","content":[""" +
+                """{"type":"server_tool_use","id":"srv2","name":"web_search","input":{"query":"unsearchable"}},""" +
+                """{"type":"web_search_tool_result","tool_use_id":"srv2","content":{"error_code":"max_uses_exceeded"}}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-search", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "search.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "search")
+            val tools = out.filter { it["role"]?.jsonPrimitive?.contentOrNull == "tool" }
+            assertEquals(2, tools.size, "each server_tool_use is one tool line")
+
+            val ok = tools[0]
+            assertEquals("web_search", ok["text"]?.jsonPrimitive?.contentOrNull)
+            assertEquals("kotlin coroutines", ok["desc"]?.jsonPrimitive?.contentOrNull,
+                "the query describes the line — `query` is already in DESC_KEYS")
+            assertEquals("2 results\n\nCoroutines basics\nhttps://kotlinlang.org/docs/x.html\n\n" +
+                "Flow\nhttps://kotlinlang.org/docs/flow.html",
+                ok["out"]?.jsonPrimitive?.contentOrNull,
+                "the OUT box must match RenderLimits.searchResults byte for byte")
+            assertNull(ok["isError"], "a successful search is not a failed tool")
+
+            val bad = tools[1]
+            assertEquals("Web search error: max_uses_exceeded", bad["out"]?.jsonPrimitive?.contentOrNull,
+                "an object `content` is the ERROR branch, not a result set")
+            assertEquals(true, bad["isError"]?.jsonPrimitive?.contentOrNull?.toBoolean(),
+                "a failed search must colour its dot red, like any other failed tool")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * Every tool's result gets an OUT box now, not just Bash's — except the ones whose outcome the
      * panel already shows. Measured before building: rendering all of them would have added ~2100
      * boxes, 2033 of which said "The file … has been updated successfully" directly under the diff

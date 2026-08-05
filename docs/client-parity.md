@@ -75,7 +75,7 @@ and the reasoning is in the item.
 | 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P2 | **S** — `ioRow('IN', …)` already exists |
 | 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
 | 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
-| 12 | Server-side tools (web search blocks) | ✅ | ✅ | ❌ | P2 | **S** — one `content_block_start` branch |
+| 12 | Server-side tools (web search blocks) | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | `S` held — but replay needed it too, and the rule is shared |
 | 24 | Queued messages | ✅ | ❌ | ❌ | **P2** ↑ (philosophy) | **L** — composer state machine, not a renderer |
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · probe corrected the source | `S` held; the "already in the init payload" claim did not |
 | 22 | Hook activity | ✅ | ? | ❌ | P2 | **?** — probe the empty-ack first; unknown until then |
@@ -340,9 +340,44 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
 
 - **Terminal:** ✅ shown as a search line with result counts.
 - **VS Code:** ✅ the stream assembler completes `server_tool_use` blocks alongside `tool_use`.
-- **Us:** ❌ `content_block_start` (`chat.html:1726`) branches on `tool_use` and `thinking` only, so
-  a server-side search renders literally nothing — a silent gap in the conversation.
-- **Take: P2.** Small, and it removes an unexplained hole in the timeline.
+- **Us:** ❌ `content_block_start` branched on `tool_use` and `thinking` only, so a server-side
+  search rendered literally nothing — a silent gap in the conversation. Replay dropped both block
+  types too, which this item did not mention.
+- **Take: P2. DONE 2026-08-06.** Small, and it removes an unexplained hole in the timeline.
+
+  **Measured first, and the measurement had to be read carefully.** `server_tool_use` occurs **zero**
+  times across local transcripts — the same result that re-scored items 8 and 11 down to P3. It does
+  NOT mean the same thing here: `WebSearch` and `WebFetch` never appear either, in *any* form, so the
+  absence says the feature has never been exercised on this machine, not that the CLI declines to
+  emit it. The binary settles it — `server_tool_use` ×46, `web_search_tool_result` ×8,
+  `code_execution_tool_result` ×14, and VS Code's webview reads them too. **Zero records is evidence
+  only when the surrounding feature has actually been used.**
+
+  Shape, from the CLI's own reader — worth quoting because the discriminator is a TYPE CHECK, not a
+  field, and reading it backwards prints `[object Object]` into the transcript:
+
+      if (a.type === "web_search_tool_result") {
+        if (!Array.isArray(a.content)) { `Web search error: ${a.content.error_code}` ; continue }
+        let l = a.content.map(c => ({title: c.title, url: c.url}))
+      }
+
+  `server_tool_use` is shaped exactly like `tool_use` (id / name / an `input` that streams as
+  `input_json_delta`), so it rides the existing machinery, and `query` was already in `DESC_KEYS` —
+  the description filled itself. There is no `tool_result` user event, because no client-side tool
+  ever ran; the results arrive as their own content block on the same assistant message.
+
+  The formatting rule went into **`RenderLimits.searchResults`** rather than being written twice:
+  equal caps do not help if the two sides format the body differently, because then a resume
+  silently rewrites what the search returned. `searchResultText` in chat.html is the mirror, and
+  `RenderLimitsTest` pins the pair — both were checked against the same expected strings, byte for
+  byte. An error marks the tool line `.fail`, like any other failed tool. An unmatched result (a
+  windowed replay can cut between the two blocks) gets a standalone tool line rather than being
+  dropped, which is the hole this item exists to close.
+
+  **Not built:** `code_execution_tool_result`, `mcp_tool_use`, `web_fetch_tool_result` and the rest
+  of that block family are recognised by the CLI but have never occurred here either, and each has
+  its own result shape. Extending to them on the same zero evidence would be guessing at a matrix,
+  which is what item 7 taught against. They stay silent until one is seen.
 
 ## C. Session & account state
 
@@ -917,7 +952,7 @@ an argument for probing the wire before writing the branch, not for padding the 
 
 **Tier 3 — depth.** Ordered cheapest-first, since none of it is urgent:
 real thinking tokens (19) `XS`, ~~`modelUsage[].contextWindow` (17a)~~ **done** — retired the `[1m]`
-sniffing, server-side tool blocks (12) `S`, the sub-agent prompt (3) `S`, a "2 tasks running" chip
+sniffing, ~~server-side tool blocks (12)~~ **done**, the sub-agent prompt (3) `S`, a "2 tasks running" chip
 (4) `S`. Then the two genuinely large ones, each needing a design pass before any code: sub-agent
 nesting (1) `L`, which 3 and the full roster (4) should ride on, and queued messages (24) `L`,
 which is composer state rather than a renderer. Hook activity (22) is unsized — settle the

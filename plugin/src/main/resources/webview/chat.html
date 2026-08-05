@@ -1074,6 +1074,50 @@
     rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1], r[2], r[3], r[4], r[5], r[6])); });
     return io;
   }
+  /**
+   * A server-side tool's results, as one OUT box under its tool line (item 12).
+   *
+   * Shape taken from the CLI's own reader, which is the only place it is written down:
+   *   if (a.type === "web_search_tool_result") {
+   *     if (!Array.isArray(a.content)) { `Web search error: ${a.content.error_code}` ; continue }
+   *     let l = a.content.map(c => ({title: c.title, url: c.url}))
+   *   }
+   * So `content` is EITHER an array of results OR an error object — the array check is the
+   * discriminator, not a `type` field, and getting that backwards would print "[object Object]".
+   *
+   * THE RULE ITSELF lives in RenderLimits.searchResults (Kotlin) — this is the mirror, exactly as
+   * `cutInfo` mirrors `cut`. Equal caps do not help if the two sides format the body differently:
+   * one OUT box would then say something the other does not, and a resume would silently rewrite
+   * what the search returned. RenderLimitsTest pins the pair.
+   */
+  function searchResultText(content) {
+    if (!Array.isArray(content)) {
+      const code = content && (content.error_code || content.errorCode);
+      return { text: 'Web search error: ' + (code || 'unknown'), isError: true };
+    }
+    if (!content.length) return { text: 'No results.', isError: false };
+    // Title over url, blank line between, so a long list stays scannable inside the fold.
+    const body = content.map(function (r) {
+      const title = (r && (r.title || r.url)) || 'untitled';
+      const url = (r && r.url) || '';
+      return url && url !== title ? title + '\n' + url : String(title);
+    }).join('\n\n');
+    return { text: content.length + (content.length === 1 ? ' result\n\n' : ' results\n\n') + body,
+             isError: false };
+  }
+  function serverToolResult(cb) {
+    const t = cb.tool_use_id ? toolsById[cb.tool_use_id] : null;
+    const res = searchResultText(cb.content);
+    // An unmatched result must still be visible: without its tool line there is nothing on screen
+    // to hang it under, and silently dropping it is the very hole this item exists to close.
+    const line = t ? t.el : track(toolLine('web_search'));
+    const holder = t || { el: line, io: null };
+    if (res.isError) line.classList.add('fail');
+    if (!holder.io) { holder.io = ioBox([]); line.after(holder.io); }
+    const cut = cutInfo(res.text, LIM.outMax);
+    holder.io.appendChild(ioRow('OUT', cut ? cut.shown : res.text, cut));
+    maybeScroll();
+  }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
   function toolLine(name) {
     const t = el('tool-line', '');
@@ -2176,12 +2220,18 @@
       }
       case 'content_block_start': {
         const cb = e.content_block || {};
-        if (cb.type === 'tool_use') {
+        // `server_tool_use` is a web search the API ran on its own side. It is shaped exactly like
+        // `tool_use` — id, name, and an `input` that streams in as input_json_delta — so it rides
+        // the same machinery, and `query` is already in RenderLimits.DESC_KEYS, which is what fills
+        // the description at content_block_stop. Item 12: these used to render literally nothing.
+        if (cb.type === 'tool_use' || cb.type === 'server_tool_use') {
           const t = track(toolLine(cb.name));
           openTool = { el: t, name: cb.name || 'tool', json: '' };
           if (cb.id) toolsById[cb.id] = openTool;
           flushMd();
           curBubble = null; // text after a tool starts a fresh block
+        } else if (cb.type === 'web_search_tool_result') {
+          serverToolResult(cb);
         } else if (cb.type === 'thinking') {
           curThink = track(el('think-live', ''));
           curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
@@ -2961,6 +3011,22 @@
     });
     // The refusal with NO retry: nothing is coming, so nothing follows this line.
     onRefusalNoFallback({ original_model: 'claude-opus-5', content: '' });
+
+    // server-side web search (item 12) — the API ran it, so there is no tool_result user event and
+    // no IN box; the query rides on the tool line and the results come back as their own block.
+    { const ts = track(toolLine('web_search'));
+      ts.querySelector('.t-desc').textContent = 'kotlin coroutines structured concurrency';
+      toolsById['srv-1'] = { el: ts, name: 'web_search', json: '' };
+      serverToolResult({ type: 'web_search_tool_result', tool_use_id: 'srv-1', content: [
+        { title: 'Coroutines basics | Kotlin', url: 'https://kotlinlang.org/docs/coroutines-basics.html' },
+        { title: 'Structured concurrency', url: 'https://kotlinlang.org/docs/coroutines-basics.html#structured-concurrency' },
+      ] }); }
+    // and its failure, which marks the line red — content is an OBJECT here, not an array
+    { const tse = track(toolLine('web_search'));
+      tse.querySelector('.t-desc').textContent = 'something unsearchable';
+      toolsById['srv-2'] = { el: tse, name: 'web_search', json: '' };
+      serverToolResult({ type: 'web_search_tool_result', tool_use_id: 'srv-2',
+        content: { error_code: 'max_uses_exceeded' } }); }
 
     // todo checklist — TodoWrite sends the whole list every call, so the newest call IS the state.
     // The in-flight item wears activeForm ("Wiring…"), which is what it is for.

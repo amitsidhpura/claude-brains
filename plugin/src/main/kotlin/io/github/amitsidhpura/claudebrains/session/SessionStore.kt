@@ -655,6 +655,37 @@ object SessionStore {
                                             text = b["thinking"]?.jsonPrimitive?.content ?: ""
                                             durMs = sincePrev
                                         })
+                                        // A web search the API ran server-side. Shaped exactly like
+                                        // `tool_use` (id / name / input), and `query` is already in
+                                        // DESC_KEYS, so the existing builder describes it correctly.
+                                        // Item 12: replay dropped these as silently as live did.
+                                        "server_tool_use" -> out.add(toolItem(b, byToolId))
+                                        "web_search_tool_result" -> {
+                                            val target = (b["tool_use_id"] as? JsonPrimitive)
+                                                ?.contentOrNull?.let { byToolId[it] }
+                                            val arr = b["content"] as? JsonArray
+                                            val res = RenderLimits.searchResults(
+                                                arr?.map { r ->
+                                                    val o = r as? JsonObject
+                                                    val title = (o?.get("title") as? JsonPrimitive)
+                                                        ?.contentOrNull.orEmpty()
+                                                    val url = (o?.get("url") as? JsonPrimitive)
+                                                        ?.contentOrNull.orEmpty()
+                                                    title to url
+                                                },
+                                                ((b["content"] as? JsonObject)?.get("error_code")
+                                                    as? JsonPrimitive)?.contentOrNull,
+                                            )
+                                            // No tool line to hang it under (a windowed replay can
+                                            // cut between the two blocks) — emit a standalone one
+                                            // rather than dropping the result on the floor.
+                                            val item = target ?: Item("tool").apply {
+                                                text = "web_search"
+                                            }.also { out.add(it) }
+                                            item.outCut = RenderLimits.cut(res.text, RenderLimits.OUT_MAX)
+                                            item.out = item.outCut?.shown ?: res.text
+                                            if (res.isError) item.isError = true
+                                        }
                                         "tool_use" -> {
                                             val ti = toolItem(b, byToolId)
                                             out.add(ti)

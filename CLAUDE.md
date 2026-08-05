@@ -145,6 +145,10 @@ zip in `build/distributions/`.
   marker is a SIBLING of `.io-v`, never a child: `foldBlock` collapses `.io-v`, so a marker inside it
   would itself be folded away. Fold ≠ marker — the fold hides content it still holds, the marker
   reports content that is gone. Details in docs/limits.md.
+  Same treatment for any FORMAT both paths produce, not just caps: `RenderLimits.searchResults`
+  (mirrored by `searchResultText`) formats a server-side web search's OUT box, because equal caps
+  don't help if the two sides lay the body out differently — a resume would then silently rewrite
+  what the search returned. Both are pinned against the same expected strings by `RenderLimitsTest`.
 - Plugin Verifier hygiene (0 warnings on 242→262, achieved post-0.2.0): blocking reads go
   through `readLocked {}` (Threads.kt) — `ReadAction.compute` AND Kotlin's `runReadAction {}`
   are both deprecated on 2026.1, `Application.runReadAction(Computable)` is the one blocking-read
