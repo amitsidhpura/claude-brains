@@ -19,8 +19,9 @@ Ask of any proposed feature: *is this reached for many times an hour while writi
 This is why login is terminal-only, why there is no settings page, and why the slash menu is a
 short allowlist — those are DELIBERATE, not a backlog. Say so in that vocabulary: the release
 description splits "By design" from "Not there yet", and the two lists must not blur. Deferred
-items in the status section below are the "wanted, not built yet" kind (tabs, usage display,
-auto-include selection, voice) — the settings page and non-terminal login are NOT among them.
+items in the status section below are the "wanted, not built yet" kind (tabs, auto-include
+selection, voice) — the settings page and non-terminal login are NOT among them, and neither is
+the usage/cost display any more (declined 2026-08-06, see below).
 
 ## Repo layout
 - `plugin/` — Kotlin source + Gradle root (IntelliJ Platform Gradle Plugin 2.x, JCEF
@@ -253,8 +254,12 @@ replay doesn't filter) — accepted as an honest audit trail, no filter planned.
 
 BY DESIGN, not a backlog (see Philosophy): settings page, non-terminal login — both are the
 terminal's half of the split. Don't build them; don't list them as gaps.
-DEFERRED (user's choice, do last): conversation tabs, usage/tokens display,
-auto-include selection / Alt+K, voice input.
+Joined 2026-08-06, declined outright rather than deferred: cost display (parity 17), the
+token/usage panel (18) and per-record metadata (26), alongside the four already-deliberate
+non-features — hidden bookkeeping records (25), stripped IDE context (27), off-window history as a
+consequence of windowed replay (28), and silent `/effort` turns replaying as an honest audit trail
+(30). Note usage display MOVED here out of DEFERRED: it is now a decision, not a queue position.
+DEFERRED (user's choice, do last): conversation tabs, auto-include selection / Alt+K, voice input.
 
 UI: chat.html is fully ported to the mockup design (Phase 1 chrome + Phase 2 renderer, see
 docs/port-plan.md). Styles live ONLY in webview/chat.css (spliced at `<!--CSS-->`; mockup links

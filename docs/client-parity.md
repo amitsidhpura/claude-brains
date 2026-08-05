@@ -81,21 +81,30 @@ and the reasoning is in the item.
 | 22 | Hook activity | ✅ | ? | ✅ | **DONE** 2026-08-06 · probe changed the work | ack was fine; blocked tools already shown; `informational` was the gap |
 | 8 | Tool-returned images | ⚠️ | ✅ | ✅ | **DONE** 2026-08-06 | item named the wrong field; `isImage` is a Bash field |
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
-| 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
+| 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
 | 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
-| 17 | Cost | ✅ | ✅ | ❌ | P3 | S |
-| 18 | Token breakdown / usage panel | ✅ | ✅ | ⚠️ | P3 | L |
-| 26 | Per-record metadata (effort/branch/model) | ⚠️ | ⚠️ | ❌ | P3 | S |
-| 25 | Bookkeeping records on replay | ❌ | ❌ | ❌ | P3 | — keep as is |
-| 27 | Injected IDE context | ❌ | ❌ | ❌ | P3 | — keep as is |
-| 28 | Off-window history | ✅ | ✅ | ⚠️ | P3 | — keep as is |
-| 30 | Silent `/effort` turns | — | — | ❌ | P3 | — keep as is |
+| 17 | Cost | ✅ | ✅ | ❌ | **by design** | not wanted — `/cost` answers it |
+| 18 | Token breakdown / usage panel | ✅ | ✅ | ⚠️ | **by design** | not wanted — the usage-panel half of the split |
+| 26 | Per-record metadata (effort/branch/model) | ⚠️ | ⚠️ | ❌ | **by design** | not wanted — per-record metadata is archive detail |
+| 25 | Bookkeeping records on replay | ❌ | ❌ | ❌ | **by design** | not wanted — bookkeeping stays hidden |
+| 27 | Injected IDE context | ❌ | ❌ | ❌ | **by design** | not wanted — injected context stays hidden |
+| 28 | Off-window history | ✅ | ✅ | ⚠️ | **by design** | not wanted — a consequence of windowed replay |
+| 30 | Silent `/effort` turns | — | — | ❌ | **by design** | not wanted — an honest audit trail |
 
-Sorted by take, not by item number — the numbered sections below keep their original order.
-`↑`/`↓` mark a take the philosophy moved; **by design** means it is now ruled out rather than
-deferred, and belongs in the release description's "By design" list, not its gap list.
+Sorted by take, not by item number — the numbered sections below keep their original order, so the
+table is the index and the sections are the archive. Four groups, in this order:
+
+1. **DONE** (24) — everything shipped.
+2. **P3, still open** (1): **11**, and only its evidence is in question — see below.
+3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
+
+`↑`/`↓` mark a take the philosophy moved. **By design** means ruled out rather than postponed, and
+belongs in the release description's "By design" list, never its gap list. Group 3 grew from 2 to 9
+on 2026-08-06 when the remaining P3s were explicitly declined: cost (17), the usage panel (18) and
+per-record metadata (26) joined the four that were already deliberate non-features. Nothing in
+group 3 is waiting for time — reopening any of it takes a reason to reverse the decision.
 
 **Effort scale.** Sized against this codebase, not in the abstract — what makes something `M` here
 is usually that it has to land in the live renderer AND the replay parser without the two drifting,
@@ -688,7 +697,8 @@ Approaching / hit a usage limit, and when it resets.
 - **VS Code:** ✅ `total_cost_usd` → `usageData.totalCost`, with `modelUsage[model]` supplying the
   context window and max output tokens.
 - **Us:** ❌ `onResult` (`chat.html:2000`) uses wall-clock + output tokens only.
-- **Take: P3**, and the philosophy agrees with the existing deferral: cost is checked occasionally,
+- **Take: by design, don't build** (was P3; ruled out 2026-08-06). The philosophy already pointed
+  this way and the call is now explicit: cost is checked occasionally,
   `/cost` answers it, and a spend dashboard is not something you reach for while writing a line of
   code. Keep it on the DEFERRED list rather than promoting it.
 - **17a — `modelUsage[].contextWindow`: P2, and separate from the above. DONE 2026-08-06.** This is
@@ -729,7 +739,7 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 - **Terminal:** ✅ `/context` breakdown.
 - **VS Code:** ✅ a usage panel attributing consumption to agents, skills, plugins and MCP servers.
 - **Us:** ⚠️ those numbers feed the context gauge denominator and nothing else.
-- **Take: P3.** Same deferral as 17.
+- **Take: by design, don't build** (was P3; ruled out 2026-08-06). Same reasoning as 17.
 
 ### 19. Real thinking-token count
 - **Terminal:** ✅ live token count while thinking.
@@ -984,7 +994,8 @@ records (`task_reminder`, `deferred_tools_delta`, `agent_listing_delta`, `skill_
 `command_permissions`), `mode`, `queue-operation`, `last-prompt`.
 
 - **Terminal / VS Code:** ❌ both hide these too.
-- **Take: P3.** Correct as-is. Listed so nobody "discovers" them later and assumes they're a bug.
+- **Take: by design.** Correct as-is. Listed so nobody "discovers" them later and assumes they're
+  a bug.
 
 ### 26. Per-record metadata
 `effort`, `attributionSkill`, `permissionMode`, `gitBranch`, `version`, `cwd` sit on nearly every
@@ -993,7 +1004,8 @@ record.
 - **Terminal:** ⚠️ model + branch in the status line.
 - **VS Code:** ⚠️ model shown; the rest not.
 - **Us:** ❌ nothing — a resumed session can't tell you which model, effort or branch a turn ran on.
-- **Take: P3** as chrome, but `effort`/model per turn would be genuinely useful on long resumed
+- **Take: by design, don't build** (was P3; ruled out 2026-08-06). It reads as chrome, and although
+  `effort`/model per turn would be mildly useful on long resumed
   sessions. Park it.
 
 ### 27. Injected IDE context
@@ -1001,7 +1013,7 @@ record.
 `cleanInjected()` (`SessionStore.kt:641`).
 
 - **Terminal / VS Code:** ❌ hidden there too.
-- **Take: P3.** Keep stripping.
+- **Take: by design.** Keep stripping.
 
 ### 28. Off-window history
 Windowed replay ships the newest ~250 blocks; earlier turns aren't in the DOM until you scroll up,
@@ -1009,7 +1021,7 @@ so browser find can't see them.
 
 - **Terminal / VS Code:** ✅ full scrollback.
 - **Us:** ⚠️ deliberate — it's what makes a big session open fast (`docs/limits.md`).
-- **Take: P3.** Keep — the windowing is what makes a big session open fast, and scrolling back
+- **Take: by design.** Keep — the windowing is what makes a big session open fast, and scrolling back
   through old turns is not an hourly act.
   Worth flagging the adjacent feature, though: **find-in-conversation** *would* pass the
   philosophy's test (searching what Claude just did, mid-task, with no terminal equivalent — the
@@ -1031,7 +1043,8 @@ Replay keeps `structuredPatch` (edits) and `answers` (ask cards); `stdout` is ke
 The stream, echo and summary of an effort change are suppressed live via `effortMuted`
 (`chat.html:1654`); they reappear on resume because the transcript records them.
 
-- **Take: P3.** Already decided and documented in `CLAUDE.md` — kept as an honest audit trail.
+- **Take: by design.** Already decided and documented in `CLAUDE.md` — kept as an honest audit
+  trail.
 
 ---
 
@@ -1154,9 +1167,22 @@ accounting. **Every `L` in this document shrank when measured. Not one grew.**
 real gap (`system/informational`) was neither hook-specific nor what the item described.
 
 **Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
-release description mentions them, they belong under "By design". Items 17, 18, 25–28 and 30 stay
-P3 for the reasons in their sections.
+release description mentions them, they belong under "By design".
 
+**Everything still open, in one place — and it is now one item.**
+
+**11** ("file was modified by the user") is all that remains, and what it needs first is a
+measurement rather than a feature. Its P3 rests on a zero-count for a single field name,
+`userModified`, and item 8 has since shown such a zero means nothing until you have confirmed the
+CLI writes that key — item 8's field turned out to belong to Bash results, so its zero was
+guaranteed regardless of the truth. **Confirm the field against a real record before re-scoring or
+building.**
+
+Everything else was declined on 2026-08-06. Cost (17), the token/usage panel (18) and per-record
+metadata (26) moved from P3 to **by design**, joining 25, 27, 28 and 30, which were already
+deliberate non-features. That is a decision, not a backlog: they belong under "By design" in any
+release description, and picking one up again needs a reason to reverse the call rather than an
+opening in the schedule.
 
 ---
 
