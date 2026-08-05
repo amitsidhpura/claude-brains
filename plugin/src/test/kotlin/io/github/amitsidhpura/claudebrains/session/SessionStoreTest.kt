@@ -245,11 +245,19 @@ class SessionStoreTest {
      * A safety classifier can make the CLI retry on another model and WITHDRAW what it already sent.
      * Leaving retracted text on screen would show content the model explicitly took back.
      *
-     * BUILT BLIND: not one local transcript contains `model_refusal_fallback` or an assistant
-     * `supersedes` field, so this fixture is the only thing it has ever run against. The shape comes
-     * from the VS Code webview bundle (2.1.222). Both retraction lanes are covered, and so is the
-     * guard that matters most — a `user` block is never withdrawn, because the model cannot take
-     * back what the human typed.
+     * Not one local transcript contains `model_refusal_fallback` or an assistant `supersedes` field,
+     * so this fixture is the only thing it has ever run against — but the CONTRACT is no longer
+     * guessed. Verified 2026-08-05 against the 2.1.222 binary's own wire schema, which also settled
+     * two things this test did not originally cover:
+     *  - `scope` decides whether the SESSION model changed. "local" means a subagent / `/btw` /
+     *    background fork fell back and the session model is untouched, so a notice claiming a switch
+     *    would be a falsehood. Absent means "session" — the schema says so explicitly.
+     *  - `model_refusal_no_fallback` is a separate subtype for the refusal that was NOT retried.
+     *    It carries no `fallback_model` and no retractions; the record exists only to say the turn
+     *    ended and why, and we used to drop it on the floor.
+     *
+     * Both retraction lanes are covered, and so is the guard that matters most — a `user` block is
+     * never withdrawn, because the model cannot take back what the human typed.
      */
     @Test
     fun `retracted assistant messages are withdrawn, but never the user's own`() {
@@ -276,6 +284,18 @@ class SessionStoreTest {
                 """"originalModel":"claude-opus-5","fallbackModel":"claude-haiku-4-5",""" +
                 """"content":"Safeguards flagged this message.","session_id":"s",""" +
                 """"retractedMessageUuids":["a4"],"timestamp":"2026-08-05T10:05:00.000Z"}""",
+            // scope:"local" — a subagent fell back. Nothing is retracted and the session model did
+            // NOT change, so the notice must not claim a switch.
+            assistant("a5", "LOCAL-KEPT"),
+            """{"type":"system","subtype":"model_refusal_fallback","uuid":"r3","direction":"retry",""" +
+                """"scope":"local","original_model":"claude-opus-5","fallback_model":"claude-sonnet-5",""" +
+                """"content":"Safeguards flagged a side question.","session_id":"s",""" +
+                """"timestamp":"2026-08-05T10:06:00.000Z"}""",
+            // the refusal with no retry at all; `content` is empty, which one emission site really
+            // does send, so the parser has to supply the sentence itself
+            """{"type":"system","subtype":"model_refusal_no_fallback","uuid":"r4",""" +
+                """"original_model":"claude-opus-5","request_id":null,"content":"","session_id":"s",""" +
+                """"timestamp":"2026-08-05T10:07:00.000Z"}""",
         ).joinToString("\n")
 
         val tmpHome = File.createTempFile("claude-home-refusal", "").let { it.delete(); it.mkdirs(); it }
@@ -302,6 +322,17 @@ class SessionStoreTest {
                 "the camelCase spelling the CLI's emission site writes must retract too")
             assertTrue(texts.any { it.contains("claude-haiku-4-5") },
                 "the camelCase model fields must reach the notice")
+
+            val localNotice = texts.single { it.startsWith("Safeguards flagged a side question.") }
+            assertFalse(localNotice.contains("Switched"),
+                "a local-scope fallback did not swap the session model, so the notice must not say it did")
+            assertTrue(localNotice.contains("session model is unchanged"),
+                "a local-scope notice has to state what did NOT change, or it reads as a session switch")
+            assertTrue(texts.any { it == "LOCAL-KEPT" },
+                "a local-scope fallback retracts nothing — that message must survive")
+
+            assertTrue(texts.any { it.contains("declined to answer") && it.contains("claude-opus-5") },
+                "model_refusal_no_fallback must still produce a notice when its content is empty")
         } finally {
             SessionStore.claudeHome = home   // the other tests read the shared fixture from here
             tmpHome.deleteRecursively()

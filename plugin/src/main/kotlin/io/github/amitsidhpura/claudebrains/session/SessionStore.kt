@@ -732,10 +732,39 @@ object SessionStore {
                                     ?.jsonPrimitive?.contentOrNull
                                 val body = obj["content"]?.jsonPrimitive?.contentOrNull
                                     ?: "Safeguards flagged this message."
+                                // `scope` says whether the SESSION model actually changed. The wire
+                                // schema: "'session': the main thread fell back and the session model
+                                // is swapped. 'local': a subagent / side-question (/btw) / background
+                                // fork fell back — only that response came from the fallback model and
+                                // the session model is unchanged. Absent from older CLIs (treat as
+                                // 'session')." Verified against 2.1.222; the live path had the same
+                                // bug and repainted the model chip for a switch that never happened.
+                                val local = (obj["scope"]?.jsonPrimitive?.contentOrNull
+                                    ?: "session") == "local"
                                 flushSummary()
                                 out.add(Item("error").apply {
-                                    text = if (orig != null && fb != null)
-                                        "$body Switched from $orig to $fb." else body
+                                    text = when {
+                                        fb != null && local ->
+                                            "$body That response came from $fb; the session model is unchanged."
+                                        orig != null && fb != null -> "$body Switched from $orig to $fb."
+                                        else -> body
+                                    }
+                                })
+                                continue
+                            }
+                            // The refusal that was NOT retried: "no fallback model is configured, or
+                            // per-category routing declined the retry". No fallback_model and no
+                            // retractions ride on it, so there is nothing to withdraw — the record
+                            // exists purely to say the turn ended and why. Mirrors onRefusalNoFallback.
+                            if (obj["subtype"]?.jsonPrimitive?.content == "model_refusal_no_fallback") {
+                                val orig = (obj["original_model"] ?: obj["originalModel"])
+                                    ?.jsonPrimitive?.contentOrNull
+                                val body = obj["content"]?.jsonPrimitive?.contentOrNull
+                                    ?.takeIf { it.isNotBlank() }
+                                flushSummary()
+                                out.add(Item("error").apply {
+                                    text = body ?: ((orig ?: "The model") +
+                                        " declined to answer, and no fallback model was available.")
                                 })
                                 continue
                             }

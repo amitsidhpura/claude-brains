@@ -61,7 +61,7 @@ and the reasoning is in the item.
 | 10 | Truncated-output marker | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — `.io-cut` / `.cmd-cut` |
 | 9 | Bash exit-code explanation (was "failure detail") | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · re-scored P0→P3 | shipped — `.io-note`; premise was measured wrong |
 | 15 | Compaction boundary | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — marker + folded summary + gauge reset |
-| 21 | Model refusal fallback | ? | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | shipped — banner, model follow, both eviction lanes |
+| 21 | Model refusal fallback | ? | ✅ | ✅ | **DONE** · **VERIFIED against 2.1.222** 2026-08-06 | 2nd pass found a real bug (`scope`) + a missing subtype |
 | 31 | API retry storms (`system/api_error`) | ✅ | ? | ✅ | **DONE** 2026-08-05 · FOUND BY MEASURING | 20 real records in ONE session, all invisible |
 | 6 | Non-Bash tool result summaries | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — structural skip rule, not per-tool shapes |
 | 2 | Sub-agent final report | ✅ | ⚠️ | ✅ | **DONE** 2026-08-05 | free with 6, as predicted |
@@ -670,6 +670,33 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
     Evict the named messages on arrival… Idempotent." Tool-result uuids match nothing we stamp, so
     those degrade to no-op — benign, and now known rather than discovered.
 
+  **Second verification pass (2026-08-06)** — the first pass checked that the fields we *used*
+  existed; this one read the whole wire schema for the fields we did **not** use. It found a real
+  bug and a whole missing branch, which is the argument for verifying a BLIND item even after it
+  looks confirmed:
+  - **`scope` was ignored, and that made the panel lie.** The schema documents it in its own words:
+    *"'session': the main thread fell back and the session model is swapped. 'local': a subagent /
+    side-question (/btw) / background fork fell back — only that response came from the fallback
+    model and the session model is unchanged. Absent from older CLIs (treat as 'session')."* We
+    followed `fallback_model` into the model chip **unconditionally**, so a subagent falling back
+    silently repainted the composer and left it there — every later turn then reported a model the
+    session had never switched to, and nothing would ever correct it. Both paths now honour `scope`,
+    defaulting to `session` exactly as the schema instructs, and the local case gets its own sentence
+    ("That response came from X; the session model is unchanged") because claiming a switch that did
+    not happen is the same falsehood the chip was telling. Retraction stays scope-independent.
+  - **`model_refusal_no_fallback` was dropped on the floor.** A separate subtype, described as
+    *"emitted when the model ends the stream with stop_reason 'refusal' and no retry runs: no
+    fallback model is configured, or per-category routing declined the retry"*. It carries
+    `original_model` and `content` but **no** `fallback_model` and **no** retractions — there is
+    nothing to follow and nothing to evict, and the entire job is saying the turn ended and why.
+    Unhandled, the panel simply stopped. Now rendered on both paths, with our own sentence behind
+    `content` because one emission site really does send `content:""`.
+
+  Note the shape of both misses: neither is a wrong field name, which is what the first pass looked
+  for. They are fields that exist, that we never read, and whose absence changes what the panel
+  *claims*. `direction` (`retry`/`revert`/`sticky`) is still unused, and deliberately so — we follow
+  whatever `fallback_model` names, whichever direction it moved.
+
   **Still never OBSERVED in a live session or transcript**, and that will not change until a refusal
   actually occurs. Tests are synthetic; the live path was driven headless through `onClaudeEvent`.
 
@@ -835,6 +862,15 @@ Two habits that did the work, both worth repeating:
   `api_error_status` / `api_error` / `error_details` and no plain `error`, which reads as though
   `ev.error` were dead. The emission site settles it — `error:n.error` is written onto every
   assistant frame. When the two disagree, the code that runs wins.
+
+Item 21 was then verified TWICE, and the second pass is the instructive one. The first checked that
+the fields we *used* existed, and cleared them. The second read the schema for the fields we did
+**not** use, and found a bug plus a missing branch: `scope` was ignored, so a subagent's fallback
+permanently repainted the session's model chip, and `model_refusal_no_fallback` — the refusal that
+is never retried — was dropped entirely. Neither is a wrong field name, which is all the first pass
+was looking for. **The dangerous field is not the one you spelled wrong; it is the one you never
+read.** For a handler that makes a CLAIM — which model answered, whether you are signed in, whether
+your tools loaded — the unread field is what turns a missing feature into a false statement.
 
 **Tier 2 — signals with no terminal fallback (rule 1).** All small, and each converts a dead end
 into something actionable. Together they are less work than item 6 alone; a good tier to take when
