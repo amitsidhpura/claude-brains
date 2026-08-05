@@ -1235,6 +1235,55 @@
     st.el.classList.toggle('run', !done);
     maybeScroll();
   }
+  /**
+   * An image a TOOL returned — a Playwright screenshot, or `Read` on a PNG (client-parity item 8).
+   *
+   * Shape, from a real record rather than the audit's guess:
+   *   live   tool_result block  {type:"image", source:{media_type:"image/png", data:<base64>}}
+   *   replay toolUseResult      {type:"image", file:{base64, type:"image/png", dimensions,
+   *                                                  originalSize}}
+   * The discriminator is `type === "image"`. It is NOT `isImage`, which the item named: that field
+   * is real but belongs to BASH results, where it is always false — which is why measuring it found
+   * zero and the gap looked unreachable.
+   *
+   * Without this the result renders as NOTHING: the text path filters for `type === 'text'` blocks,
+   * an image-only result yields an empty string, and the early return drops it — leaving a bare
+   * `Read` tool line under a reply that says "screenshot displayed above".
+   *
+   * `dimensions` reserves the box BEFORE the data URI decodes, so a screenshot landing mid-turn
+   * does not shove the timeline down as it paints.
+   */
+  function toolImages(imgs) {
+    const box = document.createElement('div');
+    box.className = 'tool-imgs';
+    (imgs || []).forEach(function (im) {
+      if (!im) return;   // one malformed entry must not take out the whole result
+      const name = im.name || 'image';
+      if (!im.data) {
+        // Past the replay image budget: the chip still records that an image was here, because a
+        // silently absent screenshot is the very thing this item fixes.
+        const miss = document.createElement('div');
+        miss.className = 'ti-missing';
+        miss.textContent = name + ' — image not kept in this replay';
+        box.appendChild(miss);
+        return;
+      }
+      const img = document.createElement('img');
+      img.className = 'ti';
+      img.alt = name;
+      // Real key names, taken from an actual record: the CLI sends
+      // {originalWidth, originalHeight, displayWidth, displayHeight} — NOT {width, height}, which
+      // an earlier guess here used, so the box was never reserved and the timeline reflowed.
+      const d = im.dimensions || {};
+      const w = d.displayWidth || d.originalWidth || d.width;
+      const h = d.displayHeight || d.originalHeight || d.height;
+      if (w && h) { img.width = w; img.height = h; }
+      img.src = 'data:' + (im.media_type || 'image/png') + ';base64,' + im.data;
+      img.onclick = function () { openLB(img.src, name); };
+      box.appendChild(img);
+    });
+    return box.childNodes.length ? box : null;
+  }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
   function toolLine(name) {
     const t = el('tool-line', '');
@@ -1465,6 +1514,13 @@
             if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut]);
             if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile, it.note, it.interrupted]);
             t.after(ioBox(rows));
+          }
+          // Tool-returned images (item 8), through the same builder live uses. Kotlin already
+          // applied the replay image budget, so an over-budget screenshot arrives without `data`
+          // and renders as a "not kept" chip rather than disappearing.
+          if (it.images && it.images.length) {
+            const box = toolImages(it.images);
+            if (box) t.after(box);
           }
           replayCard(it);
           break;
@@ -2630,6 +2686,18 @@
       // ~2000 boxes saying "The file … has been updated successfully" under the diff that just
       // showed the change. An error is never skipped: a failure is not a restatement of a success.
       if (LIM.resultSkip.indexOf(t.name) !== -1 && !b.is_error) return;
+      // Images the tool returned (item 8). Drawn BEFORE the text early-return below, because an
+      // image-only result has no text at all — which is exactly how a screenshot used to vanish.
+      if (Array.isArray(b.content)) {
+        const imgs = b.content.filter(function (x) { return x && x.type === 'image' && x.source; })
+          .map(function (x) {
+            return { media_type: x.source.media_type, data: x.source.data, name: t.name || 'image' };
+          });
+        if (imgs.length) {
+          const box = toolImages(imgs);
+          if (box) { (t.io || t.el).after(box); maybeScroll(); }
+        }
+      }
       let txt = '';
       if (typeof b.content === 'string') txt = b.content;
       else if (Array.isArray(b.content)) txt = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
@@ -3310,6 +3378,19 @@
       'reference an issue\n\nOriginal prompt: commit this', 'warning');
     infoLine('Consider running the test suite before committing.', 'suggestion');
     infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
+
+    // tool-returned image (item 8) — a Read on a PNG or a Playwright screenshot. Two states:
+    // the image itself, and the budget-trimmed chip a replay shows when the bytes were dropped.
+    { const ti = track(toolLine('Read'));
+      ti.querySelector('.t-desc').textContent = '/home/you/project/screenshot.png';
+      ti.querySelector('.t-desc').classList.add('path');
+      const box = toolImages([{ media_type: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z4AATAxQxhArAgQAAP//G6QCFVmA6TsAAAAASUVORK5CYII=',
+        name: 'screenshot.png', dimensions: { displayWidth: 2, displayHeight: 2 } }]);
+      if (box) ti.after(box);
+      const ti2 = track(toolLine('Read'));
+      ti2.querySelector('.t-desc').textContent = '/home/you/project/huge-capture.png';
+      const box2 = toolImages([{ kind: 'image', name: 'huge-capture.png' }]);
+      if (box2) ti2.after(box2); }
 
     // queued messages (item 24) — the composer's pending list, drawn through the real renderer.
     queue = [{ text: 'also add a test for the empty case', images: [] },

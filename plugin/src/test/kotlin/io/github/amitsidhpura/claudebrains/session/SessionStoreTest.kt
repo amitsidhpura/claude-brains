@@ -340,6 +340,58 @@ class SessionStoreTest {
     }
 
     /**
+     * An image a TOOL returned (client-parity item 8) — a Playwright screenshot, or `Read` on a PNG.
+     *
+     * The shape below is REAL, from the transcript of a live run that took a screenshot and read it
+     * back. It corrects the item, which named `toolUseResult.isImage`: that field exists but belongs
+     * to BASH results, where it is always `false` — which is why measuring it found zero and the gap
+     * looked unreachable. The discriminator is `toolUseResult.type == "image"`.
+     *
+     * The bytes go on `images`, the same list user attachments use, so `trimAttachments` applies the
+     * 4 MB replay budget to tool images too and a screenshot cannot starve the visible tail.
+     */
+    @Test
+    fun `an image a tool returned survives replay`() {
+        val b64 = "iVBORw0KGgoAAAANSUhEUg" + "A".repeat(200)
+        val jsonl = listOf(
+            """{"type":"user","uuid":"u1","timestamp":"2026-08-06T01:30:00.000Z","message":{"role":"user","content":[{"type":"text","text":"screenshot it"}]}}""",
+            """{"type":"assistant","uuid":"a1","timestamp":"2026-08-06T01:31:00.000Z","message":{"id":"m1","role":"assistant","content":[""" +
+                """{"type":"tool_use","id":"r1","name":"Read","input":{"file_path":"/home/x/google-home.png"}}]}}""",
+            // the result: an image block, no text at all — which is how it used to vanish
+            """{"type":"user","uuid":"u2","timestamp":"2026-08-06T01:31:02.000Z",""" +
+                """"toolUseResult":{"type":"image","file":{"base64":"$b64","type":"image/png",""" +
+                """"dimensions":{"originalWidth":921,"originalHeight":892,"displayWidth":921,"displayHeight":892},""" +
+                """"originalSize":40960}},""" +
+                """"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"r1",""" +
+                """"content":[{"type":"image","source":{"type":"base64","media_type":"image/png","data":"$b64"}}]}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-img", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "img.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val tool = SessionStore.readTranscript(CWD, "img")
+                .single { it["role"]?.jsonPrimitive?.contentOrNull == "tool" }
+            val imgs = tool["images"]?.jsonArray
+            assertEquals(1, imgs?.size, "the image must reach replay, not be dropped for having no text")
+
+            val im = imgs!![0].jsonObject
+            assertEquals("image/png", im["media_type"]?.jsonPrimitive?.contentOrNull)
+            assertEquals(b64, im["data"]?.jsonPrimitive?.contentOrNull)
+            assertEquals("google-home.png", im["name"]?.jsonPrimitive?.contentOrNull,
+                "named from the path so the lightbox caption and alt text mean something")
+            // carried through verbatim: the renderer reserves the box from displayWidth/Height
+            assertEquals(921, im["dimensions"]?.jsonObject?.get("displayWidth")?.jsonPrimitive?.content?.toInt())
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * `system/informational` — the CLI's own notices (client-parity item 22).
      *
      * The first record below is REAL, copied verbatim from a transcript produced by driving 2.1.222

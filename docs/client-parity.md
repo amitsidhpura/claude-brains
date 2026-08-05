@@ -79,7 +79,7 @@ and the reasoning is in the item.
 | 24 | Queued messages | ✅ | ❌ | ✅ | **DONE** 2026-08-06 | `L`→`M`; it was hiding an active bug, not just a gap |
 | 13a | MCP *failure notice* (not a server UI) | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · probe corrected the source | `S` held; the "already in the init payload" claim did not |
 | 22 | Hook activity | ✅ | ? | ✅ | **DONE** 2026-08-06 · probe changed the work | ack was fine; blocked tools already shown; `informational` was the gap |
-| 8 | Tool-returned images | ⚠️ | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `isImage` never once set |
+| 8 | Tool-returned images | ⚠️ | ✅ | ✅ | **DONE** 2026-08-06 | item named the wrong field; `isImage` is a Bash field |
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 11 | "File was modified by the user" | ? | ✅ | ❌ | **P3** ↓ (measured) | 0 local records — `userModified` never once set |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
@@ -342,11 +342,40 @@ Playwright screenshots, `Read` on a PNG — `toolUseResult.isImage`.
 - **Terminal:** ⚠️ can't render images inline.
 - **VS Code:** ✅ image results render.
 - **Us:** ❌ dropped entirely.
-- **Take: P3** (was P2), **measured 2026-08-05: `isImage` is set on ZERO local records.** The
-  wiring claim still holds — we already decode base64 for user attachments — but there is
-  nothing to wire it to, and it would be a third feature built blind. Revisit when a
-  screenshot-returning tool is actually used; the guard it rides on (item 6) is now open, so
-  it stays cheap.
+- **Take: was P3. DONE 2026-08-06, once a screenshot was actually taken — and the item named the
+  WRONG FIELD.**
+
+  The 2026-08-05 measurement ("`isImage` is set on ZERO local records") was accurate and its
+  conclusion was not. `isImage` is real, but it belongs to **Bash** results, where it is always
+  `false`; it is not the image discriminator at all. So the count could never have been anything but
+  zero, and "revisit when a screenshot-returning tool is used" was only half the reason nothing was
+  found. Two problems were masking each other: no screenshot had been taken, *and* the field being
+  measured was the wrong one.
+
+  The real shape, from a live run that screenshotted a page with Playwright and read the PNG back:
+
+      live    tool_result block  {type:"image", source:{media_type:"image/png", data:<base64>}}
+      replay  toolUseResult      {type:"image", file:{base64, type:"image/png",
+                                                     dimensions:{originalWidth, originalHeight,
+                                                                 displayWidth, displayHeight},
+                                                     originalSize}}
+
+  **What the user saw before this:** a bare `Read` tool line with nothing under it, beneath a reply
+  reading *"Screenshot captured and displayed above"*. The panel was contradicting the answer — rule
+  3, not a missing nicety. The cause is one line: the result text is built by filtering for
+  `type === 'text'` blocks, so an image-only result yields `''` and hits the early return.
+
+  **Shipped** on both paths through one shared builder. The bytes ride on `images`, the same list
+  user attachments use, so `trimAttachments` applies the 4 MB replay budget to tool images for free
+  and a screenshot cannot starve the visible tail; an over-budget image degrades to a "not kept in
+  this replay" chip rather than vanishing, which is the failure this item exists to fix. Height is
+  capped at 320px with the lightbox for full size — a full-page screenshot is tall enough to push
+  the rest of the turn off screen.
+
+  Two things caught by building against the real record rather than the doc: `dimensions` uses
+  `displayWidth`/`displayHeight`, **not** `width`/`height` (an earlier guess here, so the box was
+  never reserved and the timeline reflowed as the data URI decoded), and one malformed entry in the
+  list threw and took out the entire result render.
 
 ### 9. Bash failure detail
 We show the concatenated `tool_result` text and colour the dot.
@@ -419,6 +448,12 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
 - **Take: P3** (was P2), **measured 2026-08-05: `userModified` is set on ZERO local records.**
   Item 6 has now opened the path it was waiting on, so it remains cheap — but a flag never
   once observed is not worth rendering on speculation. Same call as items 8 and 21's evidence.
+
+  **Caution added 2026-08-06:** this row's evidence is a zero-count on a single field name, which is
+  exactly what item 8 had — and item 8's field turned out to be the wrong one, making the zero
+  meaningless. Before acting on "0 local records" here, confirm against a real record that
+  `userModified` is the field the CLI actually writes for this, rather than inferring it from the
+  audit. Zero is only evidence once you know you measured the right key.
 
 ### 12. Server-side tools
 `server_tool_use` content blocks (web search executed API-side).

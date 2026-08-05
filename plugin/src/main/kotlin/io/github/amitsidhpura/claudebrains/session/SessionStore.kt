@@ -945,6 +945,29 @@ object SessionStore {
         res?.get("structuredPatch")?.takeIf { it is JsonArray && it.jsonArray.isNotEmpty() }
             ?.let { item.patch = it }
 
+        // An image the tool returned — a Playwright screenshot, or `Read` on a PNG (item 8).
+        // Discriminated by `toolUseResult.type == "image"`, NOT by `isImage`: that field exists but
+        // belongs to Bash results, where it is always false, which is why measuring it found zero
+        // and this looked unreachable. Read from a real record.
+        //
+        // Parked on `images`, the same list user attachments use, so `trimAttachments` applies the
+        // 4 MB budget to tool images for free and a screenshot cannot starve the visible tail.
+        if (res?.get("type")?.jsonPrimitive?.contentOrNull == "image") {
+            val file = res["file"] as? JsonObject
+            val b64 = file?.get("base64")?.jsonPrimitive?.contentOrNull
+            if (!b64.isNullOrEmpty()) {
+                val dims = file["dimensions"] as? JsonObject
+                item.images.add(buildJsonObject {
+                    put("kind", "image")
+                    put("media_type", file["type"]?.jsonPrimitive?.contentOrNull ?: "image/png")
+                    put("data", b64)
+                    put("name", item.desc?.substringAfterLast('/') ?: "image")
+                    // Reserves the box before the data URI decodes, so replay does not reflow.
+                    if (dims != null) put("dimensions", dims)
+                })
+            }
+        }
+
         // Every tool's result, not just Bash's — EXCEPT the ones whose outcome the panel already
         // shows (RenderLimits.RESULT_SKIP). An error is never skipped: a failure is not a
         // restatement of a success, so it shows whatever the tool. The stdout/stderr, spill and

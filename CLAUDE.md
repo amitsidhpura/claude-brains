@@ -211,6 +211,12 @@ always-allow / allow-directory; stripped on `blocked_path` cards where no grant 
 ALL `addRules` suggestions merge into ONE "Always allow" button that echoes every rule index at
 once (compound commands arrive as one suggestion per sub-command — granting half would re-prompt;
 the wire `sugg` field is a comma-separated index list, done-text names the granted rules).
+Tool-returned images (Playwright screenshots, `Read` on a PNG) render under the tool line via
+`toolImages`: live from the `tool_result` block `{type:"image",source:{media_type,data}}`, replay
+from `toolUseResult.type=="image"` + `file.base64`. The discriminator is `type=="image"` — NOT
+`isImage`, which is a BASH-result field that is always false. Bytes ride on `Item.images` so
+`trimAttachments` applies the 4 MB budget to them too; over-budget images keep a chip, never vanish.
+`dimensions` is `{originalWidth,originalHeight,displayWidth,displayHeight}`, not `{width,height}`.
 Queued messages: typing while a turn runs holds the text in `#queue` above the composer (click a
 row to edit it back, `×` to drop it) and it sends when the request ENDS — drained from `onResult`,
 never mid-turn, and NOT after a Stop. There is no CLI queue to drive: `queue-operation` records are

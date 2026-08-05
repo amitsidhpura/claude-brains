@@ -329,6 +329,16 @@ blockquote > *:last-child { margin-bottom: 0; }
    transcript), so a resumed session keeps the tool line and its result and loses this. */
 .t-prog { margin: -2px 0 0 22px; font-size: 12px; color: var(--dot); }
 .t-prog.run { color: var(--muted); }
+/* Images a tool returned (client-parity item 8): a Playwright screenshot, or Read on a PNG.
+   Aligned with the IN/OUT box at 22px so it reads as that tool's output. Capped in height rather
+   than width — a full-page screenshot is tall, and letting it run would push the rest of the turn
+   off screen; the lightbox is there for the full size. `height:auto` overrides the intrinsic
+   height attribute, which is set only so the box is reserved before the data URI decodes. */
+.tool-imgs { margin: 2px 0 0 22px; display: flex; flex-direction: column; gap: 6px; }
+.tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 320px; object-fit: contain;
+  object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--code-bg); cursor: zoom-in; display: block; }
+.tool-imgs .ti-missing { color: var(--muted); font-size: 11px; }
 .io-cut, .io-note { flex: 0 0 100%; margin-left: 32px; color: var(--muted); font-size: 11px;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
 .io-cut.click { cursor: pointer; }
