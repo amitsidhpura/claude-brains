@@ -65,6 +65,14 @@ class ClaudeCli(
     @Volatile
     private var stopped = false
 
+    /**
+     * Last few stderr lines, for reporting WHY the CLI died. Bounded because a crashing process can
+     * print without limit, and only the tail explains the exit anyway.
+     */
+    private val stderrTail = ArrayDeque<String>()
+    /** Recent stderr, newest last — empty when the process said nothing. */
+    fun stderrTail(): List<String> = synchronized(stderrTail) { stderrTail.toList() }
+
     /** `--mcp-config` JSON pointing the CLI at the plugin's MCP-over-WebSocket bridge. */
     private fun ideMcpConfig(): String {
         val cfg = buildJsonObject {
@@ -135,7 +143,17 @@ class ClaudeCli(
             }
         }
         thread(name = "claude-stderr", isDaemon = true) {
-            p.errorStream.bufferedReader(StandardCharsets.UTF_8).forEachLine { log.info("[claude] $it") }
+            p.errorStream.bufferedReader(StandardCharsets.UTF_8).forEachLine {
+                log.info("[claude] $it")
+                // Keep the tail so a non-zero exit can SAY why. The panel used to show
+                // "claude process exited (1)" with the reason only in idea.log, which a normal user
+                // never opens — and unlike everything else, there is no terminal to check, because
+                // this session's CLI is the one that just died.
+                synchronized(stderrTail) {
+                    stderrTail.addLast(it)
+                    while (stderrTail.size > STDERR_TAIL) stderrTail.removeFirst()
+                }
+            }
         }
         thread(name = "claude-wait", isDaemon = true) {
             val code = p.waitFor()
@@ -340,6 +358,8 @@ class ClaudeCli(
 
     private companion object {
         const val INIT_REQ_ID = "sdk-init"
+        /** stderr lines kept for the exit message — the tail is what explains a crash. */
+        const val STDERR_TAIL = 8
     }
 
     private fun gitBashPath(): String? {

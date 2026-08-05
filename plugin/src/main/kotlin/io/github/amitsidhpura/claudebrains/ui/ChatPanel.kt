@@ -395,7 +395,17 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     }
                 }
             },
-            onExit = { code -> pushEvent("""{"type":"__exit","code":$code}""") },
+            // Carry the stderr tail on a NON-ZERO exit: "claude process exited (1)" with the reason
+            // buried in idea.log is a dead end, and there is no terminal to check — the CLI that
+            // just died is this session's.
+            onExit = { code ->
+                pushFrame(buildJsonObject {
+                    put("type", "__exit")
+                    put("code", code)
+                    if (code != 0) session.stderrTail().takeIf { it.isNotEmpty() }
+                        ?.let { put("stderr", it.joinToString("\n")) }
+                })
+            },
         )
 
         // Seed the mode chip with the persisted mode the CLI was just launched with —

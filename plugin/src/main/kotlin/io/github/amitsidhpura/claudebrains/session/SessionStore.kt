@@ -692,6 +692,22 @@ object SessionStore {
                         // user message (see the isCompactSummary branch above). The marker is emitted
                         // here and the summary folded into it when the next record claims this uuid.
                         "system" -> {
+                            // A transient API failure the CLI is retrying. 24 of these across local
+                            // transcripts, every one invisible: the panel simply stalled while the
+                            // CLI backed off. Rule 1 territory — there is no terminal to check,
+                            // because the terminal is not running this session.
+                            if (obj["subtype"]?.jsonPrimitive?.content == "api_error") {
+                                val err = obj["error"] as? JsonObject
+                                val msg = (err?.get("formatted") ?: err?.get("message"))
+                                    ?.jsonPrimitive?.contentOrNull ?: "API error"
+                                val n = (obj["retryAttempt"] as? JsonPrimitive)?.contentOrNull
+                                val max = (obj["maxRetries"] as? JsonPrimitive)?.contentOrNull
+                                out.add(Item("status").apply {
+                                    text = msg + if (n != null && max != null) " — retrying ($n/$max)" else ""
+                                    icon = "alert"
+                                })
+                                continue
+                            }
                             // A safety classifier flagged the exchange: the CLI retried on another
                             // model and WITHDREW what it had already sent. Replay both halves — the
                             // notice, and the removal — or a resumed session would show text the

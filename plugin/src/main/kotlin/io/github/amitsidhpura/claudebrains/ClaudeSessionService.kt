@@ -206,6 +206,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         io.github.amitsidhpura.claudebrains.session.SessionStore.readTranscript(cwd.path, id)
 
 
+    /** Recent CLI stderr, so a non-zero exit can report why instead of only a code. */
+    fun stderrTail(): List<String> = cli?.stderrTail().orEmpty()
+
     /** The session's current task list, from the store the CLI keeps at ~/.claude/tasks/<id>/. */
     fun tasks(id: String): kotlinx.serialization.json.JsonArray =
         io.github.amitsidhpura.claudebrains.session.SessionStore.tasks(id)

@@ -1146,7 +1146,8 @@
           errorBlock(it.text);
           break;
         case 'status':
-          statusLine(it.text, it.icon === 'stop' ? SVG_STOP : null);
+          statusLine(it.text, it.icon === 'stop' ? SVG_STOP : (it.icon === 'alert' ? SVG_ALERT : null),
+            it.icon === 'alert' ? 'status err' : null);
           break;
         case 'tasks':
           // A reconstructed snapshot of the Task* list at this point in the turn. Same renderer as
@@ -1784,6 +1785,15 @@
       // Rendering is driven entirely by stream_event deltas, so the whole-message `assistant` record
       // is only here for its uuid — the one field that ties a live summary to its replayed twin.
       case 'assistant':
+        // An auth failure is a DEAD END here: the plugin has no login flow by design
+        // (CLAUDE.md § Philosophy), so the message has to carry the whole fix. VS Code opens its
+        // own login; we point at the terminal, which is where signing in lives.
+        if (ev.error === 'authentication_failed' || ev.subtype === 'authentication_failed') {
+          setBusy(false);
+          return void statusLine(
+            'Not signed in. Run `claude` in a terminal and sign in there, then press Refresh.',
+            SVG_ALERT, 'status err');
+        }
         if (reqSeed == null && ev.uuid) reqSeed = ev.uuid;
         // The uuid the transcript will carry — stamp it on the blocks this message just drew, so a
         // later retraction can find them.
@@ -1817,6 +1827,13 @@
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }
+        } else if (ev.subtype === 'api_error') {
+          // The CLI is retrying a failed request. Without this the panel just stalls, and there is
+          // no terminal to check — this session's CLI is ours.
+          const e = ev.error || {};
+          statusLine((e.formatted || e.message || 'API error') +
+            (ev.retryAttempt && ev.maxRetries ? ' — retrying (' + ev.retryAttempt + '/' + ev.maxRetries + ')' : ''),
+            SVG_ALERT, 'status err');
         } else if (ev.subtype === 'model_refusal_fallback') {
           onRefusalFallback(ev);
         } else if (ev.subtype === 'compact_boundary') {
@@ -1837,6 +1854,17 @@
         }
         return;
       case '__tasks':            return void todoList(ev.items || []);
+      // A usage limit was hit or is close. One status line — and unlike most things, there is no
+      // terminal to check, because the terminal is not running this session. BUILT DEFENSIVELY:
+      // the event is in the CLI binary but has never appeared in a local transcript, so an
+      // unexpected shape must degrade to no line rather than a wrong one.
+      case 'rate_limit_event': {
+        const r = ev.rate_limit || ev;
+        const until = r.resetsAt || r.resets_at;
+        const when = until ? ' — resets ' + new Date(
+          typeof until === 'number' ? (until < 1e12 ? until * 1000 : until) : until).toLocaleTimeString() : '';
+        return void statusLine((r.message || 'Approaching a usage limit') + when, SVG_ALERT, 'status err');
+      }
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
@@ -1844,8 +1872,17 @@
       case '__title':            return setTitle(ev.text);
       case '__mode':             return applyCliMode(ev.mode);   // persisted mode, at startup
       case '__ctl_error':        return errorBlock(ev.error || 'control request failed');
-      case '__exit':             setBusy(false);
-        return statusLine('claude process exited (' + ev.code + ')', SVG_ALERT, 'status err');
+      case '__exit': {
+        setBusy(false);
+        const line = statusLine('claude process exited (' + ev.code + ')', SVG_ALERT, 'status err');
+        // WHY it died, when it said anything. Folded, because a crash dump is long and the first
+        // lines are rarely the useful ones — but present, which it was not before.
+        if (ev.stderr) {
+          const box = ioBox([['ERR', ev.stderr]]);
+          line.after(box);
+        }
+        return;
+      }
     }
   };
 

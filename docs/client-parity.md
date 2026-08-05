@@ -62,15 +62,16 @@ and the reasoning is in the item.
 | 9 | Bash exit-code explanation (was "failure detail") | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · re-scored P0→P3 | shipped — `.io-note`; premise was measured wrong |
 | 15 | Compaction boundary | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — marker + folded summary + gauge reset |
 | 21 | Model refusal fallback | ? | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | shipped — banner, model follow, both eviction lanes |
+| 31 | API retry storms (`system/api_error`) | ✅ | ? | ✅ | **DONE** 2026-08-05 · FOUND BY MEASURING | 20 real records in ONE session, all invisible |
 | 6 | Non-Bash tool result summaries | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — structural skip rule, not per-tool shapes |
 | 2 | Sub-agent final report | ✅ | ⚠️ | ✅ | **DONE** 2026-08-05 | free with 6, as predicted |
 | 29 | Non-Bash tool output on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped WITH 6, one shared skip list |
 | 7 | Tool input beyond one key | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — one case, not a matrix: Read line ranges |
 | 5 | Blank Task/Skill tool lines | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | shipped — 6 keys into `DESC_KEYS`, 74 lines fixed |
 | 14 | Todo / task checklist | ✅ | ✅ | ✅ | **DONE** 2026-08-05 | `TodoWrite` (replay) + the live `Task*` list |
-| 16 | Rate-limit warnings | ✅ | ✅ | ❌ | P1 | **S** — one `statusLine()` |
-| 23 | CLI stderr | — | ? | ❌ | **P1** ↑ (philosophy) | **S** — buffer it, print on non-zero exit |
-| 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ❌ | **P1** ↑ (philosophy) | **XS** — one branch, one message |
+| 16 | Rate-limit warnings | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | one `statusLine()`; event never seen locally |
+| 23 | CLI stderr | — | ? | ✅ | **DONE** 2026-08-05 | tail buffered, shown under the exit line |
+| 20a | Auth failure → "sign in from a terminal" | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | one branch; the message IS the fix |
 | 3 | Sub-agent prompt (what it was asked) | ✅ | ✅ | ❌ | P2 | **S** — `ioRow('IN', …)` already exists |
 | 1 | Sub-agent internals (nested tool calls) | ✅ | ✅ | ❌ | P2 | **L** — the only design pass in this doc |
 | 4 | Background task roster | ✅ | ✅ | ❌ | P2 | **S** chip · **M** ⇢ real roster rides on 1 |
@@ -741,3 +742,26 @@ empty-ack question first, because it may be a protocol bug rather than a display
 **Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
 release description mentions them, they belong under "By design". Items 17, 18, 25–28 and 30 stay
 P3 for the reasons in their sections.
+
+
+---
+
+## 31. API retry storms — `system/api_error` (found 2026-08-05, not in the original audit)
+
+Surveying the `system` record subtypes for tier 2 turned up six the parser skipped entirely. One of
+them matters: `api_error`, carrying
+`{error:{message, formatted}, retryInMs, retryAttempt, maxRetries, source:"request_retry"}`.
+
+- **Us:** ❌ was skipped with every other `system` record. Session `42d09b97` alone holds **20 of
+  them — a `529 Overloaded` storm retried ten times** — during which the panel showed nothing at
+  all. The turn simply appeared to hang.
+- **Take: DONE.** Textbook rule 1: the CLI is retrying inside OUR process, so there is no terminal
+  to check and no other client to defer to. Rendered as a status line on both paths —
+  `529 Overloaded — retrying (3/10)`.
+
+**The other five subtypes, deliberately left alone:** `turn_duration` (11) duplicates our own
+completion summary · `local_command` (7) is the `<local-command-stdout>` family `cleanInjected`
+already strips · `away_summary` (2) and `informational` (1) are one-off notices · **`stop_hook_summary`
+(1) is real evidence for item 22** (hook activity), which the audit could not size — it carries
+`hookCount`, `hookInfos`, `hookErrors` and `preventedContinuation`, so that item is no longer
+unsizeable, only unbuilt.
