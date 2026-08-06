@@ -287,13 +287,21 @@ object SessionStore {
     private fun computeTitle(f: File): String {
         var firstUser: String? = null
         var aiTitle: String? = null
+        var customTitle: String? = null
+        var summary: String? = null
         runCatching {
             f.bufferedReader().useLines { lines ->
                 for (line in lines.take(400)) {
                     if (line.isBlank()) continue
                     val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
                     when (obj["type"]?.jsonPrimitive?.content) {
-                        "summary" -> obj["summary"]?.jsonPrimitive?.content?.let { return it.trim() }
+                        // the user's own rename — a `/rename` in the TUI, or a fork's "… (fork)"
+                        // stamp (client-parity item 34). An explicit name outranks every derived
+                        // one, and later renames supersede earlier ones, so keep scanning.
+                        "custom-title" -> obj["customTitle"]?.jsonPrimitive?.content?.trim()
+                            ?.takeIf { it.isNotBlank() }?.let { customTitle = it }
+                        "summary" -> obj["summary"]?.jsonPrimitive?.content?.trim()
+                            ?.takeIf { it.isNotBlank() }?.let { if (summary == null) summary = it }
                         // keep scanning: later ai-title records supersede earlier ones
                         "ai-title" -> obj["aiTitle"]?.jsonPrimitive?.content?.trim()
                             ?.takeIf { it.isNotBlank() }?.let { aiTitle = it }
@@ -307,7 +315,7 @@ object SessionStore {
                 }
             }
         }.onFailure { log.warning("titleOf ${f.name}: $it") }
-        return aiTitle ?: firstUser?.take(80)?.ifBlank { null } ?: "(untitled session)"
+        return customTitle ?: summary ?: aiTitle ?: firstUser?.take(80)?.ifBlank { null } ?: "(untitled session)"
     }
 
     /**
@@ -1131,7 +1139,11 @@ object SessionStore {
     private fun cleanInjected(text: String): String? {
         val t = text.trim()
         if (t.startsWith("<local-command-caveat>") || t.startsWith("<local-command-stdout>") ||
-            t.startsWith("<task-notification>") || t.startsWith("<ide_opened_file>")) return null
+            t.startsWith("<task-notification>") || t.startsWith("<ide_opened_file>") ||
+            // a TUI-attached IDE's selection notification (client-parity item 37) — the one
+            // injected tag a full census of local user records found unstripped; 4 real records
+            // replayed as raw XML in a blue user box
+            t.startsWith("<ide_selection>")) return null
         CMD_RE.find(t)?.let { m ->
             val name = m.groupValues[1].trim()
             val args = m.groupValues[2].trim()

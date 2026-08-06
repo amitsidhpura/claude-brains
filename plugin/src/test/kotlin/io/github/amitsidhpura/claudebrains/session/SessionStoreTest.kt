@@ -930,6 +930,60 @@ class SessionStoreTest {
      * rather than showing the caveat blob as the title.
      */
     @Test
+    fun `a rename outranks every derived title, and the newest rename wins`() {
+        // Client-parity item 34: `custom-title` is what /rename (and a fork's "(fork)" stamp)
+        // writes, and it never reached titleOf — a renamed session kept showing its derived name.
+        // Precedence with an explicit name present: customTitle > summary > ai-title > first user.
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"first message"}]}}""",
+            """{"type":"summary","summary":"A derived summary","leafUuid":"x"}""",
+            """{"type":"ai-title","aiTitle":"An AI title","sessionId":"rename"}""",
+            """{"type":"custom-title","customTitle":"First rename","sessionId":"rename"}""",
+            """{"type":"custom-title","customTitle":"Final rename","sessionId":"rename"}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-rename", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "rename.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+            val info = SessionStore.list(CWD).first { it.id == "rename" }
+            assertEquals("Final rename", info.title,
+                "the user's own name must beat summary and ai-title, and the LAST rename wins")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `an injected ide_selection is stripped, not shown as raw xml`() {
+        // Client-parity item 37: the one injected tag the census found unstripped — a TUI-attached
+        // IDE's selection notification, not isMeta, replaying as raw XML in a blue user box.
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","message":{"role":"user","content":[""" +
+                """{"type":"text","text":"<ide_selection>The user selected the lines 6 to 11 from env.prod:\nSECRET=x</ide_selection>"}]}}""",
+            """{"type":"user","timestamp":"2026-07-28T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"a real message"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-idesel", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "idesel.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+            val users = SessionStore.readTranscript(CWD, "idesel")
+                .filter { it["role"]?.jsonPrimitive?.contentOrNull == "user" }
+            assertEquals(1, users.size, "the injected selection must not become a user box")
+            assertEquals("a real message", users[0]["text"]?.jsonPrimitive?.contentOrNull)
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `title falls through a local-command-caveat to the first real message`() {
         val jsonl = listOf(
             """{"type":"user","timestamp":"2026-07-28T10:00:00.000Z","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"<local-command-caveat>Caveat: The messages below were generated…</local-command-caveat>"}]}}""",

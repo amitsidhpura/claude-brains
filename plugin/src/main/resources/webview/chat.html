@@ -2409,6 +2409,17 @@
             const why = ev.compact_error || ev.compactError;
             statusLine('Compaction failed' + (why ? ' — ' + why : ''), SVG_ALERT, 'status err');
           }
+        } else if (ev.subtype === 'commands_changed') {
+          // Item 36. The schema's own instruction: "Clients should REPLACE their cached command
+          // list with this payload" — skills discovered mid-session change the roster, and our
+          // cache otherwise dates from the initialize response. REPLACE, not merge, and
+          // unconditionally — unlike the init seed, which only fills an empty list. The menu's
+          // allowlist (cmdKind) filters at render time, so an updated roster passes the same gate.
+          if (Array.isArray(ev.commands)) {
+            slashCommands = ev.commands.map(function (c) {
+              return (typeof c === 'string') ? { name: c } : c;
+            });
+          }
         }
         return;
       case '__tasks':            return void todoList(ev.items || []);

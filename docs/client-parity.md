@@ -86,9 +86,9 @@ and the reasoning is in the item.
 | 32 | Live retry banner listens for the wrong subtype | ✅ | ? | ✅ | **DONE** 2026-08-06 · found and fixed same day | both spellings + string/object `error`, pinned both sides |
 | 33 | Interrupt markers replay as user boxes | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | whole-block equality; 7→0 in the probe, quotes stay user text |
 | 35 | `system/status`: a failed `/compact` is invisible | ✅ | ⚠️ | ✅ | **DONE** 2026-08-06 · failure driven live | failed line + "Compacting…" verb pin; `requesting` stays silent |
-| 34 | `custom-title` ignored in history titles | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 3 real records |
-| 36 | `commands_changed` roster refresh | ✅ | ⚠️ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — zero local records, but the wire doc instructs it |
-| 37 | `<ide_selection>` not stripped on replay | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 4 real records render as raw XML |
+| 34 | `custom-title` ignored in history titles | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | rename outranks derived titles; newest rename wins |
+| 36 | `commands_changed` roster refresh | ✅ | ⚠️ | ✅ | **DONE** 2026-08-06 | REPLACE, unconditional, through the same allowlist gate |
+| 37 | `<ide_selection>` not stripped on replay | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | one more tag in `cleanInjected`; census says the list is complete |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
 | 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
 | 17 | Cost | ✅ | ✅ | ❌ | **by design** | not wanted — `/cost` answers it |
@@ -100,19 +100,17 @@ and the reasoning is in the item.
 | 30 | Silent `/effort` turns | — | — | ❌ | **by design** | not wanted — an honest audit trail |
 
 Sorted by take, not by item number — the numbered sections below keep their original order, so the
-table is the index and the sections are the archive. Three groups, in this order:
+table is the index and the sections are the archive. Two groups, in this order:
 
-1. **DONE** (28) — everything from the original audit, plus items 32, 33 and 35 (found by the
-   sweep, fixed the same day).
-2. **OPEN** (3): 34, 36, 37 — all XS, found by the 2026-08-06 full-bundle completeness sweep
-   (§ 32); the original 31 items are closed, and both P-scored sweep finds are too.
-3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
+1. **DONE** (31) — everything from the original audit, plus all six sweep finds (32–37, found
+   and fixed 2026-08-06). **Nothing is open.**
+2. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
 
 `↑`/`↓` mark a take the philosophy moved. **By design** means ruled out rather than postponed, and
-belongs in the release description's "By design" list, never its gap list. Group 3 grew from 2 to 9
-on 2026-08-06 when the remaining P3s were explicitly declined: cost (17), the usage panel (18) and
-per-record metadata (26) joined the four that were already deliberate non-features. Nothing in
-group 3 is waiting for time — reopening any of it takes a reason to reverse the decision.
+belongs in the release description's "By design" list, never its gap list. The by-design group grew
+from 2 to 9 on 2026-08-06 when the remaining P3s were explicitly declined: cost (17), the usage
+panel (18) and per-record metadata (26) joined the four that were already deliberate non-features.
+Nothing in it is waiting for time — reopening any of it takes a reason to reverse the decision.
 
 **Effort scale.** Sized against this codebase, not in the abstract — what makes something `M` here
 is usually that it has to land in the live renderer AND the replay parser without the two drifting,
@@ -1246,8 +1244,8 @@ release description mentions them, they belong under "By design".
 9 ruled out by design, none deferred. **The same-day completeness sweep (§ 32) then reopened the
 ledger with six new rows**, 32–37, found by enumerating the whole CLI schema and both extension
 halves instead of sampling: one P1 (the live retry banner keyed on the transcript spelling of a
-wire event), two P2, three P3. Items 32, 33 and 35 were fixed the same day, so only the three
-XS rows remain: 34, 36, 37.
+wire event), two P2, three P3. **All six were fixed the same day they were found.** The ledger
+stands at 31 done / 0 open / 9 by design.
 
 The final item is also the sharpest lesson in the document. Its evidence was a zero-count on
 `userModified` — a field that is real, correctly spelled, present on 2091 local records and `false`
@@ -1363,13 +1361,15 @@ double-emit. Before/after on session `42d09b97`: marker user boxes 7 → 0, `⏹
 +7, the 20 retry lines untouched. Pinned by a test covering both variants, the flag+marker
 record, and a quoting message.
 
-### 34. `custom-title` beats every title source we read — P3
+### 34. `custom-title` beats every title source we read — was P3, DONE 2026-08-06
 
 `rename_session` (and forks, which write `"… (fork)"`) persist a `{type:"custom-title"}` record.
-VS Code's precedence is `customTitle → aiTitle → lastPrompt → summary`; our `titleOf()` reads
-`summary → ai-title → first user message` and never looks at `custom-title` at all. 3 real records
-locally. A session renamed in the TUI shows a stale name in our history panel. XS: one more record
-type in `computeTitle`, at top precedence.
+VS Code's precedence is `customTitle → aiTitle → lastPrompt → summary`; our `titleOf()` read
+`summary → ai-title → first user message` and never looked at `custom-title` at all. 3 real records
+locally. A session renamed in the TUI showed a stale name in our history panel.
+**Shipped:** `computeTitle` now scans `custom-title` too — the user's explicit name outranks every
+derived source, and the NEWEST rename wins (like `ai-title`, later records supersede). The rest of
+our precedence is unchanged; pinned by a test with all four sources present at once.
 
 ### 35. `system/status` — a failed `/compact` is invisible — was P2, DONE 2026-08-06
 
@@ -1396,15 +1396,24 @@ in `hideWorking` so a held verb can't leak into the next turn); `requesting`, `s
 stay silent. Live-only by measurement — zero `status` records are ever persisted, so replay needs
 nothing. `permissionMode` on these frames was already read before the subtype chain, unchanged.
 
-### 36. `commands_changed` — the slash roster can go stale — P3
+### 36. `commands_changed` — the slash roster can go stale — was P3, DONE 2026-08-06
 
 The wire doc, in its own words: *"Fire-and-forget push of the full slash-command list after a
 mid-session change (e.g. skills discovered dynamically…). Clients should REPLACE their cached
-command list with this payload."* We cache `commands` once from the initialize response and never
-update. Zero local records, but this is the live-event class where transcript absence is not
-evidence (item 19's lesson). XS: one branch, REPLACE semantics like the background roster.
+command list with this payload."* We cached `commands` once from the initialize response and never
+updated. Zero local records, but this is the live-event class where transcript absence is not
+evidence (item 19's lesson).
+**Shipped:** one branch — the payload REPLACES `slashCommands` unconditionally (unlike the init
+seed, which only fills an empty list), and the menu's `cmdKind` allowlist filters the new roster
+at render time exactly as it filtered the old one. The emission site in the binary confirms the
+field (`commands:`, deduped by name); bare-string entries are tolerated. Headless-verified through
+the real menu: seed shows the old description, the push swaps it, the old one is gone.
 
-### 37. `<ide_selection>` renders as raw XML on replay — P3
+### 37. `<ide_selection>` renders as raw XML on replay — was P3, DONE 2026-08-06
+
+**Shipped:** one more `startsWith` in `cleanInjected`'s drop list, pinned by a test asserting the
+injected selection vanishes while real messages survive. The census below is why this is the LAST
+tag and not the next of many.
 
 The tag census across every local user record found exactly one injected wrapper `cleanInjected`
 misses: `<ide_selection>` (4 records, none `isMeta`, all starting with the tag — so they replay as
