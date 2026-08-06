@@ -85,7 +85,7 @@ and the reasoning is in the item.
 | 11 | "File was modified by the user" | ? | ✅ | ✅ | **DONE** 2026-08-06 | right field, wrong sibling: `staleRecovered` is what fires |
 | 32 | Live retry banner listens for the wrong subtype | ✅ | ? | ✅ | **DONE** 2026-08-06 · found and fixed same day | both spellings + string/object `error`, pinned both sides |
 | 33 | Interrupt markers replay as user boxes | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | whole-block equality; 7→0 in the probe, quotes stay user text |
-| 35 | `system/status`: a failed `/compact` is invisible | ✅ | ⚠️ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — we own `/compact` (self-inflicted class) |
+| 35 | `system/status`: a failed `/compact` is invisible | ✅ | ⚠️ | ✅ | **DONE** 2026-08-06 · failure driven live | failed line + "Compacting…" verb pin; `requesting` stays silent |
 | 34 | `custom-title` ignored in history titles | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 3 real records |
 | 36 | `commands_changed` roster refresh | ✅ | ⚠️ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — zero local records, but the wire doc instructs it |
 | 37 | `<ide_selection>` not stripped on replay | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 4 real records render as raw XML |
@@ -102,11 +102,10 @@ and the reasoning is in the item.
 Sorted by take, not by item number — the numbered sections below keep their original order, so the
 table is the index and the sections are the archive. Three groups, in this order:
 
-1. **DONE** (27) — everything from the original audit, plus items 32 and 33 (found by the sweep,
-   fixed the same day).
-2. **OPEN** (4): 34–37, all found by the 2026-08-06 full-bundle completeness sweep (§ 32) — the
-   original 31 items are closed; these are what the sweep of the whole CLI binary + both extension
-   halves turned up beyond them.
+1. **DONE** (28) — everything from the original audit, plus items 32, 33 and 35 (found by the
+   sweep, fixed the same day).
+2. **OPEN** (3): 34, 36, 37 — all XS, found by the 2026-08-06 full-bundle completeness sweep
+   (§ 32); the original 31 items are closed, and both P-scored sweep finds are too.
 3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
 
 `↑`/`↓` mark a take the philosophy moved. **By design** means ruled out rather than postponed, and
@@ -1247,8 +1246,8 @@ release description mentions them, they belong under "By design".
 9 ruled out by design, none deferred. **The same-day completeness sweep (§ 32) then reopened the
 ledger with six new rows**, 32–37, found by enumerating the whole CLI schema and both extension
 halves instead of sampling: one P1 (the live retry banner keyed on the transcript spelling of a
-wire event), two P2, three P3. Items 32 and 33 were fixed the same day, so four rows remain.
-Sweep order: 35 → 34/36/37.
+wire event), two P2, three P3. Items 32, 33 and 35 were fixed the same day, so only the three
+XS rows remain: 34, 36, 37.
 
 The final item is also the sharpest lesson in the document. Its evidence was a zero-count on
 `userModified` — a field that is real, correctly spelled, present on 2091 local records and `false`
@@ -1372,7 +1371,7 @@ VS Code's precedence is `customTitle → aiTitle → lastPrompt → summary`; ou
 locally. A session renamed in the TUI shows a stale name in our history panel. XS: one more record
 type in `computeTitle`, at top precedence.
 
-### 35. `system/status` — a failed `/compact` is invisible — P2
+### 35. `system/status` — a failed `/compact` is invisible — was P2, DONE 2026-08-06
 
 We read `permissionMode` off every system event (the mode chip) and drop the rest of `status`. The
 schema: `status ∈ {"compacting","requesting",null}` plus `compact_result:"success"|"failed"` and
@@ -1385,6 +1384,17 @@ line for `compact_result:"failed"` with `compact_error`.
 **Verified live 2026-08-06:** `{"type":"system","subtype":"status","status":"requesting"}` fired
 three times in ONE ordinary probed turn — this subtype is routine per-request traffic, not a
 compaction edge case, so whatever handles it must treat `requesting` as the common quiet case.
+
+**Shipped, and the failure path was driven LIVE the same day** — compacting a two-message session
+produced the whole sequence for real: `status:"compacting"`, then
+`{"status":null,"compact_result":"failed","compact_error":"Not enough messages to compact."}`,
+then a `result` with `is_error:false` and NO `compact_boundary` — proof the panel previously
+showed nothing at all for a failed compaction. What renders now: `compact_result:"failed"` draws
+`Compaction failed — <reason>` as a red status line; while `status:"compacting"` the working
+line's whimsical verb is PINNED to "Compacting…" (released by any other status frame and cleared
+in `hideWorking` so a held verb can't leak into the next turn); `requesting`, `success` and null
+stay silent. Live-only by measurement — zero `status` records are ever persisted, so replay needs
+nothing. `permissionMode` on these frames was already read before the subtype chain, unchanged.
 
 ### 36. `commands_changed` — the slash roster can go stale — P3
 

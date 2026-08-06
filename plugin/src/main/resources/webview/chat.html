@@ -296,10 +296,26 @@
     workMeta = workingEl.querySelector('.meta'); workMetaHtml = '';
     updateWorkTokens();                     // composes the meta; empty until there is something to say
     let fi = 0, vi = Math.floor(Math.random() * VERBS.length);
-    verb.textContent = VERBS[vi] + '…';
+    verb.textContent = verbHold || (VERBS[vi] + '…');
     workTimers.push(setInterval(function () { fi = (fi + 1) % FRAMES.length; spin.textContent = FRAMES[fi]; }, 175));
-    workTimers.push(setInterval(function () { vi = (vi + 1) % VERBS.length; verb.textContent = VERBS[vi] + '…'; }, 1800));
+    workTimers.push(setInterval(function () {
+      if (verbHold) { verb.textContent = verbHold; return; }   // a real state outranks whimsy
+      vi = (vi + 1) % VERBS.length; verb.textContent = VERBS[vi] + '…';
+    }, 1800));
     workTimers.push(setInterval(updateWorkTokens, 1000));
+  }
+  /**
+   * Pin the working verb to a real state ("Compacting…") instead of the whimsical rotation, or
+   * release it with null. Item 35: while the CLI compacts, the spinner should say so — the CLI
+   * announces the state via system/status, and any other status frame releases the pin.
+   */
+  let verbHold = null;
+  function setWorkVerb(text) {
+    verbHold = text || null;
+    if (workingEl && verbHold) {
+      const v = workingEl.querySelector('.verb');
+      if (v) v.textContent = verbHold;
+    }
   }
   /**
    * Compose "(3s · ↓ 60 tokens)" from whichever parts are non-zero. Rebuilt rather than toggled so
@@ -423,6 +439,7 @@
     workTimers.forEach(clearInterval); workTimers = [];
     if (workingEl) { workingEl.remove(); workingEl = null; }
     workMeta = null; workMetaHtml = '';
+    verbHold = null;   // a held state must not leak into the next turn's spinner
   }
   // The working line is shown for the WHOLE turn (like VS Code / the reference plugin): visible
   // whenever Claude is busy, except while a card is waiting on the user. It's pinned to the
@@ -2379,6 +2396,19 @@
           bgTasks = Array.isArray(ev.tasks) ? ev.tasks : [];
           pendingBgTasks = bgTasks.length;
           renderBgTasks();
+        } else if (ev.subtype === 'status') {
+          // Item 35. `permissionMode` on this frame is already read above, like every system event.
+          // `status:"requesting"` fires ~3x per ordinary turn (probed 2026-08-06) — the routine
+          // case, and it must stay silent. While the CLI compacts, the working verb says so; any
+          // other status frame releases the pin. Live-only: zero status records are ever persisted.
+          setWorkVerb(ev.status === 'compacting' ? 'Compacting…' : null);
+          const cr = ev.compact_result || ev.compactResult;
+          if (cr === 'failed') {
+            // The user just asked for the context to shrink — without this line a failed
+            // compaction is a silent no-op (we enabled /compact, so this state is ours to own).
+            const why = ev.compact_error || ev.compactError;
+            statusLine('Compaction failed' + (why ? ' — ' + why : ''), SVG_ALERT, 'status err');
+          }
         }
         return;
       case '__tasks':            return void todoList(ev.items || []);
