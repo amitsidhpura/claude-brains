@@ -574,6 +574,23 @@ object SessionStore {
                                 out.add(Item("status").apply { text = "Stopped"; icon = "stop" })
                                 continue
                             }
+                            // A mid-turn Stop is ALSO persisted as a user record whose whole text is
+                            // a literal marker string (client-parity item 33) — the human never typed
+                            // it. Measured: 28 such records locally and only 5 carry
+                            // interruptedByShutdown (caught above), so keying on the flag alone left
+                            // 23 replaying as blue user boxes. WHOLE-BLOCK equality, never contains:
+                            // all 28 real markers are exactly one of these two strings, and 3 local
+                            // messages merely QUOTE the marker and must stay user text. Both variants
+                            // draw the same "⏹ Stopped" the live path draws — the tool-use one's
+                            // cancelled tool line is already on screen just above it.
+                            val stopMarker = userTextFull(obj)?.trim()
+                            if (stopMarker == "[Request interrupted by user]" ||
+                                stopMarker == "[Request interrupted by user for tool use]"
+                            ) {
+                                reqWork = false; flushSummary()
+                                out.add(Item("status").apply { text = "Stopped"; icon = "stop" })
+                                continue
+                            }
                             if (obj["isMeta"]?.jsonPrimitive?.content == "true") continue // caveat wrapper
                             // The CLI's post-compaction summary is written as a `user` record — but the
                             // user never typed it. It carries isCompactSummary rather than isMeta, so

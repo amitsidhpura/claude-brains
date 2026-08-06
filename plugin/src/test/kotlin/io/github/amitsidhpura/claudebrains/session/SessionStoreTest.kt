@@ -444,6 +444,48 @@ class SessionStoreTest {
     }
 
     /**
+     * Client-parity item 33: a mid-turn Stop is persisted as a user record whose whole text is a
+     * literal marker. Measured 2026-08-06: 28 such records locally, only 5 carrying
+     * `interruptedByShutdown` — so the flag alone (pinned by `interrupt becomes a stopped status
+     * line` against the fixture) left 23 replaying as blue user boxes holding text the human never
+     * typed. Both marker variants become the same "⏹ Stopped" the live path draws; a message that
+     * merely QUOTES the marker (3 exist locally — this repo's own audit sessions) must stay a user
+     * box, which is why the match is whole-block equality and not contains.
+     */
+    @Test
+    fun `interrupt markers become stopped lines, quoting them stays a user message`() {
+        val jsonl = listOf(
+            """{"type":"user","uuid":"m1","timestamp":"2026-08-05T10:00:00.000Z","sessionId":"s",""" +
+                """"message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}""",
+            """{"type":"user","uuid":"m2","timestamp":"2026-08-05T10:00:01.000Z","sessionId":"s",""" +
+                """"message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user for tool use]"}]}}""",
+            """{"type":"user","uuid":"m3","timestamp":"2026-08-05T10:00:02.000Z","sessionId":"s",""" +
+                """"message":{"role":"user","content":[{"type":"text",""" +
+                """"text":"the doc quotes [Request interrupted by user] as the marker string"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-stop", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "stops.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val blocks = SessionStore.readTranscript(CWD, "stops")
+            val status = blocks.filter { it["role"]?.jsonPrimitive?.contentOrNull == "status" }
+            val users = blocks.filter { it["role"]?.jsonPrimitive?.contentOrNull == "user" }
+            assertEquals(2, status.size, "both marker variants must become status lines")
+            assertTrue(status.all { it["text"]?.jsonPrimitive?.contentOrNull == "Stopped" })
+            assertEquals(1, users.size, "quoting the marker mid-text must stay a user message")
+            assertTrue(users[0]["text"]?.jsonPrimitive?.contentOrNull
+                ?.startsWith("the doc quotes") == true)
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * Client-parity item 32: the retry banner must accept BOTH spellings of the retry event.
      * Transcripts persist the internal twin `api_error` ({error:{message,formatted}, retryAttempt,
      * maxRetries}); the live wire sends `api_retry` ({attempt, max_retries, error_status,

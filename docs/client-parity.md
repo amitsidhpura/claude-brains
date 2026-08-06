@@ -84,7 +84,7 @@ and the reasoning is in the item.
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
 | 11 | "File was modified by the user" | ? | ✅ | ✅ | **DONE** 2026-08-06 | right field, wrong sibling: `staleRecovered` is what fires |
 | 32 | Live retry banner listens for the wrong subtype | ✅ | ? | ✅ | **DONE** 2026-08-06 · found and fixed same day | both spellings + string/object `error`, pinned both sides |
-| 33 | Interrupt markers replay as user boxes | ✅ | ✅ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — 23 real records, same family as item 15 |
+| 33 | Interrupt markers replay as user boxes | ✅ | ✅ | ✅ | **DONE** 2026-08-06 | whole-block equality; 7→0 in the probe, quotes stay user text |
 | 35 | `system/status`: a failed `/compact` is invisible | ✅ | ⚠️ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — we own `/compact` (self-inflicted class) |
 | 34 | `custom-title` ignored in history titles | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 3 real records |
 | 36 | `commands_changed` roster refresh | ✅ | ⚠️ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — zero local records, but the wire doc instructs it |
@@ -102,9 +102,9 @@ and the reasoning is in the item.
 Sorted by take, not by item number — the numbered sections below keep their original order, so the
 table is the index and the sections are the archive. Three groups, in this order:
 
-1. **DONE** (26) — everything from the original audit, plus item 32 (found by the sweep, fixed
-   the same day).
-2. **OPEN** (5): 33–37, all found by the 2026-08-06 full-bundle completeness sweep (§ 32) — the
+1. **DONE** (27) — everything from the original audit, plus items 32 and 33 (found by the sweep,
+   fixed the same day).
+2. **OPEN** (4): 34–37, all found by the 2026-08-06 full-bundle completeness sweep (§ 32) — the
    original 31 items are closed; these are what the sweep of the whole CLI binary + both extension
    halves turned up beyond them.
 3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
@@ -1247,8 +1247,8 @@ release description mentions them, they belong under "By design".
 9 ruled out by design, none deferred. **The same-day completeness sweep (§ 32) then reopened the
 ledger with six new rows**, 32–37, found by enumerating the whole CLI schema and both extension
 halves instead of sampling: one P1 (the live retry banner keyed on the transcript spelling of a
-wire event), two P2, three P3. Item 32 was fixed the same day, so five rows remain.
-Sweep order: 33 → 35 → 34/36/37.
+wire event), two P2, three P3. Items 32 and 33 were fixed the same day, so four rows remain.
+Sweep order: 35 → 34/36/37.
 
 The final item is also the sharpest lesson in the document. Its evidence was a zero-count on
 `userModified` — a field that is real, correctly spelled, present on 2091 local records and `false`
@@ -1342,15 +1342,27 @@ frame beside the transcript shape (`529 Overloaded — retrying (3/10)` /
 `401 authentication_failed — retrying (1/10)`), and the headless harness confirms the same two
 frames — plus a counterless one — render live. 55 tests green.
 
-### 33. Interrupt markers replay as user messages — P2
+### 33. Interrupt markers replay as user messages — was P2, DONE 2026-08-06
 
 The CLI writes a `user` record whose text is `[Request interrupted by user]` or
 `[Request interrupted by user for tool use]` when a turn is stopped. VS Code maps exactly these
 two strings to "Interrupted" / "Tool interrupted" labels. Our replay keys interruption on
 `interruptedByShutdown` only — measured: **28 such records locally, and only 5 carry that field**,
-so 23 replay today as blue user boxes holding text the human never typed. Same misattribution
-family as item 15's compact summary. Fix is replay-side: exact-match the two strings (leading
-position, whole-block) to the existing `⏹ Stopped` status line.
+so 23 replayed as blue user boxes holding text the human never typed. Same misattribution
+family as item 15's compact summary.
+
+**Fixed, replay-side only** — measured first that live needs nothing: `onUserEvent` renders only
+`tool_result` blocks, so user TEXT never reaches the live DOM and the marker cannot appear there.
+The match is **whole-block equality on the trimmed text, never contains**: all 28 real markers
+are exactly one of the two strings (single text block, no trailing content), while 3 local
+messages merely *quote* the marker — this repo's own audit sessions writing about it — and must
+stay user boxes. That is the `persistedOutput` "merely mentions the token" guard again. Both
+variants draw the same `⏹ Stopped` the live path draws (the tool-use variant's cancelled tool
+line is already on screen just above it), ending the request without a summary exactly like the
+`interruptedByShutdown` branch — which runs first, so the 5 records carrying both can't
+double-emit. Before/after on session `42d09b97`: marker user boxes 7 → 0, `⏹ Stopped` lines
++7, the 20 retry lines untouched. Pinned by a test covering both variants, the flag+marker
+record, and a quoting message.
 
 ### 34. `custom-title` beats every title source we read — P3
 
