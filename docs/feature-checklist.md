@@ -183,3 +183,48 @@ Work order suggestion in **§ Milestones** at the bottom.
 5. **M5 – Config & UX**: §13 settings page + parity, §12 window placement, §10 auth/login.
 6. **M6 – Extensibility**: §11 plugins/MCP/skills/hooks/subagents, §7 slash commands.
 7. **M7 – Extras**: §14 worktrees, §15 voice/share/logs/walkthrough.
+
+---
+
+## Feature-level gaps vs VS Code 2.1.222 (recorded 2026-08-06)
+
+From the full-bundle sweep (`docs/client-parity.md` § 32 / `docs/ide-mcp-protocol.md` §9). That
+audit was about DATA the CLI emits; this list is the FEATURE remainder — everything the VS Code
+extension does that we don't, once the by-design nine (client-parity group 2), the DEFERRED list
+(tabs, voice, auto-include selection — CLAUDE.md), and the "Then:" roadmap (editor accept/reject,
+@-symbol mentions, worktrees, extensibility view) are excluded. Each row carries a take so the gap
+is a decision, not an unknown:
+
+- [ ] ⬜ **Rewind / checkpoints + fork conversation** — the one substantial capability gap.
+  VS Code: "Rewind code to here", "Fork conversation and rewind", `enableFileCheckpointing:!0`,
+  `rewind_code`/`fork_conversation`. We REMOVED per-turn rewind 2026-07-30 (revival notes in
+  CLAUDE.md §Key protocol facts: needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo,
+  client-supplied uuids — which item 21's `stampMessage` now provides — and dry_run first).
+  **Status: UNDECIDED — needs an explicit yes/later/no; currently in limbo on no list at all.**
+- [ ] ⬜ **Session rename / delete in the history panel** — VS Code has both (`rename_session`
+  writes the `custom-title` record we now READ per client-parity item 34; delete removes the
+  jsonl). Rename is the natural write-half of item 34. Take: small, panel-appropriate (managing
+  the artifacts of in-IDE work, not configuration).
+- [ ] ⬜ **Focus view** — hide tool noise, show prompts + responses only (Ctrl+Alt+F, host flag
+  `viewMode:"focus"`). A reading mode for long sessions; the philosophy question is whether
+  toggling it is an hourly act or a novelty. Take: worth a mockup pass before building.
+- [ ] ⬜ **Fast mode + thinking toggles** — "Toggle fast mode (Opus only)" (`fastMode` state rides
+  the initialize response and `result.fast_mode_state`, which we already receive) and an extended
+  thinking on/off. Siblings of the model chip + effort slider we already ship. Take: fast mode is
+  cheap and fits the composer family; a thinking toggle may be redundant beside the effort slider.
+- [ ] ⬜ **Plan preview with inline comments** — VS Code opens the plan as markdown with comment
+  threads (`open_markdown_preview` + `plan_comment`). Our plan card with approve/reject covers the
+  decision loop; commenting is the delta. Take: revisit only if plan-heavy workflows demand it.
+- [ ] ⬜ **Remote sessions (teleport) + remote control** — list claude.ai/code web sessions,
+  teleport one down (`GET /v1/code/sessions/<id>/teleport-events-*`); `/remote-control` bridge
+  toggle. Take: session SOURCES beyond the local disk lean configuration/infrastructure — the
+  terminal's half — but this is a judgment call recorded here, not yet a hard "by design".
+- [ ] ⬜ **Small chrome, leaning no**: message rating + `/feedback` UI (the terminal's half),
+  prompt/proactive suggestions (sweep: "noted, not wanted yet"), Artifact auto-open, the
+  "Explored" cosmetic grouping of consecutive Reads, onboarding/walkthrough/upsell banners.
+
+Confirmed at parity or better, for the record: the edit-diff pipeline (they use SDK hooks +
+baselines, we read disk fresh — different route, same rendered diff), diagnostics, injected IDE
+context handling, Read ranges with range-selecting clicks, permission suggestions (ours merges
+compound `addRules` into one button, theirs does not), queued messages (VS Code has none), and
+the retry/compaction/informational signal set from the client-parity audit.
