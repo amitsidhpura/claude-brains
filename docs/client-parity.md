@@ -545,6 +545,14 @@ We cut at `RenderLimits.OUT_MAX` (2000 chars) with no indication.
   of that block family are recognised by the CLI but have never occurred here either, and each has
   its own result shape. Extending to them on the same zero evidence would be guessing at a matrix,
   which is what item 7 taught against. They stay silent until one is seen.
+  **Probed live 2026-08-06:** a real turn explicitly asked to web-search ran the search as an
+  ordinary CLIENT-side `WebSearch` tool call (`tool_use` + text `tool_result`) — no
+  `server_tool_use` block. So on this CLI the server-side path cannot currently be exercised at
+  all, and the item-6/`DESC_KEYS` machinery already renders what actually happens; this code is
+  defensive cover, pinned by `RenderLimitsTest`, for whenever the CLI does route a search
+  API-side. Same probe: the CLI's `ToolSearch` returned a `tool_reference` content block live —
+  our text filter renders it as an empty OUT, which is what VS Code does too (it filters
+  `tool_reference` explicitly).
 
 ## C. Session & account state
 
@@ -715,6 +723,11 @@ Approaching / hit a usage limit, and when it resets.
   Verified: routine event silent · "You've used 82% of your session limit · resets in 4h" ·
   repeat not restated · "You've hit your weekly Opus limit" · `rejected` with no type stays quiet.
 
+  **A real `allowed` event was finally captured live 2026-08-06** (it rode an ordinary probed
+  turn): `{"status":"allowed","resetsAt":…,"rateLimitType":"five_hour","overageStatus":"rejected",
+  "overageDisabledReason":"org_level_disabled","isUsingOverage":false}` — and the headless harness
+  confirms our handler stays silent on it, speaks on `rejected` + type, and dedupes a repeat. The
+  overage fields are new vocabulary; they change nothing while the `status` gate holds.
   **It cannot be verified against a record, and that is by the CLI's design**, not an accident of
   local history: the binary carries `"[sdkMessageAdapter] Ignoring rate_limit_event message"`, and a
   sweep of the project where it fired live found zero genuine records. So the shape rests on the
@@ -791,6 +804,14 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
   this is a LIVE event that is never written to the transcript (same class as `rate_limit_event`),
   so transcript silence says nothing about whether it fires. The binary carries the emission site
   with the exact shape: `subtype:"thinking_tokens", estimated_tokens, estimated_tokens_delta, uuid`.
+  **Probed live 2026-08-06** with a real thinking turn built to trigger it: the event still did not
+  fire — because the thinking block itself streamed EMPTY (`thinking_delta` with `thinking:""` and
+  `estimated_tokens:null`, then only a `signature_delta`). The wire schema says the event is
+  digested *from* `estimated_tokens` during redacted thinking, and on this account the API sends
+  null there, so there is nothing to digest. Two consequences, both fine: the handler stays dormant
+  (correct, headless-verified: a synthetic event does render `1.2k`), and the chars/4 fallback is
+  the path that actually runs — which for empty-bodied thinking is ~0, correctly hidden by the
+  hide-0s rule. The signature-only thinking pattern known from transcripts is confirmed LIVE.
   Contrast `interrupted` / `isImage` / `userModified`, which are transcript FIELDS — there, absence
   across thousands of records IS evidence. Worth keeping the two cases apart when scoring.
   The subtle part was the reset: `thinkTokReal` is cleared everywhere `thinkTok` is, or a real count
@@ -840,10 +861,17 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
     is null-prototype so an unknown code can only miss — a plain literal answers
     `AUTH_BLOCKED['constructor']` with a truthy function and renders it as the fix.
 
-    Still unverified, and honestly so: **no local transcript contains a single `isApiErrorMessage`
-    record**, so neither this branch nor the replay path at `SessionStore.kt:632` has been observed
-    against real data. What is confirmed is the contract both are written to, which is as far as
-    reading the binary can take it.
+    ~~Still unverified~~ — **VERIFIED AGAINST A REAL AUTH FAILURE 2026-08-06** (verification pass,
+    lane 2): drove 2.1.222 with an invalid `ANTHROPIC_API_KEY` and got the real frames end to end.
+    The assistant frame carries exactly `error:"authentication_failed"`, and the CLI's own specific
+    message ("Failed to authenticate. API Error: 401 API key is invalid.") arrives as the content
+    and the `result` — confirming the routing-not-diagnosis design: our line points at the
+    terminal, the CLI's message states the cause. Two facts worth keeping from the same run: the
+    401 is RETRIED (ten times, as a `system/api_retry` storm — see item 32 — so the failure frame
+    arrives only after the storm; `CLAUDE_CODE_MAX_RETRIES=1` caps it for probing), and the final
+    result is `subtype:"success"` with `is_error:true` and `terminal_reason:"api_error"` — an auth
+    failure is not a result *error subtype*. The replay path at `SessionStore.kt:632` remains
+    unobserved (still zero `isApiErrorMessage` records).
   - **20b — account / plan display: by design, don't build.** `/status` answers it, it is read
     occasionally, and it is the login half of the split.
 
@@ -1292,8 +1320,19 @@ Different subtype AND different field spellings (`attempt` vs `retryAttempt`). M
 internal twin while the stream carries the public one. So the live banner has plausibly never
 fired, and a 529 storm still looks like a hang in a live session — the exact rule-1 failure item
 31 was built to fix. Item 31 was never verified live (the storm session predates it), which is how
-this survived. Fix: accept both subtypes and both spellings, same both-spellings idiom as items 16
-and 21, pinned by a fixture each way.
+this survived.
+
+**CONFIRMED EMPIRICALLY 2026-08-06** (verification pass): an invalid-API-key run against real
+2.1.222 produced the storm live, and the frame is, byte for byte:
+
+    {"type":"system","subtype":"api_retry","attempt":1,"max_retries":10,"retry_delay_ms":602,
+     "error_status":401,"error":"authentication_failed","session_id":…,"uuid":…}
+
+— which pins a THIRD difference the binary grep missed: **`error` is a plain string** (the API
+error code), not the `{message, formatted}` object our handler destructures. And the headless
+harness fed both spellings through `onClaudeEvent`: the transcript spelling renders the banner,
+the real wire frame renders nothing. Fix: accept both subtypes and both shapes (string and
+object `error`), same both-spellings idiom as items 16 and 21, pinned by a fixture each way.
 
 ### 33. Interrupt markers replay as user messages — P2
 
@@ -1323,6 +1362,9 @@ schema: `status ∈ {"compacting","requesting",null}` plus `compact_result:"succ
   visibly happened, and the reason is in a field we discard.
 Fix: handle `status` beside the other subtypes — a working-line state for `compacting`, a status
 line for `compact_result:"failed"` with `compact_error`.
+**Verified live 2026-08-06:** `{"type":"system","subtype":"status","status":"requesting"}` fired
+three times in ONE ordinary probed turn — this subtype is routine per-request traffic, not a
+compaction edge case, so whatever handles it must treat `requesting` as the common quiet case.
 
 ### 36. `commands_changed` — the slash roster can go stale — P3
 
@@ -1414,3 +1456,52 @@ records are all `isMeta` and already skipped; `post-tool-use-hook` / `ide_diagno
   vocabulary (teleport, remote control/bridge, channels, plugins UI, worktree creation, voice,
   tabs, focus view, feedback/ratings, onboarding, proactive suggestions) maps onto the deferred
   or by-design lists already recorded in CLAUDE.md.
+
+---
+
+## Verification pass (2026-08-06) — every DONE item re-checked
+
+Ran the same day as the sweep, prompted by item 32 proving that DONE can hide a broken half.
+Three lanes; findings were folded into the items above, this is the ledger.
+
+**Lane 1 — automated regression (free).** `./gradlew test`: 54 tests, 0 failures. Probe
+re-assertions against the three doc-cited real sessions, every claim re-measured:
+`42d09b97` — 3 compact blocks with folded summaries (25,137 / 41,013 / 21,714 chars), 0 oversized
+user boxes, 105/105 Read OUT boxes, 95 Read ranges (all with line+endLine), 3/3 Agent prompts and
+reports, 0 blank tool lines outside the by-design set, 9 result notes (incl. both stale-edit
+cases), 105 cut markers + 1 spill, 20 retry status lines, 2 denied cards, 287 completion
+summaries. `85174406` — exactly the 11 checklists claimed. `4f520694` — task reconstruction now
+yields 15 snapshots (was 8 when written; the session grew). The same probe also shows item 33's
+7 interrupt-marker user boxes — the open item, visible in real output.
+
+**Lane 1b — headless live-event harness** (chat.html spliced exactly as `ChatPanel.loadUi` does,
+events fed through `onClaudeEvent`): 20a routes, 13a names failed and needs-auth servers
+separately, 16 is silent on `allowed` / speaks on `rejected` / dedupes repeats, 4 replaces and
+empties the roster, 22 renders the hook block and dedupes by `tool_use_id`, 21 honours
+`scope:"local"` and renders the no-fallback sentence, 15 draws the live marker and resets the
+gauge, 19 renders a synthetic count. **All pass.** The one deliberate failure: the real
+`api_retry` wire frame renders nothing — item 32 demonstrated, not inferred.
+
+**Lane 2 — real 2.1.222 CLI, deliberate triggers** (stream-json headless, three small turns):
+- **20a VERIFIED** — invalid `ANTHROPIC_API_KEY` produced the real
+  `error:"authentication_failed"` assistant frame; details in the item.
+- **32 CONFIRMED + sharpened** — the live storm frames arrived as `api_retry` with a string
+  `error`; three differences from our handler, not two.
+- **19 honestly dormant** — even the designed trigger yields `estimated_tokens:null`
+  (signature-only thinking, live); the fallback is the running path.
+- **12 sharpened** — an explicit web-search turn ran CLIENT-side (`WebSearch` tool_use); the
+  server-side branch is unreachable on this CLI and stays defensive.
+- **35 strengthened** — `status:"requesting"` fired 3× in one ordinary turn.
+- Opportunistic census: across all three runs, none of `tool_progress`, `tool_use_summary`,
+  `session_state_changed`, `post_turn_summary`, `commands_changed`, `prompt_suggestion` appeared —
+  consistent with the probe-first triage.
+
+**Still unverifiable by construction, failing safe:** 16's warning path (no way to force a real
+limit), 21's refusal path (no way to force a refusal), 9's `interrupted` flag (zero occurrences
+ever). Each renders silence or the status quo on the shapes it cannot recognise.
+
+**Lane 3 — remains yours:** the real-IDE smoke pass (installed snap PhpStorm, not the sandbox —
+the JCEF-dependency class of failure only reproduces there). Trigger checklist: stop mid-turn
+(33's records + the ⏹ line), type mid-turn (24), a sub-agent task (1/2/3/4), a Playwright
+screenshot (8), `/compact` (15 — and 35's failure case if one occurs), a broken `--mcp-config`
+(13a), a hook exiting 2 (22), an oversized output (10).
