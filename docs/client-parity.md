@@ -83,6 +83,12 @@ and the reasoning is in the item.
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
 | 11 | "File was modified by the user" | ? | ✅ | ✅ | **DONE** 2026-08-06 | right field, wrong sibling: `staleRecovered` is what fires |
+| 32 | Live retry banner listens for the wrong subtype | ✅ | ? | ❌ | **P1 — OPEN** · sweep 2026-08-06 | S — wire is `api_retry`; `api_error` is the persisted twin |
+| 33 | Interrupt markers replay as user boxes | ✅ | ✅ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — 23 real records, same family as item 15 |
+| 35 | `system/status`: a failed `/compact` is invisible | ✅ | ⚠️ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — we own `/compact` (self-inflicted class) |
+| 34 | `custom-title` ignored in history titles | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 3 real records |
+| 36 | `commands_changed` roster refresh | ✅ | ⚠️ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — zero local records, but the wire doc instructs it |
+| 37 | `<ide_selection>` not stripped on replay | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 4 real records render as raw XML |
 | 13b | MCP server management UI | ✅ | ✅ | ❌ | **by design** | — |
 | 20b | Account / plan / login display | ✅ | ✅ | ❌ | **by design** | — |
 | 17 | Cost | ✅ | ✅ | ❌ | **by design** | not wanted — `/cost` answers it |
@@ -94,10 +100,13 @@ and the reasoning is in the item.
 | 30 | Silent `/effort` turns | — | — | ❌ | **by design** | not wanted — an honest audit trail |
 
 Sorted by take, not by item number — the numbered sections below keep their original order, so the
-table is the index and the sections are the archive. Four groups, in this order:
+table is the index and the sections are the archive. Three groups, in this order:
 
-1. **DONE** (25) — everything shipped. **Nothing is open.**
-2. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
+1. **DONE** (25) — everything from the original audit shipped.
+2. **OPEN** (6): 32–37, all found by the 2026-08-06 full-bundle completeness sweep (§ 32) — the
+   original 31 items are closed; these are what the sweep of the whole CLI binary + both extension
+   halves turned up beyond them.
+3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
 
 `↑`/`↓` mark a take the philosophy moved. **By design** means ruled out rather than postponed, and
 belongs in the release description's "By design" list, never its gap list. Group 3 grew from 2 to 9
@@ -265,6 +274,10 @@ Which background tasks are running while the turn is suspended.
 
   Rows are deliberately **read-only** — no kill, no restart. Process control is the terminal's half
   (`/bashes`, § Philosophy); this answers "what is running?", which is the during-work question.
+  The 2026-08-06 sweep put the capability on record so the decision stays a decision rather than a
+  presumed limitation: the CLI accepts `stop_task` (*"Stops a running task."*) and
+  `background_tasks` (*"Backgrounds in-flight foreground tasks … omitted = Ctrl+B semantics"*) as
+  control requests. Reversing this row is one control request away; it still takes a reason.
   That required qualifying the CSS as `.popup-item.bg-row`: a bare `.bg-row` ties on specificity and
   loses to `.popup-item` declared later in the file, so the rows kept a pointer cursor and looked
   clickable. Caught by measuring in headless Chrome, not by reading the rule.
@@ -957,10 +970,17 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
   message silently is the failure this audit exists to correct. Spelling split again: wire
   `prevent_continuation`, transcript `preventContinuation`.
 
-  **Still invisible, because there is no data:** a hook's non-blocking output (a `UserPromptSubmit`
-  `systemMessage` appears in the CLI's debug log and never reaches the stream) and a hook that fails
-  to execute (a `PreToolUse` hook pointing at a missing binary leaves no stream trace at all). Those
-  are not display gaps and cannot be closed from this side.
+  **Still invisible — but the 2026-08-06 sweep corrected the "cannot be closed" claim:** a hook's
+  non-blocking output and a hook that fails to execute leave no trace *on our current wire* because
+  hook events are **opt-in**. The CLI has a `--include-hook-events` flag (the VS Code extension
+  passes it on every launch), and behind it live `system/hook_started`, `hook_progress` and
+  `hook_response` — the last carrying `stdout`, `stderr`, `exit_code` and
+  `outcome:"success"|"error"|"cancelled"` — plus a real `stop_hook_summary` schema
+  (`hook_count`, `hook_infos[{command,prompt_text,duration_ms}]`, `hook_errors`). So the probe's
+  zero was an accurate measurement of a stream we hadn't asked for. Closing it is a *choice*
+  (pass the flag, handle three subtypes), not an impossibility. Not adopted yet — hooks are
+  configuration, and their routine chatter is the terminal's half; the flag is on record here for
+  whenever a hook-debugging need makes it worth taking.
 
   **A claim in an earlier draft of this item was wrong and is retracted:** `stop_hook_summary`
   records with `hookCount`/`hookInfos`/`hookErrors`/`preventedContinuation` do **not** exist locally
@@ -1194,8 +1214,11 @@ real gap (`system/informational`) was neither hook-specific nor what the item de
 **Not on the list at all:** 13b and 20b are ruled out by the philosophy, not deferred — if a
 release description mentions them, they belong under "By design".
 
-**Nothing is open.** Item 11 was the last row with work in it and shipped on 2026-08-06, closing
-the audit: 25 items done, 9 ruled out by design, none deferred.
+**The original audit is closed** — item 11 was its last row, shipped 2026-08-06: 25 items done,
+9 ruled out by design, none deferred. **The same-day completeness sweep (§ 32) then reopened the
+ledger with six new rows**, 32–37, found by enumerating the whole CLI schema and both extension
+halves instead of sampling: one P1 (the live retry banner keyed on the transcript spelling of a
+wire event), two P2, three P3. Sweep order: 32 → 33 → 35 → 34/36/37.
 
 The final item is also the sharpest lesson in the document. Its evidence was a zero-count on
 `userModified` — a field that is real, correctly spelled, present on 2091 local records and `false`
@@ -1219,13 +1242,173 @@ them matters: `api_error`, carrying
 - **Us:** ❌ was skipped with every other `system` record. Session `42d09b97` alone holds **20 of
   them — a `529 Overloaded` storm retried ten times** — during which the panel showed nothing at
   all. The turn simply appeared to hang.
-- **Take: DONE.** Textbook rule 1: the CLI is retrying inside OUR process, so there is no terminal
-  to check and no other client to defer to. Rendered as a status line on both paths —
-  `529 Overloaded — retrying (3/10)`.
+- **Take: DONE — for replay. The live half is item 32, reopened by the 2026-08-06 sweep.**
+  Textbook rule 1: the CLI is retrying inside OUR process, so there is no terminal to check and no
+  other client to defer to. Rendered as a status line on both paths —
+  `529 Overloaded — retrying (3/10)` — but the live branch was keyed on the *transcript* spelling.
+  The binary's own schema note: `api_error` is *"@internal … REPL renders the retry banner from
+  this. Wire twin is SDKAPIRetryMessage ('api_retry')"*. Measured locally: `api_error` 24 records
+  persisted, `api_retry` 0 — exactly the split that description predicts, because transcripts hold
+  the internal twin and the stream carries the public one. See item 32.
 
 **The other five subtypes, deliberately left alone:** `turn_duration` (11) duplicates our own
 completion summary · `local_command` (7) is the `<local-command-stdout>` family `cleanInjected`
-already strips · `away_summary` (2) and `informational` (1) are one-off notices · **`stop_hook_summary`
-(1) is real evidence for item 22** (hook activity), which the audit could not size — it carries
-`hookCount`, `hookInfos`, `hookErrors` and `preventedContinuation`, so that item is no longer
-unsizeable, only unbuilt.
+already strips · `away_summary` (2) is a one-off notice · `informational` was later handled in full
+by item 22 · `stop_hook_summary` — an earlier draft here claimed one local record carrying
+`hookCount`/`hookInfos`/`hookErrors`; **measured while closing item 22: zero records for every one
+of those keys.** The claim is retracted in item 22 and stands retracted here too.
+
+---
+
+## 32–37. Full-bundle completeness sweep (2026-08-06)
+
+The whole reference surface, enumerated rather than sampled: the 2.1.222 CLI binary's embedded
+wire schema (~1,160 `.describe()` doc strings), `extension.js` (host half, including the bundled
+Agent SDK 0.3.222), and `webview/index.js`. Purpose: answer "did the original 31 items cover
+everything?" The short answer: **the CLI knows 44 `system` subtypes (we handle 12), ~20 top-level
+frame types (we handle 7), and accepts 56 control subtypes (we send 4)** — but almost all of the
+delta is internal, remote-control-only, or gated behind flags we don't pass. What survives triage
+is six open items, three corrections to closed items (folded into 4, 22 and 31 above), and a probe
+list.
+
+Unknown frame types are silently ignored by construction — `ClaudeCli.route` forwards anything
+that isn't control traffic, and the webview `switch` has no default action — so none of the
+unhandled vocabulary can crash the panel. The findings below are about content that *should* have
+been shown.
+
+### 32. Live retry banner listens for the wrong subtype — P1
+
+Item 31's live branch checks `ev.subtype === 'api_error'` and reads `retryAttempt`/`maxRetries`/
+`error.formatted` — the shape of the *persisted* record. The binary says plainly that this is the
+internal twin (*"Wire twin is SDKAPIRetryMessage ('api_retry')"*), and the wire frame is:
+
+    {type:"system", subtype:"api_retry", attempt, max_retries, retry_delay_ms,
+     error_status, error, session_id, uuid}
+
+Different subtype AND different field spellings (`attempt` vs `retryAttempt`). Measured: 24
+`api_error` records persisted locally, 0 `api_retry` — consistent with transcripts holding the
+internal twin while the stream carries the public one. So the live banner has plausibly never
+fired, and a 529 storm still looks like a hang in a live session — the exact rule-1 failure item
+31 was built to fix. Item 31 was never verified live (the storm session predates it), which is how
+this survived. Fix: accept both subtypes and both spellings, same both-spellings idiom as items 16
+and 21, pinned by a fixture each way.
+
+### 33. Interrupt markers replay as user messages — P2
+
+The CLI writes a `user` record whose text is `[Request interrupted by user]` or
+`[Request interrupted by user for tool use]` when a turn is stopped. VS Code maps exactly these
+two strings to "Interrupted" / "Tool interrupted" labels. Our replay keys interruption on
+`interruptedByShutdown` only — measured: **28 such records locally, and only 5 carry that field**,
+so 23 replay today as blue user boxes holding text the human never typed. Same misattribution
+family as item 15's compact summary. Fix is replay-side: exact-match the two strings (leading
+position, whole-block) to the existing `⏹ Stopped` status line.
+
+### 34. `custom-title` beats every title source we read — P3
+
+`rename_session` (and forks, which write `"… (fork)"`) persist a `{type:"custom-title"}` record.
+VS Code's precedence is `customTitle → aiTitle → lastPrompt → summary`; our `titleOf()` reads
+`summary → ai-title → first user message` and never looks at `custom-title` at all. 3 real records
+locally. A session renamed in the TUI shows a stale name in our history panel. XS: one more record
+type in `computeTitle`, at top precedence.
+
+### 35. `system/status` — a failed `/compact` is invisible — P2
+
+We read `permissionMode` off every system event (the mode chip) and drop the rest of `status`. The
+schema: `status ∈ {"compacting","requesting",null}` plus `compact_result:"success"|"failed"` and
+`compact_error`. Two consequences, both ours to own because `/compact` is a command we enabled:
+- while compaction runs the panel shows nothing (the TUI shows a spinner state);
+- **a failed compaction is a silent no-op** — the user asked for the context to shrink, nothing
+  visibly happened, and the reason is in a field we discard.
+Fix: handle `status` beside the other subtypes — a working-line state for `compacting`, a status
+line for `compact_result:"failed"` with `compact_error`.
+
+### 36. `commands_changed` — the slash roster can go stale — P3
+
+The wire doc, in its own words: *"Fire-and-forget push of the full slash-command list after a
+mid-session change (e.g. skills discovered dynamically…). Clients should REPLACE their cached
+command list with this payload."* We cache `commands` once from the initialize response and never
+update. Zero local records, but this is the live-event class where transcript absence is not
+evidence (item 19's lesson). XS: one branch, REPLACE semantics like the background roster.
+
+### 37. `<ide_selection>` renders as raw XML on replay — P3
+
+The tag census across every local user record found exactly one injected wrapper `cleanInjected`
+misses: `<ide_selection>` (4 records, none `isMeta`, all starting with the tag — so they replay as
+raw XML in a blue user box today). Both official clients parse or hide it. This is a gap *inside*
+item 27's standing decision ("injected context stays hidden"), not a new decision. The same census
+confirms the rest of the strip list is complete: `local-command-*` / `command-name` /
+`task-notification` / `ide_opened_file` cover everything else that occurs; `<system-reminder>`
+records are all `isMeta` and already skipped; `post-tool-use-hook` / `ide_diagnostics` /
+`local-command-stderr` occur zero times.
+
+### Seen on the wire, deliberately not taken (probe first if ever wanted)
+
+- **`model_consent_fallback`** — the Fable 5 usage-credit gate swapping the session model pre-send
+  (`choice:"consent"|"switch_default"|"cancelled"`), self-described *"Not yet in the public
+  SDKMessage union"*. The webview handles it; we don't. Adjacent: the gate's dialog arrives as
+  `request_user_dialog{dialog_kind:"fable_overage_consent_prompt"}`, and we declare no
+  `supportedDialogKinds`, so the CLI *"stays silent so a capable client (or the worker's park
+  deadline) settles it"*. **This is live-relevant to anyone running Fable on this plugin** — if
+  the gate fires, the model chip could lie exactly the way item 21's `scope` bug did. Zero local
+  records; probe by exercising the gate before building.
+- **`tombstone`** — *"Consumers that render or persist the stream should remove the referenced
+  message"*: generalised retraction beyond the `supersedes`/`retracted_message_uuids` lanes item
+  21 already handles. Marked `@internal`, zero local records. The uuid→DOM map exists now, so this
+  is one branch if it ever proves to reach our wire.
+- **`tool_progress`** (top-level) — `{tool_use_id, tool_name, elapsed_time_seconds, heartbeat?,
+  subagent_retry?}`: heartbeat for long-running tools. Probe when it is emitted to stream-json
+  clients; a "still running · 45s" tail on the tool line would be the shape.
+- **`conversation_reset`** — *"Emitted by /clear, plan-mode exit, and fresh-session flows. The
+  surface should mount a fresh transcript under new_conversation_id."* Our `/clear` is native so
+  the obvious trigger can't fire, but if any flow we do drive emits it, ignoring it desyncs us
+  from the CLI's transcript. Probe plan-mode exit.
+- **Effort via `apply_flag_settings` / `--effort`** — the muted-`/effort` hack (docs/
+  slash-commands.md) was built because no `set_effort` control request exists. Still true — but
+  the sweep found a spawn flag `--effort <v>` and a live `apply_flag_settings` control request
+  (*"Merges the provided settings into the flag settings layer"*; VS Code drives `viewMode` with
+  it, and `effortLevel` is a settings key). Probing whether `apply_flag_settings{effortLevel}`
+  takes effect mid-session could retire the muted turn and its resume-audit-trail quirk.
+- **`permission_denied`** — auto-denies (deny rules, auto-mode classifier) currently surface only
+  as an `is_error` tool result; this subtype carries the *reason*. Also on `can_use_tool` itself:
+  `display_name`, `decision_reason`, `matched_ask_rule{source, rule_content}` — a permission card
+  could say *why* it is asking. Both P3 polish.
+- **`result` extras** — `terminal_reason` (19 values: `prompt_too_long`, `stop_hook_prevented`,
+  `blocking_limit`, …) says why a turn ended when the ending looks odd; error subtypes
+  `error_max_turns` / `error_max_budget_usd` / `error_max_structured_output_retries` currently all
+  render as a generic error block.
+- **`redacted_thinking`** blocks — live renders nothing (no `content_block_start` branch); VS Code
+  renders a placeholder. Rare; XS if ever seen.
+- **`prompt_suggestion` / `agents_killed` / `session_state_changed`** — suggestion chrome (would
+  need opting in at initialize), an "agents killed" banner on interrupt, and an *"authoritative
+  turn-over signal"* (`idle` fires only after held-back results flush) that could harden the queue
+  drain if `onResult` ever proves racy. Noted, not wanted yet.
+- **`elicitation`** — the CLI forwards MCP elicitation requests as a control request; our generic
+  empty-`{}` ack answers it with neither `{action:"decline"}` nor a real answer. No local MCP
+  server elicits today; if one ever does, probe what the empty ack does to it.
+
+### Confirmed complete, with evidence
+
+- **`refusal_fallback` as a top-level type does not exist** in the CLI (0 occurrences) — it is a
+  webview-internal synthetic. Our system-subtype-only handling of item 21 is the right shape.
+- **`web_fetch_tool_result` / `code_execution_tool_result` / `mcp_tool_result` / `search_result` /
+  `container_upload`: the CLI itself has ZERO handling** for them — item 12's "stay silent until
+  one is seen" is not just cautious, those blocks cannot currently be emitted by this CLI at all.
+- **Rate-limit vocabulary matches** — our `LIMIT_LABELS` already carries 2.1.222's set including
+  `seven_day_overage_included` and `overage`; the three fringe types (`seven_day_oauth_apps`,
+  `extra_usage`, `cinder_cove`) fall back to the generic "usage limit", which is correct-but-vague
+  rather than wrong.
+- **Unknown delta types are safe** — `citations_delta` and `compaction_delta` fall through our
+  else-if chain; VS Code no-ops `compaction_delta` too.
+- **`isVisibleInTranscriptOnly` needs nothing** — all 26 local records carrying it also carry
+  `isCompactSummary`, so item 15's pairing already handles every one. If the flags ever diverge,
+  the visibility flag is the general rule and this note is the trailhead.
+- **Queue stance vindicated** — the CLI's async-queue control (`cancel_async_message`) exists for
+  remote clients; nothing about it changes item 24's client-side design.
+- **The by-design list holds under enumeration.** Login without a terminal IS possible
+  (`claude_authenticate` + OAuth callbacks), usage/cost panels ARE feedable (`get_usage`,
+  `get_context_usage`, `get_session_cost`), MCP management IS drivable (`mcp_toggle`,
+  `mcp_authenticate`, `mcp_set_servers`) — every one of those rows is now a confirmed *decision*
+  against an existing capability, not a bet that the capability is missing. The remaining
+  vocabulary (teleport, remote control/bridge, channels, plugins UI, worktree creation, voice,
+  tabs, focus view, feedback/ratings, onboarding, proactive suggestions) maps onto the deferred
+  or by-design lists already recorded in CLAUDE.md.
