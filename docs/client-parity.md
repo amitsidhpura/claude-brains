@@ -83,7 +83,7 @@ and the reasoning is in the item.
 | 19 | Real thinking-token count | ✅ | ✅ | ✅ | **DONE** 2026-08-05 · BUILT BLIND | event is live-only; chars/4 kept as fallback |
 | 17a | `modelUsage[].contextWindow` for the gauge | ✅ | ✅ | ✅ | **DONE** 2026-08-06 · probed first | `S` held; `modelUsage` is a MAP incl. side models |
 | 11 | "File was modified by the user" | ? | ✅ | ✅ | **DONE** 2026-08-06 | right field, wrong sibling: `staleRecovered` is what fires |
-| 32 | Live retry banner listens for the wrong subtype | ✅ | ? | ❌ | **P1 — OPEN** · sweep 2026-08-06 | S — wire is `api_retry`; `api_error` is the persisted twin |
+| 32 | Live retry banner listens for the wrong subtype | ✅ | ? | ✅ | **DONE** 2026-08-06 · found and fixed same day | both spellings + string/object `error`, pinned both sides |
 | 33 | Interrupt markers replay as user boxes | ✅ | ✅ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — 23 real records, same family as item 15 |
 | 35 | `system/status`: a failed `/compact` is invisible | ✅ | ⚠️ | ❌ | **P2 — OPEN** · sweep 2026-08-06 | S — we own `/compact` (self-inflicted class) |
 | 34 | `custom-title` ignored in history titles | ✅ | ✅ | ❌ | **P3 — OPEN** · sweep 2026-08-06 | XS — 3 real records |
@@ -102,8 +102,9 @@ and the reasoning is in the item.
 Sorted by take, not by item number — the numbered sections below keep their original order, so the
 table is the index and the sections are the archive. Three groups, in this order:
 
-1. **DONE** (25) — everything from the original audit shipped.
-2. **OPEN** (6): 32–37, all found by the 2026-08-06 full-bundle completeness sweep (§ 32) — the
+1. **DONE** (26) — everything from the original audit, plus item 32 (found by the sweep, fixed
+   the same day).
+2. **OPEN** (5): 33–37, all found by the 2026-08-06 full-bundle completeness sweep (§ 32) — the
    original 31 items are closed; these are what the sweep of the whole CLI binary + both extension
    halves turned up beyond them.
 3. **By design** (9): 13b, 20b, 17, 18, 26, 25, 27, 28, 30 — ruled out, not deferred.
@@ -1246,7 +1247,8 @@ release description mentions them, they belong under "By design".
 9 ruled out by design, none deferred. **The same-day completeness sweep (§ 32) then reopened the
 ledger with six new rows**, 32–37, found by enumerating the whole CLI schema and both extension
 halves instead of sampling: one P1 (the live retry banner keyed on the transcript spelling of a
-wire event), two P2, three P3. Sweep order: 32 → 33 → 35 → 34/36/37.
+wire event), two P2, three P3. Item 32 was fixed the same day, so five rows remain.
+Sweep order: 33 → 35 → 34/36/37.
 
 The final item is also the sharpest lesson in the document. Its evidence was a zero-count on
 `userModified` — a field that is real, correctly spelled, present on 2091 local records and `false`
@@ -1306,7 +1308,7 @@ that isn't control traffic, and the webview `switch` has no default action — s
 unhandled vocabulary can crash the panel. The findings below are about content that *should* have
 been shown.
 
-### 32. Live retry banner listens for the wrong subtype — P1
+### 32. Live retry banner listens for the wrong subtype — was P1, DONE 2026-08-06
 
 Item 31's live branch checks `ev.subtype === 'api_error'` and reads `retryAttempt`/`maxRetries`/
 `error.formatted` — the shape of the *persisted* record. The binary says plainly that this is the
@@ -1331,8 +1333,14 @@ this survived.
 — which pins a THIRD difference the binary grep missed: **`error` is a plain string** (the API
 error code), not the `{message, formatted}` object our handler destructures. And the headless
 harness fed both spellings through `onClaudeEvent`: the transcript spelling renders the banner,
-the real wire frame renders nothing. Fix: accept both subtypes and both shapes (string and
-object `error`), same both-spellings idiom as items 16 and 21, pinned by a fixture each way.
+the real wire frame renders nothing.
+
+**FIXED same day.** Both paths now accept both subtypes and both `error` shapes (string with
+`error_status` prefixed, or object via `formatted`/`message`), the same both-spellings idiom as
+items 16 and 21. Pinned twice: a `SessionStoreTest` case replays the byte-for-byte real wire
+frame beside the transcript shape (`529 Overloaded — retrying (3/10)` /
+`401 authentication_failed — retrying (1/10)`), and the headless harness confirms the same two
+frames — plus a counterless one — render live. 55 tests green.
 
 ### 33. Interrupt markers replay as user messages — P2
 

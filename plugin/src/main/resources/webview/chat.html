@@ -2322,12 +2322,19 @@
           // The CLI's own count, replacing our chars/4 guess for as long as it keeps sending them.
           const n = ev.estimated_tokens;
           if (typeof n === 'number' && n >= 0) { thinkTokReal = n; paintThinkTokens(); }
-        } else if (ev.subtype === 'api_error') {
+        } else if (ev.subtype === 'api_error' || ev.subtype === 'api_retry') {
           // The CLI is retrying a failed request. Without this the panel just stalls, and there is
-          // no terminal to check — this session's CLI is ours.
+          // no terminal to check — this session's CLI is ours. Two spellings of one fact (item 32):
+          // the LIVE wire sends `api_retry` with {attempt, max_retries, error_status,
+          // error:"<code string>"}; transcripts persist the internal twin `api_error` with
+          // {retryAttempt, maxRetries, error:{message, formatted}}. Accept both, or the live
+          // banner never fires — probed 2026-08-06 with a real 401 storm.
           const e = ev.error || {};
-          statusLine((e.formatted || e.message || 'API error') +
-            (ev.retryAttempt && ev.maxRetries ? ' — retrying (' + ev.retryAttempt + '/' + ev.maxRetries + ')' : ''),
+          const text = (typeof ev.error === 'string' && ev.error)
+            ? (ev.error_status ? ev.error_status + ' ' : '') + ev.error
+            : (e.formatted || e.message || 'API error');
+          const at = ev.retryAttempt || ev.attempt, max = ev.maxRetries || ev.max_retries;
+          statusLine(text + (at && max ? ' — retrying (' + at + '/' + max + ')' : ''),
             SVG_ALERT, 'status err');
         } else if (ev.subtype === 'model_refusal_fallback') {
           onRefusalFallback(ev);

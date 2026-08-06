@@ -730,12 +730,23 @@ object SessionStore {
                             // transcripts, every one invisible: the panel simply stalled while the
                             // CLI backed off. Rule 1 territory — there is no terminal to check,
                             // because the terminal is not running this session.
-                            if (obj["subtype"]?.jsonPrimitive?.content == "api_error") {
-                                val err = obj["error"] as? JsonObject
-                                val msg = (err?.get("formatted") ?: err?.get("message"))
-                                    ?.jsonPrimitive?.contentOrNull ?: "API error"
-                                val n = (obj["retryAttempt"] as? JsonPrimitive)?.contentOrNull
-                                val max = (obj["maxRetries"] as? JsonPrimitive)?.contentOrNull
+                            // Item 32: `api_error` is the persisted internal twin of the wire's
+                            // `api_retry` ({attempt, max_retries, error_status, error:"<code>"}).
+                            // Transcripts hold only the former today; accept both shapes so a CLI
+                            // that starts persisting the wire frame doesn't go invisible again.
+                            if (obj["subtype"]?.jsonPrimitive?.content in setOf("api_error", "api_retry")) {
+                                val msg = when (val err = obj["error"]) {
+                                    is JsonObject -> ((err["formatted"] ?: err["message"]) as? JsonPrimitive)
+                                        ?.contentOrNull
+                                    is JsonPrimitive -> err.contentOrNull?.takeIf { it.isNotBlank() }
+                                        ?.let { s ->
+                                            (obj["error_status"] as? JsonPrimitive)?.contentOrNull
+                                                ?.let { "$it $s" } ?: s
+                                        }
+                                    else -> null
+                                } ?: "API error"
+                                val n = ((obj["retryAttempt"] ?: obj["attempt"]) as? JsonPrimitive)?.contentOrNull
+                                val max = ((obj["maxRetries"] ?: obj["max_retries"]) as? JsonPrimitive)?.contentOrNull
                                 out.add(Item("status").apply {
                                     text = msg + if (n != null && max != null) " — retrying ($n/$max)" else ""
                                     icon = "alert"

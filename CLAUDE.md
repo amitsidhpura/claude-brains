@@ -96,6 +96,12 @@ the usage/cost display any more (declined 2026-08-06, see below).
   into the transcript record (timestamp too) — verified by diffing a live run against its own JSONL.
   That is the only handle for tying a live render to its replayed twin; the completion-summary verb
   uses it. Don't assume "live-only state can't be persisted" without checking for a shared uuid.
+- API retry storms wear TWO spellings (client-parity item 32, probed with a real 401 storm): the
+  LIVE wire sends `system/api_retry` `{attempt, max_retries, retry_delay_ms, error_status,
+  error:"<code string>"}`, while transcripts persist the internal twin `system/api_error`
+  `{retryAttempt, maxRetries, error:{message, formatted}}`. Note `error` even changes TYPE
+  (string vs object). Both paths accept both. Same trap family as `prevent_continuation`/
+  `preventContinuation` — never trust the transcript spelling for a live handler.
 - One API message is persisted as one record PER CONTENT BLOCK (`['thinking']`, `['tool_use']`,
   `['text']`…), and every one of those records repeats the same *cumulative* `message.usage`. Anything
   summing `output_tokens` over records must dedupe by `message.id` or it over-reports by the block

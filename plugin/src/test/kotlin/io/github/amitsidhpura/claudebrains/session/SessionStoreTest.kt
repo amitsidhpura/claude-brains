@@ -444,6 +444,47 @@ class SessionStoreTest {
     }
 
     /**
+     * Client-parity item 32: the retry banner must accept BOTH spellings of the retry event.
+     * Transcripts persist the internal twin `api_error` ({error:{message,formatted}, retryAttempt,
+     * maxRetries}); the live wire sends `api_retry` ({attempt, max_retries, error_status,
+     * error:"<code string>"}) — the shape below is byte-for-byte from a real 401 storm probed
+     * 2026-08-06. The first cut of item 31 read only the transcript shape, so the live banner
+     * never fired; this pins both, on the replay side where both can be exercised.
+     */
+    @Test
+    fun `a retry storm replays in either spelling`() {
+        val jsonl = listOf(
+            """{"type":"system","subtype":"api_error","uuid":"r1","sessionId":"s",""" +
+                """"timestamp":"2026-08-05T10:00:00.000Z","retryAttempt":3,"maxRetries":10,""" +
+                """"error":{"message":"overloaded","formatted":"529 Overloaded"}}""",
+            // verbatim wire frame from the real storm (uuid/session trimmed)
+            """{"type":"system","subtype":"api_retry","uuid":"r2","session_id":"s",""" +
+                """"timestamp":"2026-08-05T10:00:01.000Z","attempt":1,"max_retries":10,""" +
+                """"retry_delay_ms":602,"error_status":401,"error":"authentication_failed"}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-retry", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "retry.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val status = SessionStore.readTranscript(CWD, "retry")
+                .filter { it["role"]?.jsonPrimitive?.contentOrNull == "status" }
+            assertEquals(2, status.size, "both spellings must produce a status line")
+            assertEquals("529 Overloaded — retrying (3/10)",
+                status[0]["text"]?.jsonPrimitive?.contentOrNull)
+            assertEquals("401 authentication_failed — retrying (1/10)",
+                status[1]["text"]?.jsonPrimitive?.contentOrNull,
+                "the wire spelling used to render NOTHING — a string error and snake_case counters")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * What a sub-agent was ASKED (client-parity item 3). The tool line already carried `description`
      * — a handful of words — while the `prompt` it actually ran on was dropped, so "what did it just
      * go off and do?" was unanswerable from the panel. Measured 2026-08-06: local `Agent` prompts
