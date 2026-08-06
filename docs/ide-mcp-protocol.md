@@ -1,6 +1,7 @@
 # Claude Code IDE ↔ CLI protocol (reverse-engineered)
 
 Source: `vscode/extension.js` from `anthropic.claude-code` **v2.1.220** (win32-x64), decompiled/minified.
+§9 was later enumerated from the **v2.1.222** linux-x64 bundle (binary + both extension halves).
 Purpose: document the "IDE integration" bridge so a PhpStorm/JetBrains plugin can implement the
 IDE side and drive the **official `claude` CLI** unchanged. Symbol names below (e.g. `zG`, `UZt`)
 are the minifier's; they're kept as breadcrumbs so you can re-locate the code after an update.
@@ -262,3 +263,281 @@ The webview reuse (§5) is a later, higher-effort enhancement.
 2. Re-copy (excluding the ~266 MB `resources/native-binary/claude.exe`) into `vscode/`.
 3. Re-run the greps used to build this doc (search `extension.js` for `x-claude-code-ide-authorization`,
    `.lock`, `a.tool(`, `CLAUDE_CODE_SSE_PORT`) and diff against §2–§4 to catch protocol changes.
+
+---
+
+## 9. Full wire vocabulary — 2.1.222 sweep (2026-08-06)
+
+Raw reference, preserved from the full-bundle completeness sweep (see `docs/client-parity.md`
+§ 32 for the triage — that doc says what we DO about each of these; this section only records
+what EXISTS). Sources: the CLI binary's embedded zod wire schema (~1,160 `.describe()` strings,
+byte offsets ≈ 281.9–285.2 M in `resources/native-binary/claude`), `extension.js` (host half,
+bundled Agent SDK 0.3.222), and `webview/index.js`. Counts are occurrence counts in those
+artifacts, not transcript counts. Re-derive after an update with `grep -oaE` over the binary
+(it embeds JS, so `-a` text greps work directly; never dump raw matching lines — they can be
+megabytes).
+
+### 9a. Top-level stream-json frame types
+
+`StdoutMessage` union (all carry `uuid` + `session_id`):
+
+| type | notes |
+|---|---|
+| `assistant` | full message frames; carry `error`, `supersedes`, `is_meta`, `parent_tool_use_id` |
+| `user` | echoes + tool results; variants carry `isReplay`, `isSynthetic`, `subagent_type`, `tool_use_result` |
+| `system` | 44 subtypes — §9b |
+| `result` | §9d |
+| `stream_event` | wraps raw SSE `event` + `parent_tool_use_id`, `ttft_ms` |
+| `rate_limit_event` | `rate_limit_info` — "emitted when rate limit info changes" |
+| `control_request` / `control_response` / `control_cancel_request` | §9c |
+| `tool_progress` | `{tool_use_id, tool_name, parent_tool_use_id, elapsed_time_seconds, task_id?, heartbeat?, subagent_type?, subagent_retry?{agent_id, attempt, max_retries, retry_delay_ms, error_status, error_category}}` |
+| `keep_alive` | 30 s timer; ignore |
+| `auth_status` | `{isAuthenticating, output[], error?}` — only with `--enable-auth-status` |
+| `attachment` | @internal — at-mentioned files, IDE selections, pasted media, structured output |
+| `tombstone` | @internal — "consumers that render or persist the stream should remove the referenced message" |
+| `command_lifecycle` | `{command_uuid, state}` — pairs with stdin `bash_command` (CCR terminal UIs) |
+| `active_goal` | `/goal` Stop-hook state; `value` null when cleared |
+| `transcript_mirror` | @internal — only with `--session-mirror` |
+| `prompt_suggestion` | predicted next prompt; only when `promptSuggestions` enabled at initialize |
+| `tool_use_summary` | received-and-dropped by the VS Code webview; purpose undocumented |
+| `conversation_reset` | "emitted by /clear, plan-mode exit, and fresh-session flows … mount a fresh transcript under new_conversation_id" |
+| `notification` | "loop-side text notification — mirrors the interactive REPL notification queue (key/priority/timeout)" |
+
+Stdin-only types: `user`, `bash_command` (@internal, CCR terminal UIs), `control_request`,
+`control_response`, `control_cancel_request`, `keep_alive`, `update_environment_variables`.
+
+Internal QueryEvent types with **no public schema and explicit no-op switch arms** (the CLI
+consumes them itself; a client never sees them): `api_metrics`, `apply_flag_settings`,
+`compact_progress`, `hint_clears`, `interruptible_tool_in_progress`, `open_message_selector`,
+`os_notification`, `response_length`, `refusal_continuation` (`phase:"begin"|"end"`,
+`salvage_text`), `set_expanded_view`, `set_in_progress_tool_use_ids`, `stream_mode`,
+`thinking_progress`, `thinking_signature`, `hooks_start`, `content_block_start`, `start`, `end`,
+`sdk_status`, `query_model_change` (no schema at all).
+
+Does NOT exist: top-level `refusal_fallback` (0 occurrences in the binary — the VS Code webview
+synthesizes a pseudo-message of that name internally); `checkpoint` as a stream or record type.
+
+### 9b. `system` subtypes (runtime literals, count of emission sites)
+
+```
+informational 8 | model_refusal_fallback 7 | compact_boundary 7 | status 6 | thinking_tokens 5
+model_fallback 5 | notification 4 | model_refusal_no_fallback 4 | model_consent_fallback 4
+background_tasks_changed 3 | session_state_changed 2 | permission_denied 2 | api_retry 2
+worker_shutting_down 1 | vcs_state_changed 1 | turn_starting 1 | turn_duration 1 | task_updated 1
+task_summary 1 | task_started 1 | task_progress 1 | task_notification 1 | stop_hook_summary 1
+scheduled_task_fire 1 | post_turn_summary 1 | plugin_install 1 | permission_retry 1 | mirror_error 1
+memory_saved 1 | memory_recall 1 | local_command 1 | init 1 | hook_started 1 | hook_response 1
+hook_progress 1 | file_snapshot 1 | elicitation_complete 1 | control_request_progress 1
+commands_changed 1 | code_change_published 1 | bridge_status 1 | bridge_state 1 | away_summary 1
+api_error 1 | agents_killed 1        (+ schema-only: files_persisted, local_command_output, thinking)
+```
+
+Field notes worth keeping (schema doc strings, abridged):
+- `init` carries far more than we read: `agents, apiKeySource, betas, claude_code_version, cwd,
+  tools, mcp_servers[{name,status}], model, permissionMode, slash_commands, output_style, skills,
+  plugins, plugin_errors?, mcp_server_errors?, fast_mode_state?, capabilities?, memory_paths?`.
+  `capabilities` is an open set for feature detection (e.g. `interrupt_receipt_v1`,
+  `interrupt_cancel_queued_v1`) — "ignore unknown values".
+- `status`: `status ∈ {"compacting","requesting",null}` + `permissionMode?` +
+  `compact_result:"success"|"failed"?` + `compact_error?`.
+- `api_retry` is the PUBLIC wire frame (`attempt, max_retries, retry_delay_ms, error_status,
+  error`); `api_error` is "@internal … wire twin is SDKAPIRetryMessage ('api_retry')" and is what
+  transcripts persist. The two have different field spellings.
+- `compact_boundary`: `compact_metadata{trigger:"manual"|"auto", pre_tokens, post_tokens?,
+  cumulative_dropped_tokens?}` + `logical_parent_uuid?`.
+- `session_state_changed`: `state ∈ idle|running|requires_action` — "'idle' fires after
+  heldBackResult flushes … authoritative turn-over signal".
+- `permission_denied`: tool auto-denied with NO prompt (deny rule, auto-mode classifier) — "so
+  SDK hosts can render the denial instead of only seeing an is_error tool_result". Hook denies
+  are NOT covered by it.
+- `task_updated.patch.status ∈ pending|running|completed|failed|killed|paused`; merge semantics.
+- `commands_changed`: full roster push mid-session — "clients should REPLACE their cached
+  command list".
+- `hook_started` `{hook_id, hook_name, hook_event}` / `hook_progress` `{+stdout, stderr, output}`
+  / `hook_response` `{+exit_code?, outcome:"success"|"error"|"cancelled"}` — all behind the
+  `--include-hook-events` spawn flag (VS Code passes it; we don't).
+- `stop_hook_summary` `{hook_count, hook_infos[{command, prompt_text?, duration_ms?}],
+  hook_errors[], hook_additional_context?}`.
+- `model_consent_fallback` `{choice:"consent"|"switch_default"|"cancelled"}` — the Fable 5
+  usage-credit gate; "@internal … Not yet in the public SDKMessage union".
+- `model_fallback` `{trigger, original_model, fallback_model, content}` — the generic
+  (non-refusal) fallback; needs `--fallback-model`.
+- `mirror_error` — SessionStore.append failed for a mirror batch, "the batch is then dropped;
+  this surfaces the failure so consumers are not silent on data loss".
+- `vcs_state_changed.kind ∈ commit|push|merge|rebase` (open set); `code_change_published.provider
+  ∈ github|github-enterprise|gitlab|bitbucket` (open set); `memory_recall.mode ∈
+  select|synthesize`; `plugin_install.status ∈ started|installed|failed|completed`;
+  `worker_shutting_down.reason` e.g. `host_exit`, `remote_control_disabled`.
+- `bridge_status` / `bridge_state` / `turn_starting` have runtime literals but NO zod schema.
+
+### 9c. Control protocol
+
+**Loop → client** (CLI sends, blocks on reply; exhaustive — the dispatcher throws on anything
+else): `can_use_tool`, `hook_callback`, `mcp_message`, `elicitation` (default answer
+`{action:"decline"}`), `request_user_dialog` (`{dialog_kind, payload, tool_use_id?}`; kinds seen:
+`refusal_fallback_prompt`, `fable_overage_consent_prompt`; a client that declared no
+`supportedDialogKinds` is never sent one — the CLI "stays silent so a capable client (or the
+worker's park deadline) settles it"), `oauth_token_refresh`, `host_auth_token_refresh`.
+
+`can_use_tool` request fields beyond what we render: `display_name`, `description`, `title`,
+`requires_user_interaction`, `decision_reason`, `agent_id`,
+`matched_ask_rule{source, tool_name, rule_content?}`. Response shape:
+`{behavior:"allow", updatedInput?, updatedPermissions?, toolUseID?, decisionClassification?}` or
+`{behavior:"deny", message, interrupt?, toolUseID?, decisionClassification?}` with
+`decisionClassification ∈ user_temporary|user_permanent|user_reject`.
+
+**Client → loop** (56 accepted at runtime): `interrupt`, `end_session`, `initialize`,
+`set_permission_mode` (+`ultraplan:bool`), `set_model` (+optional `system_prompt`),
+`set_max_thinking_tokens` (+`thinking_display:"summarized"|"omitted"|null`), `set_cwd`,
+`set_color`, `mcp_status`, `get_binary_version`, `get_context_usage`, `list_models`,
+`get_session_cost`, `get_usage`, `get_settings`, `get_plan`, `get_workspace_diff`, `mcp_message`,
+`mcp_call`, `mcp_set_servers`, `mcp_reconnect`, `mcp_toggle`, `mcp_authenticate`,
+`mcp_oauth_callback_url`, `mcp_clear_auth`, `set_mcp_permission_mode_override` (tighten-only),
+`channel_enable`, `rewind_files`, `rewind_conversation`, `cancel_async_message`, `read_file`,
+`stage_file`, `register_repo_root`, `add_directory`, `file_suggestions`, `seed_read_state`,
+`reload_plugins`, `reload_skills`, `apply_flag_settings` ("merges the provided settings into the
+flag settings layer"), `stop_task`, `background_tasks` (Ctrl+B semantics), `generate_session_title`,
+`rename_session`, `submit_feedback`, `side_question`, `ultrareview_launch`, `message_rated`,
+`remote_control`, `claude_authenticate`, `claude_oauth_callback`,
+`claude_oauth_wait_for_completion`, `log_otel_event`, plus loopback arms for `hook_callback`,
+`can_use_tool`, `request_user_dialog`, `elicitation`.
+
+No `set_effort` / `set_output_style` / `list_sessions` subtypes exist. Effort is a spawn flag
+(`--effort <v>`) and possibly `apply_flag_settings{effortLevel}` (unprobed).
+
+Schema-less but accepted (undocumented): `end_session`, `add_directory`, `stage_file`,
+`rewind_conversation`, `side_question`, `ultrareview_launch`, `remote_control`, `channel_enable`,
+`generate_session_title`, and the `claude_*`/`mcp_*` auth family.
+
+Accepted MID-TURN: `set_model`, `set_permission_mode`, `interrupt`, `set_max_thinking_tokens`,
+`rename_session`, `set_color`, `mcp_authenticate`, `mcp_oauth_callback_url`, `mcp_reconnect`,
+`apply_flag_settings`, `side_question`, `reload_plugins`.
+
+Response envelope: `{subtype:"success", request_id, response?}` / `{subtype:"error", request_id,
+error}` — both may carry `pending_permission_requests` / `pending_user_dialog_requests` on the
+`initialize` response, "so a client joining an already-initialized session learns about in-flight
+prompts".
+
+### 9d. `result` event
+
+Success arm: `{subtype:"success", duration_ms, duration_api_ms, ttft_ms?, num_turns, result,
+stop_reason, total_cost_usd, usage, modelUsage, permission_denials[{tool_name, tool_use_id,
+tool_input}], structured_output?, deferred_tool_use?, terminal_reason?, fast_mode_state?,
+origin?, uuid, session_id}` (+ several @internal timing fields). Error arm: same minus
+`result`/timings, plus `errors:string[]`, `subtype ∈ error_during_execution | error_max_turns |
+error_max_budget_usd | error_max_structured_output_retries`.
+
+`terminal_reason` (19 values): `blocking_limit, rapid_refill_breaker, prompt_too_long,
+image_error, model_error, api_error, malformed_tool_use_exhausted, aborted_streaming,
+aborted_tools, stop_hook_prevented, hook_stopped, tool_deferred, max_turns,
+background_requested, completed, budget_exhausted, structured_output_retry_exhausted,
+tool_deferred_unavailable, turn_setup_failed`.
+
+`modelUsage` is a MAP keyed by raw model string: `{inputTokens, outputTokens,
+cacheReadInputTokens, cacheCreationInputTokens, webSearchRequests, costUSD, contextWindow,
+maxOutputTokens, canonicalModel?, provider?}`; `provider ∈ firstParty|bedrock|vertex|foundry|
+anthropicAws|anthropicGoogleCloud|mantle|gateway`.
+
+### 9e. Content blocks and SSE deltas
+
+Block types by `==="X"` comparison count in the CLI's own stream handling: `text` 298 ·
+`tool_use` 166 · `tool_result` 128 · `image` 65 · `thinking` 56 · `redacted_thinking` 22 ·
+`document` 17 · `server_tool_use` 12 · `mcp_tool_use` 5 · `web_search_tool_result` 2 ·
+**zero**: `web_fetch_tool_result`, `code_execution_tool_result`,
+`bash_code_execution_tool_result`, `text_editor_code_execution_tool_result`, `mcp_tool_result`,
+`container_upload`, `search_result` — this CLI cannot emit those despite the API types existing.
+
+Delta types (VS Code's assembler, exhaustive): `text_delta`, `thinking_delta`,
+`signature_delta`, `input_json_delta`, `citations_delta` (pushes onto `text.citations`),
+`compaction_delta` (no-op even there). The CLI synthesizes `content_block_stop` /
+`message_delta` / `message_stop` frames to close orphaned partial messages on retraction.
+
+### 9f. Transcript record types (`~/.claude/projects/**/*.jsonl`)
+
+Message records: `user`, `assistant`, `system`, `attachment`, `progress`, `summary`.
+Sidecar/state records: `last-prompt`, `custom-title`, `ai-title`, `tag`, `relocated`,
+`agent-name`, `agent-color`, `agent-setting`, `mode`, `permission-mode`, `isolation-latch`,
+`worktree-state`, `pr-link`, `bridge-session`, `file-history-snapshot`, `file-history-delta`,
+`queue-operation`, `attribution-snapshot`, `observer-ref`, `fork-context-ref`,
+`marble-origami-snapshot`, `marble-origami-commit`, `marble-origami-reset`, `compact`,
+`env_manager_log`, `teleport-skipped-branch`.
+
+Per-record flags (binary occurrence counts): `isMeta` 188, `isSidechain` 19, `isReplay` 12,
+`isCompactSummary` 7, `isApiErrorMessage` 7, `isSynthetic` 7, `isVisibleInTranscriptOnly` 6
+("stored in the transcript but not rendered in the live UI" — locally coextensive with
+`isCompactSummary`, all 26 records carry both), `isSnapshotUpdate` 2.
+
+VS Code title precedence: `customTitle → aiTitle → lastPrompt → summary → derived first prompt`.
+It prefilters lines with raw substring checks (`'"isSidechain":true'`) BEFORE JSON.parse for
+speed, and reads only head/tail byte windows of each file when listing sessions.
+
+### 9g. Hook events (30 names in the schema)
+
+`PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest,
+PermissionDenied, Notification, UserPromptSubmit, UserPromptExpansion, Stop, StopFailure,
+SubagentStart, SubagentStop, SessionStart, SessionEnd, Setup, PreCompact, PostCompact,
+ConfigChange, CwdChanged, DirectoryAdded, FileChanged, MessageDisplay, InstructionsLoaded,
+Elicitation, ElicitationResult, TaskCreated, TaskCompleted, TeammateIdle, WorktreeCreate,
+WorktreeRemove`. Hook-produced synthetic frames in the internal stream (no zod schema):
+`hook_additional_context`, `hook_non_blocking_error`, `hooks_start`, `hook_cancelled`,
+`hook_success`, `hook_error_during_execution`.
+
+### 9h. VS Code extension — spawn flags, protocol and renderers (2.1.222)
+
+**Spawn**: base `--output-format stream-json --verbose --input-format stream-json`; the host adds
+`--permission-prompt-tool stdio` (when a canUseTool callback exists), `--include-partial-messages`
+(disabled in remote/SSH windows), and extraArgs `--debug --debug-to-stderr --enable-auth-status
+--no-chrome --replay-user-messages` on every native-UI launch. Other flags the SDK can emit:
+`--thinking adaptive|disabled`, `--max-thinking-tokens`, `--thinking-display`, `--effort`,
+`--max-turns`, `--max-budget-usd`, `--task-budget`, `--model`, `--agent`, `--betas`,
+`--json-schema`, `--debug-file`, `--continue`, `--resume=<id>`, `--resume-session-at=<v>`,
+`--fork-session`, `--session-id=<uuid>`, `--no-session-persistence`, `--channels`,
+`--allowedTools`, `--disallowedTools`, `--tools`, `--mcp-config <inline json>`,
+`--strict-mcp-config`, `--setting-sources=a,b`, `--permission-mode`,
+`--allow-dangerously-skip-permissions`, `--fallback-model`, `--include-hook-events`,
+`--session-mirror`, `--add-dir`, `--plugin-dir`, `--managed-settings`, `--settings`. No `--ide`
+flag exists — IDE attachment is lockfile + env or `--mcp-config` (§3b). Env: sets
+`MCP_CONNECTION_NONBLOCKING=true`, `CLAUDE_CODE_ENTRYPOINT=claude-vscode`,
+`CLAUDE_CODE_ENABLE_TASKS=0`, `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING` (checkpointing always
+on), deletes `CLAUDECODE`/`TRACEPARENT`/`TRACESTATE`/`NODE_OPTIONS`.
+
+**Host-registered SDK hooks** (how their diff/diagnostics pipeline works without reading files
+fresh): `PreToolUse Edit|Write|MultiEdit → captureBaseline`, `PreToolUse Edit|Write|Read →
+autosave`, `PostToolUse Edit|Write|MultiEdit → findDiagnosticsProblems`.
+
+**Webview ⟷ host**: envelope types `io_message, request, response, cancel_request,
+close_channel, speech_audio_level, speech_to_text_message, file_updated, plan_comment` (+
+`from-extension` DOM wrapper). Host→webview pushes: `update_state, visibility_changed,
+font_configuration_changed, create_new_conversation, toggle_dictation, open_plugins_dialog,
+insert_at_mention, selection_changed, session_states_update, proactive_suggestions_update,
+usage_update, auth_url, tool_permission_request, user_dialog_request`. Webview→host: ~78 request
+types covering sessions (list/get/delete/rename/fork/teleport), files/diffs
+(open_file, open_diff, open_file_diffs, open_markdown_preview + plan comments, create_worktree),
+model/mode (set_model, set_permission_mode, set_thinking_level, apply_settings), MCP
+(get_mcp_servers, set_mcp_server_enabled, reconnect/authenticate/clear_auth/oauth_callback,
+chrome/jupyter enable-disable), plugins/marketplaces (8), usage/auth
+(get_usage, get_context_usage, login, submit_oauth_code), terminal
+(exec, open_terminal, get_terminal_contents), speech (start/stop_speech_to_text), telemetry
+(log_event, message_rated, submit_feedback).
+
+**Webview per-tool renderers**: `Bash`/`PowerShell` (command block), `Read` (chip + range link),
+`ReadCoalesced` (synthetic multi-Read "Explored" merge), `Write`, `Edit` (inline diff),
+`NotebookEdit`, `Glob` (`pattern:`), `Grep` (`in <path>, glob:, type:`), `Search`, `WebFetch`
+(hostname), `WebSearch` (query), `TodoWrite` (checklist), `ExitPlanMode` ("Claude's Plan"),
+`Agent` (wire name `Task`; description + prompt IN row), `TaskOutput`, `AgentOutputTool`
+(renders nothing), `Skill`, `ToolSearch` (hidden), `REPL`, `SandboxNetworkAccess`,
+`AskUserQuestion`, `Artifact` (auto-opens published URL), `mcp__claude-in-chrome__*` (per-action
+labels), generic `mcp__*` (server-name header), fallback (JSON IN/OUT dump). Message window cap:
+600 messages, sliced to newest 500.
+
+**Webview system subtypes handled** (9 — fewer than the CLI emits): `init, status,
+compact_boundary, thinking_tokens, task_started, task_progress, task_notification,
+model_refusal_fallback, model_consent_fallback`. It does NOT know `informational`, `api_error`/
+`api_retry`, `model_refusal_no_fallback`, `task_updated`, or `background_tasks_changed` (it
+builds its task map from the edge events instead).
+
+**Notable dead code in the shipped build** (evidence that presence ≠ reachable): the
+`refusal_fallback_prompt` dialog is disabled by a hardcoded `||!1||`; the debugger/Jupyter MCP
+controllers are stubbed (`hasActiveSession: false`, `registerTool: ()=>{}`); `tool_use_summary`
+produces no view-model; `claude-vscode.update` and `.createWorktree` commands are declared but
+never registered.

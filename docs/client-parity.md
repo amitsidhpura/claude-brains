@@ -1264,8 +1264,10 @@ of those keys.** The claim is retracted in item 22 and stands retracted here too
 
 The whole reference surface, enumerated rather than sampled: the 2.1.222 CLI binary's embedded
 wire schema (~1,160 `.describe()` doc strings), `extension.js` (host half, including the bundled
-Agent SDK 0.3.222), and `webview/index.js`. Purpose: answer "did the original 31 items cover
-everything?" The short answer: **the CLI knows 44 `system` subtypes (we handle 12), ~20 top-level
+Agent SDK 0.3.222), and `webview/index.js`. The raw inventories — every frame type, all 44
+`system` subtypes, all 56 control subtypes, VS Code's renderers and spawn flags — are preserved
+in `docs/ide-mcp-protocol.md` §9; this section is only the triage. Purpose: answer "did the
+original 31 items cover everything?" The short answer: **the CLI knows 44 `system` subtypes (we handle 12), ~20 top-level
 frame types (we handle 7), and accepts 56 control subtypes (we send 4)** — but almost all of the
 delta is internal, remote-control-only, or gated behind flags we don't pass. What survives triage
 is six open items, three corrections to closed items (folded into 4, 22 and 31 above), and a probe
