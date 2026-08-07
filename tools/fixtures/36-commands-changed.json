@@ -1,0 +1,38 @@
+{
+  "item": "36",
+  "branch": "system/commands_changed",
+  "provenance": "Shape and semantics from the schema line quoted in chat.html's handler — 'Clients should REPLACE their cached command list with this payload'. Skills discovered mid-session change the roster; our cache otherwise dates from the initialize response. The handler normalises string entries to {name}, so both forms are exercised.",
+  "steps": [
+    {
+      "note": "a roster arrives and REPLACES whatever was cached",
+      "frames": [
+        {"type": "system", "subtype": "commands_changed",
+         "commands": [{"name": "compact", "description": "Compact the context"},
+                      {"name": "clear", "description": "Start fresh"},
+                      {"name": "fixture-only", "description": "Proves replacement"}]}
+      ],
+      "expect": [
+        {"js": "slashCommands.length", "equals": 3, "why": "cache replaced wholesale"},
+        {"js": "slashCommands.map(c => c.name).join(',')", "contains": "fixture-only", "why": "new command present"}
+      ]
+    },
+    {
+      "note": "bare strings normalise to {name}",
+      "frames": [{"type": "system", "subtype": "commands_changed", "commands": ["compact", "clear"]}],
+      "expect": [
+        {"js": "slashCommands.length", "equals": 2, "why": "replaced again, shorter"},
+        {"js": "slashCommands[0].name", "equals": "compact", "why": "string became an object"}
+      ]
+    },
+    {
+      "note": "REPLACE is unconditional — unlike the init seed, which only fills an empty list",
+      "frames": [{"type": "system", "subtype": "commands_changed", "commands": []}],
+      "expect": [{"js": "slashCommands.length", "equals": 0, "why": "an empty roster is honoured"}]
+    },
+    {
+      "note": "a malformed payload is ignored rather than clearing the roster",
+      "frames": [{"type": "system", "subtype": "commands_changed", "commands": "not-an-array"}],
+      "expect": [{"js": "Array.isArray(slashCommands)", "equals": true, "why": "still an array"}]
+    }
+  ]
+}

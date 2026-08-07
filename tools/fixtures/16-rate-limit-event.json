@@ -1,0 +1,32 @@
+{
+  "item": "16",
+  "branch": "rate_limit_event",
+  "provenance": "Field names from chat.html's handler, which reads both spellings (rate_limit_info / rateLimitInfo) after originalModel-vs-original_model bit the refusal fallback. client-parity records this path as unforceable against a real CLI — no way to make a real limit happen — so this fixture is the only evidence available and asserts the three behaviours the handler owes: silence on allowed, speech on rejected, and no repetition.",
+  "steps": [
+    {
+      "note": "status 'allowed' says nothing",
+      "frames": [{"type": "rate_limit_event", "rate_limit_info": {"status": "allowed"}}],
+      "expect": [{"js": "document.querySelectorAll('.status').length", "equals": 0, "why": "routine case stays silent"}]
+    },
+    {
+      "note": "rejected speaks, with the label for the type",
+      "frames": [{"type": "rate_limit_event",
+                  "rate_limit_info": {"status": "rejected", "rateLimitType": "five_hour"}}],
+      "expect": [
+        {"js": "document.querySelectorAll('.status').length", "equals": 1, "why": "one line"},
+        {"js": "document.querySelector('.status').textContent", "contains": "session limit", "why": "five_hour reads as 'session limit'"}
+      ]
+    },
+    {
+      "note": "the same limit again is not restated",
+      "frames": [{"type": "rate_limit_event",
+                  "rate_limit_info": {"status": "rejected", "rateLimitType": "five_hour"}}],
+      "expect": [{"js": "document.querySelectorAll('.status').length", "equals": 1, "why": "deduped by status:type"}]
+    },
+    {
+      "note": "an unknown shape yields no status and stays silent",
+      "frames": [{"type": "rate_limit_event", "somethingElse": {"nope": true}}],
+      "expect": [{"js": "document.querySelectorAll('.status').length", "equals": 1, "why": "no new line — silence is the safe direction"}]
+    }
+  ]
+}

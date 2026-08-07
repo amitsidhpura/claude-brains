@@ -1,0 +1,79 @@
+{
+  "item": "1, 3, 4",
+  "branch": "system/task_started, task_progress, task_updated, task_notification",
+  "provenance": "Frame shapes from chat.html's taskLine and the task_updated handler, whose comments cite checks against real frames: subagent_type rides on started/progress but NOT on notification (hence the remembering), and task_updated carries only {task_id, patch} with no tool_use_id — so it can finalize a line but never create one. This fixture pins exactly that asymmetry.",
+  "steps": [
+    {
+      "note": "an Agent tool line must exist first — task frames hang off it",
+      "frames": [
+        {"type": "stream_event", "event": {"type": "message_start", "message": {"usage": {}}}},
+        {"type": "stream_event", "event": {"type": "content_block_start", "index": 0,
+          "content_block": {"type": "tool_use", "id": "toolu_fx1", "name": "Task"}}},
+        {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0,
+          "delta": {"type": "input_json_delta",
+                    "partial_json": "{\"description\":\"Sweep the renderer\",\"prompt\":\"Look at every branch\"}"}}},
+        {"type": "stream_event", "event": {"type": "content_block_stop", "index": 0}}
+      ],
+      "expect": [
+        {"js": "document.querySelectorAll('.tool-line').length", "atLeast": 1, "why": "tool line drawn"},
+        {"js": "document.body.textContent", "contains": "Sweep the renderer", "why": "description on the line"},
+        {"js": "document.body.textContent", "contains": "Look at every branch", "why": "item 3: the prompt shows in the IN box"}
+      ]
+    },
+    {
+      "note": "task_started opens a progress line under it",
+      "frames": [
+        {"type": "system", "subtype": "task_started", "task_id": "task_fx1", "tool_use_id": "toolu_fx1",
+         "subagent_type": "Explore", "description": "Reading words.txt"}
+      ],
+      "expect": [
+        {"js": "document.querySelectorAll('.t-prog').length", "equals": 1, "why": "one progress line"},
+        {"js": "document.querySelector('.t-prog').textContent", "contains": "Explore", "why": "agent type"},
+        {"js": "document.querySelector('.t-prog').textContent", "contains": "Reading words.txt", "why": "running commentary"},
+        {"js": "document.querySelectorAll('.t-prog.run').length", "equals": 1, "why": "still running"}
+      ]
+    },
+    {
+      "note": "task_progress updates in place and adds counts",
+      "frames": [
+        {"type": "system", "subtype": "task_progress", "task_id": "task_fx1", "tool_use_id": "toolu_fx1",
+         "description": "Grepping for handlers", "usage": {"tool_uses": 3, "total_tokens": 950}}
+      ],
+      "expect": [
+        {"js": "document.querySelectorAll('.t-prog').length", "equals": 1, "why": "updated, not appended"},
+        {"js": "document.querySelector('.t-prog').textContent", "contains": "3 tool uses", "why": "plural count"},
+        {"js": "document.querySelector('.t-prog').textContent", "contains": "Grepping for handlers", "why": "new commentary"}
+      ]
+    },
+    {
+      "note": "task_updated can only finalize a line that exists — it carries no tool_use_id",
+      "frames": [
+        {"type": "system", "subtype": "task_updated", "task_id": "task_fx1", "patch": {"status": "completed"}}
+      ],
+      "expect": [
+        {"js": "document.querySelectorAll('.t-prog.run').length", "equals": 0, "why": "no longer running"},
+        {"js": "document.querySelectorAll('.t-prog').length", "equals": 1, "why": "did not create a second line"}
+      ]
+    },
+    {
+      "note": "task_updated for an UNKNOWN task creates nothing",
+      "frames": [
+        {"type": "system", "subtype": "task_updated", "task_id": "never_seen", "patch": {"status": "completed"}}
+      ],
+      "expect": [{"js": "document.querySelectorAll('.t-prog').length", "equals": 1, "why": "still just the one"}]
+    },
+    {
+      "note": "task_notification swaps commentary for the summary, keeping the remembered type",
+      "frames": [
+        {"type": "system", "subtype": "task_notification", "task_id": "task_fx1", "tool_use_id": "toolu_fx1",
+         "summary": "Found 3 unhandled branches", "status": "completed",
+         "usage": {"tool_uses": 5, "total_tokens": 1400}}
+      ],
+      "expect": [
+        {"js": "document.querySelector('.t-prog').textContent", "contains": "Found 3 unhandled branches", "why": "summary replaces commentary"},
+        {"js": "document.querySelector('.t-prog').textContent", "contains": "Explore", "why": "subagent_type remembered — notification does not carry it"},
+        {"js": "document.querySelector('.t-prog').textContent.includes('Grepping for handlers')", "equals": false, "why": "commentary gone"}
+      ]
+    }
+  ]
+}

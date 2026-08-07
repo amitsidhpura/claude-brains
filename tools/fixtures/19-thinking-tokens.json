@@ -1,0 +1,35 @@
+{
+  "item": "19",
+  "branch": "system/thinking_tokens",
+  "provenance": "Shape from chat.html's handler (estimated_tokens, a number). client-parity records this as honestly dormant: probed against 2.1.222, even the designed trigger yields estimated_tokens:null, so the chars/4 fallback is the path that actually runs. This fixture proves the real-count branch works IF the CLI ever sends one, and that the fallback holds when it does not.",
+  "steps": [
+    {
+      "note": "a live thinking block starts on the chars/4 estimate",
+      "frames": [
+        {"type": "stream_event", "event": {"type": "message_start", "message": {"usage": {}}}},
+        {"type": "stream_event", "event": {"type": "content_block_start", "index": 0,
+          "content_block": {"type": "thinking"}}},
+        {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0,
+          "delta": {"type": "thinking_delta", "thinking": "weighing the options"}}}
+      ],
+      "expect": [
+        {"js": "document.querySelectorAll('.think-live').length", "equals": 1, "why": "thinking block live"},
+        {"js": "document.querySelector('.think-live .tok').textContent", "contains": "tokens", "why": "estimate painted"}
+      ]
+    },
+    {
+      "note": "the CLI's own count replaces the guess",
+      "frames": [{"type": "system", "subtype": "thinking_tokens", "estimated_tokens": 950}],
+      "expect": [
+        {"js": "document.querySelector('.think-live .tok').textContent", "contains": "950", "why": "real count wins"}
+      ]
+    },
+    {
+      "note": "a null count is ignored — the dormant case, and the one that actually happens",
+      "frames": [{"type": "system", "subtype": "thinking_tokens", "estimated_tokens": null}],
+      "expect": [
+        {"js": "document.querySelector('.think-live .tok').textContent", "contains": "950", "why": "last good value kept, not blanked"}
+      ]
+    }
+  ]
+}

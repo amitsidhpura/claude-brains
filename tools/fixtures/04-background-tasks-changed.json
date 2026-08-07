@@ -1,0 +1,36 @@
+{
+  "item": "4",
+  "branch": "system/background_tasks_changed",
+  "provenance": "Shape from the schema line quoted in chat.html's handler — 'Every live background task after the change. REPLACE semantics: swap your set for this payload.' The REPLACE rule is the whole point of the fixture: merging would leave a finished task on the roster forever.",
+  "steps": [
+    {
+      "note": "two tasks open the roster chip",
+      "frames": [
+        {"type": "system", "subtype": "background_tasks_changed",
+         "tasks": [{"task_id": "bg1", "description": "Indexing words.txt"},
+                   {"task_id": "bg2", "description": "Fetching docs"}]}
+      ],
+      "expect": [
+        {"js": "document.getElementById('bgChip').hidden", "equals": false, "why": "chip visible"},
+        {"js": "document.getElementById('bgChip').textContent", "equals": "2 tasks", "why": "counts both"},
+        {"js": "document.getElementById('bgList').textContent", "contains": "Indexing words.txt", "why": "names the task"}
+      ]
+    },
+    {
+      "note": "a smaller payload REPLACES, it does not merge",
+      "frames": [
+        {"type": "system", "subtype": "background_tasks_changed",
+         "tasks": [{"task_id": "bg2", "description": "Fetching docs"}]}
+      ],
+      "expect": [
+        {"js": "document.getElementById('bgChip').textContent", "equals": "1 task", "why": "singular, and bg1 is gone"},
+        {"js": "document.getElementById('bgList').textContent.includes('Indexing')", "equals": false, "why": "finished task left the roster"}
+      ]
+    },
+    {
+      "note": "empty payload hides the chip",
+      "frames": [{"type": "system", "subtype": "background_tasks_changed", "tasks": []}],
+      "expect": [{"js": "document.getElementById('bgChip').hidden", "equals": true, "why": "chip hidden"}]
+    }
+  ]
+}
