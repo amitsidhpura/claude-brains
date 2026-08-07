@@ -22,3 +22,6 @@ plugin/.intellijPlatform/
 
 # Personal scratch space — notes, throwaway files. Never part of the plugin.
 /_local/
+
+# Python bytecode from tools/ (live_harness imports cdp)
+__pycache__/

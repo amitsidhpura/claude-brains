@@ -4,6 +4,8 @@
     python tools/cdp.py -f probe.js          # anything multi-line
     python tools/cdp.py --targets            # what DevTools can see right now
     python tools/cdp.py --screenshot out.png # PNG of the panel as it renders in the IDE
+    python tools/cdp.py --html [out.html]    # the live DOM, not the chat.html template
+    python tools/cdp.py --console [seconds]  # console + uncaught exceptions, from now on
 
 Needs `./gradlew runIde` up with the Claude Brains tool window OPEN — CEF starts with the
 first JBCefBrowser, so before that the page does not exist and there is nothing to attach to.
@@ -20,9 +22,8 @@ Complements, not replaces:
   Ctrl+Alt+G        — the gallery: every transient state drawn without driving the CLI.
   this              — the live DOM as it actually is, mid-session.
 
-Only Python's `websockets` is required (no CDP client library). One shot per invocation: it
-connects, evaluates, prints, disconnects — so there is no streaming console capture here; add a
-`Runtime.consoleAPICalled` listener if you need one.
+Only Python's `websockets` is required (no CDP client library). Every mode connects, does its one
+job and disconnects — except `--console`, which holds the socket open for the seconds you give it.
 
 Gotcha: the expression runs in the page's GLOBAL scope, so a bare `const log = ...` collides with
 chat.html's own globals and throws "Identifier already declared". Wrap anything with declarations
@@ -30,9 +31,16 @@ in an IIFE: `(() => { const el = ...; return JSON.stringify(...); })()`.
 """
 import json
 import sys
+import time
 import urllib.request
 
 from websockets.sync.client import connect
+
+# The panel is full of non-ASCII — ✻ on the completion summary, ⏹, ⋯ on cut markers, the arrows
+# in "↓ N tokens". Windows consoles default to cp1252, which raises UnicodeEncodeError on all of
+# them, so a perfectly good result dies in the print rather than in the browser.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 PORT = 9222
 # JBCefBrowser.loadHTML serves the panel from a synthetic file URL — the panel has no real
@@ -86,6 +94,70 @@ def evaluate(expr):
     print(value if isinstance(value, str) else json.dumps(value, indent=2, default=str))
 
 
+def dump_html(path=None):
+    """The panel's LIVE DOM — post-splice, post-render, including everything the renderer built.
+
+    Not the same thing as reading chat.html: that is the template, with `<!--CSS-->`/`<!--LIMITS-->`
+    unspliced and an empty log. This is what is actually on screen.
+    """
+    target = panel_target()
+    with connect(target["webSocketDebuggerUrl"], max_size=64 * 1024 * 1024) as ws:
+        ws.send(json.dumps({
+            "id": 1,
+            "method": "Runtime.evaluate",
+            "params": {"expression": "document.documentElement.outerHTML", "returnByValue": True},
+        }))
+        while True:
+            msg = json.loads(ws.recv(timeout=30))
+            if msg.get("id") == 1:
+                break
+    html = msg["result"]["result"]["value"]
+    if path:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"{path} ({len(html):,} chars)")
+    else:
+        print(html)
+
+
+def console(seconds=15):
+    """Stream console output and uncaught exceptions for N seconds.
+
+    History IS included: `Runtime.enable` re-delivers the console messages CEF has buffered for
+    the page, and `Log.enable` replays browser-level entries (network failures, CSP violations),
+    so entries from before this attached still show up. Measured, not assumed — an earlier version
+    of this comment claimed the opposite and a second listener printed the same four entries back.
+    The flip side is that a run is not a clean slate: what you see may predate the thing you are
+    testing. To attribute output to one action, note what is already there, then act.
+    """
+    target = panel_target()
+    print(f"# listening {seconds}s on: {target.get('title')}", file=sys.stderr)
+    seen = 0
+    with connect(target["webSocketDebuggerUrl"], max_size=64 * 1024 * 1024) as ws:
+        ws.send(json.dumps({"id": 1, "method": "Runtime.enable"}))
+        ws.send(json.dumps({"id": 2, "method": "Log.enable"}))
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            try:
+                msg = json.loads(ws.recv(timeout=max(0.5, deadline - time.monotonic())))
+            except TimeoutError:
+                break
+            method, params = msg.get("method"), msg.get("params", {})
+            if method == "Runtime.consoleAPICalled":
+                args = " ".join(str(a.get("value", a.get("description", "?"))) for a in params.get("args", []))
+                print(f"[console.{params.get('type')}] {args}")
+                seen += 1
+            elif method == "Log.entryAdded":
+                e = params.get("entry", {})
+                print(f"[{e.get('level')}/{e.get('source')}] {e.get('text')}")
+                seen += 1
+            elif method == "Runtime.exceptionThrown":
+                d = params.get("exceptionDetails", {})
+                print(f"[EXCEPTION] {d.get('exception', {}).get('description') or d.get('text')}")
+                seen += 1
+    print(f"# {seen} entr{'y' if seen == 1 else 'ies'}", file=sys.stderr)
+
+
 def screenshot(path):
     """PNG of the panel exactly as the IDE renders it — real JCEF, real fonts, real theme.
 
@@ -122,6 +194,10 @@ if __name__ == "__main__":
             print(f"[{t.get('type')}] {t.get('title')!r}\n    {t.get('url', '')[:90]}")
     elif args[0] == "--screenshot":
         screenshot(args[1])
+    elif args[0] == "--html":
+        dump_html(args[1] if len(args) > 1 else None)
+    elif args[0] == "--console":
+        console(int(args[1]) if len(args) > 1 else 15)
     elif args[0] == "-f":
         evaluate(open(args[1], encoding="utf-8").read())
     else:

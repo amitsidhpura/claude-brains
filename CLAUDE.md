@@ -113,6 +113,33 @@ the usage/cost display any more (declined 2026-08-06, see below).
 `cd plugin && ./gradlew runIde` (launches a sandbox PhpStorm), or the same task from
 IntelliJ. `./gradlew compileKotlin` for a fast type-check; `buildPlugin` produces the installable
 zip in `build/distributions/`.
+
+### Which debug route — pick by symptom, not by habit
+Each of these is documented in full below; this is only the chooser. The tools are not
+interchangeable and reaching for the wrong one is how a session gets spent measuring the wrong
+layer.
+
+| Symptom | Route |
+|---|---|
+| "Does the CLI even send this?" | grep `~/.claude/projects/*/*.jsonl` **by key**, or run `claude --output-format stream-json` in a terminal |
+| Wrong blocks after resume | `./gradlew probe` — splits a PARSER bug from a RENDERER bug, no IDE |
+| A transient state renders wrong | Ctrl+Alt+G gallery — every state, without driving the CLI |
+| Live render misbehaving mid-session | `python tools/cdp.py` — the only view of real JCEF |
+| Kotlin logic: bridge, permissions, parsing | `./gradlew runIde --debug-jvm` then attach a remote debugger |
+| CSS / layout iteration | `design/mockup.html` + headless Chrome (mind the compositor traps) |
+| Won't load in a REAL IDE | install the zip in the real PhpStorm — the sandbox cannot catch this class |
+| Poking around by hand | the DevTools window (F12 / Find Action): breakpoints, live CSS editing |
+
+**Start at the top row.** It is the cheapest check and the one most often skipped: two of the four
+`P0`s in docs/client-parity.md described bugs that were not there, and the one that was real was
+mis-described — every time because the premise was never measured against actual records first.
+Check by KEY, not substring (a transcript quoting a field name is not a record containing it).
+The live panel is for AFTER you know the data exists.
+
+- `./gradlew runIde --debug-jvm` — starts the sandbox SUSPENDED, listening on port 5005; attach
+  IntelliJ's Remote JVM Debug run configuration to get real breakpoints in `ClaudeCli` /
+  `SessionStore` / `ChatPanel`. Strictly better than adding log statements for anything on the
+  Kotlin side. (A plain Gradle `JavaExec` option — `RunIdeTask` extends it.)
 - Build JVM must be **Java 21**. Do NOT use the JBR bundled with a recent PhpStorm — 2026.x ships
   JDK 25 and Gradle 8.10.2 refuses to run on anything above 23. Linux dev box uses Temurin 21 at
   `~/.jdks/jdk-21.0.12+8` (also IntelliJ's auto-detect dir); `~/.zshrc` exports `JAVA_HOME`.
@@ -168,6 +195,18 @@ zip in `build/distributions/`.
   open: CEF starts with the first JBCefBrowser. It is listed by its `<title>` ("Claude Brains —
   chat panel"); without one the entry reads `474222809#url=about:blank`, the pseudo-URL
   `loadHTML` invents, since the panel has no real address.
+- `python tools/live_harness.py` — replays recorded CLI wire frames through `onClaudeEvent` into
+  the LIVE panel and asserts what it renders; `--shots <dir>` for a PNG per fixture. This is the
+  regression suite for LIVE-only branches — the ones that cannot be triggered on demand (a rate
+  limit, a sub-agent task, a compaction failure), so nothing else can cover them. It exists
+  because docs/client-parity.md's 2026-08-06 pass verified eight such items with a harness that
+  was never committed: proof they worked once, and nothing that can catch a regression.
+  Each fixture carries a `provenance` field, and it is the field that matters — a fixture whose
+  shape was copied from our own handler proves the handler is self-consistent, NOT that the CLI
+  emits that shape. Say which it is. Keep the negative control in mind when adding fixtures: an
+  all-green first run is what a vacuous suite also looks like (feed a deliberately wrong
+  expectation and check it FAILS). Live path only; the replay half is `SessionStoreTest`'s job,
+  and an item that renders on both needs evidence in both.
 - `python tools/cdp.py "<js>"` — evaluate JS in the LIVE webview over CDP (`--targets` to list,
   `-f file.js` for multi-line). The ONLY way to inspect the renderer under real JCEF: headless
   Chrome is a different browser (no compositor → rAF ~2.5/s, ResizeObserver never fires — see
