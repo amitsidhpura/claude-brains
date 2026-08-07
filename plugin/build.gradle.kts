@@ -43,6 +43,29 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 
 /**
+ * Remote DevTools for the webview, on every machine, with no per-sandbox setup:
+ * `http://localhost:9222` (or `chrome://inspect`) once the chat panel is open, and
+ * `tools/cdp.py` for scripted inspection.
+ *
+ * This was a manual Registry edit inside each sandbox, which is why it worked on one machine and
+ * silently did nothing on the next — sandbox config lives in `build/idea-sandbox/`, is not in git,
+ * and dies with the sandbox. Setting it here makes the port a property of the BUILD.
+ *
+ * Why a system property sets a registry key (verified in 2024.2 bytecode):
+ * `SettingsHelper.getRemoteDebugPort()` reads `Registry.intValue("ide.browser.jcef.debug.port", -1)`,
+ * and `RegistryValue._get` resolves user properties -> `System.getProperty(key)` -> bundled default.
+ * The platform recommends system properties for anything read at early startup, which JCEF init is.
+ * `-1` is the default and means off; the port is read once when CEF starts, so it is live from the
+ * first panel open. A value set by hand in a sandbox Registry still WINS over this one — it is
+ * checked first — so an old manual edit on a different port keeps overriding the line below.
+ *
+ * Sandbox only: `runIde` is a dev task, so no installed IDE ever opens this port.
+ */
+tasks.named<JavaExec>("runIde") {
+    systemProperty("ide.browser.jcef.debug.port", "9222")
+}
+
+/**
  * Print the replay blocks SessionStore produces for a real session, without launching the IDE:
  *   ./gradlew probe --args="/path/to/project <session-uuid>"
  * SessionStore has no IntelliJ dependencies, so it runs standalone.

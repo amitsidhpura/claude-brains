@@ -34,6 +34,7 @@ the usage/cost display any more (declined 2026-08-06, see below).
   External parity; `docs/renderer-parity.md` is the internal live-vs-resume-vs-mockup one
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved
   changes get ported into `plugin/src/main/resources/webview/chat.html`
+- `tools/cdp.py` — run JS in the live webview over the DevTools protocol (see Build / run)
 - `vscode/` — NOT in git. Extracted official VS Code extension (from
   `~/.vscode/extensions/anthropic.claude-code-<ver>/`, minus `resources/native-binary/claude.exe`).
   Re-extract locally for reference; used to reverse-engineer protocols and styles.
@@ -152,10 +153,27 @@ zip in `build/distributions/`.
   the CEF popup never appeared (OSR on Linux). Webview keystrokes are also minefields: Ctrl+Alt+D
   is a WM "show desktop" grab. What works: Find Action → "Claude Brains: Open DevTools"
   (`DevToolsAction` → `ChatPanel.openDevtools()`, panel stashed under `ChatPanel.PANEL_KEY`; F12
-  in the panel rides the same path via `{kind:"devtools"}`), and the remote port — sandbox registry
-  `ide.browser.jcef.debug.port=9222` (a plain `Registry.intValue` on 2024.2, read at JCEF init →
-  restart needed, panel must be open) then `http://localhost:9222` or `chrome://inspect` in a real
-  browser. Both attempts log `openDevtools requested` to the sandbox idea.log.
+  in the panel rides the same path via `{kind:"devtools"}`), and the remote port —
+  `http://localhost:9222` or `chrome://inspect` in a real browser. Both attempts log
+  `openDevtools requested` to the sandbox idea.log.
+  The port is set by the BUILD (`tasks.named<JavaExec>("runIde")` → `-Dide.browser.jcef.debug.port=9222`),
+  NOT by hand in each sandbox's Registry — that manual step is why it worked on one machine and
+  did nothing on the next (sandbox config isn't in git and dies with the sandbox). A system
+  property is a legitimate way to set ANY registry key: `RegistryValue._get` resolves user
+  properties → `System.getProperty(key)` → bundled default, and the platform recommends exactly
+  that for anything read at early startup, which JCEF init is (`SettingsHelper.getRemoteDebugPort()`
+  → `Registry.intValue("ide.browser.jcef.debug.port", -1)`, checked in 2024.2 bytecode). A port set
+  by hand in a sandbox Registry still WINS — user properties are checked first — so an old manual
+  edit keeps overriding the build. The panel only appears in `/json/list` once the tool window is
+  open: CEF starts with the first JBCefBrowser. It is listed by its `<title>` ("Claude Brains —
+  chat panel"); without one the entry reads `474222809#url=about:blank`, the pseudo-URL
+  `loadHTML` invents, since the panel has no real address.
+- `python tools/cdp.py "<js>"` — evaluate JS in the LIVE webview over CDP (`--targets` to list,
+  `-f file.js` for multi-line). The ONLY way to inspect the renderer under real JCEF: headless
+  Chrome is a different browser (no compositor → rAF ~2.5/s, ResizeObserver never fires — see
+  docs/limits.md) and the mockup is static. Use it with the other two dev routes, not instead of
+  them: `./gradlew probe` splits a parser bug from a renderer bug without an IDE, Ctrl+Alt+G draws
+  every transient state without driving the CLI. Needs Python's `websockets` and an open panel.
 - Caps/key-orders shared by the LIVE renderer and the REPLAY parser live in ONE place,
   `RenderLimits.kt` (tool-description cap + key order, IN/OUT caps, and `IN_KEYS` — the IN box is
   keyed on the INPUT (`command`, `prompt`), never on the tool name, so a sub-agent's brief and a

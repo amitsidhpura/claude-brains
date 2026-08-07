@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!-- Never visible in the panel (JCEF draws no title bar) — this is the label the remote DevTools
+     target list shows. Without it the entry reads "474222809#url=about:blank", the pseudo-URL
+     JBCefBrowser.loadHTML invents, which looks like a stray blank tab rather than the panel. -->
+<title>Claude Brains — chat panel</title>
 <!--CSS-->
 <!--LIMITS-->
 </head>
