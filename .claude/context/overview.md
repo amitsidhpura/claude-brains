@@ -1,0 +1,91 @@
+# Claude Brains — Claude Code for JetBrains IDEs (unofficial)
+
+Personal project: a JetBrains/PhpStorm plugin that drives the official `claude` CLI,
+replicating the VS Code Claude Code extension. **Personal use only — never bundle or
+redistribute Anthropic's extension.js / webview / claude.exe.**
+Renamed from "Claude Code (Syncroze)" 2026-07-31: plugin id `io.github.amitsidhpura.claude-brains`,
+packages `io.github.amitsidhpura.claudebrains.*`, no syncroze references in the plugin.
+Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude-brains`
+(NOT the JetBrains Marketplace); process in `docs/release.md`.
+
+## Philosophy — "Develop in the IDE. Configure in the Terminal."
+The slogan, and the scope rule. The plugin COMPLEMENTS the terminal. Ask of any feature:
+*is this reached for many times an hour while writing code?*
+- **Yes → the panel.** Asking, editing, diffs, approvals, model/mode/effort, session resume,
+  file references — one keystroke from the editor.
+- **No → the terminal.** Login, MCP servers, hooks, permission rules, agents, everything under
+  `~/.claude`. Rebuilding those in the IDE buys a second implementation that drifts.
+See conventions.md for the vocabulary rules this imposes; decisions.md for what it has declined.
+
+## Repo layout
+- `plugin/` — Kotlin source + Gradle root (IntelliJ Platform Gradle Plugin 2.x, JCEF webview UI);
+  every `./gradlew` command runs from here
+- `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
+- `docs/feature-checklist.md` — feature parity checklist + status (the working TODO list)
+- `docs/limits.md` — every size cap (folded/scrolled/truncated/volume) and where it is set
+- `docs/client-parity.md` — CLI data we drop, scored vs terminal TUI and VS Code extension
+  (verified against installed 2.1.220). External parity; `docs/renderer-parity.md` is the
+  internal live-vs-resume-vs-mockup one
+- `docs/slash-commands.md` — the slash-command allowlist and per-command verification status
+- `docs/manual-test.md` — the standing manual-test checklist
+- `docs/release.md` — release process (Path B custom repo)
+- `design/mockup.html` — static UI mockup for design iteration in a browser; approved changes
+  get ported into `plugin/src/main/resources/webview/chat.html`
+- `tools/cdp.py` — run JS in the live webview over CDP; `tools/live_harness.py` — live-path
+  regression suite (replays recorded wire frames through `onClaudeEvent`); `tools/fixtures/`
+- `vscode/` — NOT in git. Extracted official VS Code extension (from
+  `~/.vscode/extensions/anthropic.claude-code-<ver>/`, minus the binary). Re-extract locally;
+  used to reverse-engineer protocols and styles.
+- `_local/` — personal scratch, not in git.
+
+## Architecture (all verified working end-to-end)
+- **Bridge** (`bridge/`): picks a free port (10000–65535), writes `~/.claude/ide/<port>.lock`
+  `{pid, workspaceFolders, ideName, transport:"ws", runningInWindows, authToken}`, runs an
+  MCP-over-WebSocket server on 127.0.0.1 checking header `x-claude-code-ide-authorization`,
+  advertising WebSocket subprotocol "mcp" (the CLI's WS client aborts without the echo).
+  IDE tools in `IdeTools.kt` (openFile/openDiff/getDiagnostics/selection/etc.). The CLI is
+  handed the bridge via `--mcp-config` (server "ide", type "ws"), NOT env discovery — see
+  gotchas.md.
+- **CLI** (`cli/ClaudeCli.kt`): spawns `claude --input-format stream-json --output-format
+  stream-json --include-partial-messages --verbose --permission-prompt-tool stdio
+  --permission-mode <mode>` with env `CLAUDE_CODE_SSE_PORT=<port>`. Routes control protocol
+  (`can_use_tool`, `initialize`, `set_model`, `set_permission_mode`, `interrupt`) separately
+  from conversation events.
+- **UI** (`ui/ChatPanel.kt` + `resources/webview/chat.html`): JCEF panel in a right-anchored
+  tool window. Single JS<->Kotlin channel: `window.__bridge(json)` up,
+  `window.onClaudeEvent(line)` down. Styles ONLY in `webview/chat.css` (spliced at `<!--CSS-->`;
+  the mockup links the same file).
+- **Sessions** (`session/SessionStore.kt`): reads `~/.claude/projects/<enc-cwd>/*.jsonl`
+  (enc = cwd with non-alphanumerics → `-`); resume via `--resume <id>`; transcript replayed
+  into the UI through rich `JsonObject` blocks so replay matches live rendering.
+- Shared caps/formats (tool-desc chain, IN/OUT caps, cut rule, search-result format) live once
+  in `RenderLimits.kt`, spliced into chat.html as `window.LIMITS` — see gotchas.md.
+
+## Build / run
+`cd plugin && ./gradlew runIde` (sandbox PhpStorm 2024.2). `./gradlew compileKotlin` for a fast
+type-check; `buildPlugin` → installable zip in `build/distributions/`; `./gradlew test` (plain
+JUnit 5 over SessionStore/RenderLimits); `./gradlew probe --args="<projectPath> <sessionId>"`
+dumps replay blocks without the IDE. Resource-only changes (chat.html) need only a `runIde`
+restart. `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
+Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bearing — gotchas.md.
+
+### Which debug route — pick by symptom, not by habit
+| Symptom | Route |
+|---|---|
+| "Does the CLI even send this?" | grep `~/.claude/projects/*/*.jsonl` **by key**, or run `claude --output-format stream-json` in a terminal |
+| Wrong blocks after resume | `./gradlew probe` — splits a PARSER bug from a RENDERER bug, no IDE |
+| A transient state renders wrong | Ctrl+Alt+G gallery — every state, without driving the CLI |
+| Live render misbehaving mid-session | `python tools/cdp.py` — the only view of real JCEF |
+| Kotlin logic: bridge, permissions, parsing | `./gradlew runIde --debug-jvm` (suspends, port 5005) + Remote JVM Debug |
+| CSS / layout iteration | `design/mockup.html` + headless Chrome (compositor traps — gotchas.md) |
+| Won't load in a REAL IDE | install the zip in the real PhpStorm — the sandbox cannot catch this class |
+| Poking around by hand | DevTools window (F12 / Find Action "Claude Brains: Open DevTools") |
+
+**Start at the top row** — cheapest and most skipped. Check by KEY, not substring. The live
+panel is for AFTER you know the data exists.
+
+## External references
+- Official extension for reverse-engineering: `~/.vscode/extensions/anthropic.claude-code-<ver>/`
+- Release repo: `github.com/amitsidhpura/claude-brains` (`updatePlugins.xml` at repo root)
+- Local toolchain: Temurin 21 at `~/.jdks/jdk-21.0.12+8`; Gradle 8.10.2 at
+  `~/.local/opt/gradle-8.10.2`; `~/.zshrc` exports `JAVA_HOME`.

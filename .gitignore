@@ -17,8 +17,10 @@ plugin/.intellijPlatform/
 # Playwright MCP browser-session artifacts (snapshots/console logs from design checks)
 /.playwright-mcp/
 
-# Claude Code local settings (per-machine permission grants)
-.claude/
+# Claude Code local settings (per-machine permission grants) — but the portable
+# project memory in .claude/context/ IS committed so it travels with the repo.
+.claude/*
+!.claude/context/
 
 # Personal scratch space — notes, throwaway files. Never part of the plugin.
 /_local/
