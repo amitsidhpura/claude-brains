@@ -24,7 +24,8 @@
 - **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/`
   stays out of git. Personal use only.
 - Styles live ONLY in `webview/chat.css`; editing chat.html markup? Mirror it in
-  `design/mockup.html` too.
+  `design/mockup.html` too. No new hardcoded colours — add a token to `:root` and use
+  `var(--x)` (for tints prefer `color-mix()` over a companion `-rgb` token).
 - Any cap or output FORMAT produced by both the live renderer and the replay parser is stated
   once in `RenderLimits.kt` (spliced as `window.LIMITS`) and pinned by `RenderLimitsTest` —
   never a second copy in JS.

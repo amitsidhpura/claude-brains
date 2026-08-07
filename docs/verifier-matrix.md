@@ -89,4 +89,5 @@ pluginVerification {
 3. Existing PhpStorm results must stay clean. NEW warnings from other products are the point —
    surface them for a decision (fix vs document vs untilBuild) rather than silently patching.
 4. Update docs/release.md (verifyPlugin bullet: matrix description + first-run download note)
-   and CLAUDE.md's Plugin Verifier hygiene line to match the real result.
+   and the Plugin Verifier hygiene line in `.claude/context/conventions.md` to match the real
+   result.

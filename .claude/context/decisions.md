@@ -3,6 +3,17 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-07 — Light theme declined; colour groundwork removed
+`docs/colors.md`, `design/colors.html`, and `design/light.css` (the theming groundwork —
+light.css was the draft palette, unwired from mockup.html's `<link>` + devbar theme toggle)
+deleted, along with the completed `docs/port-plan.md` and the one-off comparison pages
+`design/btn-variants.html` / `design/model-icon-variants.html`. The
+colours-through-`:root`-tokens rule they carried moved to conventions.md; the token inventory
+itself had already drifted (28 documented vs 35 in chat.css).
+**Why:** the user doesn't want a light theme, and the doc duplicated what `chat.css` answers.
+**Rejected:** keeping the doc trimmed to theming notes — groundwork for work that won't happen
+is reload-budget spent on nothing; git history keeps it recoverable.
+
 ## 2026-08-07 — Project context lives in `.claude/context/`; CLAUDE.md abolished
 The `/context` skill's file set replaces the 427-line root `CLAUDE.md` (last committed copy at
 `ee7e9fc`) and the global auto-memory directory for this project. `.gitignore` un-ignores
@@ -30,6 +41,9 @@ label "Auto" and had to relaunch the CLI to enter it (only bypass is refused at 
 Plugin id `io.github.amitsidhpura.claude-brains`, packages `io.github.amitsidhpura.claudebrains.*`,
 no syncroze references. Custom plugin repo on `github.com/amitsidhpura/claude-brains`, NOT the
 JetBrains Marketplace (process in docs/release.md).
+*Partially superseded same day:* the plugin WAS also submitted to the Marketplace on 2026-07-31
+(vendor `amitsidhpura`) — both channels ship the same id; IDEs take the higher version
+(docs/release.md § Marketplace listing).
 
 ## 2026-07-30 — Slash menu is an allowlist; /model and /effort deliberately hidden
 Over `--input-format stream-json` there's no interactive terminal, so only turn-producing

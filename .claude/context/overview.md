@@ -5,8 +5,9 @@ replicating the VS Code Claude Code extension. **Personal use only — never bun
 redistribute Anthropic's extension.js / webview / claude.exe.**
 Renamed from "Claude Code (Syncroze)" 2026-07-31: plugin id `io.github.amitsidhpura.claude-brains`,
 packages `io.github.amitsidhpura.claudebrains.*`, no syncroze references in the plugin.
-Distribution is Path B — custom plugin repo on `github.com/amitsidhpura/claude-brains`
-(NOT the JetBrains Marketplace); process in `docs/release.md`.
+Distribution: custom plugin repo on `github.com/amitsidhpura/claude-brains` (Path B) AND the
+JetBrains Marketplace (vendor `amitsidhpura`, submitted 2026-07-31 — same plugin id, IDEs take
+the higher version from either source); process in `docs/release.md`.
 
 ## Philosophy — "Develop in the IDE. Configure in the Terminal."
 The slogan, and the scope rule. The plugin COMPLEMENTS the terminal. Ask of any feature:
