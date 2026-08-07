@@ -1,8 +1,9 @@
-# Manual test pass — DISPOSABLE
+# Manual test pass — STANDALONE
 
-Self-contained checklist for one full manual sweep of every shipped feature.
-**This file is temporary**: it is not committed, nothing references it, and it gets deleted
-once the pass is confirmed complete. Tick items by telling me the number (e.g. "3.4 done").
+Self-contained checklist for a full manual sweep of every shipped feature.
+**Standalone checklist** — deliberately referenced nowhere else; it describes itself.
+It stays in the repo after the pass as the record of what was manually verified.
+Tick items by telling me the number (e.g. "3.4 done").
 
 Setup: `cd plugin && ./gradlew runIde`, open the Claude Brains tool window.
 Items marked **(hard to trigger)** need a specific situation — skip if it doesn't occur naturally.
@@ -169,4 +170,4 @@ Items marked **(hard to trigger)** need a specific situation — skip if it does
 
 ---
 
-When every box is ticked I'll ask for your confirmation, then delete this file.
+When every box is ticked I'll ask for your confirmation that the pass is complete.
