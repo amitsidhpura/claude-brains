@@ -3664,6 +3664,7 @@
   window.__gallery = gallery;
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey && e.altKey && e.code === 'KeyG') { e.preventDefault(); gallery(); }
+    if (e.code === 'F12') { e.preventDefault(); bridge({kind: 'devtools'}); }
   });
 </script>
 </body>

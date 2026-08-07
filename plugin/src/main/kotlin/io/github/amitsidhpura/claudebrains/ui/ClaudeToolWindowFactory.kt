@@ -1,6 +1,7 @@
 package io.github.amitsidhpura.claudebrains.ui
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -15,6 +16,10 @@ class ClaudeToolWindowFactory : ToolWindowFactory {
         val panel = ChatPanel(project, toolWindow.disposable)
         val content = ContentFactory.getInstance().createContent(panel.component, "", false)
         toolWindow.contentManager.addContent(content)
+
+        // Let DevToolsAction find the panel; cleared with the tool window so it can't go stale.
+        project.putUserData(ChatPanel.PANEL_KEY, panel)
+        Disposer.register(toolWindow.disposable) { project.putUserData(ChatPanel.PANEL_KEY, null) }
 
         // The platform doesn't recolor our stripe icon on selection, so do it ourselves:
         // white while the tool window is open (blue stripe), grey otherwise.

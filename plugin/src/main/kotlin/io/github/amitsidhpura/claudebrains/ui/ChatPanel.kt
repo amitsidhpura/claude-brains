@@ -2,6 +2,7 @@ package io.github.amitsidhpura.claudebrains.ui
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.project.Project
@@ -103,6 +104,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
             "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
+            // F12 in the webview. The JCEF context-menu route to DevTools is unreliable
+            // (OSR on Linux can swallow the popup entirely), so the panel asks for it directly.
+            "devtools" -> openDevtools()
             "new" -> {
                 transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
                 clearLog(); session.newConversation(); pushTitle(null)
@@ -435,8 +439,22 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         }
     }
 
-    private companion object {
-        const val INITIAL_BLOCKS = 250
-        const val MORE_BLOCKS = 500
+    /** Open Chrome DevTools for the webview. Reached by F12 in the panel and by the
+     *  "Claude Brains: Open DevTools" action (DevToolsAction) — logged because every
+     *  keyboard route into JCEF has failed silently at least once (WM grabs, OSR). */
+    fun openDevtools() {
+        log.info("openDevtools requested, url=${browser.cefBrowser.url}")
+        runCatching { browser.openDevtools() }
+            .onFailure { log.warn("openDevtools failed", it) }
+    }
+
+    companion object {
+        private const val INITIAL_BLOCKS = 250
+        private const val MORE_BLOCKS = 500
+        private val log = Logger.getInstance(ChatPanel::class.java)
+
+        /** The project's live panel, stashed by ClaudeToolWindowFactory so actions can reach it. */
+        val PANEL_KEY: com.intellij.openapi.util.Key<ChatPanel> =
+            com.intellij.openapi.util.Key.create("claude-brains.chatPanel")
     }
 }

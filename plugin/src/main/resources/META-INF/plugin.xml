@@ -68,4 +68,14 @@
         <!-- Balloon used by DiffReview for Accept/Reject on proposed changes. -->
         <notificationGroup id="Claude Brains" displayType="BALLOON"/>
     </extensions>
+
+    <actions>
+        <!-- Dev aid: opens Chrome DevTools for the chat webview. No default shortcut on
+             purpose — invoke via Find Action; every chord we tried collided somewhere
+             (Ctrl+Alt+D is a WM grab on Linux, F12 dies inside JCEF on some setups). -->
+        <action id="ClaudeBrains.OpenDevTools"
+                class="io.github.amitsidhpura.claudebrains.ui.DevToolsAction"
+                text="Claude Brains: Open DevTools"
+                description="Open Chrome DevTools for the Claude Brains chat panel"/>
+    </actions>
 </idea-plugin>

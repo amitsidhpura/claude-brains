@@ -146,6 +146,16 @@ zip in `build/distributions/`.
   works fine (JCEF still in core there). Optional because the module id doesn't exist on 242.
   The sandbox can't catch this class of bug; smoke-test installs in the real snap IDE.
 - Resource-only changes (chat.html) need only a `runIde` restart, no Gradle sync.
+- Webview DevTools (probed 2026-08-07, Linux): the JCEF context-menu route is DEAD here — the
+  registry key `ide.browser.jcef.contextMenu.devTools.enabled` is honored on 2024.2 but captured
+  ONCE into a final field when the browser's menu handler is constructed, and even set correctly
+  the CEF popup never appeared (OSR on Linux). Webview keystrokes are also minefields: Ctrl+Alt+D
+  is a WM "show desktop" grab. What works: Find Action → "Claude Brains: Open DevTools"
+  (`DevToolsAction` → `ChatPanel.openDevtools()`, panel stashed under `ChatPanel.PANEL_KEY`; F12
+  in the panel rides the same path via `{kind:"devtools"}`), and the remote port — sandbox registry
+  `ide.browser.jcef.debug.port=9222` (a plain `Registry.intValue` on 2024.2, read at JCEF init →
+  restart needed, panel must be open) then `http://localhost:9222` or `chrome://inspect` in a real
+  browser. Both attempts log `openDevtools requested` to the sandbox idea.log.
 - Caps/key-orders shared by the LIVE renderer and the REPLAY parser live in ONE place,
   `RenderLimits.kt` (tool-description cap + key order, IN/OUT caps, and `IN_KEYS` — the IN box is
   keyed on the INPUT (`command`, `prompt`), never on the tool name, so a sub-agent's brief and a
