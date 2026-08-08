@@ -3,6 +3,19 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-08 — Manual-test pass conventions; two behaviours accepted, not fixed
+The 92-item pass closed with a "tick + inline ISSUE note" convention: a box is ticked when the
+behaviour was OBSERVED, with defects recorded under it rather than leaving boxes open. Two
+verification methods were admitted for unforceable events, each with provenance stated in the
+tick: CDP fixture injection through `onClaudeEvent` (rate-limit: recorded fixture; refusal
+fallback: the VS-Code-bundle shape the handler was built from), and direct MCP-over-WS calls to
+the bridge (openFile / selection / openDiff) when CLI 2.1.226 stopped exposing those tools to
+the model. **Accepted, not bugs:** untitled sessions deriving "/model <x>" as their title (CLI
+audit record, same family as /effort turns); replayed image chips as "file.jpg <smaller>" (the
+transcript persists the bare API image block — no filename exists to show).
+**Rejected:** styling the issue notes as GitHub alerts (tried, reverted — plain text wanted);
+logging the name-loss as a defect (retracted after measuring the records).
+
 ## 2026-08-07 — Light theme declined; colour groundwork removed
 `docs/colors.md`, `design/colors.html`, and `design/light.css` (the theming groundwork —
 light.css was the draft palette, unwired from mockup.html's `<link>` + devbar theme toggle)

@@ -56,6 +56,31 @@
   `{originalWidth,originalHeight,displayWidth,displayHeight}`, not `{width,height}`.
 - Many transcript `thinking` blocks have an EMPTY body and only a `signature` (~2.1k of 6.6k
   local ones carry text) — those replay as nothing, correctly.
+- CLI 2.1.226 exposes ONLY `mcp__ide__getDiagnostics` to the MODEL — openFile / openDiff /
+  getCurrentSelection are refused ("No such tool available") even though the bridge advertises
+  them and the CLI connects fine. Verify bridge health by speaking MCP-over-WS directly
+  (lockfile `authToken` in header `x-claude-code-ide-authorization`, subprotocol "mcp",
+  `tools/call`) — that path proved openFile/selection/openDiff all work plugin-side.
+- 2.1.226 transcript format: ONE assistant record per message (blocks inline — the old
+  per-block cumulative-usage gotcha above applies to OLD files only), plus new record types
+  (`queue-operation`, `attachment` [tool-roster deltas, NOT files], `ai-title`, `last-prompt`,
+  `mode`, `custom-title` from TUI `/rename`). Image attachments persist as the bare API block —
+  recompressed, NO filename — so replay chips saying "file.jpg <smaller size>" are CORRECT.
+- With a non-default model persisted, every CLI spawn writes a "/model <x>" audit record as the
+  transcript's first user record (panel sends `set_model` at startup) — same accepted
+  audit-trail family as `/effort`; untitled sessions derive it as their title (accepted).
+- Hooks are re-read from settings PER PROMPT, not cached at CLI spawn — removing a hook file
+  takes effect on the very next message of a LIVE session (probed 2026-08-08 via a
+  UserPromptSubmit exit-2 hook).
+- `blocked_path` is BASH-ONLY (write outside cwd / network). A Write/Edit tool targeting an
+  out-of-workspace or root-owned path is a NORMAL permission ask WITH suggestions — don't
+  mis-read that card as a broken 6.6 (cost real time on the pass).
+- The context gauge's >window→1M promotion means a big session shows the SAME % under a 200k
+  and a 1M model — correct, not a stuck denominator; hover the gauge for used/window truth.
+- Synthetic transcript tricks that WORK for fixtures: stitch complete turns from real donor
+  sessions (slice at turn starts, remap uuid/parentUuid per copy, rewrite sessionId), verify
+  with `./gradlew probe` before opening in the IDE. Inflated tail usage dies at the first live
+  turn (newest request wins), so gauge tests need real bulk or a non-1M window.
 - If per-turn rewind ever returns: `rewind_files` needs
   `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo, and a client-supplied `uuid` on
   sent user messages; success is `{canRewind, skippedLinks}` (no filesChanged) → dry_run first.
@@ -88,10 +113,12 @@
   animation reads frozen — stub `requestAnimationFrame` onto `setTimeout`. (3) `ResizeObserver`
   exists but never reliably fires — give RO-synced code a second trigger and test that.
   (Also docs/limits.md.)
-- Webview DevTools on Linux (probed 2026-08-07): JCEF context-menu route is DEAD (OSR;
-  `ide.browser.jcef.contextMenu.devTools.enabled` is captured once into a final field);
-  Ctrl+Alt+D is a WM grab. What works: Find Action → "Claude Brains: Open DevTools", F12 in the
-  panel, or `http://localhost:9222`. The debug port is set by the BUILD (`runIde` JVM arg
+- Webview DevTools on Linux (probed 2026-08-07, re-probed 2026-08-08): JCEF context-menu route
+  is DEAD (OSR; `ide.browser.jcef.contextMenu.devTools.enabled` is captured once into a final
+  field); Ctrl+Alt+D is a WM grab. What works: Find Action → "Claude Brains: Open DevTools" or
+  `http://localhost:9222`. F12 — and EVERY webview JS keydown chord (Ctrl+N, Ctrl+Alt+G) — is
+  dead on this machine even with the composer focused; the handlers never fire (manual-test
+  issues 1.5/11.1/11.2). Chords need IDE-level action shortcuts to be reliable. The debug port is set by the BUILD (`runIde` JVM arg
   `-Dide.browser.jcef.debug.port=9222`) — a system property legitimately sets any Registry key
   read at early startup — but a port hand-set in a sandbox's Registry still WINS over it.
   The panel appears in `/json/list` only once the tool window has opened (CEF starts with the
