@@ -966,29 +966,27 @@
       row.innerHTML = '<div class="t"><span class="t-txt">' + esc(s.title) + '</span>' +
         (isCurrent ? '<span class="badge">current</span>' : '') +
         '</div><div class="d">' + esc(meta) + '</div>' +
-        // the CLI reopens the transcript per write, so deleting the live one truncates rather
-        // than removes it — no delete affordance here, and the service refuses it as a backstop
-        (isCurrent ? '' :
-          '<button class="hist-del" title="Delete conversation">' + SVG_TRASH + '</button>' +
-          '<div class="hist-confirm"><span>Delete permanently?</span>' +
-            '<button class="yes">' + SVG_CHECK + 'Delete</button>' +
-            '<button class="no">' + SVG_X + 'Cancel</button></div>');
+        // Every row deletes, the CURRENT one included: Kotlin routes the live thread through
+        // leave-first (fresh conversation, old CLI dies, THEN the file goes — the CLI reopens
+        // the transcript per write, so deleting it while live would truncate, not remove).
+        '<button class="hist-del" title="Delete conversation">' + SVG_TRASH + '</button>' +
+        '<div class="hist-confirm"><span>Delete permanently?</span>' +
+          '<button class="yes">' + SVG_CHECK + 'Delete</button>' +
+          '<button class="no">' + SVG_X + 'Cancel</button></div>';
       row.onclick = function () { histPanel.classList.remove('show'); bridge({ kind: 'resume', id: s.id }); };
-      if (!isCurrent) {
-        // arm/disarm in place rather than a modal; stopPropagation so the row doesn't resume
-        row.querySelector('.hist-del').onclick = function (e) {
-          e.stopPropagation(); row.classList.add('arm');
-        };
-        row.querySelector('.hist-confirm .no').onclick = function (e) {
-          e.stopPropagation(); row.classList.remove('arm');
-        };
-        row.querySelector('.hist-confirm .yes').onclick = function (e) {
-          e.stopPropagation();
-          row.remove();                     // optimistic; Kotlin re-pushes the real list
-          bridge({ kind: 'delete', id: s.id });
-        };
-        row.querySelector('.hist-confirm').onclick = function (e) { e.stopPropagation(); };
-      }
+      // arm/disarm in place rather than a modal; stopPropagation so the row doesn't resume
+      row.querySelector('.hist-del').onclick = function (e) {
+        e.stopPropagation(); row.classList.add('arm');
+      };
+      row.querySelector('.hist-confirm .no').onclick = function (e) {
+        e.stopPropagation(); row.classList.remove('arm');
+      };
+      row.querySelector('.hist-confirm .yes').onclick = function (e) {
+        e.stopPropagation();
+        row.remove();                     // optimistic; Kotlin re-pushes the real list
+        bridge({ kind: 'delete', id: s.id });
+      };
+      row.querySelector('.hist-confirm').onclick = function (e) { e.stopPropagation(); };
       histList.appendChild(row);
     });
     histPanel.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';

@@ -126,6 +126,17 @@ class ClaudeCli(
         }
         val pb = ProcessBuilder(cmd).directory(workingDir).redirectErrorStream(false)
         pb.environment().apply {
+            // A desktop-launched IDE carries the bare GUI-session environment — no nvm/pyenv/…
+            // PATH additions from the user's shell init — so anything the CLI spawns through
+            // them dies with ENOENT while the identical config works in a terminal (measured
+            // 2026-08-09: `npx @playwright/mcp` failed under the IDE, fine in zsh; npx lived
+            // only in nvm's shell-added dir). Two overlays, shell values winning, our keys
+            // last: EnvironmentUtil is the platform's shell snapshot but loads it ONLY on
+            // macOS (shouldLoadShellEnv() bytecode: `if (!isMac) return false` — verified on
+            // 242 AND 262, which is why the first fix attempt was a no-op on Linux); ShellEnv
+            // is our own capture covering Linux (empty on Windows — no shell PATH layer there).
+            putAll(com.intellij.util.EnvironmentUtil.getEnvironmentMap())
+            putAll(io.github.amitsidhpura.claudebrains.ShellEnv.get())
             put("CLAUDE_CODE_SSE_PORT", ssePort.toString())
             put("CLAUDE_CODE_ENTRYPOINT", "phpstorm-claude-brains")
             gitBashPath()?.let { put("CLAUDE_CODE_GIT_BASH_PATH", it) }
@@ -354,6 +365,15 @@ class ClaudeCli(
         // Carries the bridge auth token; don't leave it in the temp dir.
         runCatching { mcpConfigFile?.delete() }
         mcpConfigFile = null
+    }
+
+    /**
+     * Bounded wait for the process to actually die after [stop] (which only SENDS the signal).
+     * For callers that must outlive-proof a file operation — a dying CLI can still flush a
+     * write, resurrecting a transcript deleted too early. Call OFF the EDT.
+     */
+    fun awaitExit(timeoutMs: Long) {
+        runCatching { process?.waitFor(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS) }
     }
 
     private companion object {

@@ -1,14 +1,15 @@
 # State
 
 ## Current focus
-The defect register in `docs/manual-test.md` is nearly cleared: **2 open ISSUE notes /
-22 RESOLVED** (through `f001e0b`, pushed). The latest session shipped editor accept/reject
-v2's buttons half — the balloon replaced by a card-identical Accept / Accept-all / Reject
-bar UNDER the diff editor (`DiffReview.kt` + `ChatPanel.kt` + bundled `/icons/*.svg`;
-user runIde-verified through four iterations). The only open register items are the
-3.1+9.10 pairing, which the user explicitly wants worked TOGETHER, next. Per-issue detail
-lives under each checklist item in `docs/manual-test.md` — that file is the register, not
-this one.
+**v0.4.0 RELEASED 2026-08-09** (user-approved notes; full gate history in journal seventh
+entry): the editor-review release — dual-surface edit permissions with the card-identical
+verdict bar, delete-current-conversation, the ShellEnv MCP fix (smoke-test find), the
+composer spacing fix, and the whole 92-item register wave. Verifier clean ×3, smoke-tested
+on the user's real PhpStorm. The defect register in `docs/manual-test.md` stands at
+**2 open ISSUE notes / 22 RESOLVED**; the open pair 3.1+9.10 (custom commands in the `/`
+menu) was explicitly scoped OUT of 0.4.0 and is the next work, worked TOGETHER per the
+user. Per-issue detail lives under each checklist item in `docs/manual-test.md` — that
+file is the register, not this one.
 
 ## Issue register highlights (full detail in docs/manual-test.md)
 - **Still open, next up, worked TOGETHER per user**: 3.1 custom commands missing from the
@@ -27,13 +28,11 @@ this one.
       harness's `system/commands_changed` seeding trick supplies the roster.
 - [ ] VFS refresh after CLI writes (backlog.md "Next up") — accepted edits currently need
       "Reload from disk" in open editors; fix shape already worked out.
-- [ ] Run Plugin Verifier before the next release: 2026-08-09 added new platform API usage
-      (`ChainDiffVirtualFile`, `SimpleDiffRequestChain`, `DiffUserDataKeys.FORCE_READ_ONLY`,
-      `FileEditorManager.openFile` on a diff file, and now `FileEditorManager.
-      addBottomComponent` + `JBColor.border()` for the under-diff Accept/Reject bar) — the
-      0-warnings-on-242→262 target (conventions.md) hasn't been re-checked since. The bar
-      APIs were pre-checked by hand in both 242 and 262 bytecode: public, un-annotated,
-      identical signatures.
+- [x] Plugin Verifier re-run DONE 2026-08-09 (after the verdict-bar + delete-current work,
+      run against the working tree): plain "Compatible", zero warnings, on all seven
+      recommended IDEs 242 → 262 (reports in plugin/build/reports/pluginVerifier/). The
+      release-blocking gate is cleared; re-run only if new platform API usage lands before
+      the cut.
 - [ ] When convenient: 5.14's heavy-turn scroll FEEL on real JCEF (logic proven 8/8 headless);
       and the 8.2/8.7 tail-error replay eyeball — needs a session whose TAIL is an API error
       (the 2026-08-09 storm session `afe39ca0…` recovered, so its error is mid-history; stitch

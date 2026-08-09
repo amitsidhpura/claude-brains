@@ -228,8 +228,17 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "tasks" -> pushTasks(msg["id"]?.jsonPrimitive?.content)
             "more" -> pushEarlier()
             "history" -> pushSessions()
-            "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
-                session.deleteSession(it); pushSessions()
+            "delete" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
+                if (id == session.currentSessionId()) {
+                    // Deleting the live thread leaves it first — same reset the "new" action
+                    // does — and the service removes the file once the old CLI is gone (a dying
+                    // process can still flush a write). The list re-pushes when it's done.
+                    transcriptItems = emptyList(); transcriptFrom = 0
+                    clearLog(); pushTitle(null)
+                    session.deleteCurrentSession { pushSessions() }
+                } else {
+                    session.deleteSession(id); pushSessions()
+                }
             }
         }
     }

@@ -650,6 +650,10 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* Queued messages (client-parity item 24) — typed while a turn was running, waiting their turn.
    Wears the composer's own raised surface so they read as part of the input, not as transcript. */
 #queue { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+/* Same trap as .chip-btn: the display:flex above beats the UA's [hidden]{display:none} (ID
+   outranks attribute selector), so an EMPTY queue still rendered — zero height but its
+   margin-bottom stayed, a permanent 6px of dead space above the composer's first row. */
+#queue[hidden] { display: none; }
 .q-row { display: flex; align-items: center; gap: 8px; background: var(--user-raised);
   border: 1px solid var(--user-divider); border-radius: var(--radius); padding: 5px 6px 5px 9px; }
 .q-row:hover { background: var(--user-raised-hover); }

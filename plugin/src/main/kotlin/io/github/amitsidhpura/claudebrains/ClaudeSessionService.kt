@@ -31,6 +31,14 @@ import java.util.concurrent.ConcurrentHashMap
 class ClaudeSessionService(private val project: Project) : Disposable {
 
     private val log = Logger.getInstance(ClaudeSessionService::class.java)
+
+    init {
+        // Warm the shell-env capture (ShellEnv KDoc has the whole story) as early as the
+        // service exists, so it's ready before the first CLI start instead of costing that
+        // start its bounded wait.
+        ShellEnv.warm()
+    }
+
     private var server: IdeMcpServer? = null
     private var lock: IdeLockFile? = null
     private var cli: ClaudeCli? = null
@@ -192,11 +200,29 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * Delete a past conversation from disk. Irreversible; the UI confirms first.
      * Refuses the live transcript: the CLI reopens the file per write, so deleting it mid-session
      * just recreates it with the remaining records — a silently truncated history rather than a
-     * removal. This is the backstop; the UI also hides delete on the current row.
+     * removal. This is the backstop; the live thread deletes via [deleteCurrentSession] instead.
      */
     fun deleteSession(id: String): Boolean {
         if (id == cli?.sessionId) return false
         return io.github.amitsidhpura.claudebrains.session.SessionStore.delete(cwd.path, id)
+    }
+
+    /**
+     * Delete the LIVE conversation — the one [deleteSession] refuses. Leave it first: restart
+     * on a fresh conversation, wait (bounded, off the EDT) for the OLD process to actually die,
+     * THEN delete the file it can no longer resurrect. [onDone] fires from that pooled thread
+     * once the file is gone (or the wait/delete failed — the sessions list re-push shows the
+     * truth either way).
+     */
+    fun deleteCurrentSession(onDone: () -> Unit) {
+        val old = cli
+        val oldId = old?.sessionId
+        newConversation()
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread {
+            old?.awaitExit(5_000)
+            oldId?.let { io.github.amitsidhpura.claudebrains.session.SessionStore.delete(cwd.path, it) }
+            onDone()
+        }
     }
 
     /** Context in use at the end of a past conversation, so a resumed thread shows its gauge. */

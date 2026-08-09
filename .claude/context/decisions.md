@@ -3,6 +3,19 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-09 — Deleting the LIVE conversation = leave it first, then delete
+Every history row now offers delete, the current one included. The live path routes through
+`ClaudeSessionService.deleteCurrentSession`: restart on a fresh conversation, `awaitExit(5s)`
+on the OLD process off-EDT, then delete the transcript, then re-push the sessions list.
+**Why:** the CLI reopens the transcript per write, so a live delete truncates rather than
+removes (the original refusal reason) — and `stop()` only sends the signal, so a dying CLI
+can still flush one resurrecting write; the bounded wait closes that window. Deleting the
+thread you're looking at was a standing user annoyance; "make it not exist" implies leaving
+it. Mid-turn delete stops the turn — identical to mid-turn "New conversation", deliberately.
+**Rejected:** delete-in-place (truncates, the refusal stays as backstop); hiding delete on the
+current row (the previous design — solved the corruption, not the user's need); unbounded wait
+(a hung CLI would leak the pooled thread and the file).
+
 ## 2026-08-09 — Editor verdict UI is a bar UNDER the diff, card-identical, combined grant only
 Accept / Accept-all / Reject live on a `FileEditorManager.addBottomComponent` bar beneath the
 diff editor: centered, no prose, no tint, the panel card's exact colours (chat.css .ok/.no,

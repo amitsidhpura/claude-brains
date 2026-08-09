@@ -123,6 +123,17 @@ trusting memory here.
   DevTools", or `http://localhost:9222` (port set by the `runIde` JVM arg — but a port hand-set
   in a sandbox's Registry WINS over it). The panel appears in `/json/list` only once the tool
   window has opened, titled "Claude Brains — chat panel".
+- A desktop-launched IDE has the GUI session's environment, NOT the shell's — nvm/pyenv PATH
+  layers are missing, so CLI-spawned `npx …` MCP servers die under the IDE while identical
+  config works in a terminal (found by the 0.4.0 smoke test, minutes after the new MCP-failure
+  banner first shipped; 0.3.3 had the same failure SILENTLY). The platform's fix,
+  `EnvironmentUtil.getEnvironmentMap()`, loads the shell env ONLY on macOS —
+  `shouldLoadShellEnv()` opens `if (!isMac) return false` (242 AND 262 bytecode; an
+  API existing is not the API working — the first fix attempt overlaid a no-op on Linux).
+  Linux is covered by our own `ShellEnv` (`$SHELL -l -i -c "command env -0"`, watchdogged,
+  warmed at service init, empty-map degradation); its capture+parse was proven against this
+  machine before shipping (93 entries, nvm npx on PATH). Windows needs neither: GUI processes
+  get the full registry environment.
 - Sandbox startup noise, NOT ours: `GlobalMenuLinux <clinit> requests Experiments instance …
   Class initialization must not depend on services` is the 2024.2 platform's own class-init
   hygiene assertion, thrown while IT builds the Linux global menu during frame creation — no
@@ -168,7 +179,10 @@ trusting memory here.
 - `.popup`'s base `min-width: 330px` silently beats a smaller `width` on a variant — pair every
   narrower popup with `min-width: 0`, and MEASURE (a probe read 330 while the rule said 310).
   Same family as the UA `[hidden]` rule losing to `display: inline-flex`: assert COMPUTED style,
-  never the property or the declaration you wrote.
+  never the property or the declaration you wrote. That trap BIT AGAIN 2026-08-09 (#queue): any
+  hidden-toggled element whose ID rule sets `display` needs its own `[hidden]{display:none}`
+  re-assert (`.chip-btn[hidden]` / `#queue[hidden]`), or even an empty element keeps painting
+  its margins — the composer carried 6px of permanent phantom spacing that way.
 - The cut-marker is a SIBLING of `.io-v`, never a child (`foldBlock` would fold it away). Fold ≠
   marker: the fold hides content it still holds; the marker reports content that is GONE.
 - Replayed ask cards are marked `.ask-done` — that class must NOT be `.done` (the
