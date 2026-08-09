@@ -1,7 +1,7 @@
 # Backlog
 
 ## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
-- 9 open issues from the 2026-08-08 pass; headline fixes: openDiff accept must actually save
+- 6 open issues from the 2026-08-08 pass; headline fixes: openDiff accept must actually save
   (DiffReview.kt), custom commands in the / menu
 - Re-scope checklist section 10 if CLI keeps IDE tools model-hidden (2.1.226 restriction)
 
@@ -15,6 +15,12 @@
 - Conversation tabs
 - Auto-include selection / Alt+K
 - Voice input
+
+## Housekeeping (one line each, do opportunistically)
+- `docs/client-parity.md:1335` still says "**FIXED same day.**" — the register vocabulary is now
+  ISSUE / RESOLVED; conform it if that file is touched anyway (offered 2026-08-09, not done).
+- `.claude/skills/` is git-ignored (`.gitignore:22` ignores all of `.claude/*` bar `context/`),
+  so the `/context` workflow itself does NOT travel to a fresh clone — un-ignore if wanted.
 
 ## Someday / conditional
 - TodoWrite checklist renderer (client-parity item 14) — until then TodoWrite tool lines stay blank by design

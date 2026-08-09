@@ -1270,8 +1270,13 @@
     if (st.type) bits.push(st.type);
     // `summary` is the finished answer, `description` the running commentary — so a completed line
     // stops saying "Reading words.txt" and says what came back instead.
-    const what = done ? (ev.summary || ev.description) : ev.description;
-    if (what) bits.push(String(what).replace(/\s+/g, ' ').slice(0, LIM.descMax));
+    // stripPlumbing FIRST, then collapse whitespace (7.4): the harness envelope the CLI prepends to
+    // a flagged sub-agent's output is one line ending in `]`, and collapsing newlines first would
+    // weld it to the summary and leave nothing to anchor on. Untouched it WAS the finished line —
+    // "Explore · [harness: subagent output matched instruction-shaped pattern(s): settings-json …]"
+    // — because the marker is longer than descMax, so the real summary never made it on screen.
+    const what = stripPlumbing(String((done ? (ev.summary || ev.description) : ev.description) || ''));
+    if (what) bits.push(what.replace(/\s+/g, ' ').slice(0, LIM.descMax));
     const n = u.tool_uses;
     if (typeof n === 'number' && n > 0) bits.push(n + (n === 1 ? ' tool use' : ' tool uses'));
     if (typeof u.total_tokens === 'number' && u.total_tokens > 0) bits.push(fmtTok(u.total_tokens) + ' tokens');
@@ -1341,20 +1346,32 @@
     });
     return box.childNodes.length ? box : null;
   }
-  /**
-   * The `(note: …)` the CLI appends to an otherwise-successful tool result (item 11). Mirror of
-   * `RenderLimits.resultNote` — same two-language contract as `cut`/`cutInfo`, pinned by tests.
-   * Anchored to the END so a parenthetical inside ordinary output cannot be mistaken for it.
-   */
-  // Mirror of RenderLimits.stripPlumbing — the Kotlin doc comment owns the rule (5.9). Tag
-  // names ride LIMITS.plumbingTags so the two renderers cannot disagree on the list.
+  // Mirror of RenderLimits.stripPlumbing — the Kotlin doc comment owns the rule (5.9, 7.4). Tag
+  // names ride LIMITS.plumbingTags so the two renderers cannot disagree on the list; the leading
+  // `[harness: …]` envelope is a regex on both sides, like cut/cutInfo.
+  const HARNESS_MARKER = /^\[harness:[^\]]*\]\r?\n?/;
   function stripPlumbing(t) {
     if (!t) return t;
+    t = String(t).replace(/^\s+/, '').replace(HARNESS_MARKER, '');
     for (const tag of LIM.plumbingTags) {
       t = t.split('<' + tag + '>').join('').split('</' + tag + '>').join('');
     }
     return t.trim();
   }
+  /**
+   * A result the CLI wrote for the MODEL, which therefore gets no OUT box (7.4). Mirror of
+   * `RenderLimits.isInternalResult` — the Kotlin doc comment owns the rule, including why this is
+   * keyed on content where RESULT_SKIP is keyed on the tool name.
+   */
+  function isInternalResult(text) {
+    const first = String(text || '').replace(/^\s+/, '').split('\n')[0];
+    return /\(This tool result is internal metadata\b[^)]*\)\s*$/.test(first);
+  }
+  /**
+   * The `(note: …)` the CLI appends to an otherwise-successful tool result (item 11). Mirror of
+   * `RenderLimits.resultNote` — same two-language contract as `cut`/`cutInfo`, pinned by tests.
+   * Anchored to the END so a parenthetical inside ordinary output cannot be mistaken for it.
+   */
   function resultNote(text) {
     const m = /\(note:\s*([\s\S]+?)\)\s*$/.exec(String(text || '').trim());
     const s = m ? m[1].replace(/\s+/g, ' ').trim() : '';
@@ -1562,6 +1579,14 @@
           infoLine(it.text, it.level, null);
           break;
         case 'status':
+          // icon 'auth' (8.2): `text` is the CLI's error CODE, not prose — resolve it through the
+          // same AUTH_BLOCKED map the live path uses, so the wording exists once. The `|| it.text`
+          // fallback shows the raw code rather than nothing if the map ever loses a key
+          // (RenderLimitsTest pins the alignment with RenderLimits.AUTH_BLOCKED_CODES).
+          if (it.icon === 'auth') {
+            statusLine(AUTH_BLOCKED[it.text] || it.text, SVG_ALERT, 'status err');
+            break;
+          }
           statusLine(it.text, it.icon === 'stop' ? SVG_STOP : (it.icon === 'alert' ? SVG_ALERT : null),
             it.icon === 'alert' ? 'status err' : null);
           break;
@@ -2929,10 +2954,10 @@
       // still says ✓ Applied and nothing else on screen says the file moved under us. Mirrors
       // RenderLimits.resultNote; read from the TEXT because `staleRecovered` rides on
       // toolUseResult, which the live stream does not carry.
-      { let raw = '';
-        if (typeof b.content === 'string') raw = b.content;
-        else if (Array.isArray(b.content)) raw = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
-        const note = resultNote(raw);
+      let resultRaw = '';
+      if (typeof b.content === 'string') resultRaw = b.content;
+      else if (Array.isArray(b.content)) resultRaw = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
+      { const note = resultNote(resultRaw);
         if (note) { const n = noteLine(note); if (n) (t.io || t.el).after(n); } }
       // Auto-approved edit (4.4): no permission card claimed this tool_use (supersedeEdit
       // never matched it), so draw the SAME resolved card replay draws — from the stashed
@@ -2948,6 +2973,11 @@
         t.edit = null;
       }
       if (LIM.resultSkip.indexOf(t.name) !== -1 && !b.is_error) return;
+      // The same rule keyed on CONTENT rather than tool name (7.4): the async sub-agent launch is
+      // model-facing bookkeeping end to end, but its tool name is the one whose COMPLETED result is
+      // the report worth reading, so only the text can tell them apart. Mirror of
+      // RenderLimits.isInternalResult — the Kotlin doc comment owns the rule.
+      if (!b.is_error && isInternalResult(resultRaw)) return;
       // Images the tool returned (item 8). Drawn BEFORE the text early-return below, because an
       // image-only result has no text at all — which is exactly how a screenshot used to vanish.
       if (Array.isArray(b.content)) {
@@ -2960,10 +2990,7 @@
           if (box) { (t.io || t.el).after(box); maybeScroll(); }
         }
       }
-      let txt = '';
-      if (typeof b.content === 'string') txt = b.content;
-      else if (Array.isArray(b.content)) txt = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
-      txt = stripPlumbing((txt || '').trim());   // tags off BEFORE the cut, same as replay (5.9)
+      let txt = stripPlumbing((resultRaw || '').trim());   // tags off BEFORE the cut, same as replay (5.9)
       if (!txt) return;
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
       // The CLI's own truncation, above ours. Its facts live on `toolUseResult` for replay, but the

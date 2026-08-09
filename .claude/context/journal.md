@@ -3,6 +3,56 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-09 (third) — 7.4 and 8.2+8.7 fixed: register 9 → 6 open; hardware sweep cleared
+- 7.4 both halves: neither payload exists in any transcript (sub-agent frames are live-only),
+  so both were read VERBATIM out of the CLI binary (`strings` on
+  `~/.local/share/claude/versions/2.1.226`) — which also revealed the harness envelope is
+  longer than descMax, so it wasn't just ugly, it crowded the real summary off the finished
+  line. `isInternalResult()` (content-keyed — the same tool's COMPLETED result is worth
+  reading, so RESULT_SKIP's name-keying couldn't express it) + leading-`[harness:]` strip in
+  `stripPlumbing()` (safe at position 0 only: the CLI escapes line-initial forgeries first).
+- 8.2 measured first: the transcript persists the SAME top-level `error` enum live keys off —
+  replay just never read it. Fix: `AUTH_BLOCKED_CODES` in RenderLimits, `icon:"auth"` status
+  items resolving through chat.html's AUTH_BLOCKED map (wording stated once), and `reqError`
+  suppressing the phantom summary. That phantom turned out to BE 8.7's root cause: the done
+  item was the actual tail, so `tail.role === 'error'` never matched and Retry never seeded —
+  8.7 closed with zero 8.7-specific code.
+- Fixtures 07 + 08 committed, each proven to pin the DEFECT by running against pre-fix
+  chat.html (5 and 3 failures respectively). Negative controls on every new Kotlin test.
+- New trap (in fixtures + gotchas): assert on `#log`, never `document.body` — body.textContent
+  includes chat.html's own script source, which now contains the very literals under test.
+- User cleared the hardware re-verification sweep on real JCEF (2.9, 2.14, Escape menus, 4.4,
+  6.4) and 7.4(a) live; only 5.14's scroll FEEL and an 8.2/8.7 error-tail eyeball remain.
+- Next: 10.5 openDiff accept-save, then 3.1 custom commands.
+
+## 2026-08-09 (later) — fixing round two: register 13 → 9 open, both rounds committed
+- 4.4 live edit diffs: in acceptEdits (or under a saved rule, or a pre-authorized path) the CLI
+  never sends `can_use_tool` at all, and the permission card was the ONLY live diff producer —
+  so live was strictly poorer than replay. Fixed optimistically from the tool_use INPUT the page
+  already had: stash at `content_block_stop`, ask Kotlin for the gutter line over a new
+  `lineStart` bridge round-trip, mount replay's own "Applied" card at `tool_result` unless a
+  permission card superseded it. MultiEdit gained an `edits[]` branch everywhere, which also
+  fixed its EMPTY permission-card preview — multi-hunk edits were being approved blind.
+- 5.9 plumbing strip (`RenderLimits.PLUMBING_TAGS`, shared via LIMITS) and 5.14 scroll pin
+  (keys off scroll DIRECTION now — the old at-bottom test lost the pin to any mid-turn reflow).
+- 5.13 addendum, and a diagnosis the user corrected: I read the duplicated-checklist screenshots
+  as "collapse consecutive lists"; the user pointed out replay was the CORRECT one and live was
+  missing the status titles. Real fix was relocating each live checklist under the tool line
+  that asked (tool_use_id echoed on the `__tasks` frame). Lesson: when live and replay disagree,
+  establish WHICH is right before designing the fix.
+- 6.4 split-button caret: parts were built one-per-suggestion, but a compound command is ONE
+  suggestion carrying several rules — wire-probed first, and the CLI does persist exactly the
+  picked subset when the echoed suggestion is narrowed. Then two defects only live testing could
+  find: the menu was clipped by `content-visibility` containment (which also defeats
+  synthetic-click assertions, so the harness was structurally blind), and it resized on hover.
+- User rejected my first sizing fix (always reserve 32px) — "lets do like conversations drop
+  down". The conversations list uses the same hover-only gutter and is stable only because
+  `#histPanel` is a FIXED width; copying that (310px + `min-width:0` to beat `.popup`'s 330px
+  base) was the right answer. Copy the working idiom whole, don't reinvent half of it.
+- Committed both rounds: `4a64433` (six issues) and `fe620ef` (four). Tests green; pushed.
+- Next: 10.5 openDiff accept-save — Kotlin-side, so runIde + direct MCP-over-WS, not the
+  headless harness. Plus the accumulated hardware re-verification sweep (state.md).
+
 ## 2026-08-09 — the fixing session: register 19 → 13 open
 - Removed all three webview keyboard chords (Ctrl+N / Ctrl+Alt+G / F12) instead of re-homing
   them as IDE actions — the plugin now binds NO shortcuts (decision logged). Every capability

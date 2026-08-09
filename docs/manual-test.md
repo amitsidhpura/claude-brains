@@ -359,15 +359,34 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       live progress line updates ("Explore · … · N tool uses · N tokens"),
       finished line shows the summary
 
-      **ISSUE (2026-08-07):** the async-launch OUT box renders the CLI's internal metadata
-      verbatim — "Async agent launched successfully. (This tool result is internal metadata —
-      never quote or paste any part of it, including the agentId below …)". Text that
-      literally announces itself as internal is shown to the user; same plumbing-leak family
-      as the `<tool_use_error>` wrappers under 5.9. Candidate for the NO_OUT_BOX list in
-      RenderLimits (the tool line + progress line already tell the story). ALSO: the
-      progress/finished line can carry a raw harness annotation as the "summary" — observed
-      "Explore · [harness: subagent output matched instruction-shaped pattern(s):
-      settings-json. Control tags below are neutralized …] · 5 tool uses · 14.6k tokens".
+      **RESOLVED (2026-08-09) — fixed:** both halves, as two shared rules in RenderLimits so
+      live and replay cannot drift. Payloads were read VERBATIM out of the CLI binary
+      (`~/.local/share/claude/versions/2.1.226`) rather than inferred, because neither event is
+      ever persisted and no local transcript contains one.
+      (a) The async-launch OUT box: `isInternalResult()` suppresses a result whose first line
+      closes with the CLI's own "(This tool result is internal metadata …)" declaration — every
+      line of that payload is addressed to the model, and the tool line + progress line already
+      say what was launched, which is RESULT_SKIP's rule. Keyed on CONTENT and not on the tool
+      name deliberately: the SAME tool's completed result is the sub-agent's report and is the
+      one thing there worth reading, so a name-keyed skip could not express it.
+      (b) The harness annotation: `stripPlumbing()` now also drops a leading `[harness: …]`
+      envelope. It was not merely ugly — the marker is longer than `descMax`, so it crowded the
+      real summary off the finished line entirely. Stripping only at position 0 is safe
+      structurally, not hopefully: the CLI escapes any LINE-INITIAL `[harness:` in the
+      sub-agent's own text to `[\harness:` before prepending its own, so an unescaped one in
+      first position can only be the envelope — a quoted one mid-line survives.
+      Pinned by `RenderLimitsTest` (both rules, with negative controls) and by the new live
+      fixture `tools/fixtures/07-subagent-internal-metadata.json`. Verified headless on the
+      spliced-chat harness: 13/13 assertions pass, and the SAME fixture fails 5 of them against
+      the pre-fix `chat.html` — so it pins the defect, not just today's behaviour. Trap worth
+      keeping: assert on `#log`, never `document.body`, whose `textContent` now includes
+      chat.html's own script source and therefore these very literals.
+      (a) VERIFIED on real JCEF 2026-08-09 (runIde, a genuine background Explore launch): tool
+      line + IN box intact, no OUT box, finished line "Explore · <summary> · 6 tool uses ·
+      10.6k tokens". (b) could NOT be discriminated live — no `[harness:` appeared, but the
+      sub-agent's summary likely never tripped the `settings-json` pattern (it needs the literal
+      `.claude/settings…json` path form), so the envelope may simply not have been emitted;
+      absence is the correct end state either way. (b) stays pinned by fixture 07 + unit tests.
 - [x] 7.5 During a background suspend, the turn does NOT show a completion summary early;
       one summary at the true end
 
@@ -382,10 +401,25 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       resolved ask cards, thinking blocks with durations, plan cards, ⏹ Stopped lines,
       completion summaries with the SAME verbs as live
 
-      **ISSUE (2026-08-08):** two small live-vs-replay divergences around an auth-failed
-      turn: (1) the live "Authentication failed. Run `claude` in a terminal…" status line
-      does not replay (only the error block does); (2) replay shows a "✻ Conjured for 1s"
-      completion summary on the error-terminated turn that had NO summary live.
+      **RESOLVED (2026-08-09) — fixed:** both divergences, plus 8.7's missing Retry, one root
+      cause chain. Measured first: the transcript persists the SAME top-level `error` enum live
+      keys off (a real record shows `"error":"rate_limit","isApiErrorMessage":true`; the CLI
+      builds every such record through one `kd({error, content})` shape, probed in the 2.1.226
+      binary) — replay just never read it.
+      (1) Status line: `RenderLimits.AUTH_BLOCKED_CODES` (the account half of the enum);
+      SessionStore emits a `status` item with `icon:"auth"` carrying the CODE, and replay's
+      renderer resolves it through the same AUTH_BLOCKED map live uses — wording stated once,
+      unknown codes degrade to the raw code rather than vanishing. Emitted before the error
+      item, matching live's order (status at the assistant frame, error block at the result).
+      Transient codes (rate_limit &c.) deliberately get NO status line, same as live.
+      (2) Phantom summary: `reqError` (last-assistant-record-wins) suppresses `flushSummary`'s
+      done item on an error-terminated request — live's `is_error` branch draws error block +
+      Retry, never a verb line.
+      Pinned by RenderLimitsTest (synthetic transcript: auth turn = status+error+no summary,
+      rate-limit turn = error only, normal turn keeps its summary+seed; both negative-control
+      reverts fail the suite) and fixture `tools/fixtures/08-resumed-error-tail.json` for the
+      JS half (8/8 new, 3 fail pre-fix). NOT yet eyeballed on real JCEF — needs a re-auth-fail
+      or a stitched error-tail session.
 - [x] 8.3 A big session opens fast and lands at the bottom
 - [x] 8.4 Scrolling up silently streams in earlier history — no viewport jump
 - [x] 8.5 A long user message stays pinned (sticky) while its turn scrolls
@@ -395,10 +429,12 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       against records 2026-08-08.)
 - [x] 8.7 An error at the tail of a resumed session shows the error block + working Retry
 
-      **ISSUE (2026-08-08):** the error block replays at the tail, but the ↻ Retry link does
-      NOT — live showed "Not logged in · Please run /login" + Retry; the resumed view shows
-      the error block followed by a phantom "✻ Tinkered for 1s" summary (issue also noted
-      under 8.2) and no Retry, so the user cannot re-run the failed prompt after resume.
+      **RESOLVED (2026-08-09) — fixed:** by 8.2's fix — the phantom summary WAS the root cause,
+      not a sibling symptom. `renderTranscript` seeds Retry only when `items[last].role ===
+      'error'`, and the phantom done item was the actual tail, so the check never matched.
+      With the summary suppressed the error is the true tail again and `addRetryLine()` fires.
+      No 8.7-specific code changed; pinned by fixture 08's retry assertions. Same real-JCEF
+      caveat as 8.2.
 - [x] 8.8 /effort turns DO appear on resume (accepted audit trail — expected, not a bug)
 - [x] 8.9 "New conversation" from a resumed windowed session doesn't pull the old session's chunks
 - [x] 8.10 A session renamed in the terminal (custom title) shows that name in the history

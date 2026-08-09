@@ -1,57 +1,42 @@
 # State
 
 ## Current focus
-The standing manual-test pass (`docs/manual-test.md`) is COMPLETE as of 2026-08-08: all 92
-items ticked. The defect register now stands at **15 open ISSUE notes** after the 2026-08-09
-fixing session: three keyboard-chord issues closed by removing the chords; the 1.7
-Escape-reopen glitch retired as a sandbox artifact and two real Escape defects fixed in its
-place (`slashEscaped` flag, `closeCardMenus()` rung in the Escape chain — verified by
-headless-Chrome probe of the mockup mirror); 2.8 @-mention fixed — the menu opened INVISIBLY
-(`#mention` had zero CSS, so `position: static` ignored `openMenu()`'s viewport coords) and
-the fix is CSS-only, verified by injecting the rules into the live installed-IDE panel over
-CDP (filter/nav/pick/Escape all exercised, screenshot taken); mention menu also got the
-slash menu's Escape-stick contract (`mentionEscaped`) plus, after a user-reported follow-up,
-the full dismissal contract (outside-click close; mutual exclusivity with composer popups in
-both directions; caret returning to an @-token reopens the menu — outside-click is a soft
-dismissal, Escape a hard one; the slash menu shares the identical contract via `slashAuto()`). The JS pieces are verified by running the REAL spliced chat.html headless
-(CSS + live-captured LIMITS, files fed via `onClaudeEvent`) — a reusable technique; only
-real-JCEF confirmation remains, next runIde. Also fixed same-day (new standing item 2.14):
-the JCEF-Linux Delete key inserting 0x7F as a tofu char — manual forward-delete on keydown
-plus a capture-phase control-char strip, verified 7/7 on the headless harness, hardware-key
-check pending next runIde. Checklist notes carry all detail. The pass
-itself was committed as `3278aac` (2026-08-08); all 2026-08-09 work is uncommitted.
+Working the standing defect register in `docs/manual-test.md`. The 92-item pass itself is
+COMPLETE (2026-08-08, commit `3278aac`); what remains is fixing what it found. Register stands
+at **6 open ISSUE notes / 18 RESOLVED**: rounds `4a64433` + `fe620ef` (committed, pushed), then
+UNCOMMITTED on 2026-08-09: 7.4 (internal-metadata suppression + harness-envelope strip, fixture
+07, 7.4(a) user-verified on real JCEF) and 8.2+8.7 (auth status line on replay via
+AUTH_BLOCKED_CODES + `icon:"auth"` items, phantom summary suppressed via `reqError`, which also
+un-blocked the tail Retry — fixture 08; not yet eyeballed on real JCEF). Per-issue detail lives
+under each checklist item in `docs/manual-test.md` — that file is the register, not this one.
 
-## Issue register highlights (full detail lives in docs/manual-test.md)
-- **Real bugs**: openDiff accept reports FILE_SAVED but never writes (`DiffReview.kt:56`);
-  custom commands filtered out of the `/` menu (`cmdKind` — no custom detection).
-- **Cosmetic**: raw `<tool_use_error>`/`<system-reminder>` wrappers in OUT boxes; sub-agent
-  async-launch "internal metadata" OUT box + harness annotations in the progress line;
-  "unknown — retrying (n/10)" + duplicated first attempt; 6.4 split-button arrow never
-  appeared; replay drops the auth status line and adds phantom summaries on error turns;
-  resumed tail error has no Retry link.
+## Issue register highlights (full detail in docs/manual-test.md)
+- **Real bugs, still open**: openDiff accept reports FILE_SAVED but never writes
+  (`DiffReview.kt:56`); custom commands filtered out of the `/` menu (`cmdKind` has no custom
+  detection).
+- **Cosmetic, still open**: "unknown — retrying (n/10)" + duplicated first attempt.
 - **Upstream (CLI 2.1.226)**: only `mcp__ide__getDiagnostics` is model-facing — openFile /
-  openDiff / selection refused to the model. Bridge itself verified healthy by direct WS
-  calls. Re-scope manual-test 10.1/10.3/10.4/10.5 if the restriction sticks.
+  openDiff / getCurrentSelection refused TO THE MODEL. Bridge itself verified healthy by direct
+  MCP-over-WS calls. Re-scope manual-test 10.1/10.3/10.4/10.5 if the restriction sticks.
 
 ## Next steps
-- [x] Commit the pass results + context updates (done: `3278aac`, 2026-08-08).
-- [ ] Fix issues, suggested order: 10.5 openDiff accept-save (roadmap-relevant) →
-      3.1 custom commands (then re-test 9.10; fixture
-      `claude-brains-testing/.claude/commands/dummy-cmd.md` is in place; the harness's
-      `commands_changed` seeding trick applies)
-      → 7.4 async-metadata suppression → replay fidelity (8.2 / 8.7).
-      (5.9 wrapper strip: done 2026-08-09 — `RenderLimits.PLUMBING_TAGS`/`stripPlumbing`,
-      shared via LIMITS.plumbingTags. 5.14 scroll pin: done 2026-08-09 — direction-based
-      unpin + `__tasks` maybeScroll; feel-check the heavy turn next runIde. 5.13 addendum:
-      Task* checklists now attach under their own tool line via a tool_use_id echoed on the
-      `__tasks` frame — live matches replay; was the detached-duplicate stack the user
-      screenshotted. 6.4 split caret: done 2026-08-09 — parts per RULE not per suggestion
-      (measured: compound = ONE addRules suggestion with rules[]); "N.R" grant tokens narrow
-      the echoed suggestion, subset-echo wire-probed as accepted; protocol doc updated.)
-      (Done 2026-08-09: 7.3 chip CSS, 2.9 drag-drop, 4.4 live diffs for auto-approved edits
-      — optimistic-with-supersede via `fillAppliedCard`/`supersedeEdit`/`lineStart` bridge
-      round-trip; MultiEdit preview fixed as a rider. Next runIde re-verifies: hardware drag,
-      hardware Delete, Escape flags, 4.4 visuals in acceptEdits mode.)
+- [x] **runIde re-verification sweep** — user-confirmed on real hardware/JCEF 2026-08-09:
+      hardware file drag (2.9), hardware Delete key (2.14), Escape in the slash/mention menus,
+      4.4's applied-edit cards in acceptEdits, and 6.4's split-button menu. Plus 7.4(a) verified
+      live the same session (background Explore launch: no internal-metadata OUT box, clean
+      finished line). Still outstanding from the old list: **5.14's heavy-turn scroll FEEL only**
+      (headless proved the logic 8/8; real-JCEF rAF cadence is the production case — a
+      when-next-convenient check, not a blocker).
+- [ ] Fix the remaining register issues, suggested order: **10.5 openDiff accept-save**
+      (roadmap-relevant; Kotlin-side, so verification is runIde + direct MCP-over-WS, NOT the
+      headless harness) → **3.1 custom commands** in the `/` menu (then re-test 9.10; fixture
+      `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` is in place, and the
+      harness's `system/commands_changed` seeding trick supplies the roster) → the retry-storm
+      cosmetics ("unknown — retrying" + duplicated first attempt).
+- [ ] Eyeball 8.2/8.7 on real JCEF when convenient: resume a session whose tail is an API
+      error (stitch one from the real `"error":"rate_limit"` donor records in
+      `~/.claude/projects/-home-syncroze-Sites-peers-woocommerce/b4589d75…jsonl`, or re-run
+      the auth-failure manufacture) and check status line + no phantom summary + Retry.
 - [ ] Decide whether to re-scope section 10 of the checklist against the CLI 2.1.226
       model-facing tool restriction, or wait to see if upstream reverts it.
 - [ ] Roadmap after fixes: editor-title accept/reject → @-symbol mentions → worktrees →

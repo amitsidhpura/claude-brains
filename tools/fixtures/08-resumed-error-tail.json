@@ -1,0 +1,37 @@
+{
+  "item": "manual-test 8.2 + 8.7",
+  "branch": "__transcript with an error-terminated tail (auth status item, no phantom summary, Retry)",
+  "provenance": "The ITEM shapes are what SessionStore emits as of the 2026-08-09 8.2 fix, pinned Kotlin-side by RenderLimitsTest's `an error-terminated turn replays with the status line and no summary` against a synthetic transcript modelled on a REAL persisted API-error record (top-level `error` enum + isApiErrorMessage). This fixture pins the OTHER half of the contract: what chat.html renders when given those items — the auth code resolved through AUTH_BLOCKED (wording stated there once, for both paths), no summary on the error turn, and the Retry link seeding because the error is the true tail again (8.7: the phantom summary used to BE the tail, so `tail.role === 'error'` never matched and Retry never appeared).",
+  "steps": [
+    {
+      "note": "a resumed session whose last turn died on an auth failure",
+      "frames": [
+        {"type": "__transcript", "more": 0, "items": [
+          {"role": "user", "text": "do a thing"},
+          {"role": "status", "text": "authentication_failed", "icon": "auth"},
+          {"role": "error", "text": "API Error: OAuth token has expired."}
+        ]}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "Authentication failed. Run `claude` in a terminal, sign in there, then press Refresh.", "why": "8.2(1): the account-half status line replays, code resolved through the same AUTH_BLOCKED map live uses"},
+        {"js": "document.querySelector('#log').textContent.includes('authentication_failed')", "equals": false, "why": "the CODE itself never reaches the screen. Assert on #log, never document.body — body.textContent includes chat.html's own script source"},
+        {"js": "[...document.querySelectorAll('.status.err')].some(function(e){return e.textContent.indexOf('Authentication failed')===0})", "equals": true, "why": "same err styling as live"},
+        {"js": "document.querySelector('#log').textContent", "contains": "OAuth token has expired", "why": "the error block itself still replays"},
+        {"js": "document.querySelectorAll('.done').length", "equals": 0, "why": "8.2(2): no phantom completion summary on an error-terminated turn (live's is_error branch draws none)"},
+        {"js": "document.querySelectorAll('.retry').length", "equals": 1, "why": "8.7: with the phantom gone the error is the true tail, so the Retry link seeds"},
+        {"js": "document.querySelector('.retry').textContent", "contains": "Retry", "why": "and it is the working link, not an empty div"}
+      ]
+    },
+    {
+      "note": "negative control: an unknown future code degrades to the raw code, never to nothing",
+      "frames": [
+        {"type": "__transcript", "more": 0, "items": [
+          {"role": "status", "text": "some_future_code", "icon": "auth"}
+        ]}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "some_future_code", "why": "a code the AUTH_BLOCKED map lost still surfaces rather than vanishing"}
+      ]
+    }
+  ]
+}

@@ -26,6 +26,9 @@
 - Styles live ONLY in `webview/chat.css`; editing chat.html markup? Mirror it in
   `design/mockup.html` too. No new hardcoded colours — add a token to `:root` and use
   `var(--x)` (for tints prefer `color-mix()` over a companion `-rgb` token).
+- Popups/dropdowns copy the conversations-list idiom WHOLE: a FIXED width plus a hover-only
+  action gutter. Never reserve space for hover affordances (rejected 2026-08-09) — and never
+  take half the idiom, since the hover gutter only stays jiggle-free because the width is fixed.
 - Any cap or output FORMAT produced by both the live renderer and the replay parser is stated
   once in `RenderLimits.kt` (spliced as `window.LIMITS`) and pinned by `RenderLimitsTest` —
   never a second copy in JS.

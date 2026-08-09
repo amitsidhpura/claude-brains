@@ -3,6 +3,21 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-09 — Live edit diffs render OPTIMISTICALLY from tool input, superseded by the card
+Edit/Write/MultiEdit now draw replay's "Applied" card live, built from the tool_use INPUT at
+`tool_result` time, and a `permission_request` for the same edit marks the pending record
+superseded so manual mode never double-renders.
+**Why:** the live wire carries no diff data at all (no `toolUseResult`/`structuredPatch` — probed
+2026-08-05), and in acceptEdits / under a saved rule / in a pre-authorized path the CLI never
+sends `can_use_tool`, so the permission card — the only live diff producer — never fires. Keying
+off `currentMode` instead would have missed rule-grant and scratchpad approvals; keying off the
+card's absence is not knowable at `content_block_stop` (the card, if any, arrives later). Hence
+optimistic-plus-supersede rather than wait-and-see.
+**Rejected:** asking the CLI for the patch (nothing to ask); a bespoke live diff widget (replay's
+card already exists, is mode-agnostic by design, and sidesteps the bare-`.diff` float problem).
+Cost of the choice: the gutter line must be fetched PRE-apply (see gotchas) and degrades to no
+line numbers when it can't be found.
+
 ## 2026-08-09 — All keyboard chords removed; the plugin binds NO shortcuts
 The three webview JS keydown chords are deleted, not re-homed as IDE actions: Ctrl/Cmd+N (new
 conversation), Ctrl+Alt+G (gallery), F12 (DevTools). The `"devtools"` bridge branch in

@@ -487,6 +487,12 @@ object SessionStore {
         var reqLast: java.time.Instant? = null
         var reqTokens = 0L
         var reqWork = false
+        // Whether the request's LAST assistant record was an API error (8.2). Live never draws a
+        // completion summary on an error-terminated turn — onResult's `is_error` branch is error
+        // block + Retry, no verb line — but replay counted the error record as reqWork and stamped
+        // "✻ Conjured for 1s" on a turn that produced nothing. Last-record-wins rather than sticky,
+        // so a request that somehow recovers after an error record keeps its summary.
+        var reqError = false
         var reqSeed: String? = null            // first assistant uuid of the request (verb seed)
         val reqMsgIds = HashSet<String>()      // message.ids already counted — see the "assistant" branch
         // A compaction boundary awaiting its summary. The CLI writes the marker and the summary as
@@ -513,7 +519,7 @@ object SessionStore {
             // (reqWork = an assistant record appeared). The renderer omits the "↓ N tokens" segment
             // when it is 0, so there is no noisy "↓ 0 tokens" — but the "for Ns" time still shows.
             // A truly empty turn (no assistant record) has reqWork == false and is skipped here.
-            if (reqWork && s != null && e != null) {
+            if (reqWork && !reqError && s != null && e != null) {
                 // Seed the verb on the first assistant uuid — the CLI puts the same uuid on the live
                 // stream event, so a turn keeps the verb it was born with across every resume. Falls
                 // back to the request's start instant, which is at least stable within the file.
@@ -526,7 +532,7 @@ object SessionStore {
                 })
                 prevDoneSeed = sd
             }
-            reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false
+            reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false; reqError = false
             reqSeed = null; reqMsgIds.clear()
         }
 
@@ -657,8 +663,25 @@ object SessionStore {
                             // an API error ("session limit", "usage credits") is persisted as an
                             // ordinary assistant record + `isApiErrorMessage`; live draws it as an
                             // `.error` block, so replay must not render it as prose
-                            val role = if (obj["isApiErrorMessage"]?.jsonPrimitive?.content == "true")
-                                "error" else "assistant"
+                            val isApiError = obj["isApiErrorMessage"]?.jsonPrimitive?.content == "true"
+                            val role = if (isApiError) "error" else "assistant"
+                            // Last assistant record wins (see reqError's declaration): an error
+                            // record marks the request error-terminated, a later normal one clears it.
+                            reqError = isApiError
+                            // The ACCOUNT half of the error enum ALSO gets the status line live
+                            // draws when the assistant frame arrives — the route out ("run `claude`
+                            // in a terminal…"), which used to vanish on resume while the error block
+                            // survived (8.2). Same persisted `error` field live keys off; the code
+                            // travels and chat.html's AUTH_BLOCKED map supplies the wording, so the
+                            // text exists once. Emitted BEFORE the error item, matching live order
+                            // (status at the assistant frame, error block at the `result`).
+                            if (isApiError) {
+                                obj["error"]?.jsonPrimitive?.contentOrNull
+                                    ?.takeIf { it in RenderLimits.AUTH_BLOCKED_CODES }
+                                    ?.let { code ->
+                                        out.add(Item("status").apply { text = code; icon = "auth" })
+                                    }
+                            }
                             val recUuid = obj["uuid"]?.jsonPrimitive?.contentOrNull
                             // The SECOND retraction lane: an assistant record can supersede earlier
                             // ones directly, with no refusal event involved. Never seen locally
@@ -1019,7 +1042,11 @@ object SessionStore {
         // rule — the flag exists only on the persisted record.
         RenderLimits.resultNote(resultText(block["content"]))?.let { item.note = it }
 
-        if (item.text !in RenderLimits.RESULT_SKIP || item.isError) {
+        // The same rule as RESULT_SKIP, keyed on content because the tool name cannot tell an async
+        // sub-agent LAUNCH (all model-facing bookkeeping) from its COMPLETION (the report). 7.4.
+        val internal = !item.isError && RenderLimits.isInternalResult(resultText(block["content"]))
+
+        if ((item.text !in RenderLimits.RESULT_SKIP && !internal) || item.isError) {
             // Match the live path (onUserEvent): show the tool_result block's content — the
             // model-facing result text — so a resumed OUT box reads identically. stdout/stderr are
             // only a fallback for the rare record whose content block is empty.
