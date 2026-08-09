@@ -157,6 +157,13 @@ img { max-width: 100%; height: auto; }
    and their real size is remembered — this only sets where unvisited turns start. */
 .turn-body { display: flex; flex-direction: column; gap: 18px;
   content-visibility: auto; contain-intrinsic-size: auto 1000px; }
+/* The split-button card menu is the ONE popup living inside a turn-body, and the paint
+   containment above clips it at the turn's box — it opened as a few-px sliver cut off at the
+   card edge (found in the 6.4 live check; clipped elements still pass DOM/synthetic-click
+   assertions, which is how the harness missed it). Lift containment only while a menu is
+   open; it returns the moment the menu closes. Containment-clipping also blocks HIT-TESTING,
+   so the regression pin for this is elementFromPoint, not querySelector. */
+.turn-body:has(.card-menu.show) { content-visibility: visible; }
 /* A turn with no response yet (interrupt, /compact, /model, a resume-continuation) has an EMPTY
    .turn-body; hide it so its 18px top-margin (and off-screen contain-intrinsic-size) don't stack on
    #log's 18px gap and double the space between two consecutive user messages. It reverts to flex the
@@ -414,14 +421,16 @@ blockquote > *:last-child { margin-bottom: 0; }
    popups: a card menu that opened up would cover the command preview being approved. JS flips it
    to .up only when there is no room below. `.popup.card-menu` (0,2,0) because .popup is declared
    LATER in this file and would otherwise win overflow on equal specificity. */
-.popup.card-menu { min-width: 0; max-width: 340px; top: calc(100% + 6px); bottom: auto;
+.popup.card-menu { width: 310px; min-width: 0; top: calc(100% + 6px); bottom: auto;
   overflow-y: auto; background: var(--ok); border-color: var(--ok-hover); }
 .card-menu .popup-item:hover, .card-menu .popup-item.sel { background: var(--ok-hover); }
 .card-menu .pi-title { color: #fff; }
-/* Same double-check the button wears, but placed like the history list's delete control: on the
-   RIGHT and only while the row is hovered, so a resting menu is just the rules and the affordance
-   appears where you are pointing. The gutter is reserved on hover only — an unhovered row keeps
-   its full width and the rule ellipsises one step later. */
+/* Same double-check the button wears, placed exactly like the history list's delete control:
+   on the RIGHT, only while the row is hovered — and stable for the same reason the history
+   panel is: the menu box has a FIXED width (matching #histPanel's 310px), so the hover-only
+   gutter just shifts the rule's ellipsis inside a constant box. It used to shrink-wrap
+   (min-width: 0), which made the hover padding grow the whole dropdown per mouseover — the
+   resize jiggle found in the 6.4 live check. */
 .card-menu .pi-ic { position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
   display: none; width: auto; padding: 0; color: #fff; }
 .card-menu .popup-item:hover .pi-ic { display: block; }

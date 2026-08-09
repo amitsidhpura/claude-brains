@@ -176,11 +176,28 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 - [x] 4.3 Composer focus border + Send button colour follow the mode
 - [x] 4.4 Edit automatically: file edits apply without a card; Bash still asks (correct, not a bug)
 
-      **ISSUE (2026-08-07):** no card is correct, but auto-approved edits render NO diff at
-      all live — the only live diff path is the permission card's `previewHtml`
-      (chat.html:3348); the tool-line path never calls renderEditDiff/writeDiffHtml. The same
-      edit replays WITH a diff ("✓ Applied" via `structuredPatch`), so live is poorer than
-      replay. TUI/VS Code show applied diffs even when auto-approved.
+      **RESOLVED (2026-08-09) — fixed:** auto-approved Edit/Write/MultiEdit now mount the
+      SAME "✓ Applied" `.card.warn` replay draws, built from the tool_use INPUT (the live
+      wire carries no structuredPatch — probed 2026-08-05). Design is optimistic-with-
+      supersede so it covers every auto-approval source (acceptEdits/auto mode, saved
+      allow-rules, pre-authorized scratchpad paths), not just mode state: at
+      `content_block_stop` the parsed input is stashed on the `toolsById` record and a new
+      `{kind:'lineStart'}` bridge round-trip asks Kotlin for the gutter line (pre-apply is
+      the only moment `old_string` is still findable; a late/null answer degrades to no
+      gutter). If a `permission_request` arrives, `supersedeEdit(tool, file)` marks the
+      pending record card-owned (frames carry no tool_use_id; tool+file is the correlation)
+      so manual mode never double-renders. At `tool_result`, un-superseded non-error edits
+      mount the card via `fillAppliedCard` — extracted from `replayCard` so live, replay,
+      and the permission preview share one diff producer (`previewHtml` now delegates to
+      `replayDiff`). Bonus fixes riding along: MultiEdit was handled NOWHERE — its
+      permission card showed an EMPTY preview (approve a multi-hunk edit blind) and live
+      showed a bare tool line; `replayDiff` gained an `edits[]` branch (per-edit sections,
+      ⋯ separator, gutter on the first) and `editLineStart` a MultiEdit branch
+      (edits[0].old_string). Verified on the spliced headless harness 8/8 live scenarios
+      (auto Edit with gutter, RESULT_SKIP intact, manual no-double-render, Write, MultiEdit,
+      MultiEdit card preview, error edit, late answer) + 3/3 replay regression (old/new,
+      structuredPatch hunks, MultiEdit patch; zero JS errors). Re-verify visually next
+      runIde in acceptEdits mode against a replay of the same session.
 - [x] 4.5 Plan mode: plan card appears; approving drops the chip back to Manual
 - [x] 4.6 Model selector: picking a model persists across restart; search filters the list
 - [x] 4.7 Custom model in `value : Display Name : Description` form shows its display name in the chip
@@ -200,21 +217,59 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 - [x] 5.8 Failed Bash: exit-code explanation note under the OUT box
 - [x] 5.9 Non-Bash tool results show a summary under the tool line (not blank, not a dump)
 
-      **ISSUE (2026-08-07):** failed-tool OUT boxes render CLI plumbing wrappers verbatim —
-      `<tool_use_error>…</tool_use_error>` on a failed Write, raw `<system-reminder>` on an
-      empty-file Read. Should be stripped (the TUI presents these without the tags).
+      **RESOLVED (2026-08-09) — fixed:** the plumbing wrappers are now stripped on BOTH
+      paths through one rule: `RenderLimits.PLUMBING_TAGS` + `stripPlumbing()` (Kotlin owns
+      it; the tag list rides `LIMITS.plumbingTags` so the JS mirror in chat.html cannot
+      disagree). Applied before the cut on each side — SessionStore for replay, onUserEvent
+      for live — so the OUT cap counts real output, and a wrapper-only-empty result (bare
+      `<system-reminder></system-reminder>`) now renders no OUT box at all. Tags only; the
+      inner message is kept, matching the TUI. Pinned by RenderLimitsTest (round-trip
+      literal, LIM.plumbingTags usage, strip unit test with a negative control for ordinary
+      angle-bracket output) and headless harness 4/4 (failed-Write strip, empty-file-Read
+      strip on a non-error result, empty suppression, diff-style `<`/`>` Bash output
+      untouched). The 7.4 async-launch metadata leak is a separate note — it needs
+      suppression, not stripping.
 - [x] 5.10 Tool-returned image renders under the tool line (ask it to Read a PNG)
 - [x] 5.11 Clicking a file path opens it in the editor; a path that no longer exists → balloon,
       not a silent nothing
 - [x] 5.12 Edit/Write diff: real line numbers in the gutter, context rows around the change;
       a huge diff caps at 400 rows with a truncation marker
-- [x] 5.13 Todo checklist renders inline when the model plans with tasks, updating as items complete
+- [x] 5.13 Todo checklist renders inline when the model plans with tasks, updating as items
+      complete; each Task* tool line carries its OWN snapshot, live matching replay
+
+      **RESOLVED (2026-08-09) — fixed** (user-reported post-pass): live Task* checklists
+      appended at the TURN'S END — `todoList`'s `el()` mounts at the current position, and
+      the `__tasks` frame carried no correlation to the tool call that asked. A parallel-call
+      turn (two TaskUpdates in one assistant message) streamed both tool lines first, then
+      both result snapshots stacked below the last line as detached, unlabelled duplicates —
+      while replay correctly showed each labelled line (completed / in_progress) with its own
+      list. Fix: the `tasks` bridge request now carries the `tool_use_id`, `pushTasks` echoes
+      it on the `__tasks` frame, and the handler relocates the built box under the requesting
+      line (`(r.io || r.el).after(box)`) — replay's layout, produced live. A frame without an
+      id (evicted line) falls back to append-at-end. The stale todoList comment claiming
+      Task* "isn't handled here" is rewritten. Headless harness 6/6: the reconstructed
+      screenshot turn renders line→todos→line→todos with differing snapshots, id rides the
+      request, no-id fallback renders, TodoWrite's inline path unchanged, replay records
+      alternate correctly. This stacking was also a chunk of 5.14's heavy-turn DOM load.
 - [x] 5.14 Auto-scroll pins to the bottom while streaming; scrolling up releases the pin;
       scroll-to-bottom button glides; submitting scrolls down
 
-      **ISSUE (2026-08-07):** during the heavy task-list turn (many TaskCreate/TaskUpdate
-      checklist appends), auto-scroll could not keep up with the output — the view lagged
-      behind the newest content instead of staying pinned to the bottom.
+      **RESOLVED (2026-08-09) — fixed:** two defects stacked. (1) The pin was re-derived
+      from position on EVERY scroll event (`pinned = atBottom()`), so whenever content grew
+      between a programmatic pin-scroll and its async scroll event, the handler measured the
+      new taller height, read "not at bottom", and silently unpinned mid-stream — the heavy
+      task-list turn made that race constant. The pin is now DIRECTION-based: only an upward
+      move that actually leaves the bottom zone releases it (user intent — programmatic
+      pin-scrolls only ever go down, content growth never moves scrollTop, and renderEarlier
+      only ever increases it), while any route back to the bottom re-pins. (2) The `__tasks`
+      checklist re-render never called `maybeScroll()` at all, so checklist growth stalled
+      the view even with a healthy pin — it does now, matching the content_block_stop
+      pattern. Verified on the headless harness 8/8, including a deterministic
+      reconstruction of the race (grow-after-pin + late scroll event → pin survives),
+      user-scroll-up still releasing and staying released while streaming continues,
+      re-pin on return, `__tasks` growth following, and clearLogUI landing pinned.
+      Feel-check the heavy-turn behaviour next runIde (headless has no compositor; real
+      JCEF's rAF cadence is the production case).
 - [x] 5.15 Code blocks have a language label and a working copy button
 - [x] 5.16 A WebSearch turn renders: tool line with the query, result summary underneath
 - [x] 5.17 A huge Bash result the CLI spills to a file shows the persisted-output note
@@ -228,10 +283,45 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 - [x] 6.4 "Always allow" appears when the CLI suggests a rule; a compound command
       (a && b) shows ONE Always-allow that grants the whole set (split button: arrow lists parts)
 
-      **ISSUE (2026-08-07):** whole-set grant works (one click → all suggested rule chips),
-      but the split-button arrow never appeared on a compound card with multiple suggested
-      rules (`git log && composer show ; node && npm ; free && lscpu | head`) — no dropdown
-      to grant an individual part.
+      **RESOLVED (2026-08-09) — fixed:** the caret never appeared because the code assumed a
+      compound command arrives as one suggestion per sub-command and built its split-menu
+      `parts` per SUGGESTION. MEASURED against CLI 2.1.226 (headless stream-json probes, real
+      `can_use_tool` captures): the rules arrive as ONE `addRules` suggestion whose `rules[]`
+      holds one rule per sub-command (`factor 97 && mcookie ; openssl rand -hex 4 && base32`
+      → one suggestion, four rules) — so `parts.length` was always 1 and the `< 2` gate
+      suppressed the caret. Mixed payloads also exist (a Bash command rule and a `Read
+      //etc/**` path rule as separate one-rule suggestions). Fix: `parts` is now one entry
+      per RULE with `"sugIdx.ruleIdx"` pick tokens; a menu-row grant echoes the suggestion
+      NARROWED to the picked rule(s) — `ClaudeSessionService.respondPermission` clones the
+      suggestion with the rules subset, whole-button grants unchanged. The subset echo was
+      wire-PROBED before building on it: allowing with `rules` narrowed to one entry
+      persisted exactly `Bash(factor 97)` to settings.local.json and nothing else. Headless
+      UI harness: caret + 4 rows for the real captured payload, row click sends "0.2",
+      whole-set sends "0", mixed payload rows pick "1.0", duplicate rules still fold (one
+      part → plain button, correctly no caret). Live check (2026-08-09, runIde): the caret
+      RENDERED — and exposed a second defect: the open menu was clipped to a sliver at the
+      card edge. Cause: `.turn-body`'s `content-visibility: auto` applies PAINT CONTAINMENT,
+      and the card menu is the one popup living inside a turn-body — everything painting past
+      the turn's box is cut. Fixed with `.turn-body:has(.card-menu.show) { content-visibility:
+      visible; }` — containment lifts only while a menu is open. Lesson recorded in the CSS
+      comment: containment-clipped elements still pass DOM/synthetic-click assertions, so the
+      regression pin is `elementFromPoint` (containment blocks hit-testing too) — probe 4/4:
+      containment auto at rest, visible while open, last menu row hit-testable at its center,
+      Escape close restores containment. Second live-check polish, same day: the menu resized
+      on hover — the 32px check-icon gutter is reserved on :hover only, which is exactly the
+      conversations-dropdown idiom, but that idiom needs a FIXED box: the history panel is
+      310px wide, while this menu shrink-wrapped its short rules, so the hover padding grew
+      the whole dropdown per mouseover. Per user preference the menu now matches the
+      conversations dropdown: fixed `width: 310px` (plus `min-width: 0` — the `.popup` base's
+      330px min-width silently overrides a smaller width without it), hover gutter unchanged,
+      long rules ellipsise inside the constant box (probed: 310px for short and long rule
+      sets alike). Menu rows also gained scope tooltips — a trailing `*` is the CLI's prefix
+      wildcard shown verbatim ("any command starting with…"), no `*` grants exactly that
+      command (probed: both tooltip texts). NOTE for
+      future passes: the 2026-08-07/08 grants persist in the testing project's
+      settings.local.json — permission cards won't reappear for those commands until the
+      rules are removed or novel commands are used (this pass's probes used factor/mcookie/
+      openssl/base32 for that reason, and never granted them).
 - [x] 6.5 Accept-all-edits / allow-directory suggestion buttons appear when offered and stick
       (the same prompt doesn't re-ask after granting)
 - [x] 6.6 Sandbox-escape card (blocked_path) has NO suggestion buttons — only Accept / Reject

@@ -66,7 +66,7 @@ class RenderLimitsTest {
             assertTrue(!html.contains(it), "chat.html hardcodes `$it` — read it from LIM instead")
         }
         listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.descKeys", "LIM.pathKeys",
-            "LIM.resultSkip").forEach {
+            "LIM.resultSkip", "LIM.plumbingTags").forEach {
             assertTrue(html.contains(it), "chat.html no longer uses $it")
         }
     }
@@ -89,8 +89,29 @@ class RenderLimitsTest {
                 "pathKeys:[\"file_path\",\"path\"]," +
                 "resultSkip:[\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\",\"ExitPlanMode\"," +
                 "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\",\"TaskList\"]," +
-                "inKeys:[\"command\",\"prompt\"]}",
+                "inKeys:[\"command\",\"prompt\"]," +
+                "plumbingTags:[\"tool_use_error\",\"system-reminder\"]}",
             RenderLimits.asJs(),
+        )
+    }
+
+    @Test
+    fun `stripPlumbing removes the tags and keeps the message`() {
+        assertEquals(
+            "File has not been read yet. Read it first before writing to it.",
+            RenderLimits.stripPlumbing(
+                "<tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>",
+            ),
+        )
+        assertEquals(
+            "Warning: the file exists but is empty",
+            RenderLimits.stripPlumbing("<system-reminder>Warning: the file exists but is empty</system-reminder>"),
+        )
+        // negative control: ordinary output — including angle brackets that are NOT plumbing —
+        // passes through untouched
+        assertEquals(
+            "diff <old> vs <new> ok",
+            RenderLimits.stripPlumbing("diff <old> vs <new> ok"),
         )
     }
 

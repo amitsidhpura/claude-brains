@@ -1,8 +1,8 @@
 # Backlog
 
 ## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
-- 13 open issues from the 2026-08-08 pass; headline fixes: openDiff accept must actually save
-  (DiffReview.kt), custom commands in the / menu, live diff for auto-approved edits
+- 9 open issues from the 2026-08-08 pass; headline fixes: openDiff accept must actually save
+  (DiffReview.kt), custom commands in the / menu
 - Re-scope checklist section 10 if CLI keeps IDE tools model-hidden (2.1.226 restriction)
 
 ## Roadmap (rough order)

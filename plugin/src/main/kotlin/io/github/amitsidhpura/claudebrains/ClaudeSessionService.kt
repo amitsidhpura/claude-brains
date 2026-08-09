@@ -13,6 +13,8 @@ import io.github.amitsidhpura.claudebrains.bridge.IdeTools
 import io.github.amitsidhpura.claudebrains.bridge.PortFinder
 import io.github.amitsidhpura.claudebrains.cli.ClaudeCli
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -218,18 +220,40 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli?.sendUserMessage(text, attachments)
 
     /**
-     * Answer a permission card. Non-empty [suggestionIndexes] means the user took one of the CLI's
+     * Answer a permission card. Non-empty [suggestionTokens] means the user took one of the CLI's
      * permission_suggestions ("accept all edits" / "always allow" / "allow directory") — those
-     * entries ride the allow response as `updatedPermissions` and the CLI stops asking. The merged
-     * "Always allow" button sends several indexes (one addRules suggestion per sub-command of a
-     * compound command), all granted together.
+     * entries ride the allow response as `updatedPermissions` and the CLI stops asking. Tokens:
+     * "N" grants suggestion N whole; "N.R" grants only rule R of suggestion N — a compound
+     * command's rules arrive as ONE addRules suggestion with rules[] (measured 2026-08-09,
+     * CLI 2.1.226), so a split-menu partial grant must echo the suggestion NARROWED to the
+     * picked rule(s). Probed: the CLI accepts the subset and persists exactly those rules.
      */
-    fun respondPermission(requestId: String, allow: Boolean, suggestionIndexes: List<Int> = emptyList()) {
+    fun respondPermission(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList()) {
         val input = pendingPermissions.remove(requestId) ?: JsonObject(emptyMap())
         val suggestions = pendingSuggestions.remove(requestId)
-        val picked = if (allow && suggestions != null)
-            suggestionIndexes.mapNotNull { suggestions.getOrNull(it) }
-        else emptyList()
+        val picked = mutableListOf<JsonElement>()
+        if (allow && suggestions != null) {
+            val whole = linkedSetOf<Int>()
+            val partial = LinkedHashMap<Int, MutableList<Int>>()   // suggestion idx -> rule idxs
+            suggestionTokens.forEach { tok ->
+                val dot = tok.indexOf('.')
+                if (dot < 0) tok.toIntOrNull()?.let { whole.add(it) }
+                else {
+                    val si = tok.take(dot).toIntOrNull()
+                    val ri = tok.substring(dot + 1).toIntOrNull()
+                    if (si != null && ri != null) partial.getOrPut(si) { mutableListOf() }.add(ri)
+                }
+            }
+            whole.forEach { i -> suggestions.getOrNull(i)?.let { picked.add(it) } }
+            partial.forEach { (si, ruleIdxs) ->
+                if (si in whole) return@forEach                    // whole grant already covers it
+                val s = suggestions.getOrNull(si) as? JsonObject ?: return@forEach
+                val rules = s["rules"] as? JsonArray ?: return@forEach
+                val subset = ruleIdxs.mapNotNull { rules.getOrNull(it) }
+                if (subset.isEmpty()) return@forEach
+                picked.add(JsonObject(s.toMutableMap().apply { put("rules", JsonArray(subset)) }))
+            }
+        }
         val chosen = if (picked.isEmpty()) null
         else kotlinx.serialization.json.buildJsonArray { picked.forEach { add(it) } }
         cli?.respondPermission(requestId, allow, input, chosen)

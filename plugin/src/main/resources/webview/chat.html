@@ -250,7 +250,22 @@
     // A Read that named a range selects it; everything else opens at the top exactly as before.
     if (p) bridge({ kind: 'open', path: p, line: ref.dataset.line, endLine: ref.dataset.endLine });
   });
-  log.addEventListener('scroll', function () { pinned = atBottom(); updateScrollBtn(); maybeLoadEarlier(); });
+  // Direction-based pin (5.14). Only an UPWARD move — user intent; programmatic pin-scrolls
+  // only ever go down — releases it, and only when it actually leaves the bottom zone.
+  // The old `pinned = atBottom()` re-derived the pin from position on EVERY event, so when
+  // content grew between a programmatic scroll and its async scroll event, the handler
+  // measured the new taller height, read "not at bottom", and silently unpinned mid-stream —
+  // the heavy task-list turn made that race constant. Growth never moves scrollTop, so with
+  // the direction rule it can never unpin. renderEarlier only ever INCREASES scrollTop
+  // (prepended content pushes the anchor down), so windowed replay can't false-trigger it.
+  let lastScrollTop = 0;
+  log.addEventListener('scroll', function () {
+    const up = log.scrollTop < lastScrollTop - 1;
+    lastScrollTop = log.scrollTop;
+    if (up && !atBottom()) pinned = false;       // wheel/drag/keys away from the bottom
+    else if (atBottom()) pinned = true;          // any route back to the bottom re-pins
+    updateScrollBtn(); maybeLoadEarlier();
+  });
   if (scrollBtn) scrollBtn.onclick = function () { smoothToBottom(); input.focus(); };
 
   /* ---------- turn structure: user box + everything that answers it ---------- */
@@ -1331,6 +1346,15 @@
    * `RenderLimits.resultNote` — same two-language contract as `cut`/`cutInfo`, pinned by tests.
    * Anchored to the END so a parenthetical inside ordinary output cannot be mistaken for it.
    */
+  // Mirror of RenderLimits.stripPlumbing — the Kotlin doc comment owns the rule (5.9). Tag
+  // names ride LIMITS.plumbingTags so the two renderers cannot disagree on the list.
+  function stripPlumbing(t) {
+    if (!t) return t;
+    for (const tag of LIM.plumbingTags) {
+      t = t.split('<' + tag + '>').join('').split('</' + tag + '>').join('');
+    }
+    return t.trim();
+  }
   function resultNote(text) {
     const m = /\(note:\s*([\s\S]+?)\)\s*$/.exec(String(text || '').trim());
     const s = m ? m[1].replace(/\s+/g, ' ').trim() : '';
@@ -1413,16 +1437,35 @@
   // The diff/preview body for a replayed edit, or '' when the tool has nothing to show.
   function replayDiff(it) {
     if (it.patch && it.patch.length) return '<div class="diff">' + patchRows(it.patch) + '</div>';
-    if (it.oldStr != null || it.newStr != null) {
-      return '<div class="diff">' + renderEditDiff(it.oldStr || '', it.newStr || '') + '</div>';
+    if (it.edits && it.edits.length) {
+      // MultiEdit: one .diff, per-edit sections joined by the same ⋯ separator patchRows
+      // uses between hunks. Gutter only on the first edit — Kotlin locates only edits[0].
+      return '<div class="diff">' + it.edits.map(function (e, i) {
+        return renderEditDiff(e.old_string || '', e.new_string || '', i === 0 ? it.lineStart : null);
+      }).join(diffRow('ctx', '  ', null, '⋯')) + '</div>';
     }
-    if (it.content != null) return writeDiffHtml(it.content, 1);
+    if (it.oldStr != null || it.newStr != null) {
+      return '<div class="diff">' + renderEditDiff(it.oldStr || '', it.newStr || '', it.lineStart) + '</div>';
+    }
+    if (it.content != null) return writeDiffHtml(it.content, typeof it.lineStart === 'number' ? it.lineStart : 1);
     return '';
   }
 
-  // Resolved permission card: what ran, its diff, and a static outcome instead of buttons.
-  // "Applied" rather than "Accepted" — the transcript records that the edit ran, not whether a
-  // human approved it or an auto mode did.
+  // Fills a .card.warn with the resolved-edit surface: what ran, its diff, and a static
+  // outcome instead of buttons. Shared by replay (replayCard) and the live auto-approved
+  // path (onUserEvent, 4.4) so the two cannot drift. Returns false when there is no body.
+  // "Applied" rather than "Accepted" — the record is that the edit ran, not whether a human
+  // approved it or an auto mode did.
+  function fillAppliedCard(card, it) {
+    const body = replayDiff(it);
+    if (!body) return false;
+    card.innerHTML = '<div class="card-h"><b>' + esc(toolLabel(it.text)) + '</b>' +
+      (it.file ? ' on <code>' + esc(it.file) + '</code>' : '') + '</div>' + body +
+      '<div class="card-b">' + (it.denied
+        ? '<span class="no-t">✗ Rejected</span>'
+        : '<span class="ok-t">✓ Applied</span>') + '</div>';
+    return true;
+  }
   function replayCard(it) {
     // ExitPlanMode replays as the plan card, same surface and wording as the live one
     if (it.plan) {
@@ -1433,14 +1476,8 @@
           : '<span class="ok-t">✓ Approved</span>') + '</div>';
       return;
     }
-    const body = replayDiff(it);
-    if (!body) return;
     const card = el('card warn', '');
-    card.innerHTML = '<div class="card-h"><b>' + esc(toolLabel(it.text)) + '</b>' +
-      (it.file ? ' on <code>' + esc(it.file) + '</code>' : '') + '</div>' + body +
-      '<div class="card-b">' + (it.denied
-        ? '<span class="no-t">✗ Rejected</span>'
-        : '<span class="ok-t">✓ Applied</span>') + '</div>';
+    if (!fillAppliedCard(card, it)) { card.remove(); return; }
     foldBlock(card.querySelector('.diff'));
   }
 
@@ -2339,6 +2376,18 @@
   // message, and later turns of the request, must not move it.
   let reqSeed = null;
   let toolsById = {};         // tool_use id -> {el, name, io} for OUT boxes; reset by clearLogUI
+  // Marks the newest un-superseded pending edit matching (tool, file) as card-owned (4.4).
+  // permission_request frames carry no tool_use_id, so tool+file is the only correlation;
+  // for parallel same-file edits any pairing is equivalent — each card claims exactly one.
+  function supersedeEdit(tool, file) {
+    let match = null;
+    for (const id in toolsById) {
+      const r = toolsById[id];
+      if (r.edit && !r.superseded && r.name === tool &&
+          (r.edit.file_path || r.edit.path || '') === (file || '')) match = r;
+    }
+    if (match) match.superseded = true;
+  }
 
   window.onClaudeEvent = function (raw) {
     let ev; try { ev = JSON.parse(raw); } catch (_) { return; }
@@ -2514,7 +2563,23 @@
           }
         }
         return;
-      case '__tasks':            return void todoList(ev.items || []);
+      case '__tasks': {
+        // The checklist sits under the Task* tool line that asked for it — same layout as
+        // replay, where each labelled line (TaskUpdate completed / in_progress) carries its
+        // own snapshot. Without the relocation every snapshot appended at the turn's end, so
+        // a parallel-call turn stacked detached duplicate lists there. todoList's el() has
+        // already appended the box; .after() MOVES it. maybeScroll keeps the pin honest
+        // (5.14): this path renders without any other append to trigger a scroll.
+        const box = todoList(ev.items || []);
+        const r = ev.id && toolsById[ev.id];
+        if (r) (r.io || r.el).after(box);
+        maybeScroll(); return;
+      }
+      case '__lineStart': {      // answer to the pre-apply gutter request (4.4); may be late or absent
+        const r = toolsById[ev.id];
+        if (r && typeof ev.line === 'number') r.lineStart = ev.line;
+        return;
+      }
       // A usage limit was hit or is close. No terminal to check — the terminal is not running this
       // session. Shape read out of the CLI binary and the VS Code validator (2.1.222) after a first
       // guess fired a FALSE ALARM in a live session: the payload is `rate_limit_info`, not
@@ -2720,7 +2785,7 @@
         // the description at content_block_stop. Item 12: these used to render literally nothing.
         if (cb.type === 'tool_use' || cb.type === 'server_tool_use') {
           const t = track(toolLine(cb.name));
-          openTool = { el: t, name: cb.name || 'tool', json: '' };
+          openTool = { el: t, name: cb.name || 'tool', json: '', id: cb.id || null };
           if (cb.id) toolsById[cb.id] = openTool;
           flushMd();
           curBubble = null; // text after a tool starts a fresh block
@@ -2811,6 +2876,15 @@
               const io = ioBox([['IN', cut ? cut.shown : full, cut]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
+            // 4.4: an auto-approved edit gets its diff at tool_result time, built from this
+            // INPUT (the live wire carries no structuredPatch — probed 2026-08-05). Stash it
+            // on the toolsById record (same object as openTool) and ask Kotlin for the gutter
+            // line NOW — pre-apply is the only moment old_string is still findable in the file.
+            if (openTool.id && (openTool.name === 'Edit' || openTool.name === 'Write' ||
+                                openTool.name === 'MultiEdit')) {
+              openTool.edit = inp;
+              bridge({ kind: 'lineStart', id: openTool.id, tool: openTool.name, input: openTool.json });
+            }
           } catch (_) {}
           openTool = null;
         } else if (curThink) {
@@ -2843,7 +2917,7 @@
       // Live reads the STORE, replay reconstructs from increments — different sources because the
       // store holds only the current state, but both render through the same checklist.
       if (t.name === 'TaskCreate' || t.name === 'TaskUpdate' || t.name === 'TaskList') {
-        bridge({ kind: 'tasks' });
+        bridge({ kind: 'tasks', id: b.tool_use_id });   // echoed back so the checklist can sit under THIS line
       }
       // Every tool's result, not just Bash's — except the ones whose outcome is already on screen
       // (LIM.resultSkip, shared with the replay parser). Rendering ALL of them would have added
@@ -2860,6 +2934,19 @@
         else if (Array.isArray(b.content)) raw = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
         const note = resultNote(raw);
         if (note) { const n = noteLine(note); if (n) (t.io || t.el).after(n); } }
+      // Auto-approved edit (4.4): no permission card claimed this tool_use (supersedeEdit
+      // never matched it), so draw the SAME resolved card replay draws — from the stashed
+      // INPUT, with the pre-apply gutter line if the __lineStart answer made it back.
+      // Errors keep the existing failure surface (red dot + error OUT box below).
+      if (t.edit && !t.superseded && !b.is_error) {
+        const card = document.createElement('div'); card.className = 'card warn';
+        if (fillAppliedCard(card, { text: t.name, file: t.edit.file_path || t.edit.path,
+              edits: t.edit.edits, oldStr: t.edit.old_string, newStr: t.edit.new_string,
+              content: t.name === 'Write' ? t.edit.content : null, lineStart: t.lineStart })) {
+          (t.io || t.el).after(card); foldBlock(card.querySelector('.diff')); maybeScroll();
+        }
+        t.edit = null;
+      }
       if (LIM.resultSkip.indexOf(t.name) !== -1 && !b.is_error) return;
       // Images the tool returned (item 8). Drawn BEFORE the text early-return below, because an
       // image-only result has no text at all — which is exactly how a screenshot used to vanish.
@@ -2876,7 +2963,7 @@
       let txt = '';
       if (typeof b.content === 'string') txt = b.content;
       else if (Array.isArray(b.content)) txt = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
-      txt = (txt || '').trim();
+      txt = stripPlumbing((txt || '').trim());   // tags off BEFORE the cut, same as replay (5.9)
       if (!txt) return;
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
       // The CLI's own truncation, above ours. Its facts live on `toolUseResult` for replay, but the
@@ -2938,10 +3025,11 @@
   }
   // Timeline status line with an optional leading glyph that hangs in the dot column
   // (so icon + text align with .blk / .think / .retry). Text is set safely (textContent).
-  // The todo checklist — how you follow a long turn without reading every tool line. TodoWrite
-  // sends its WHOLE list on every call, so this needs no aggregation: the newest call is the state.
-  // (TaskCreate/TaskUpdate are increments and would need real state; TaskList already renders its
-  // list through the ordinary OUT box, so neither is handled here.)
+  // The todo checklist. Three feeders, all whole-list snapshots (never increments by the time
+  // they get here): TodoWrite's input at content_block_stop, the Kotlin task store via __tasks
+  // after every TaskCreate/TaskUpdate/TaskList result (the frame's `id` relocates the box under
+  // the tool line that asked — replay's layout), and replayed records' `todos`. el() appends at
+  // the current position; callers that need it elsewhere MOVE the returned box with .after().
   // `activeForm` is the CLI's present-continuous phrasing ("Writing the parser"), which is exactly
   // right for the one item in flight and wrong for the rest — so it is used only there.
   function todoList(items) {
@@ -3212,30 +3300,35 @@
       } else if (s.type === 'addRules' && s.rules && s.rules.length) {
         if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], sigs: [], parts: [], session: s.destination === 'session' }; out.push(ruleEntry); }
         ruleEntry.idxs.push(idx);
-        // parts keeps the suggestions separate so the split menu can grant ONE of them; rules
-        // stays flat for the merged button and the done-text chips.
-        // Both are DEDUPED by rule text: sub-commands of one compound command often need the same
-        // grant (two greps over the same directory), so the CLI sends the identical rule in more
-        // than one suggestion — which rendered as the same chip twice, and would have been two
-        // identical menu rows. Dedupe is display-only: every contributing index is kept, because
-        // the CLI persists a suggestion only if its own index comes back.
-        // Identity for deduping is the WHOLE grant — tool, raw rule and destination — not the text
-        // shown. Two different grants can render the same string (Read(//p/**) and Grep(//p/**)
-        // both display as //p/**, and one rule can be offered both for the session and persisted),
-        // and folding those would grant wider scope than the row's single line admits.
+        // parts is one entry per RULE, so the split menu can grant a single sub-command.
+        // MEASURED 2026-08-09 against CLI 2.1.226: a compound command arrives as ONE addRules
+        // suggestion whose rules[] holds one rule per sub-command (mixed payloads with several
+        // one-rule suggestions exist too — a command rule plus a Read path rule). The old
+        // per-SUGGESTION parts turned a compound card into a single part, so the split caret
+        // never appeared (manual-test 6.4). Each part carries "sugIdx.ruleIdx" picks — the
+        // grant echoes a SUBSET of that suggestion's rules, which the CLI accepts and persists
+        // exactly (probed: a subset echo wrote only the one rule to settings.local.json).
+        // rules stays flat for the merged button and the done-text chips. Both are DEDUPED by
+        // the WHOLE grant — tool, raw rule and destination, not the text shown: two different
+        // grants can render the same string (Read(//p/**) and Grep(//p/**) both display as
+        // //p/**, and one rule can be offered both for the session and persisted), and folding
+        // those would grant wider scope than the row's single line admits. Dedupe is
+        // display-only: every contributing pick is kept, so granting a folded row still echoes
+        // each source suggestion's copy of the rule.
         const txts = [], sigs = [];
         s.rules.forEach(function (r) {
           txts.push(r.ruleContent ? r.ruleContent.replace(/:\*$/, '') : r.toolName);
           sigs.push((r.toolName || '') + '\u0001' + (r.ruleContent || '') + '\u0001' + (s.destination || ''));
         });
         sigs.forEach(function (sig, n) {
-          if (ruleEntry.sigs.indexOf(sig) !== -1) return;   // the same grant, sent twice
-          ruleEntry.sigs.push(sig); ruleEntry.rules.push(txts[n]);
+          const pick = idx + '.' + n;
+          if (ruleEntry.sigs.indexOf(sig) === -1) {
+            ruleEntry.sigs.push(sig); ruleEntry.rules.push(txts[n]);
+          }
+          const twin = ruleEntry.parts.filter(function (p) { return p.key === sig; })[0];
+          if (twin) twin.picks.push(pick);
+          else ruleEntry.parts.push({ key: sig, picks: [pick], rules: [txts[n]] });
         });
-        const key = sigs.join('\u0000');
-        const twin = ruleEntry.parts.filter(function (p) { return p.key === key; })[0];
-        if (twin) twin.idxs.push(idx);
-        else ruleEntry.parts.push({ key: key, idxs: [idx], rules: txts });
       } else if (s.type === 'addDirectories' && s.directories && s.directories.length) {
         out.push({ idxs: [idx], label: 'Allow ' + s.directories.join(', '),
           title: 'Allow file access to ' + s.directories.join(', ') +
@@ -3289,12 +3382,13 @@
     return rows;
   }
   function previewHtml(tool, inp, lineStart) {
-    if (inp.old_string !== undefined || inp.new_string !== undefined) {
-      return '<div class="diff">' + renderEditDiff(inp.old_string || '', inp.new_string || '', lineStart) + '</div>';
-    }
-    if (inp.content !== undefined) {
-      return writeDiffHtml(inp.content, (typeof lineStart === 'number' ? lineStart : 1));
-    }
+    // Edit / Write / MultiEdit previews delegate to the same replayDiff the resolved cards
+    // use — one diff producer for card preview, live auto-approved, and replay (4.4). Also
+    // gives MultiEdit a preview at all: its {edits:[…]} shape matched no branch here, so a
+    // multi-hunk edit used to ask for approval showing NOTHING.
+    const d = replayDiff({ edits: inp.edits, oldStr: inp.old_string, newStr: inp.new_string,
+                           content: inp.content, lineStart: lineStart });
+    if (d) return d;
     const cmd = inp.command || inp.description;
     // slice BEFORE escaping: slicing the escaped string can cut an entity (&amp;) in half and
     // makes the real limit depend on how many specials the command happens to contain
@@ -3402,13 +3496,17 @@
     if (ev.tool === 'AskUserQuestion' && inp.questions) return renderAsk(ev, inp);
     const isPlan = ev.tool === 'ExitPlanMode' || inp.plan !== undefined;
     const file = inp.file_path || inp.path || '';
+    // This card owns the edit's diff now — the optimistic tool-line record (4.4) must not
+    // ALSO render one at tool_result time, or manual mode double-renders every edit.
+    if (ev.tool === 'Edit' || ev.tool === 'Write' || ev.tool === 'MultiEdit') supersedeEdit(ev.tool, file);
     const suggs = permSuggestions(ev.suggestions, isPlan);
     const suggBtns = suggs.map(function (s, i) {
       const main = '<button class="alt" data-s="' + i + '" title="' + escA(s.title) + '">' +
         SVG_CHECKS + esc(s.label) + '</button>';
       // One grant stays a plain button — a dropdown holding a single item is noise. With several
-      // (a compound command arrives as one suggestion per sub-command) the main half still grants
-      // the lot, and the caret opens them individually for a deliberate partial grant.
+      // (a compound command arrives as ONE addRules suggestion holding one rule per sub-command —
+      // measured 2026-08-09) the main half still grants the lot, and the caret opens the rules
+      // individually for a deliberate partial grant.
       if (!s.parts || s.parts.length < 2) return main;
       return '<span class="split">' + main +
         '<button class="alt more" data-s="' + i + '" aria-haspopup="true"' +
@@ -3417,9 +3515,15 @@
           const txt = part.rules.join(', ');
           // The double-check icon carries the meaning, as it already does on the button above:
           // without a marker a row is a bare command and reads like something about to RUN rather
-          // than a permission about to be granted. Tooltip still spells it out in words.
+          // than a permission about to be granted. The tooltip spells out the rule's SCOPE —
+          // a trailing "*" is the CLI's wildcard (prefix rule: any arguments), everything else
+          // grants exactly that command; the distinction is the CLI's choice, shown verbatim.
+          const wild = / \*$/.test(txt);
+          const scope = wild
+            ? 'Always allow any command starting with "' + txt.replace(/ \*$/, '') + '"'
+            : 'Always allow exactly "' + txt + '"';
           return '<div class="popup-item" data-s="' + i + '" data-p="' + j + '"' +
-            ' title="Always allow ' + escA(txt) + '"><div class="pi-ic">' + SVG_CHECKS + '</div>' +
+            ' title="' + escA(scope) + '"><div class="pi-ic">' + SVG_CHECKS + '</div>' +
             '<div class="pi-body"><div class="pi-title">' + esc(txt) + '</div></div></div>';
         }).join('') + '</div></span>';
     }).join('');
@@ -3475,9 +3579,10 @@
     Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item'), function (it) {
       it.onclick = function () {
         const s = suggs[+it.dataset.s], part = s.parts[+it.dataset.p];
-        // only THIS row's indexes go back, so the CLI persists just the rule that was picked
-        // (several indexes when duplicate suggestions were folded into one row)
-        done(true, { idxs: part.idxs, rules: part.rules, doneText: s.doneText });
+        // only THIS row's picks go back — "sugIdx.ruleIdx" tokens; Kotlin narrows each
+        // source suggestion to just the picked rule(s), so the CLI persists exactly this row
+        // (several picks when duplicate rules were folded into one row)
+        done(true, { idxs: part.picks, rules: part.rules, doneText: s.doneText });
       };
     });
   }

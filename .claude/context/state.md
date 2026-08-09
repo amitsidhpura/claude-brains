@@ -23,9 +23,7 @@ itself was committed as `3278aac` (2026-08-08); all 2026-08-09 work is uncommitt
 
 ## Issue register highlights (full detail lives in docs/manual-test.md)
 - **Real bugs**: openDiff accept reports FILE_SAVED but never writes (`DiffReview.kt:56`);
-  custom commands filtered out of the
-  `/` menu (`cmdKind`, chat.html:2034 — no custom detection); auto-approved edits render no
-  diff live (only the permission card ever draws one; replay is richer).
+  custom commands filtered out of the `/` menu (`cmdKind` — no custom detection).
 - **Cosmetic**: raw `<tool_use_error>`/`<system-reminder>` wrappers in OUT boxes; sub-agent
   async-launch "internal metadata" OUT box + harness annotations in the progress line;
   "unknown — retrying (n/10)" + duplicated first attempt; 6.4 split-button arrow never
@@ -40,11 +38,20 @@ itself was committed as `3278aac` (2026-08-08); all 2026-08-09 work is uncommitt
 - [ ] Fix issues, suggested order: 10.5 openDiff accept-save (roadmap-relevant) →
       3.1 custom commands (then re-test 9.10; fixture
       `claude-brains-testing/.claude/commands/dummy-cmd.md` is in place; the harness's
-      `commands_changed` seeding trick applies) → 4.4 live diff for
-      auto-approved edits
-      → plumbing-leak strips → replay fidelity (8.2 / 8.7).
-      (7.3 chip CSS and 2.9 drag-drop: done 2026-08-09; 2.9's AWT DropTarget still needs a
-      hardware drag in the next runIde.)
+      `commands_changed` seeding trick applies)
+      → 7.4 async-metadata suppression → replay fidelity (8.2 / 8.7).
+      (5.9 wrapper strip: done 2026-08-09 — `RenderLimits.PLUMBING_TAGS`/`stripPlumbing`,
+      shared via LIMITS.plumbingTags. 5.14 scroll pin: done 2026-08-09 — direction-based
+      unpin + `__tasks` maybeScroll; feel-check the heavy turn next runIde. 5.13 addendum:
+      Task* checklists now attach under their own tool line via a tool_use_id echoed on the
+      `__tasks` frame — live matches replay; was the detached-duplicate stack the user
+      screenshotted. 6.4 split caret: done 2026-08-09 — parts per RULE not per suggestion
+      (measured: compound = ONE addRules suggestion with rules[]); "N.R" grant tokens narrow
+      the echoed suggestion, subset-echo wire-probed as accepted; protocol doc updated.)
+      (Done 2026-08-09: 7.3 chip CSS, 2.9 drag-drop, 4.4 live diffs for auto-approved edits
+      — optimistic-with-supersede via `fillAppliedCard`/`supersedeEdit`/`lineStart` bridge
+      round-trip; MultiEdit preview fixed as a rider. Next runIde re-verifies: hardware drag,
+      hardware Delete, Escape flags, 4.4 visuals in acceptEdits mode.)
 - [ ] Decide whether to re-scope section 10 of the checklist against the CLI 2.1.226
       model-facing tool restriction, or wait to see if upstream reverts it.
 - [ ] Roadmap after fixes: editor-title accept/reject → @-symbol mentions → worktrees →

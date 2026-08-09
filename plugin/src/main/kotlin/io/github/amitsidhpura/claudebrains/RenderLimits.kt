@@ -269,11 +269,26 @@ object RenderLimits {
         RESULT_NOTE.find(text.trim())?.groupValues?.get(1)
             ?.replace(Regex("""\s+"""), " ")?.trim()?.takeIf { it.isNotEmpty() }
 
+    /**
+     * CLI plumbing wrappers that arrive as literal tags in tool-result TEXT — `<tool_use_error>`
+     * around a failed tool's message, `<system-reminder>` around advisory notes (an empty-file
+     * Read). The TUI presents the inner text without the tags (manual-test 5.9); both renderers
+     * strip them through this rule. Tag NAMES here; open+close tags are removed wherever they
+     * appear, inner text kept. Mirrored by `stripPlumbing` in chat.html via LIMITS.plumbingTags.
+     */
+    val PLUMBING_TAGS = listOf("tool_use_error", "system-reminder")
+
+    fun stripPlumbing(text: String): String {
+        var t = text
+        for (tag in PLUMBING_TAGS) t = t.replace("<$tag>", "").replace("</$tag>", "")
+        return t
+    }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
         return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX," +
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
-            "inKeys:${arr(IN_KEYS)}}"
+            "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}}"
     }
 }

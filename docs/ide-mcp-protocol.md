@@ -197,9 +197,17 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
 - **`permission_suggestions`** on `can_use_tool` are ready-made "don't ask again" options
   (`setMode` / `addRules {toolName, ruleContent?}` / `addDirectories`, each with `behavior` and
   `destination`: `userSettings|projectSettings|localSettings|session|cliArg`). Echo the accepted one
-  back verbatim in `updatedPermissions` on the allow response: `addRules`+`localSettings` writes
+  back in `updatedPermissions` on the allow response: `addRules`+`localSettings` writes
   `.claude/settings.local.json`; `setMode acceptEdits` silences further edit prompts. Malformed
   entries are **silently dropped** — verify by behaviour, not by lack of error.
+  - **Compound-command shape (measured 2026-08-09, 2.1.226):** the rules for a multi-part Bash
+    command arrive as **ONE `addRules` suggestion whose `rules[]` holds one rule per
+    sub-command** (`factor 97 && mcookie ; openssl rand -hex 4 && base32 <<< hello` → a single
+    suggestion with four rules) — NOT one suggestion per sub-command. Mixed payloads exist too:
+    a command rule and a `Read //etc/**` path rule came as two separate one-rule suggestions.
+  - **Subset echo is accepted (probed):** `updatedPermissions` may carry a suggestion whose
+    `rules` was narrowed to a subset — the CLI persisted exactly `Bash(factor 97)` from a
+    four-rule suggestion, nothing else. This is what makes per-sub-command grants possible.
 - **The session scratchpad is pre-authorized.** Edit/Write into `/tmp/claude-1000/<enc-cwd>/
   <session>/scratchpad/` never emits `can_use_tool`, even in `default` mode — the CLI treats its
   own temp area as approved (probed: a scratchpad Write ran silently while the cwd Write in the

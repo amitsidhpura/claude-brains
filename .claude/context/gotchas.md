@@ -160,3 +160,9 @@
   Deliberately blank lines: Bash (IN box has the command), AskUserQuestion, ExitPlanMode,
   TodoWrite.
 - Windowed replay means DOM search (browser find) only sees loaded blocks.
+- `.turn-body`'s `content-visibility` PAINT-CONTAINS: any popup absolutely positioned inside a
+  turn is clipped at the turn's box (6.4's card menu opened as a sliver) — and containment
+  blocks HIT-TESTING too, so clipped elements still pass querySelector/synthetic-click harness
+  assertions. Escape hatch: `.turn-body:has(.card-menu.show){content-visibility:visible}`;
+  regression pin for any in-turn overlay is `elementFromPoint` at the element's center, never
+  a DOM query. New in-turn popups need the same `:has` lift.

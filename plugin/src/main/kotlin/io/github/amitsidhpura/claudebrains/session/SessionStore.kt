@@ -1026,7 +1026,9 @@ object SessionStore {
             val fromBlock = resultText(block["content"]).takeIf { it.isNotBlank() }
             val stdout = res?.get("stdout")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val stderr = res?.get("stderr")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-            val txt = fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n")
+            // Plumbing tags stripped BEFORE the cut, so the cap counts real output — same order
+            // as the live path (onUserEvent strips right after assembling the text).
+            val txt = RenderLimits.stripPlumbing(fromBlock ?: listOfNotNull(stdout, stderr).joinToString("\n"))
             // The CLI's OWN truncation, above ours: an oversized result arrives as a wrapper naming
             // the file it was spilled to. Unwrap it so the box shows the preview rather than the raw
             // <persisted-output> tag, and so what we then cut is real output.

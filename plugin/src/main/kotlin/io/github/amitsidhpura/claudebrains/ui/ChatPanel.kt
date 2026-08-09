@@ -148,11 +148,13 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "perm" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val allow = msg["allow"]?.jsonPrimitive?.content == "true"
-                // "sugg" is a comma-separated list of permission_suggestions indexes the user
-                // accepted — usually one, but the merged "Always allow" button (one addRules
-                // suggestion per sub-command of a compound command) sends all of them at once.
+                // "sugg" is a comma-separated list of grant tokens: "N" accepts suggestion N
+                // whole (the merged "Always allow" button sends every suggestion's index), and
+                // "N.R" accepts only rule R of suggestion N — a split-menu partial grant of a
+                // compound command, whose rules arrive as ONE addRules suggestion (measured
+                // 2026-08-09, CLI 2.1.226). "-1" is the no-suggestion sentinel.
                 val suggs = (msg["sugg"]?.jsonPrimitive?.content ?: "")
-                    .split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it >= 0 }
+                    .split(',').map { it.trim() }.filter { it.isNotEmpty() && it != "-1" }
                 session.respondPermission(id, allow, suggs)
             }
             "answer" -> {
@@ -163,6 +165,24 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
             "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
+            // Pre-apply gutter lookup for an auto-approved edit's diff (4.4). The page asks at
+            // content_block_stop — before the CLI runs the tool — which is the only moment
+            // old_string is still findable. File IO goes to a pooled thread; the answer rides
+            // a __lineStart frame and may legitimately arrive after tool_result (late = the
+            // diff simply renders without a gutter, same as a null answer).
+            "lineStart" -> {
+                val id = msg["id"]?.jsonPrimitive?.content ?: return
+                val tool = msg["tool"]?.jsonPrimitive?.content ?: return
+                val input = msg["input"]?.jsonPrimitive?.content ?: return
+                ApplicationManager.getApplication().executeOnPooledThread {
+                    val line = editLineStart(tool, input)
+                    pushFrame(buildJsonObject {
+                        put("type", "__lineStart")
+                        put("id", id)
+                        line?.let { put("line", it) }
+                    })
+                }
+            }
             "new" -> {
                 transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
                 clearLog(); session.newConversation(); pushTitle(null)
@@ -193,7 +213,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             // The CLI keeps the task list on disk, keyed by session id; the webview asks after
             // any Task* call rather than us parsing the stream for them.
-            "tasks" -> pushTasks()
+            "tasks" -> pushTasks(msg["id"]?.jsonPrimitive?.content)
             "more" -> pushEarlier()
             "history" -> pushSessions()
             "delete" -> msg["id"]?.jsonPrimitive?.content?.let {
@@ -206,7 +226,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
      * Current task list for the live session, mapped into the shape the checklist renderer takes
      * (`content`/`status`/`activeForm`) so live and replay feed the SAME builder.
      */
-    private fun pushTasks() {
+    private fun pushTasks(toolUseId: String? = null) {
         val id = session.currentSessionId() ?: return
         val items = session.tasks(id).map { t ->
             val o = t.jsonObject
@@ -219,6 +239,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         if (items.isEmpty()) return
         pushFrame(buildJsonObject {
             put("type", "__tasks")
+            // Echoed so the page can attach the checklist to the Task* tool line that asked —
+            // without it every snapshot appended at the turn's end, and a parallel-call turn
+            // stacked detached duplicate lists there (the live-vs-replay gap the user showed).
+            toolUseId?.let { put("id", it) }
             put("items", JsonArray(items))
         })
     }
@@ -313,15 +337,22 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     }
 
     /**
-     * 1-based line where an Edit/Write lands in the file, so the diff can show a line-number gutter.
-     * Edit: locate `old_string` in the current file text. Write: line 1. null when it can't be found.
+     * 1-based line where an Edit/Write/MultiEdit lands in the file, so the diff can show a
+     * line-number gutter. Edit: locate `old_string` in the current file text. MultiEdit: locate
+     * the FIRST edit's old_string (the page numbers only the first section). Write: line 1.
+     * null when it can't be found. Must run PRE-apply — once the CLI has written the file,
+     * old_string is gone and this correctly answers null (the diff renders without a gutter).
      */
     private fun editLineStart(tool: String, inputJson: String): Int? {
         val obj = runCatching { json.parseToJsonElement(inputJson).jsonObject }.getOrNull() ?: return null
         if (tool == "Write") return 1
-        if (tool != "Edit") return null
+        val old = when (tool) {
+            "Edit" -> obj["old_string"]?.jsonPrimitive?.content
+            "MultiEdit" -> (obj["edits"] as? JsonArray)?.firstOrNull()
+                ?.let { it as? JsonObject }?.get("old_string")?.jsonPrimitive?.content
+            else -> null
+        } ?: return null
         val path = (obj["file_path"] ?: obj["path"])?.jsonPrimitive?.content ?: return null
-        val old = obj["old_string"]?.jsonPrimitive?.content ?: return null
         val text = readFileText(path) ?: return null
         val idx = text.indexOf(old)
         if (idx < 0) return null
