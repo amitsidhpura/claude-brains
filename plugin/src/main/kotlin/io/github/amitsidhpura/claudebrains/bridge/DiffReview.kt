@@ -6,32 +6,41 @@ import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.editor.ChainDiffVirtualFile
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.util.DiffUserDataKeys
-import com.intellij.notification.Notification
-import com.intellij.notification.NotificationAction
-import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.IconLoader
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.intellij.ui.JBColor
+import com.intellij.util.ui.JBUI
 import io.github.amitsidhpura.claudebrains.findVFile
 import io.github.amitsidhpura.claudebrains.readLocked
+import java.awt.Color
+import java.awt.FlowLayout
 import java.io.File
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JPanel
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Shows Claude's proposed change as a real IntelliJ diff and resolves (via the returned future)
- * when the user decides. Matches the VS Code host's openDiff contract — read from the installed
- * extension (2.1.222) and cross-checked against the CLI's consumer in the 2.1.226 binary,
- * 2026-08-09:
+ * Shows Claude's proposed change as a real IntelliJ diff — Accept/Reject as prominent buttons
+ * on a bar under the diff editor — and resolves (via the returned future) when the user
+ * decides. Matches the VS Code host's openDiff contract — read from the installed extension
+ * (2.1.222) and cross-checked against the CLI's consumer in the 2.1.226 binary, 2026-08-09:
  *   accept     -> ["FILE_SAVED", <final right-pane text>]  (the user may have edited the pane)
  *   reject     -> ["DIFF_REJECTED", <tab_name>]
  *   tab closed -> ["TAB_CLOSED"]
+ *
+ * One local EXTENSION on top of that contract: when the caller passes [acceptAllLabel] (the
+ * permission flow, mirroring its panel card's suggestion button), the bar grows a third button
+ * that resolves ["FILE_SAVED_ALL", <final right-pane text>]. The bridge flow never passes it,
+ * so bridge verdicts stay exactly the reference set above.
  *
  * The IDE deliberately does NOT write the file. In the reference implementation BOTH diff panes
  * are temp-provider documents — the real file is never touched — and the CLI applies the accepted
@@ -66,6 +75,7 @@ class DiffReview(private val project: Project) {
         newContent: String,
         tabName: String,
         readOnly: Boolean = false,
+        acceptAllLabel: String? = null,
     ): CompletableFuture<List<String>> {
         val future = CompletableFuture<List<String>>()
         pending.add(future)
@@ -112,35 +122,97 @@ class DiffReview(private val project: Project) {
             // Opened as OUR OWN ChainDiffVirtualFile through the ordinary editor API rather
             // than DiffManager.showDiff, so the tab can be closed deterministically later —
             // see [files]. The platform's diff editor provider picks the file up like any other.
+            // The verdict buttons ride a bar attached UNDER the diff editor via
+            // addBottomComponent — the same slot the platform hangs its own below-editor strips
+            // on, attached to the FileEditor so it survives viewer switches (side-by-side <->
+            // unified) and is disposed with the tab. Chosen after three dead ends (2026-08-09,
+            // chain in gotchas.md): toolbar CONTEXT_ACTIONS icons drowned among the standard
+            // diff icons, toolbar TEXT buttons can't be had warning-free across 242→262, and
+            // the NOTIFICATION_PROVIDERS banner renders only at the TOP (user wants bottom, no
+            // prose, no tint). isDone guards make a late click a no-op, and however the review
+            // ends the tab closes (closeWith), taking the bar with it — so a stale Accept can
+            // never fire into a finished (or abandoned) call.
             if (!future.isDone) {
                 val diffFile = ChainDiffVirtualFile(SimpleDiffRequestChain(request), title)
                 files[future] = diffFile
-                FileEditorManager.getInstance(project).openFile(diffFile, true)
-            }
-
-            val group = NotificationGroupManager.getInstance().getNotificationGroup("Claude Brains")
-            val notif = group.createNotification(
-                "Claude proposes changes to $fileName",
-                "Review the diff, then Accept or Reject.",
-                NotificationType.INFORMATION,
-            )
-            notif.addAction(NotificationAction.createSimple("Accept") {
-                if (!future.isDone) {
-                    future.complete(listOf("FILE_SAVED", readLocked { proposed.document.text }))
+                val fem = FileEditorManager.getInstance(project)
+                fem.openFile(diffFile, true).forEach { editor ->
+                    fem.addBottomComponent(editor, verdictBar(
+                        onAccept = {
+                            if (!future.isDone) {
+                                future.complete(listOf("FILE_SAVED", readLocked { proposed.document.text }))
+                            }
+                        },
+                        acceptAllLabel = acceptAllLabel,
+                        onAcceptAll = {
+                            if (!future.isDone) {
+                                future.complete(listOf("FILE_SAVED_ALL", readLocked { proposed.document.text }))
+                            }
+                        },
+                        onReject = {
+                            if (!future.isDone) future.complete(listOf("DIFF_REJECTED", tabName))
+                        },
+                    ))
                 }
-            })
-            notif.addAction(NotificationAction.createSimple("Reject") {
-                if (!future.isDone) future.complete(listOf("DIFF_REJECTED", tabName))
-            })
-            // No auto-verdict on balloon expiry: dismissing a notification is not a decision,
-            // and the diff tab remains the decision surface (closing IT resolves TAB_CLOSED).
-            // The balloon's lifecycle is tied to the future instead: however the review ends —
-            // buttons, tab close, close_tab, caller death — the balloon dies with it, so a
-            // stale Accept can never fire into a finished (or abandoned) call.
-            expireWith(future, notif)
-            if (!future.isDone) notif.notify(project)
+            }
+            closeWith(future)
         }
         return future
+    }
+
+    /**
+     * The bar hung under the diff editor: no prose, no tint (user's spec 2026-08-09) — just
+     * Accept ✓ / Reject ✕ buttons, centered, separated from the diff by a themed hairline.
+     * Both wear the panel card's button colours (chat.css: .ok --ok/--ok-hover for Accept,
+     * .no #3a3d41/#474a4f/--fg for Reject — mirrored here because Swing can't read CSS
+     * tokens; keep in sync) AND its exact glyphs: /icons/accept.svg + reject.svg are the
+     * card's own SVG_CHECK / SVG_X from chat.html, bundled because the closest platform
+     * icons don't match (Actions.Commit is the VCS -o- glyph in the new UI, Actions.Cancel's
+     * ✕ differs from the card's — user screenshots 2026-08-09). [acceptAllLabel] non-null adds
+     * the card's suggestion button between them — .alt is "styled exactly like Accept, only
+     * the double-check icon tells them apart" (chat.css), so it shares Accept's colours and
+     * wears SVG_CHECKS (accept-all.svg). Button order matches cardBtns(): ok, alt, no.
+     */
+    private fun verdictBar(
+        onAccept: () -> Unit,
+        acceptAllLabel: String? = null,
+        onAcceptAll: () -> Unit = {},
+        onReject: () -> Unit,
+    ): JComponent {
+        val bar = JPanel(FlowLayout(FlowLayout.CENTER, JBUI.scale(6), JBUI.scale(5)))
+        bar.border = JBUI.Borders.customLineTop(JBColor.border())
+        bar.add(cardButton("Accept", IconLoader.getIcon("/icons/accept.svg", DiffReview::class.java),
+            base = Color(0x0D542B), hover = Color(0x146E3A), text = Color.WHITE, onClick = onAccept))
+        acceptAllLabel?.let { label ->
+            bar.add(cardButton(label, IconLoader.getIcon("/icons/accept-all.svg", DiffReview::class.java),
+                base = Color(0x0D542B), hover = Color(0x146E3A), text = Color.WHITE, onClick = onAcceptAll))
+        }
+        bar.add(cardButton("Reject", IconLoader.getIcon("/icons/reject.svg", DiffReview::class.java),
+            base = Color(0x3A3D41), hover = Color(0x474A4F), text = Color(0xD5D8DD), onClick = onReject))
+        return bar
+    }
+
+    /**
+     * A JButton in the panel card's clothes. Colored via the "JButton.*" client properties,
+     * which DarculaButtonUI/DarculaButtonPainter honor on both 242 and 262 (checked in
+     * bytecode) — a plain setBackground() is IGNORED by the LAF. Hover is hand-rolled off the
+     * button model's rollover state, matching the card's :hover swap.
+     */
+    private fun cardButton(
+        label: String,
+        icon: javax.swing.Icon,
+        base: Color,
+        hover: Color,
+        text: Color,
+        onClick: () -> Unit,
+    ): JButton = JButton(label, icon).apply {
+        putClientProperty("JButton.backgroundColor", base)
+        putClientProperty("JButton.borderColor", base)
+        putClientProperty("JButton.textColor", text)
+        model.addChangeListener {
+            putClientProperty("JButton.backgroundColor", if (model.isRollover) hover else base)
+        }
+        addActionListener { onClick() }
     }
 
     /** close_tab / closeAllDiffTabs: an undecided review resolves TAB_CLOSED, as the reference's own close path does. */
@@ -156,7 +228,7 @@ class DiffReview(private val project: Project) {
     /**
      * The question was answered somewhere else (the panel card, in the permission flow): this
      * review's verdict can no longer matter. Cancelling routes through the same completion hook
-     * as every other ending, which closes the diff tab and expires the balloon.
+     * as every other ending, which closes the diff tab.
      */
     fun dismiss(future: CompletableFuture<List<String>>) {
         future.cancel(true)
@@ -168,12 +240,11 @@ class DiffReview(private val project: Project) {
      * Closed by the exact file handle held since creation; on a TAB_CLOSED verdict the tab is
      * already gone and closeFile is a silent no-op.
      */
-    private fun expireWith(future: CompletableFuture<List<String>>, notif: Notification) {
+    private fun closeWith(future: CompletableFuture<List<String>>) {
         future.whenComplete { _, _ ->
             pending.remove(future)
             val diffFile = files.remove(future)
             ApplicationManager.getApplication().invokeLater {
-                notif.expire()
                 diffFile?.let { FileEditorManager.getInstance(project).closeFile(it) }
             }
         }

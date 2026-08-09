@@ -559,3 +559,54 @@ builds its task map from the edge events instead).
 controllers are stubbed (`hasActiveSession: false`, `registerTool: ()=>{}`); `tool_use_summary`
 produces no view-model; `claude-vscode.update` and `.createWorktree` commands are declared but
 never registered.
+
+---
+
+## 10. Measured payload facts (promoted from gotchas.md, 2026-08-09)
+
+Shape-level facts consulted only when touching their specific handler — moved here so the
+per-session gotchas reload stays lean. Each was measured against real transcripts, a live
+stream, or the CLI binary; none is inferred.
+
+- **Live vs persisted spellings of one event differ** — the worked example behind gotchas.md's
+  accept-both rule: live `system/api_retry` `{attempt, max_retries, retry_delay_ms,
+  error_status, error:"<enum string>"}` vs persisted `system/api_error` `{retryAttempt,
+  maxRetries, retryInMs, error:{message, formatted}}` — `error` even changes TYPE. Same family:
+  `prevent_continuation` / `preventContinuation`. The api_retry `error` enum (five codes; a
+  no-status network failure is the literal `unknown`) resolves through chat.html's
+  `RETRY_REASONS` (9.1).
+- **AskUserQuestion**: the `can_use_tool` reply must carry `updatedInput` with answers keyed by
+  question TEXT; a plain allow silently returns "user did not answer".
+- **Sub-agent progress** (`task_started` / `task_progress` / `task_notification`) is LIVE-ONLY,
+  never persisted; `task_notification` omits `subagent_type` (remember it from `task_started`).
+  Child `assistant`/`user` events (`parent_tool_use_id`) are deliberately ignored.
+- **`background_tasks_changed`** has REPLACE semantics — assign the set, never merge, or
+  finished tasks live forever (a level signal; see glossary "Level vs edge signal").
+- **`result.modelUsage`** is a MAP that routinely includes side models the user never picked:
+  match the raw key (it carries the `[1m]` tag) → `canonicalModel` → on no match change
+  NOTHING. No denominator exists until the first turn ends, and the `[1m]` seed heuristic must
+  check BOTH `resolvedModel` and `value` (fable differs). Usage above the known window PROMOTES
+  to 1M — a big session showing the same % on a 200k and a 1M model is correct, not a stuck
+  denominator.
+- **`queue-operation` records** are the CLI's own pipeline bookkeeping (matched
+  enqueue/dequeue pairs, one per turn) — there is no CLI queue to drive; message queueing is
+  client-side.
+- **No `set_effort`/`set_thinking_level` control request exists** (only
+  `set_max_thinking_tokens`, a raw token count) — the effort slider rides a muted `/effort`
+  turn (`effortMuted`, idle-gated).
+- **Tool-returned images**: the discriminator is `toolUseResult.type=="image"` — NOT `isImage`,
+  a Bash-result field that is always false. `dimensions` is
+  `{originalWidth,originalHeight,displayWidth,displayHeight}`, not `{width,height}`.
+- **Many transcript `thinking` blocks are empty** — signature only, no body (~2.1k of 6.6k
+  local ones carry text); they replay as nothing, correctly.
+- **Transcript format changed at 2.1.226**: one assistant record per message (blocks inline),
+  plus record types that didn't exist before (`queue-operation`, `attachment` = tool-roster
+  deltas NOT files, `ai-title`, `last-prompt`, `mode`, `custom-title`). OLDER files persist one
+  record PER BLOCK, each repeating the same *cumulative* `message.usage` — summing
+  `output_tokens` over those over-reports ~2.45x unless deduped by `message.id`. Live is
+  immune. Never assume one transcript's shape generalizes.
+- **Transcript file ORDER can lie**: the CLI writes a retry storm's concluding error record
+  BEFORE flushing the buffered `api_error` records (measured on a real network-off session:
+  retries at file positions after the error, timestamps before it). Timestamps and the
+  `parentUuid` chain stay chronological; file order does not. SessionStore reorders exactly
+  this pattern (9.1's replay half).

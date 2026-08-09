@@ -3,6 +3,22 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-09 — Editor verdict UI is a bar UNDER the diff, card-identical, combined grant only
+Accept / Accept-all / Reject live on a `FileEditorManager.addBottomComponent` bar beneath the
+diff editor: centered, no prose, no tint, the panel card's exact colours (chat.css .ok/.no,
+mirrored constants) and exact Lucide glyphs (bundled /icons/accept.svg, accept-all.svg,
+reject.svg). The suggestion button is COMBINED: one click grants every allow-suggestion whole
+("Always allow" when rules are among them, else "Accept all edits"), via the new
+FILE_SAVED_ALL verdict — a permission-flow-only extension; bridge verdicts stay the reference
+three. No split/partial-grant dropdown in the editor — the panel card keeps that.
+**Why:** the two surfaces answer the SAME question, so they must read as one control; the
+user reviewed each iteration in runIde and specified bottom placement, no text, no tint, and
+"combined, not the dropdown". Partial grants are a deliberate act that belongs on the card.
+**Rejected:** toolbar CONTEXT_ACTIONS icons (invisible among diff icons); toolbar text
+buttons (no warning-free API across 242→262); NOTIFICATION_PROVIDERS banner (top-only, loud);
+platform icons (don't match the card's glyphs); split dropdown in the bar (user's explicit
+spec). Mechanics and traps in gotchas.md.
+
 ## 2026-08-09 — Edit permissions are dual-surface, first answer wins; editor close is NOT a grant
 A can_use_tool for Edit/Write/MultiEdit opens the panel card AND a real editor diff (read-only,
 balloon Accept/Reject); `ClaudeSessionService.respondPermission`'s pending map is the arbiter —

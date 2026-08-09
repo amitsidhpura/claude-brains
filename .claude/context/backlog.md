@@ -16,7 +16,11 @@
   the editLineStart reads-fresh-from-disk gotcha, surfaced editor-side.
 
 ## Roadmap (rough order)
-- Editor-title accept/reject
+- Editor accept/reject v2, remaining half: tweak-travel (pane edits ride updatedInput on
+  accept). The buttons half SHIPPED 2026-08-09: Accept ✓ / Reject ✕ text buttons on a plain
+  bar UNDER the diff editor (`FileEditorManager.addBottomComponent`), balloon removed. Two
+  same-day iterations before the user accepted the shape: toolbar icons (unidentifiable),
+  top banner with prose + info tint (wrong position, too loud) — chain in gotchas.md.
 - @-symbol mentions
 - Worktrees
 - Extensibility status view

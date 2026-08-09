@@ -374,13 +374,14 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     }
 
     /**
-     * The editor surface of an edit permission: a real diff (read-only, balloon Accept/Reject)
-     * opened alongside the panel card, either of which answers the can_use_tool. Verdict mapping
+     * The editor surface of an edit permission: a real diff (read-only, Accept/Reject buttons on
+     * the in-editor banner) opened alongside the panel card, either of which answers the
+     * can_use_tool. Verdict mapping
      * differs from the bridge flow on ONE point — TAB_CLOSED here means "the editor bows out",
      * not accept-as-proposed: closing the diff without deciding leaves the card as the sole
      * surface, because a permission must never be granted by a window being tidied away.
      */
-    private fun openEditorPermissionDiff(requestId: String, tool: String, inputJson: String) {
+    private fun openEditorPermissionDiff(requestId: String, tool: String, inputJson: String, suggestionsJson: String?) {
         if (tool != "Edit" && tool != "Write" && tool != "MultiEdit") return
         ApplicationManager.getApplication().executeOnPooledThread {
             val obj = runCatching { json.parseToJsonElement(inputJson).jsonObject }.getOrNull()
@@ -391,12 +392,21 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             // found — e.g. the file changed underneath): a wrong diff is worse than none.
             val proposed = EditProposals.proposedContent(tool, obj, readFileText(path))
                 ?: return@executeOnPooledThread
-            val future = permDiffReview.open(path, proposed, File(path).name, readOnly = true)
+            // The bar's COMBINED suggestion button (user's spec 2026-08-09): one button that
+            // grants every allow-suggestion whole — deliberately no split/partial-grant
+            // dropdown here; the panel card keeps that.
+            val combined = combinedSuggestion(suggestionsJson)
+            val future = permDiffReview.open(
+                path, proposed, File(path).name, readOnly = true,
+                acceptAllLabel = combined?.first,
+            )
             permDiffs[requestId] = future
             future.whenComplete { verdict, _ ->
                 permDiffs.remove(requestId)
                 when (verdict?.firstOrNull()) {
                     "FILE_SAVED" -> respondFromEditor(requestId, allow = true)
+                    "FILE_SAVED_ALL" -> respondFromEditor(requestId, allow = true,
+                        suggestionTokens = combined?.second.orEmpty())
                     "DIFF_REJECTED" -> respondFromEditor(requestId, allow = false)
                     // TAB_CLOSED / cancellation: no answer from the editor; the card stands.
                 }
@@ -404,9 +414,38 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         }
     }
 
+    /**
+     * The editor bar's combined suggestion button: label + grant tokens, or null when the CLI
+     * offered nothing usable. Recognizes the same entries the page's permSuggestions does
+     * (allow setMode/acceptEdits, allow addRules with rules) and grants them ALL whole — each
+     * token is a suggestion's ORIGINAL index, because respondPermission echoes by position.
+     * Label follows the card's vocabulary: rules present -> "Always allow" (the wider grant
+     * names the button), mode-only -> "Accept all edits".
+     */
+    private fun combinedSuggestion(suggestionsJson: String?): Pair<String, List<String>>? {
+        val arr = suggestionsJson
+            ?.let { runCatching { json.parseToJsonElement(it) as? JsonArray }.getOrNull() }
+            ?: return null
+        var hasRules = false
+        val tokens = ArrayList<String>()
+        arr.forEachIndexed { idx, s ->
+            val o = s as? JsonObject ?: return@forEachIndexed
+            val behavior = o["behavior"]?.jsonPrimitive?.contentOrNull
+            if (behavior != null && behavior != "allow") return@forEachIndexed
+            val type = o["type"]?.jsonPrimitive?.contentOrNull
+            val isMode = type == "setMode" && o["mode"]?.jsonPrimitive?.contentOrNull == "acceptEdits"
+            val isRules = type == "addRules" && ((o["rules"] as? JsonArray)?.size ?: 0) > 0
+            if (!isMode && !isRules) return@forEachIndexed
+            if (isRules) hasRules = true
+            tokens.add(idx.toString())
+        }
+        if (tokens.isEmpty()) return null
+        return (if (hasRules) "Always allow" else "Accept all edits") to tokens
+    }
+
     /** Editor verdict → control response, and (when it won the race) retire the panel card. */
-    private fun respondFromEditor(requestId: String, allow: Boolean) {
-        if (session.respondPermission(requestId, allow)) {
+    private fun respondFromEditor(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList()) {
+        if (session.respondPermission(requestId, allow, suggestionTokens)) {
             pushFrame(buildJsonObject {
                 put("type", "__perm_answered")
                 put("id", requestId)
@@ -523,7 +562,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     editLineStart(toolName, inputJson)?.let { put("lineStart", it) } // for the diff gutter
                 }
                 pushFrame(frame)
-                openEditorPermissionDiff(requestId, toolName, inputJson)
+                openEditorPermissionDiff(requestId, toolName, inputJson, suggestionsJson)
             },
             onInit = { metaJson ->
                 val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull()

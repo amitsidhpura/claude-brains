@@ -1,15 +1,14 @@
 # Gotchas — hard-won, don't rediscover
 
 ## Protocol / wire
-**Payload shapes live in `docs/ide-mcp-protocol.md` — this section keeps only what that doc
-can't tell you: which assumptions are WRONG.** Re-read the doc before trusting memory here.
+**Payload shapes live in `docs/ide-mcp-protocol.md` (§9 wire vocabulary, §10 measured facts) —
+this section keeps only the standing RULES that defeat assumptions.** Re-read the doc before
+trusting memory here.
 - A stream-json CLI NEVER auto-connects from `CLAUDE_CODE_SSE_PORT` — that discovery is TUI-only;
   the bridge rides `--mcp-config`. Env var + lockfile stay for terminal-launched TUI sessions.
 - `system/init` arrives only after the first user turn — send control_request `initialize` at
   startup or the panel opens blind. Its `commands` payload has NO type field, so the slash
   allowlist is the only lever for hiding commands.
-- AskUserQuestion needs a `can_use_tool` reply carrying `updatedInput` with answers keyed by
-  question TEXT; a plain allow silently returns "user did not answer".
 - Permission gate ONLY works with `--permission-prompt-tool stdio`. `acceptEdits` covers EDITS
   ONLY (Bash still asks — correct). `auto` is safety-checked, NOT `bypassPermissions`. Malformed
   `updatedPermissions` are silently DROPPED (no error). Refused control requests answer
@@ -21,64 +20,33 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
 - **No card ⇒ no live diff.** Whenever a tool is pre-approved — acceptEdits/auto mode, a saved
   rule, a pre-authorized path — the CLI sends NO `can_use_tool` at all, and the live wire never
   carries `toolUseResult`/`structuredPatch`. Anything the permission card is the sole producer
-  of must have a second source built from the tool_use INPUT (that is 4.4's fix; see
-  decisions.md).
-- A COMPOUND command (`a && b`) yields ONE addRules suggestion carrying several `rules[]`, not
-  one suggestion per rule — build per-rule UI off `rules`, not off the suggestion list. Echoing
-  a suggestion back with a NARROWED `rules` subset is accepted, and the CLI persists exactly the
-  picked rules (wire-probed 2026-08-09).
+  of needs a second source built from the tool_use INPUT (4.4's fix; see decisions.md).
+- A COMPOUND command (`a && b`) yields ONE addRules suggestion carrying several `rules[]` —
+  build per-rule UI off `rules`, not off the suggestion list. Echoing a suggestion back with a
+  NARROWED `rules` subset is accepted and persisted exactly (wire-probed 2026-08-09).
 - Hooks NEVER reach us as control requests: a hook denying a tool arrives as a plain
   `tool_result` with `is_error`; a hook blocking a NON-tool event emits `system/informational`
   with `prevent_continuation` and NOTHING else — unhandled it reads as a dead panel.
   `informational`'s optional `tool_use_id` DEDUPES rather than stacks, and it is persisted, so
   both paths must render it. Hooks are re-read from settings PER PROMPT, not cached at CLI
   spawn — removing a hook file takes effect on the next message of a LIVE session.
-- Live wire vs transcript SPELLINGS differ for the same event: live `system/api_retry`
-  `{attempt, max_retries, retry_delay_ms, error_status, error:"<string>"}` vs persisted
-  `system/api_error` `{retryAttempt, maxRetries, error:{message, formatted}}` — `error` even
-  changes TYPE. Same family: `prevent_continuation`/`preventContinuation`. Never trust the
-  transcript spelling for a live handler; accept both on both paths.
-- The `assistant` event's `uuid` is the SAME uuid the CLI writes into the transcript record
-  (timestamp too) — the only handle tying a live render to its replayed twin. Don't assume
+- Live wire and transcript disagree in SPELLING and in ORDER for the same events: field names
+  differ (even field TYPES — worked example in the doc §10), and the file order of late-flushed
+  records lies while timestamps + the `parentUuid` chain stay chronological. Accept both
+  spellings on both paths; trust timestamps over file positions.
+- The `assistant` event's `uuid` (and timestamp) is the SAME one the CLI writes into the
+  transcript record — the only handle tying a live render to its replayed twin. Don't assume
   live-only state can't be persisted without checking for a shared uuid.
-- Sub-agent progress (`task_started`/`task_progress`/`task_notification`) is LIVE-ONLY, never
-  persisted; `task_notification` omits `subagent_type` (remember it from `task_started`). Child
-  `assistant`/`user` events (`parent_tool_use_id`) are deliberately ignored.
-- `background_tasks_changed` has REPLACE semantics — assign the set, never merge, or finished
-  tasks live forever. It's a LEVEL signal → a chip reflecting the present, not timeline entries.
-- `result.modelUsage` is a MAP that routinely includes side models the user never picked: match
-  the raw key (it carries the `[1m]` tag) → `canonicalModel` → on no match change NOTHING. No
-  denominator exists until the first turn ends, and the `[1m]` seed heuristic must check BOTH
-  `resolvedModel` and `value` (fable differs). Usage above the known window PROMOTES to 1M, so a
-  big session shows the same % on a 200k and a 1M model — correct, not a stuck denominator.
-- `queue-operation` records are the CLI's own pipeline bookkeeping (matched enqueue/dequeue
-  pairs, one per turn) — there is no CLI queue to drive; message queueing is client-side.
-- No `set_effort`/`set_thinking_level` control request exists (only `set_max_thinking_tokens`, a
-  token count) — the effort slider rides a muted `/effort` turn (`effortMuted`, idle-gated).
-- Tool-returned images: discriminator is `toolUseResult.type=="image"` — NOT `isImage`, a
-  Bash-result field that is always false. `dimensions` is
-  `{originalWidth,originalHeight,displayWidth,displayHeight}`, not `{width,height}`.
-- Many transcript `thinking` blocks have an EMPTY body and only a `signature` (~2.1k of 6.6k
-  local ones carry text) — those replay as nothing, correctly.
-- The CLI exposes ONLY `mcp__ide__getDiagnostics` + `mcp__ide__executeCode` to the MODEL — a
-  hardcoded allowlist behind a `startsWith("mcp__ide__")` filter at MCP tools-listing, byte-
-  identical across 2.1.222/223/226 (measured 2026-08-09): stable upstream policy, not a
-  regression to wait out. openFile / openDiff / getCurrentSelection refuse TO THE MODEL while
-  the bridge half works perfectly. Do NOT dodge it by renaming the bridge server: the CLI finds
-  its IDE client by the literal name `"ide"` (`name === "ide"` lookup) for its own IDE features
-  (TUI diff-in-IDE among them) — a rename breaks more than it restores. Verify bridge health by
-  speaking MCP-over-WS directly (lockfile `authToken` in header
-  `x-claude-code-ide-authorization`, subprotocol "mcp", `tools/call`).
-- Transcript format CHANGED at 2.1.226: one assistant record per message (blocks inline), plus
-  record types that didn't exist before (`queue-operation`, `attachment` = tool-roster deltas NOT
-  files, `ai-title`, `last-prompt`, `mode`, `custom-title`). OLDER files persist one record PER
-  BLOCK, each repeating the same *cumulative* `message.usage` — summing `output_tokens` over
-  those over-reports ~2.45x unless deduped by `message.id`. Live is immune. Never assume one
-  transcript's shape generalizes.
-- Two behaviours that LOOK like bugs and are not: image attachments persist as the bare API block
-  (recompressed, no filename), so replay chips reading "file.jpg <smaller size>" are correct; and
-  a persisted non-default model makes every spawn write a "/model <x>" audit record as the first
-  user record, which untitled sessions then derive as their title.
+- Model-facing IDE tools are an upstream ALLOWLIST (getDiagnostics + executeCode only),
+  byte-identical across CLI 2.1.222–226 — stable policy, not a regression to wait out
+  (measured mechanism in the register's 10.1 note). Do NOT dodge it by renaming the bridge
+  server: the CLI finds its IDE client by the literal name `"ide"` for its own IDE features
+  (TUI diff-in-IDE among them). Verify bridge health by speaking MCP-over-WS directly (lockfile
+  `authToken` in header `x-claude-code-ide-authorization`, subprotocol "mcp", `tools/call`).
+- Two behaviours that LOOK like bugs and are not: image attachments persist as the bare API
+  block (recompressed, no filename) → replay chips reading "file.jpg <smaller>" are correct;
+  and a persisted non-default model writes a "/model <x>" audit record on every spawn, which
+  untitled sessions then derive as their title.
 - Synthetic transcript fixtures: stitch complete turns from REAL donor sessions (slice at turn
   starts, remap uuid/parentUuid per copy, rewrite sessionId) and verify with `./gradlew probe`
   before opening in the IDE. Inflated tail usage dies at the first live turn (newest request
@@ -107,6 +75,38 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
   `readLocked {}`). `FileSaverDescriptor` vararg ctor deprecated 2025.1+, replacement absent on
   242 → reflection is the only warning-free both-ways route. Deprecation is per-IDE-version: the
   same zip shows MORE warnings on NEWER IDEs, never the reverse.
+- `FileEditorManager.openFiles` does NOT report diff editors (measured live 2026-08-09: a
+  visible "Claude: …" diff tab alongside an empty openFiles) — find-then-close of a diff tab is
+  a silent no-op. Open diffs as your own `ChainDiffVirtualFile` via `FileEditorManager.openFile`
+  and HOLD the handle; `closeFile(handle)` is the only reliable close (DiffReview does this).
+- Verdict affordances in a diff editor, the dead-end chain (2026-08-09): toolbar icons via
+  `DiffUserDataKeys.CONTEXT_ACTIONS` render fine but are unidentifiable among the standard diff
+  toolbar icons (user rejected on sight); promoting them to TEXT buttons is impossible
+  warning-free across 242→262 (`displayTextInToolbar()` is `@Deprecated(forRemoval)` on 262,
+  its replacement `ActionUtil.SHOW_TEXT_IN_TOOLBAR` key doesn't exist on 242); a
+  `DiffUserDataKeys.NOTIFICATION_PROVIDERS` banner takes arbitrary Swing but renders only at
+  the TOP of the viewer, and is re-created per viewer (side-by-side and unified are separate —
+  always build a fresh component). The shipped surface is
+  `FileEditorManager.addBottomComponent(editor, bar)` on the editors returned by
+  `openFile(diffFile, true)`: a bar UNDER the diff, attached to the FileEditor so it survives
+  viewer switches and dies with the tab — all of the above verified in 242+262 bytecode.
+  Two Swing-side traps from styling that bar: the LAF IGNORES `JButton.setBackground()` — color
+  buttons via the `"JButton.backgroundColor"` / `"JButton.textColor"` / `"JButton.borderColor"`
+  client properties (honored by DarculaButtonUI/DarculaButtonPainter on 242 and 262, checked in
+  bytecode); and platform icons don't match the webview's Lucide glyphs (`AllIcons.Actions.
+  Commit` isn't even a checkmark in the new UI — it's the VCS -o- glyph). Final shape bundles
+  the card's own SVG_CHECK/SVG_X from chat.html as `/icons/accept.svg` + `reject.svg` (stroke
+  colour hardcoded — the IDE's SVG loader has no `currentColor` context), loaded via
+  `IconLoader.getIcon(path, Class)` (clean on 242+262; the zero-arg-context overloads are the
+  deprecated ones). And the loader is STRICT XML: a literal `--` inside an SVG comment (say,
+  a CSS var name like `--fg`) kills the whole parse — "String '--' not allowed in comment" —
+  and the icon silently renders as nothing plus an IDE error balloon. No CSS var names in
+  SVG comments.
+- The IDE's VFS never sees the CLI's out-of-band writes: `editLineStart` reads files FRESH from
+  disk because cached buffers lie, and open editors show stale content until a refresh (the
+  "Reload from disk" symptom — fix shape in backlog.md). TIMING is the other half of that trap:
+  `old_string` is only findable BEFORE the edit applies, so gutter lookups must fire at
+  `content_block_stop`; by `tool_result` they correctly degrade to no line numbers.
 
 ## JCEF is not a browser (Linux)
 - Text fields: the Delete key INSERTS keyChar 0x7F as a tofu char instead of forward-deleting
@@ -123,6 +123,11 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
   DevTools", or `http://localhost:9222` (port set by the `runIde` JVM arg — but a port hand-set
   in a sandbox's Registry WINS over it). The panel appears in `/json/list` only once the tool
   window has opened, titled "Claude Brains — chat panel".
+- Sandbox startup noise, NOT ours: `GlobalMenuLinux <clinit> requests Experiments instance …
+  Class initialization must not depend on services` is the 2024.2 platform's own class-init
+  hygiene assertion, thrown while IT builds the Linux global menu during frame creation — no
+  plugin code in the stack, fires once at EVERY runIde launch (idea.log shows it at each start
+  since long before any plugin change). Ignore it; nothing to fix on our side.
 - The runIde sandbox INVENTS UI symptoms, it doesn't only hide them (learned on manual-test 1.7).
   It runs PhpStorm 2024.2 on a fresh config with the stock keymap, so IDE-level key handling
   differs from a real install: a defect that reproduces ONLY there is suspect — reproduce any
@@ -141,21 +146,18 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
   `<!--CSS-->` and `window.LIMITS` + a `window.__bridge` stub at `<!--LIMITS-->` (capture LIMITS
   live: `cdp.py "JSON.stringify(window.LIMITS)"`), feed events through `window.onClaudeEvent`,
   assert via `document.title` under headless `--dump-dom`. Seed the slash roster with a real
-  `system/commands_changed` event. Click/class logic only — the rAF/RO caveats above still apply,
-  and see the containment trap below for what it CANNOT see.
+  `system/commands_changed` event. Click/class logic only — the rAF/RO caveats above still
+  apply, and see the containment trap below for what it CANNOT see. Assert on `#log`, never
+  `document.body` — body.textContent includes chat.html's OWN script source, which legitimately
+  contains the very literals under test (cost a false FAIL on 7.4's probe).
 - `window.LIMITS` splice: the webview THROWS on load if unspliced (a JS default would be a second
   copy). `RenderLimitsTest` fails the build on hardcoded literals, marker count ≠ 1, or unbalanced
   script tags (the latter two silently truncate the whole script block = "dead webview"). Keep a
   captured `limits.json` in step with new keys or harness runs test stale shapes.
-- In the spliced harness, assert on `#log`, never `document.body` — `body.textContent` includes
-  chat.html's OWN script source, which legitimately contains the very literals under test
-  (the internal-metadata sentence, the AUTH_BLOCKED codes). Cost a false FAIL on 7.4's probe;
-  fixtures 07/08 carry the warning inline.
-- A payload that is NEVER persisted (sub-agent task frames, the async-launch result) has a third
-  measurement lane beyond transcripts and a live run: `strings -n 8` on the CLI binary itself
-  (`~/.local/share/claude/versions/<ver>`). That is how both 7.4 payloads were read verbatim —
-  and how the envelope's `marker-prefix-forgery` escaping rule (which makes position-0 stripping
-  safe) was found at all.
+- A payload that is NEVER persisted has a third measurement lane beyond transcripts and a live
+  run: `strings -n 8` on the CLI binary itself (`~/.local/share/claude/versions/<ver>`) — and on
+  the installed VS Code `extension.js` for the host half. That lane read 7.4's payloads, 9.1's
+  retry enum and double-emission, 10.1's allowlist, and 10.5's verdict consumers verbatim.
 - `.turn-body`'s `content-visibility` PAINT-CONTAINS: any popup absolutely positioned inside a
   turn is clipped at the turn's box (6.4's card menu opened as a sliver) — and containment blocks
   HIT-TESTING too, so clipped elements still pass querySelector/synthetic-click assertions. That
@@ -167,10 +169,6 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
   narrower popup with `min-width: 0`, and MEASURE (a probe read 330 while the rule said 310).
   Same family as the UA `[hidden]` rule losing to `display: inline-flex`: assert COMPUTED style,
   never the property or the declaration you wrote.
-- Edit-diff gutter numbers (`ChatPanel.editLineStart`) read the file FRESH from disk — the CLI
-  edits out-of-band, so cached buffers lie. TIMING is the trap: `old_string` is only findable
-  BEFORE the edit applies, so the request must fire at `content_block_stop`; by `tool_result` the
-  lookup fails and the diff must degrade to no gutter numbers rather than block.
 - The cut-marker is a SIBLING of `.io-v`, never a child (`foldBlock` would fold it away). Fold ≠
   marker: the fold hides content it still holds; the marker reports content that is GONE.
 - Replayed ask cards are marked `.ask-done` — that class must NOT be `.done` (the

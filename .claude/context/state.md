@@ -1,18 +1,17 @@
 # State
 
 ## Current focus
-Working the standing defect register in `docs/manual-test.md`. The 92-item pass itself is
-COMPLETE (2026-08-08, commit `3278aac`); what remains is fixing what it found. Register stands
-at **2 open ISSUE notes / 22 RESOLVED** (the last two are the 3.1+9.10 pairing). UNCOMMITTED on 2026-08-09 (second session): 9.1 both
-halves (RETRY_REASONS enum translation + twin-emission dedupe in chat.html, fixture 09;
-late-flushed api_error reorder in SessionStore + Kotlin test — user-verified live AND on
-replay with a real network-off storm) and 10.5 (DiffReview rewritten to the reference openDiff
-contract — TAB_CLOSED verdict, final-pane-text accept, close-tool + dead-caller resolution;
-all three verdicts wire-verified, user confirmed no stale balloons). Per-issue detail lives
-under each checklist item in `docs/manual-test.md` — that file is the register, not this one.
+The defect register in `docs/manual-test.md` is nearly cleared: **2 open ISSUE notes /
+22 RESOLVED** (through `f001e0b`, pushed). The latest session shipped editor accept/reject
+v2's buttons half — the balloon replaced by a card-identical Accept / Accept-all / Reject
+bar UNDER the diff editor (`DiffReview.kt` + `ChatPanel.kt` + bundled `/icons/*.svg`;
+user runIde-verified through four iterations). The only open register items are the
+3.1+9.10 pairing, which the user explicitly wants worked TOGETHER, next. Per-issue detail
+lives under each checklist item in `docs/manual-test.md` — that file is the register, not
+this one.
 
 ## Issue register highlights (full detail in docs/manual-test.md)
-- **Still open, user wants them worked TOGETHER later**: 3.1 custom commands missing from the
+- **Still open, next up, worked TOGETHER per user**: 3.1 custom commands missing from the
   `/` menu (`cmdKind` has no custom detection) + 9.10 commands_changed re-test (unobservable
   until 3.1 is fixed).
 - **10.1/10.3 re-scoped 2026-08-09**: the model-facing restriction is a hardcoded allowlist,
@@ -23,26 +22,25 @@ under each checklist item in `docs/manual-test.md` — that file is the register
   docs/ide-mcp-protocol.md § 4).
 
 ## Next steps
-- [x] **runIde re-verification sweep** — user-confirmed on real hardware/JCEF 2026-08-09:
-      hardware file drag (2.9), hardware Delete key (2.14), Escape in the slash/mention menus,
-      4.4's applied-edit cards in acceptEdits, and 6.4's split-button menu. Plus 7.4(a) verified
-      live the same session (background Explore launch: no internal-metadata OUT box, clean
-      finished line). Still outstanding from the old list: **5.14's heavy-turn scroll FEEL only**
-      (headless proved the logic 8/8; real-JCEF rAF cadence is the production case — a
-      when-next-convenient check, not a blocker).
-- [x] ~~10.5 openDiff~~ — resolved 2026-08-09 (premise corrected + real fixes; see register).
-- [x] ~~9.1 retry storm~~ — resolved 2026-08-09, live and replay halves, user-verified both.
-- [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing, deferred to later):
-      fixture `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` is in place, and
-      the harness's `system/commands_changed` seeding trick supplies the roster.
-- [ ] Eyeball 8.2/8.7 on real JCEF when convenient: resume a session whose TAIL is an API
-      error (the 2026-08-09 storm session `afe39ca0…` recovered, so its error is mid-history —
-      stitch a tail-error one from the `"error":"rate_limit"` donor records in
-      `~/.claude/projects/-home-syncroze-Sites-peers-woocommerce/b4589d75…jsonl`, or re-run
-      the auth-failure manufacture) and check status line + no phantom summary + Retry.
-- [x] ~~Section 10 re-scope decision~~ — decided 2026-08-09: restriction measured as stable
-      upstream policy (identical 2.1.222–226); 10.1/10.3 re-scoped to their bridge halves.
-- [ ] Roadmap after fixes: editor-title accept/reject → @-symbol mentions → worktrees →
+- [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing): fixture
+      `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` is in place, and the
+      harness's `system/commands_changed` seeding trick supplies the roster.
+- [ ] VFS refresh after CLI writes (backlog.md "Next up") — accepted edits currently need
+      "Reload from disk" in open editors; fix shape already worked out.
+- [ ] Run Plugin Verifier before the next release: 2026-08-09 added new platform API usage
+      (`ChainDiffVirtualFile`, `SimpleDiffRequestChain`, `DiffUserDataKeys.FORCE_READ_ONLY`,
+      `FileEditorManager.openFile` on a diff file, and now `FileEditorManager.
+      addBottomComponent` + `JBColor.border()` for the under-diff Accept/Reject bar) — the
+      0-warnings-on-242→262 target (conventions.md) hasn't been re-checked since. The bar
+      APIs were pre-checked by hand in both 242 and 262 bytecode: public, un-annotated,
+      identical signatures.
+- [ ] When convenient: 5.14's heavy-turn scroll FEEL on real JCEF (logic proven 8/8 headless);
+      and the 8.2/8.7 tail-error replay eyeball — needs a session whose TAIL is an API error
+      (the 2026-08-09 storm session `afe39ca0…` recovered, so its error is mid-history; stitch
+      from the `"error":"rate_limit"` donor records in
+      `~/.claude/projects/-home-syncroze-Sites-peers-woocommerce/b4589d75…jsonl`).
+- [ ] Roadmap after that: editor accept/reject v2 remaining half (tweak-travel so pane edits
+      ride updatedInput; buttons half shipped 2026-08-09) → @-symbol mentions → worktrees →
       extensibility status view (backlog.md).
 
 ## Test fixtures left in place (deliberate)
@@ -50,9 +48,19 @@ under each checklist item in `docs/manual-test.md` — that file is the register
   sessions: `c7a2bf37…` ("Update Shopify theme", 2.2 MB, every record type) and `b16da214…`
   (13 MB, 20 images — exceeds the 4 MB replay image budget so both degrade states show).
   Built from real donor records only; delete freely once the fixed issues are re-verified.
+  The real network-off storm session `afe39ca0…` also lives there — the 9.1 replay-reorder
+  measurement donor.
 - `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` (sibling repo, NOT inside this
   one) — 3.1/9.10 re-test fixture.
 
 ## Known gaps (deliberately left)
 - Sidechain/subagent replay ordering untested — still no `isSidechain` records locally.
 - Windowed replay: DOM search only sees loaded blocks.
+- Editor permission diff: Accept / Accept all edits / Reject are real text buttons on a bar
+  under the diff editor (v2 buttons half, 2026-08-09; toolbar-icon and top-banner cuts
+  rejected — gotchas.md). The middle button is COMBINED by design (user's spec): one button
+  grants every allow-suggestion whole — "Always allow" when rules are among them, "Accept
+  all edits" when mode-only — echoing each suggestion's original index; no split/partial
+  dropdown in the editor (the panel card keeps that). Wire: "FILE_SAVED_ALL" verdict, a
+  permission-flow-only extension DiffReview documents — bridge verdicts stay the reference
+  set. Panes still read-only (no tweak-travel) — remaining v2 scope in backlog.

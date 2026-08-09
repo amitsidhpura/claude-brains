@@ -3,7 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-09 (fifth) — editor accept/reject v2 buttons half: balloon → under-diff bar
+- Shipped the v2 buttons half through four user-driven iterations, each measured against
+  242 AND 262 bytecode before coding: (1) toolbar CONTEXT_ACTIONS icons — worked but user
+  rejected on sight, unidentifiable among diff toolbar icons; (2) NOTIFICATION_PROVIDERS
+  top banner with prose + info tint — wrong position, too loud; (3) plain bar UNDER the
+  editor via `FileEditorManager.addBottomComponent` on the editors `openFile` returns —
+  accepted; (4) polish to full card parity: centered, card colours (.ok green / .no
+  neutral via "JButton.*" client properties — LAF ignores setBackground), card's own
+  Lucide SVGs bundled as /icons/*.svg (platform tick lookalikes don't match; Actions.
+  Commit isn't even a tick in the new UI).
+- Third button added: COMBINED suggestion grant (user's spec — no dropdown in the editor).
+  One button grants every allow-suggestion whole ("Always allow" if rules present, else
+  "Accept all edits"), echoing original indices; new "FILE_SAVED_ALL" verdict is a
+  permission-flow-only extension — bridge verdicts stay the reference set.
+- Two sandbox errors triaged: GlobalMenuLinux <clinit> SEVERE is 2024.2 platform noise at
+  every launch (log-proven, gotchas'd); the real one was MINE — a literal `--` (CSS var
+  name) inside an SVG comment is illegal XML, the strict loader killed reject.svg with
+  "String '--' not allowed in comment" → iconless button + IDE error balloon.
+- Text-in-toolbar impossibility recorded: displayTextInToolbar() @Deprecated(forRemoval)
+  on 262, replacement SHOW_TEXT_IN_TOOLBAR key absent on 242 — no warning-free path.
+- Next: 3.1+9.10 pairing (user wants together), VFS refresh, Plugin Verifier re-run
+  (new APIs: addBottomComponent, IconLoader.getIcon(path, Class), JButton client props).
+
 ## 2026-08-09 (fourth) — 9.1 + 10.5 + editor accept/reject + 10.1/10.3: register 6 → 2 open
+- Committed and pushed as `f001e0b` (20 files, +864/−90), tests green going in.
 - 9.1 live half: the api_retry `error` is c_r()'s five-code ENUM (read from the binary — network
   failures are the literal "unknown"), and the stream translator double-emits each retry (raw
   api_error falls through `else yield` before the api_retry twin). RETRY_REASONS + last-key
