@@ -17,8 +17,9 @@
   tools (lockfile + `--mcp-config`).
 - **Windowed replay** — Kotlin parses the whole transcript but ships only the newest ~250
   blocks cut at a turn boundary (`alignedStart`); earlier chunks stream in on upward scroll.
-- **Gallery** — Ctrl+Alt+G; renders every transient UI state in the live webview without
-  driving the CLI.
+- **Gallery** — `window.__gallery()` from DevTools or over CDP (the Ctrl+Alt+G chord was
+  removed 2026-08-09); renders every transient UI state in the live webview without driving
+  the CLI.
 - **Probe** — `./gradlew probe`; dumps replay blocks for a session with no IDE, splitting
   parser bugs from renderer bugs.
 - **LIMITS splice** — `RenderLimits.kt` values injected into chat.html as `window.LIMITS` at

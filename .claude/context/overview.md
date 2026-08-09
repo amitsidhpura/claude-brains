@@ -75,12 +75,13 @@ Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bea
 |---|---|
 | "Does the CLI even send this?" | grep `~/.claude/projects/*/*.jsonl` **by key**, or run `claude --output-format stream-json` in a terminal |
 | Wrong blocks after resume | `./gradlew probe` — splits a PARSER bug from a RENDERER bug, no IDE |
-| A transient state renders wrong | Ctrl+Alt+G gallery — every state, without driving the CLI |
+| A transient state renders wrong | `window.__gallery()` — every state, without driving the CLI |
 | Live render misbehaving mid-session | `python tools/cdp.py` — the only view of real JCEF |
 | Kotlin logic: bridge, permissions, parsing | `./gradlew runIde --debug-jvm` (suspends, port 5005) + Remote JVM Debug |
 | CSS / layout iteration | `design/mockup.html` + headless Chrome (compositor traps — gotchas.md) |
 | Won't load in a REAL IDE | install the zip in the real PhpStorm — the sandbox cannot catch this class |
-| Poking around by hand | DevTools window (F12 / Find Action "Claude Brains: Open DevTools") |
+| Reproduces ONLY in the sandbox | suspect the sandbox (2024.2, stock keymap) — it invents symptoms too |
+| Poking around by hand | DevTools window (Find Action → "Claude Brains: Open DevTools") |
 
 **Start at the top row** — cheapest and most skipped. Check by KEY, not substring. The live
 panel is for AFTER you know the data exists.

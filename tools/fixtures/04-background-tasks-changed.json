@@ -28,9 +28,13 @@
       ]
     },
     {
-      "note": "empty payload hides the chip",
+      "note": "empty payload hides the chip — computed display, not the hidden property: manual-test 7.3 was exactly the case where hidden=true yet .chip-btn{display:inline-flex} kept the chip (and its pulsing dot) rendered, and the property assertion could never catch it",
       "frames": [{"type": "system", "subtype": "background_tasks_changed", "tasks": []}],
-      "expect": [{"js": "document.getElementById('bgChip').hidden", "equals": true, "why": "chip hidden"}]
+      "expect": [
+        {"js": "document.getElementById('bgChip').hidden", "equals": true, "why": "chip hidden"},
+        {"js": "getComputedStyle(document.getElementById('bgChip')).display", "equals": "none", "why": "and ACTUALLY not rendered (7.3 regression pin)"},
+        {"js": "document.getElementById('bgMenu').classList.contains('show')", "equals": false, "why": "an open roster must not outlive its last task"}
+      ]
     }
   ]
 }

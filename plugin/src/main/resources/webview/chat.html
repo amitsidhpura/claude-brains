@@ -605,15 +605,22 @@
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */
   const MENUS = ['modeMenu', 'modelMenu', 'slashMenu', 'attachMenu', 'bgMenu'];
+  // Escape on the slash menu must STICK: the composer's input handler re-asserts .show on
+  // every keystroke while the text still looks like "/cmd", so removing the class alone
+  // lasts exactly one keypress. Re-armed when the text leaves the /-shape, when the slash
+  // button opens the menu explicitly, and when the composer is cleared.
+  let slashEscaped = false;
   function menuEl(id) { return document.getElementById(id); }
   function tg(id, e) {
     if (e) e.stopPropagation();
+    hideMenu();   // composer popups and the @-mention menu are one exclusive layer
     MENUS.forEach(function (x) {
       menuEl(x).classList.toggle('show', x === id && !menuEl(x).classList.contains('show'));
     });
     const p = menuEl(id);
     if (!p.classList.contains('show')) return;
     if (id === 'slashMenu') {
+      slashEscaped = false;                     // explicit open overrides an earlier Escape
       renderSlash(input.value.charAt(0) === '/' ? input.value.slice(1) : '');
       capToRows(slashList, 5, '.popup-item');   // .show was set above, so rows measure
       input.focus();
@@ -645,8 +652,11 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (lightbox.classList.contains('show')) { lightbox.classList.remove('show'); return; }
+      // card menus live OUTSIDE MENUS (transient DOM per permission card), so activeMenu()
+      // can't see them — without this rung Escape skips them entirely
+      if (document.querySelector('.card-menu.show')) { closeCardMenus(); return; }
       const m = activeMenu();
-      if (m) { m.classList.remove('show'); return; }
+      if (m) { if (m.id === 'slashMenu') slashEscaped = true; m.classList.remove('show'); return; }
       if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
       if (activeAsk) { cancelAsk(); return; }
       return;
@@ -675,6 +685,17 @@
   });
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#histPanel') && !e.target.closest('#histBtn')) histPanel.classList.remove('show');
+    // Clicks into the textarea RE-EVALUATE both text-driven menus (button popups close like
+    // any outside click first — the order matters, closeMenus() would kill a menu the
+    // re-evaluation just opened). updateAuto recomputes the @-token at the new caret,
+    // slashAuto the whole-line /-shape; both respect their Escape flags. Any other outside
+    // click closes the @-menu.
+    if (e.target === input) {
+      closeCardMenus(); closeMenus();
+      updateAuto(); slashAuto();
+      return;
+    }
+    if (!e.target.closest('#mention')) hideMenu();
     if (e.target.closest('.popup')) return;
     closeCardMenus();
     closeMenus();
@@ -1747,6 +1768,21 @@
     const fs = (e.dataTransfer && e.dataTransfer.files) || [];
     for (const f of fs) addFile(f);   // addFile categorises and skips unsupported
   });
+  // Delivery layer for OS file drags (manual-test 2.9): JCEF-on-Linux never turns them into
+  // DOM drop events, so ChatPanel's AWT DropTarget reads the files and calls this with
+  // [{name, mime, data(b64)}]. Same normalisation as addFile from here; fileKind still
+  // gatekeeps, so unsupported binaries are skipped identically to paste/picker.
+  window.__dropFiles = function (files) {
+    (files || []).forEach(function (f) {
+      const kind = fileKind({ type: (f.mime || '').toLowerCase(), name: f.name || '' });
+      if (!kind) { console.warn('Unsupported file skipped:', f.name); return; }
+      const mt = kind === 'pdf' ? 'application/pdf'
+        : kind === 'text' ? 'text/plain'
+        : (f.mime || 'image/png');
+      pending.push({ kind: kind, media_type: mt, data: f.data, name: f.name || 'file' });
+    });
+    renderAttachments();
+  };
   const fileInput = document.getElementById('fileInput');
   document.getElementById('attachBtn').onclick = function (e) { tg('attachMenu', e); };
   Array.prototype.forEach.call(document.querySelectorAll('#attachMenu .popup-item'), function (item) {
@@ -1869,7 +1905,7 @@
     smoothToBottom();
   }
 
-  function clearComposer() { input.value = ''; pending = []; renderAttachments(); autoGrow(); closeMenus(); hideMenu(); }
+  function clearComposer() { input.value = ''; pending = []; renderAttachments(); autoGrow(); closeMenus(); hideMenu(); slashEscaped = false; mentionEscaped = false; }
 
   /**
    * Messages typed while a turn is in flight (client-parity item 24).
@@ -1970,11 +2006,6 @@
       if (!busy && lastUser) { r.remove(); sendTurn(lastUser.text, lastUser.images); }
     };
   }
-
-  // Ctrl/Cmd+N: new conversation
-  document.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); bridge({ kind: 'new' }); }
-  });
 
   /* ---------- auto-grow textarea + composer-height tracking ---------- */
   const LINE = 20, MAXLINES = 10;
@@ -2085,6 +2116,9 @@
 
   const menu = document.getElementById('mention');
   let menuItems = [], menuSel = -1, menuStart = 0; // menuItems: [{ins, disp}]
+  // Same contract as slashEscaped: updateAuto() re-opens on every keystroke while the caret
+  // sits in an @-token, so Escape must stick until the caret leaves the token.
+  let mentionEscaped = false;
 
   function currentMention() {
     const m = input.value.slice(0, input.selectionStart).match(/(?:^|\s)@([^\s@]*)$/);
@@ -2094,6 +2128,7 @@
 
   function openMenu(start, entries) {
     if (!entries.length) return hideMenu();
+    closeMenus(); closeCardMenus();   // the @-menu replaces any open popup, same as tg() in reverse
     menuStart = start; menuItems = entries; menuSel = 0;
     menu.innerHTML = entries.map(function (e, i) {
       return '<div class="mi' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' + esc(e.disp) + '</div>';
@@ -2107,7 +2142,8 @@
   }
   function updateAuto() {
     const men = currentMention();
-    if (men) {
+    if (!men) mentionEscaped = false;           // leaving the @-token re-arms auto-open
+    if (men && !mentionEscaped) {
       const q = men.q.toLowerCase();
       return openMenu(men.start, files.filter(function (f) { return f.toLowerCase().includes(q); }).slice(0, 20)
         .map(function (f) { return { ins: f, disp: f }; }));
@@ -2129,6 +2165,12 @@
     Array.prototype.forEach.call(menu.children, function (c, i) { c.classList.toggle('sel', i === menuSel); });
     const selEl = menu.children[menuSel]; if (selEl) selEl.scrollIntoView({ block: 'nearest' });
   }
+  // Returning focus to a caret that sits in an @-token reopens the menu — outside-click is a
+  // soft dismissal (Escape's mentionEscaped still sticks, checked inside updateAuto). The
+  // activeMenu() guard matters: tg('slashMenu') calls input.focus() after opening, and
+  // without it this handler would open the @-menu, whose exclusivity rule would then close
+  // the slash menu the user just asked for.
+  input.addEventListener('focus', function () { if (!activeMenu()) { updateAuto(); slashAuto(); } });
 
   input.addEventListener('input', function (e) {
     autoGrow();
@@ -2146,21 +2188,30 @@
       const end = input.value.length; input.setSelectionRange(end, end);
       v = input.value;
     }
-    if (/^\/[\w-]*$/.test(v) && renderSlash(v.slice(1))) {
+    slashAuto();
+  });
+  // The slash evaluation, shared by typing, refocus, and click-into-composer (same soft-reopen
+  // contract as the @-menu: outside-click reopens on return, Escape's slashEscaped sticks).
+  // The /-shape is whole-line, so unlike updateAuto there is no caret math to redo.
+  function slashAuto() {
+    const v = input.value;
+    const isSlash = /^\/[\w-]*$/.test(v);
+    if (!isSlash) slashEscaped = false;         // leaving the /-shape re-arms auto-open
+    if (isSlash && !slashEscaped && renderSlash(v.slice(1))) {
       ['modeMenu', 'modelMenu', 'attachMenu'].forEach(function (x) { menuEl(x).classList.remove('show'); });
       menuEl('slashMenu').classList.add('show');
       capToRows(slashList, 5, '.popup-item');   // AFTER .show: renderSlash ran while still hidden
     } else {
       menuEl('slashMenu').classList.remove('show');
     }
-  });
+  }
 
   input.addEventListener('keydown', function (e) {
     if (menu.style.display === 'block') {           // legacy @-mention popup
       if (e.key === 'ArrowDown') { e.preventDefault(); return moveSel(1); }
       if (e.key === 'ArrowUp')   { e.preventDefault(); return moveSel(-1); }
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); return pick(menuSel); }
-      if (e.key === 'Escape')    { e.preventDefault(); return hideMenu(); }
+      if (e.key === 'Escape')    { e.preventDefault(); mentionEscaped = true; return hideMenu(); }
     }
     if (activeMenu()) return;                       // popup menus own the keys (document handler)
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } // Ctrl/Cmd+Enter sends; plain Enter = newline
@@ -2182,6 +2233,42 @@
     }
   });
   input.addEventListener('input', function () { histIdx = history.length; }); // typing exits history mode
+
+  /* ---------- JCEF Delete-key workaround ----------
+     On Linux JCEF, the Delete key's AWT event carries keyChar 0x7F and CEF INSERTS that
+     control char as text instead of forward-deleting — a tofu box only backspace can remove
+     (with a selection, it REPLACES the selection). Two layers, document-level so the model
+     search field is covered too:
+     1. keydown: do the forward-delete ourselves and cancel the native event.
+     2. capture-phase input: strip any control char (except \n \t) from every text field,
+        caret preserved — the net stays right even if JCEF ignores the cancel, and it kills
+        any sibling of the same bug (e.g. an Escape 0x1B) before the bubbling handlers see
+        the value. */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Delete') return;
+    const t = e.target;
+    if (!t || (t.tagName !== 'TEXTAREA' && t.tagName !== 'INPUT')) return;
+    e.preventDefault();
+    const s = t.selectionStart, se = t.selectionEnd, v = t.value;
+    let to = se;
+    if (s === se) {                                       // no selection: one char, Ctrl = word
+      to = s + 1;
+      if (e.ctrlKey) { const m = v.slice(s).match(/^\s*\S*/); to = s + Math.max(1, m ? m[0].length : 1); }
+      if (to > v.length) return;
+    }
+    t.value = v.slice(0, s) + v.slice(to);
+    t.setSelectionRange(s, s);
+    t.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentForward' }));
+  });
+  document.addEventListener('input', function (e) {
+    const t = e.target;
+    if (!t || typeof t.value !== 'string' || !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(t.value)) return;
+    const p = t.selectionStart;
+    const removedBefore = (t.value.slice(0, p).match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g) || []).length;
+    t.value = t.value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+    const np = Math.max(0, p - removedBefore);
+    t.setSelectionRange(np, np);
+  }, true);
 
   /* ---------- Kotlin -> page ---------- */
   let curBubble = null, curRaw = '';
@@ -2218,6 +2305,7 @@
     if (!chip || !list) return;
     if (!bgTasks.length) {
       chip.hidden = true;
+      chip.textContent = '';               // stale "1 task" must not flash if the chip re-shows
       const m = document.getElementById('bgMenu');
       if (m) m.classList.remove('show');   // an open roster must not outlive its last task
       list.textContent = '';
@@ -3395,7 +3483,7 @@
   }
 
   /* ---------- dev gallery: renders every transient UI state in the live webview ----------
-     Trigger with Ctrl+Alt+G, or window.__gallery() from DevTools. Drives the real renderer
+     Trigger with window.__gallery() from DevTools or over CDP. Drives the real renderer
      (renderPermission / statusLine / addRetryLine / el) so it exercises production code paths,
      not static copies — the one exception is the working line, which is drawn statically
      because a live one is owned/torn-down by the busy watchdog. */
@@ -3666,10 +3754,6 @@
     maybeScroll();
   }
   window.__gallery = gallery;
-  document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey && e.altKey && e.code === 'KeyG') { e.preventDefault(); gallery(); }
-    if (e.code === 'F12') { e.preventDefault(); bridge({kind: 'devtools'}); }
-  });
 </script>
 </body>
 </html>

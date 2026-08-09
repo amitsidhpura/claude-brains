@@ -86,6 +86,13 @@
   sent user messages; success is `{canRewind, skippedLinks}` (no filesChanged) → dry_run first.
   The env var also makes the CLI write file-history snapshots into every transcript.
 
+- JCEF-on-Linux text fields: the Delete key INSERTS keyChar 0x7F as a tofu char instead of
+  forward-deleting (backspace is fine). chat.html carries a two-layer workaround (manual
+  forward-delete on keydown + capture-phase control-char strip on input, document-level).
+  Any NEW text input added to the page gets both for free — don't add per-field key handling
+  that swallows keydown before the document handler sees it. Same event-conversion family as
+  the dead F12/Ctrl+N chords: JCEF's keyboard path is not a browser's.
+
 ## Build / toolchain
 - Build JVM must be **Java 21**: Gradle 8.10.2 refuses to run above JDK 23, and recent
   PhpStorm's bundled JBR is JDK 25. `runIde` itself runs on the JBR inside the downloaded
@@ -116,17 +123,32 @@
 - Webview DevTools on Linux (probed 2026-08-07, re-probed 2026-08-08): JCEF context-menu route
   is DEAD (OSR; `ide.browser.jcef.contextMenu.devTools.enabled` is captured once into a final
   field); Ctrl+Alt+D is a WM grab. What works: Find Action → "Claude Brains: Open DevTools" or
-  `http://localhost:9222`. F12 — and EVERY webview JS keydown chord (Ctrl+N, Ctrl+Alt+G) — is
-  dead on this machine even with the composer focused; the handlers never fire (manual-test
-  issues 1.5/11.1/11.2). Chords need IDE-level action shortcuts to be reliable. The debug port is set by the BUILD (`runIde` JVM arg
+  `http://localhost:9222`. EVERY webview JS keydown chord (F12, Ctrl+N, Ctrl+Alt+G) was dead on
+  this machine even with the composer focused — the handlers never fired — so all three were
+  REMOVED on 2026-08-09 and the plugin now binds no shortcuts at all; don't re-add a webview
+  chord expecting it to work. The debug port is set by the BUILD (`runIde` JVM arg
   `-Dide.browser.jcef.debug.port=9222`) — a system property legitimately sets any Registry key
   read at early startup — but a port hand-set in a sandbox's Registry still WINS over it.
   The panel appears in `/json/list` only once the tool window has opened (CEF starts with the
   first JBCefBrowser), listed by its `<title>` "Claude Brains — chat panel".
+- The runIde sandbox INVENTS UI symptoms, it doesn't only hide them (learned 2026-08-09 on
+  manual-test 1.7). It runs PhpStorm 2024.2 on a fresh config with the stock keymap, so
+  IDE-level key handling differs from a real install: a defect that reproduces ONLY there is
+  suspect. Reproduce any interaction bug against the installed IDE before chasing it in the
+  renderer. The matching CDP limit: synthetic events dispatched over `tools/cdp.py` go straight
+  into the page and NEVER pass through IntelliJ's key dispatcher — CDP can prove the page's own
+  state machine correct (Escape and click-toggle leaving identical DOM), but it can say nothing
+  about the IDE stealing focus on the real keypress. Page logic and IDE key routing need
+  different instruments; don't let a clean CDP result close an IDE-focus question.
 - `window.LIMITS` splice: the webview THROWS on load if unspliced (a JS default would be a
   second copy). `RenderLimitsTest` fails the build on hardcoded literals, marker count ≠ 1, or
   unbalanced script tags (the latter two silently truncate the whole script block = "dead
-  webview"). Anything loading chat.html outside the IDE must splice LIMITS too. The cut-marker
+  webview"). Anything loading chat.html outside the IDE must splice LIMITS too — and that is
+  cheap: splice chat.css at `<!--CSS-->`, `window.LIMITS` (capture from the live panel:
+  `cdp.py "JSON.stringify(window.LIMITS)"`) + a `window.__bridge` stub at `<!--LIMITS-->`,
+  feed events through `window.onClaudeEvent`, assert via `document.title` under headless
+  `--dump-dom`. Proved out 2026-08-09 on the @-menu dismissal tests; click/class logic only
+  (the rAF/RO headless caveats above still apply). The cut-marker
   is a SIBLING of `.io-v`, never a child (`foldBlock` would fold it away). Fold ≠ marker: the
   fold hides content it still holds; the marker reports content that is GONE.
 - Replayed ask cards are marked `.ask-done` — that class must NOT be `.done` (the

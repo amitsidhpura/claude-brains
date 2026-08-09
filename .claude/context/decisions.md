@@ -3,6 +3,20 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-09 — All keyboard chords removed; the plugin binds NO shortcuts
+The three webview JS keydown chords are deleted, not re-homed as IDE actions: Ctrl/Cmd+N (new
+conversation), Ctrl+Alt+G (gallery), F12 (DevTools). The `"devtools"` bridge branch in
+`ChatPanel.kt` went with them — nothing sends it now. Every capability keeps a route: the New
+button and `/clear` both send `kind:'new'`, the gallery stays exposed as `window.__gallery()`,
+and DevTools keeps the shortcut-less `ClaudeBrains.OpenDevTools` action (Find Action).
+**Why:** all three were dead on this setup — Ctrl+N was swallowed by the IDE's "Go to Class",
+and the Ctrl+Alt+G / F12 handlers never fired at all inside JCEF. A shortcut that silently does
+nothing is worse than none.
+**Rejected:** re-registering them as IDE-level actions with `<keyboard-shortcut>` (the fix
+previously queued in state.md) — that trades a dead chord for a keymap collision to hunt on
+every IDE and OS, for a panel whose buttons are already one click away. Closes manual-test
+1.5 / 11.1 / 11.2, dropping the open-issue count from 19 to 17.
+
 ## 2026-08-08 — Manual-test pass conventions; two behaviours accepted, not fixed
 The 92-item pass closed with a "tick + inline ISSUE note" convention: a box is ticked when the
 behaviour was OBSERVED, with defects recorded under it rather than leaving boxes open. Two

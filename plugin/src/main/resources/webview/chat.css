@@ -653,6 +653,10 @@ blockquote > *:last-child { margin-bottom: 0; }
 .q-x:hover { color: var(--fg); }
 .chip-btn { background: transparent; border: 0; color: var(--user-muted); cursor: pointer; font: inherit; font-size: 12px; line-height: 1;
   border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
+/* display:inline-flex above beats the UA's [hidden]{display:none} — without this re-assert a
+   "hidden" bg chip kept showing its pulsing ::before dot forever (manual-test 7.3), and
+   #ctxChip only looked hidden because its text happened to be empty. */
+.chip-btn[hidden] { display: none; }
 .chip-btn:hover { color: var(--fg); }
 .chip-btn svg { width: 14px; height: 14px; }
 /* context gauge: share of the window the next request will carry. Click to /compact.
@@ -699,6 +703,17 @@ blockquote > *:last-child { margin-bottom: 0; }
    scrolls a list that visibly fits. Keep it >= 5 real rows so it never clips before the measure. */
 #slashList { max-height: 274px; overflow-y: auto; padding-bottom: 4px; }
 .popup-empty { padding: 10px 14px; color: var(--user-muted); font-size: 12px; }
+/* @-file-mention menu. Body-level, positioned by openMenu() with viewport coords from
+   getBoundingClientRect — hence FIXED, unlike the composer popups (absolute in their anchors);
+   with position:static those inline left/top were ignored and the menu "opened" invisibly in
+   normal flow below #app (manual-test 2.8). max-height mirrors openMenu's min(240, scrollHeight)
+   placement math; box-sizing because openMenu sets width to the input's outer width. */
+#mention { display: none; position: fixed; z-index: 25; max-height: 240px; overflow-y: auto;
+  box-sizing: border-box; background: var(--user-bg); border: 1px solid var(--user-border);
+  border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); }
+.mi { padding: 6px 14px; font-size: 12px; color: var(--fg); cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mi:hover, .mi.sel { background: var(--user-raised-hover); }
 #attachMenu { left: 0; min-width: 220px; }
 #attachMenu .popup-item { align-items: center; }
 .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--user-muted);

@@ -8,6 +8,10 @@ Tick items by telling me the number (e.g. "3.4 done").
 Setup: `cd plugin && ./gradlew runIde`, open the Claude Brains tool window.
 Items marked **(hard to trigger)** need a specific situation — skip if it doesn't occur naturally.
 
+Defect notes use exactly two markers: "ISSUE (date):" = open, "RESOLVED (date) — how:" = closed,
+where *how* is one of fixed / removed / not a bug. `grep -c '\*\*ISSUE'` is always the open
+count (this header deliberately avoids the bold pattern so it doesn't count itself).
+
 ---
 
 ## 1. Launch & chrome
@@ -17,15 +21,44 @@ Items marked **(hard to trigger)** need a specific situation — skip if it does
       "Develop in the IDE. Configure in the Terminal.", `/` and `@` hint lines
 - [x] 1.3 Tool-window stripe icon: grey when closed, white while open
 - [x] 1.4 Header shows conversation title once one exists; Refresh button re-resumes the session
-- [x] 1.5 Ctrl+N starts a new conversation
+- [x] 1.5 New conversation via the New button and `/clear` (no keyboard shortcut — by design)
 
-      **ISSUE (2026-08-07):** Ctrl+N is swallowed by the IDE — opens PhpStorm's
-      "Go to Class" dialog instead of starting a new conversation.
+      **RESOLVED (2026-08-09) — removed:** the Ctrl+N chord was removed rather than fixed. It was
+      swallowed by the IDE ("Go to Class"), and the plugin now binds no shortcuts at all.
+      The New button and `/clear` both send `kind:'new'`.
 - [x] 1.6 Scroll fades at top and bottom of the conversation while content is scrollable
 - [x] 1.7 Escape closes whatever popup is open (menus, history panel, lightbox, task roster)
 
-      **ISSUE (2026-08-07):** after closing a popup with Escape, reopening it glitches;
-      click-toggle works fine.
+      **RESOLVED (2026-08-09) — not a bug, sandbox artifact:** the "reopening glitches after
+      Escape" note from 2026-08-07 does not reproduce in the installed PhpStorm 2026.2, nor
+      over CDP. Probed the live panel through the real handlers: Escape and click-toggle leave
+      byte-identical DOM state, and reopening works after either (open→true, Escape→false,
+      reopen→true, matching the click-close control exactly). `tg()` derives everything from
+      the `.show` class, so removing it IS a complete close — there is no second state flag for
+      Escape to miss. The remaining candidate is IDE-level focus: a real Escape passes through
+      IntelliJ's key dispatcher, which returns focus to the editor, so the next click is spent
+      restoring panel focus instead of hitting the chip. That is invisible over CDP (synthetic
+      events bypass the IDE) and differs between the runIde sandbox (PhpStorm 2024.2, stock
+      keymap, fresh config) and a real install. Treat as a sandbox symptom, not a plugin defect.
+
+      **RESOLVED (2026-08-09) — fixed:** Escape now sticks on the slash menu. A `slashEscaped` flag is
+      set when Escape closes it; the `input` handler skips its `.show` re-assert while the
+      flag holds. Re-armed when the text leaves the `/^\/[\w-]*$/` shape, when the slash
+      button opens the menu explicitly, and by `clearComposer()` (programmatic clears fire no
+      input event, so the composer would otherwise wake up escaped). Same-day follow-up: the
+      slash menu also got the @-menu's soft-reopen contract (see the 2.8 enhancement note) —
+      the evaluation now lives in `slashAuto()`, shared by typing, refocus, and
+      click-into-composer; outside-click reopens on return, Escape still sticks (headless
+      harness 8/8, commands seeded via `system/commands_changed`).
+
+      **RESOLVED (2026-08-09) — fixed:** Escape now closes permission-card split-button menus — a
+      `closeCardMenus()` rung sits in the Escape chain between the lightbox and `activeMenu()`
+      (card menus are transient DOM outside `MENUS`, so the existing walk couldn't see them).
+      Both fixes mirrored in `design/mockup.html` and verified there via a headless-Chrome
+      probe of the mirrored logic: Escape-then-typing stays closed through `/c`→`/co`, leaving
+      the shape re-arms, button-open overrides, and a card menu + composer menu layered pair
+      closes in order (card first, `.open` cleared, composer on the second press). Live-panel
+      re-check in the next `runIde` session.
 
 ## 2. Composer basics
 
@@ -39,16 +72,83 @@ Items marked **(hard to trigger)** need a specific situation — skip if it does
 - [x] 2.7 After Stop, queued messages do NOT auto-send
 - [x] 2.8 `@` opens the file-mention menu; picking one inserts the reference and the model can use it
 
-      **ISSUE (2026-08-07):** file-mention menu does not open on `@`.
+      **RESOLVED (2026-08-09) — fixed:** the menu was OPENING invisibly all along — `#mention`
+      and `.mi` had no CSS anywhere, so the div was `position: static`, which ignores the
+      viewport `left/top` that `openMenu()` sets and rendered it as an unstyled transparent
+      block in normal flow below `#app`. The JS/Kotlin pipeline was healthy end-to-end (CDP
+      probe on the installed IDE: 39 files fed, regex matched, 20 rows built). Fix is
+      CSS-only: `#mention` gets `position: fixed` + the standard popup skin, `.mi` rows the
+      standard row/hover/sel treatment (chat.css, next to `.popup`). Verified live by
+      injecting the new rules into the running panel over CDP: menu renders above the
+      composer (screenshot), `@sal` filters to 1 row, ArrowDown moves the highlight, Enter
+      inserts `@src/Salutation.php ` and closes, Escape closes. While here, gave the mention
+      menu the same Escape-stick contract as the slash menu (`mentionEscaped` flag —
+      `updateAuto()` reopens on every keystroke otherwise). The mockup's static `#mention`
+      fixture picks the new styles up from the shared chat.css automatically.
+
+      **Follow-up, same day:** once visible, the menu turned out to have no dismissal
+      contract — no outside-click close (the document click handler never knew `#mention`)
+      and it stacked with composer popups (user screenshot: attach menu open on top of the
+      file list). Fixed by joining it to the exclusive popup layer: the document click
+      handler hides it on any click outside `#mention` (including clicks into the textarea,
+      where a caret move would stale `menuStart` and a later pick() would splice wrong),
+      `tg()` hides it whenever a composer popup toggles, and `openMenu()` closes composer +
+      card popups when the @-menu opens. Verified against the REAL chat.html — spliced with
+      chat.css and live-captured `window.LIMITS` exactly as `loadUi()` does, run headless
+      with the file list fed through `window.onClaudeEvent` — 12/12 assertions: outside
+      click closes, both stacking directions exclusive, row-click pick intact, composer
+      popups unaffected, and the `mentionEscaped` Escape-stick contract verified the same
+      way (upgraded from "pending runIde"; only real-JCEF confirmation remains).
+
+      **Enhancement, same day (user request):** returning the caret to an @-token brings the
+      menu back — refocusing the composer or clicking into the textarea runs `updateAuto()`,
+      which recomputes the token at the new caret (open in a token, closed in plain text,
+      nothing stale). The two dismissals deliberately differ in weight: outside-click is
+      soft (reopens on return), Escape is hard (`mentionEscaped` sticks until the token
+      shape changes). A `!activeMenu()` guard on the focus path keeps `tg('slashMenu')`'s
+      `input.focus()` from opening the @-menu over the slash menu the user just requested.
+      Headless harness 9/9: refocus reopens / plain text doesn't / click-in re-evaluates /
+      Escape sticks across both return paths / attach-menu guard + click-in takeover /
+      slash-button conflict. The slash menu shares the whole contract via `slashAuto()`
+      (see the 1.7 note) — the two text-driven menus behave identically on dismissal and
+      return, and re-evaluation on return proved them mutually exclusive by shape.
 - [x] 2.9 Image paste and drag-drop → chip in the composer; renders in the sent user box
 
-      **ISSUE (2026-08-07):** paste works and renders fine in the sent user box, but
-      drag-drop of a file does nothing.
+      **RESOLVED (2026-08-09) — fixed:** drag-drop was dead because JCEF-on-Linux never
+      turns an OS file drag into DOM drag events for an OSR surface — the page's own `drop`
+      handler was correct all along (proven: a synthetic DataTransfer drop on the live panel
+      produced a chip instantly). Fix adds the missing delivery layer: an AWT `DropTarget`
+      on the browser component (`ChatPanel.installFileDrop`) accepts `javaFileListFlavor`,
+      reads files off the EDT (25 MB/file cap, `MAX_DROP_BYTES`), base64s them, and calls
+      the page's new `__dropFiles`, which applies the same fileKind gate and media-type
+      normalisation as paste/picker. Headless harness 4/4: png + code-file chips, unsupported
+      binary skipped, pdf normalised, DOM drop path regression-clean. The DOM handler stays
+      wired — if a future JBR delivers native DnD, drops would arrive twice; the comment on
+      installFileDrop says to remove the DOM path then. NEEDS a hardware drag in the next
+      `runIde` — AWT delivery over the OSR component is the one unproven link (synthetic
+      events cannot cross the OS→AWT boundary).
 - [x] 2.10 PDF / text file attach → document chip with the real filename
 - [x] 2.11 After an error ends a turn, a ↻ Retry link appears; clicking re-runs the last
       prompt including its images
 - [x] 2.12 Paperclip button opens the attach menu → native file picker → chip in the composer
 - [x] 2.13 The [/] button opens the slash-command menu, same as typing `/`
+- [x] 2.14 Delete key forward-deletes in the composer and model search (alone, with a
+      selection, and Ctrl+Delete for a word) — no stray character appears
+
+      **RESOLVED (2026-08-09) — fixed:** user-reported post-pass: Delete inserted a tofu
+      char that only backspace removed, replacing any selection. Matches JCEF-on-Linux
+      sending the AWT keyChar 0x7F through as TEXT instead of forward-deleting (inferred
+      from the symptom triple; the char was backspaced away before it could be probed).
+      Two-layer fix in chat.html, document-level so `#modelSearch` is covered too:
+      keydown does the forward-delete manually (selection-aware, Ctrl+Delete = word) and
+      cancels the native event; a capture-phase input filter strips all control chars
+      except \t \n from any text field with the caret preserved — correct even if JCEF
+      ignores the cancel (delete happens, tofu stripped) and kills same-family siblings
+      (e.g. an ESC 0x1B). Verified via the spliced-chat.html headless harness, 7/7: mid,
+      selection, Ctrl-word, end-noop, 0x7F strip, \t\n survive, mention-menu re-filter
+      through the dispatched input event. D1 doubles as proof the cancel prevents
+      double-delete in a compliant browser. Needs a real-JCEF hardware-key check next
+      runIde (synthetic events can't reproduce the native path).
 
 ## 3. Slash commands & effort
 
@@ -146,14 +246,25 @@ Items marked **(hard to trigger)** need a specific situation — skip if it does
 - [x] 7.3 Background-task chip appears while a background sub-agent runs ("1 task");
       popup lists descriptions; chip disappears when they finish
 
-      **ISSUE (2026-08-07):** chip appears and the popup lists the task correctly, but after
-      the task finishes the chip stays at "1 task" (empty popup), and on a NEW conversation a
-      lone pulsing orange dot shows. ROOT CAUSE (probed via CDP): `chip.hidden = true` is set
-      correctly, but `.chip-btn { display: inline-flex }` overrides the UA `[hidden]` rule, so
-      the chip never actually hides — empty text leaves just the `.bg::before` dot. Fix:
-      `.chip-btn[hidden] { display: none; }` in chat.css (and clear `chip.textContent` in
-      renderBgTasks' empty branch). Same defeat likely applies to `#ctxChip`, which only
-      "hides" today because its text is empty.
+      **RESOLVED (2026-08-09) — fixed:** exactly as diagnosed on 2026-08-07 — `chip.hidden =
+      true` was set correctly but `.chip-btn { display: inline-flex }` beat the UA's
+      `[hidden] { display: none }`, so the chip never actually hid; with empty text only the
+      `.bg::before` pulsing dot remained (the "lone orange dot on a new conversation").
+      Fix: `.chip-btn[hidden] { display: none; }` in chat.css next to the .chip-btn rule,
+      plus `chip.textContent = ''` in renderBgTasks' empty branch so stale "1 task" can't
+      flash on a later re-show. Covers `#ctxChip` too (same class, same defeat — its hidden
+      state now computes to none instead of relying on empty text). Verified 6/6 on the
+      headless harness driving real `background_tasks_changed` frames: initial state truly
+      hidden, "1 task" shows, emptying hides (computed display:none, text cleared, roster
+      popup closed), "2 tasks" re-shows, re-empties, ctxChip family confirmed. The live
+      panel had the defect ACTIVE when probed (hidden=true, computed display:flex) — the
+      injected rule fixed it in place; the shipped CSS takes over on the next build.
+      Confirmed END-TO-END same day with a REAL background task (`sleep 30 &&
+      echo finished` via background Bash, watched over CDP at 2s resolution): idle
+      display:none → chip "1 task" at +23s with the CLI's own description on the roster →
+      full vanish (hidden + display:none + text cleared) at +52s, right when the sleep
+      ended. Fixture 04 also gained a computed-display assertion — the original
+      `hidden`-property check was structurally unable to catch this bug.
 - [x] 7.4 Sub-agent (Task tool): line shows the errand, IN box shows the prompt,
       live progress line updates ("Explore · … · N tool uses · N tokens"),
       finished line shows the summary
@@ -279,22 +390,18 @@ Items marked **(hard to trigger)** need a specific situation — skip if it does
 
 ## 11. Dev aids
 
-- [x] 11.1 Ctrl+Alt+G renders the gallery of transient states, no console errors (F12 to check)
+- [x] 11.1 `window.__gallery()` renders the gallery of transient states, no console errors
 
-      **ISSUE (2026-08-08):** the Ctrl+Alt+G keystroke is DEAD on this setup even with the
-      composer focused — the JS keydown handler (chat.html:3670) never fires; same family as
-      1.5's Ctrl+N. Gallery itself verified via `window.__gallery()` over CDP: all transient
-      states render (19 tool lines, 5 cards, 2 asks, 2 diffs, todos, cut markers), zero real
-      console errors (only the benign ResizeObserver-loop warning).
-- [x] 11.2 F12 in the panel / Find Action "Claude Brains: Open DevTools" opens DevTools;
+      **RESOLVED (2026-08-09) — removed:** the Ctrl+Alt+G chord was removed rather than fixed; the
+      gallery is reached by calling `window.__gallery()` from DevTools or over CDP. Verified
+      that way: all transient states render (19 tool lines, 5 cards, 2 asks, 2 diffs, todos,
+      cut markers), zero real console errors (only the benign ResizeObserver-loop warning).
+- [x] 11.2 Find Action "Claude Brains: Open DevTools" opens DevTools;
       http://localhost:9222 lists "Claude Brains — chat panel"
 
-      **ISSUE (2026-08-08):** F12 is DEAD even with the webview focused (chat.html:3671
-      handler never fires) — this machine is one of the "F12 dies inside JCEF" setups
-      plugin.xml warns about, and gotchas.md's "F12 in the panel works" note needs updating.
-      Find Action route works; the 9222 route carried every CDP probe of this whole pass.
-      The webview keydown chords (Ctrl+N / Ctrl+Alt+G / F12) likely need IDE-level action
-      shortcuts instead of JS handlers.
+      **RESOLVED (2026-08-09) — removed:** the F12 chord was removed rather than fixed — this machine
+      is one of the "F12 dies inside JCEF" setups plugin.xml warns about. Find Action is now
+      the only route in; the 9222 route carried every CDP probe of this whole pass.
 
 ---
 

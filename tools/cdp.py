@@ -19,7 +19,7 @@ CLI behind it. This talks to the actual panel: real frame timing, real LIMITS sp
 
 Complements, not replaces:
   ./gradlew probe   — replay blocks for a session, no IDE. Splits a PARSER bug from a RENDERER bug.
-  Ctrl+Alt+G        — the gallery: every transient state drawn without driving the CLI.
+  window.__gallery() — the gallery: every transient state drawn without driving the CLI.
   this              — the live DOM as it actually is, mid-session.
 
 Only Python's `websockets` is required (no CDP client library). Every mode connects, does its one

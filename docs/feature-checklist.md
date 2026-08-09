@@ -104,7 +104,8 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [ ] ⬜ Multiple conversation **tabs** (`new_conversation_tab`, `rename_tab`)
 - [ ] ⬜ ~~Rewind / undo file changes per turn~~ — REMOVED 2026-07-30 (feature dropped)
 - [ ] ⬜ Rewind the *conversation* (resume-at a message) — not started; file rewind was removed
-- [x] 🟡 Ctrl+N new conversation shortcut (Ctrl+Shift+T reopen-closed still ⬜)
+- [ ] ⬜ ~~Ctrl+N new conversation shortcut~~ — REMOVED 2026-08-09 (the plugin binds no
+      keyboard shortcuts; New button and `/clear` cover it). Ctrl+Shift+T reopen-closed still ⬜
 
 ## 9. Model & usage
 - [x] ✅ **Model** selector (populated from `initialize.models`; switches via `set_model` control)

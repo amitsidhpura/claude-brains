@@ -671,6 +671,14 @@ total 196K
   var MOCK_SPARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
   // dev toolbar toggles (mockup only)
   var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu'];
+  // Mirrors chat.html: Escape on the slash menu must stick even though the input handler
+  // re-asserts .show while the text still looks like "/cmd".
+  var slashEscaped = false;
+  function closeCardMenus() {
+    document.querySelectorAll('.card-menu.show').forEach(function (m) {
+      m.classList.remove('show'); m.parentNode.classList.remove('open');
+    });
+  }
   function tg(id, e) {
     if (e) e.stopPropagation();
     MENUS.forEach(function (x) {
@@ -679,6 +687,7 @@ total 196K
     var p = document.getElementById(id);
     if (!p.classList.contains('show')) return;
     if (id === 'slashMenu') {
+      slashEscaped = false;                     // explicit open overrides an earlier Escape
       renderSlash(inp.value.charAt(0) === '/' ? inp.value.slice(1) : '');
       inp.focus();
     } else {
@@ -701,8 +710,10 @@ total 196K
     if (e.key === 'Escape') {
       var lb = document.getElementById('lightbox');
       if (lb.classList.contains('show')) { lb.classList.remove('show'); return; }
+      // card menus live outside MENUS, so activeMenu() can't see them
+      if (document.querySelector('.card-menu.show')) { closeCardMenus(); return; }
       var m = activeMenu();
-      if (m) { m.classList.remove('show'); return; }
+      if (m) { if (m.id === 'slashMenu') slashEscaped = true; m.classList.remove('show'); return; }
       document.getElementById('histPanel').classList.remove('show');
       return;
     }
@@ -822,7 +833,9 @@ total 196K
       var end = inp.value.length; inp.setSelectionRange(end, end);
       v = inp.value;
     }
-    if (v.charAt(0) === '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1) {
+    var isSlash = v.charAt(0) === '/' && v.indexOf(' ') === -1 && v.indexOf('\n') === -1;
+    if (!isSlash) slashEscaped = false;         // leaving the /-shape re-arms auto-open
+    if (isSlash && !slashEscaped) {
       renderSlash(v.slice(1));
       ['modeMenu','modelMenu','attachMenu'].forEach(function (x) { document.getElementById(x).classList.remove('show'); });
       document.getElementById('slashMenu').classList.add('show');
@@ -1081,18 +1094,14 @@ total 196K
       e.stopPropagation();
       var pop = b.parentNode.querySelector('.card-menu');
       var open = pop.classList.contains('show');
-      document.querySelectorAll('.card-menu.show').forEach(function (m) {
-        m.classList.remove('show'); m.parentNode.classList.remove('open');
-      });
+      closeCardMenus();
       pop.classList.toggle('show', !open);
       b.parentNode.classList.toggle('open', !open);
     });
   });
   document.addEventListener('click', function (e) {
     if (e.target.closest('.card-menu')) return;
-    document.querySelectorAll('.card-menu.show').forEach(function (m) {
-      m.classList.remove('show'); m.parentNode.classList.remove('open');
-    });
+    closeCardMenus();
   });
 </script>
 </body>

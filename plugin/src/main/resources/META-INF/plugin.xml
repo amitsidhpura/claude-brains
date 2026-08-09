@@ -72,7 +72,9 @@
     <actions>
         <!-- Dev aid: opens Chrome DevTools for the chat webview. No default shortcut on
              purpose — invoke via Find Action; every chord we tried collided somewhere
-             (Ctrl+Alt+D is a WM grab on Linux, F12 dies inside JCEF on some setups). -->
+             (Ctrl+Alt+D is a WM grab on Linux, F12 dies inside JCEF on some setups).
+             The plugin deliberately binds NO keyboard shortcuts at all: the webview JS keydown
+             chords proved unreliable across setups and were removed 2026-08-09. -->
         <action id="ClaudeBrains.OpenDevTools"
                 class="io.github.amitsidhpura.claudebrains.ui.DevToolsAction"
                 text="Claude Brains: Open DevTools"

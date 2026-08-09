@@ -26,7 +26,14 @@ import kotlinx.serialization.json.put
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDropEvent
+import java.io.File
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 import javax.swing.JComponent
 
 /**
@@ -64,6 +71,58 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         }, browser.cefBrowser)
 
         loadUi()
+        installFileDrop()
+    }
+
+    /**
+     * OS file drags never reach the DOM: JCEF's AWT→CEF drag bridge is not wired for OSR on
+     * Linux, so the page's own `drop` handler (which works — proven with a synthetic
+     * DataTransfer drop) simply never fires for external files (manual-test 2.9). This AWT
+     * DropTarget is the delivery layer instead: read the files off the EDT, base64 them, and
+     * hand them to the page's `__dropFiles`, which routes into the same pending/attachment
+     * pipeline as paste and the picker (fileKind still decides what is supported, so
+     * unsupported binaries are skipped identically). If a future JBR ever wires native DnD,
+     * a drop could arrive on both paths and duplicate chips — take the DOM handler out then.
+     */
+    private fun installFileDrop() {
+        DropTarget(browser.component, object : DropTargetAdapter() {
+            override fun drop(e: DropTargetDropEvent) {
+                e.acceptDrop(DnDConstants.ACTION_COPY)
+                val files = runCatching {
+                    @Suppress("UNCHECKED_CAST")
+                    (e.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>)
+                }.getOrNull().orEmpty()
+                e.dropComplete(files.isNotEmpty())
+                if (files.isEmpty()) return
+                ApplicationManager.getApplication().executeOnPooledThread {
+                    val payload = buildJsonArray {
+                        files.forEach { f ->
+                            if (!f.isFile) return@forEach
+                            if (f.length() > MAX_DROP_BYTES) {
+                                log.warn("drop: ${f.name} skipped (${f.length()} bytes > $MAX_DROP_BYTES)")
+                                return@forEach
+                            }
+                            add(buildJsonObject {
+                                put("name", f.name)
+                                // extension-based; a code file often probes null, and the page's
+                                // isTextFile falls back to the extension list — same as paste
+                                put("mime", runCatching { java.nio.file.Files.probeContentType(f.toPath()) }
+                                    .getOrNull() ?: "")
+                                put("data", Base64.getEncoder().encodeToString(f.readBytes()))
+                            })
+                        }
+                    }
+                    if (payload.isEmpty()) return@executeOnPooledThread
+                    val jsArg = JsonPrimitive(payload.toString()).toString()
+                    ApplicationManager.getApplication().invokeLater {
+                        browser.cefBrowser.executeJavaScript(
+                            "window.__dropFiles && window.__dropFiles(JSON.parse($jsArg));",
+                            browser.cefBrowser.url, 0,
+                        )
+                    }
+                }
+            }
+        })
     }
 
     private fun handleFromWeb(raw: String) {
@@ -104,9 +163,6 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
             "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
-            // F12 in the webview. The JCEF context-menu route to DevTools is unreliable
-            // (OSR on Linux can swallow the popup entirely), so the panel asks for it directly.
-            "devtools" -> openDevtools()
             "new" -> {
                 transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
                 clearLog(); session.newConversation(); pushTitle(null)
@@ -439,9 +495,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         }
     }
 
-    /** Open Chrome DevTools for the webview. Reached by F12 in the panel and by the
-     *  "Claude Brains: Open DevTools" action (DevToolsAction) — logged because every
-     *  keyboard route into JCEF has failed silently at least once (WM grabs, OSR). */
+    /** Open Chrome DevTools for the webview. Reached only through the "Claude Brains:
+     *  Open DevTools" action (DevToolsAction) — logged because every keyboard route into
+     *  JCEF has failed silently at least once (WM grabs, OSR), which is why there is none. */
     fun openDevtools() {
         log.info("openDevtools requested, url=${browser.cefBrowser.url}")
         runCatching { browser.openDevtools() }
@@ -450,6 +506,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
 
     companion object {
         private const val INITIAL_BLOCKS = 250
+        /** Per-file cap for drag-dropped attachments: protects the JVM + JS bridge from an
+         *  accidental ISO drop; generous vs the API's own image limits, same spirit as the
+         *  paste path (which the browser caps naturally at clipboard size). */
+        private const val MAX_DROP_BYTES = 25L * 1024 * 1024
         private const val MORE_BLOCKS = 500
         private val log = Logger.getInstance(ChatPanel::class.java)
 
