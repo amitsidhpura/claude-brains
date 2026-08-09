@@ -227,9 +227,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * command's rules arrive as ONE addRules suggestion with rules[] (measured 2026-08-09,
      * CLI 2.1.226), so a split-menu partial grant must echo the suggestion NARROWED to the
      * picked rule(s). Probed: the CLI accepts the subset and persists exactly those rules.
+     *
+     * FIRST ANSWER WINS: an edit permission now has two surfaces (the panel card and the editor
+     * diff), and the pending map is the arbiter — whichever route removes the entry sends the
+     * control_response; the loser gets `false` and must not answer again. This also stops a
+     * response for an id the CLI never asked about (or already got) from reaching stdin.
      */
-    fun respondPermission(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList()) {
-        val input = pendingPermissions.remove(requestId) ?: JsonObject(emptyMap())
+    fun respondPermission(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList()): Boolean {
+        val input = pendingPermissions.remove(requestId) ?: return false
         val suggestions = pendingSuggestions.remove(requestId)
         val picked = mutableListOf<JsonElement>()
         if (allow && suggestions != null) {
@@ -257,6 +262,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         val chosen = if (picked.isEmpty()) null
         else kotlinx.serialization.json.buildJsonArray { picked.forEach { add(it) } }
         cli?.respondPermission(requestId, allow, input, chosen)
+        return true
     }
 
     /** Answer an AskUserQuestion permission: allow + {questions, answers} as updatedInput. */

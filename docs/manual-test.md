@@ -448,10 +448,38 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 
 - [x] 9.1 API retry storm: "… — retrying (n/m)" status lines instead of a silent stall **(hard to trigger)**
 
-      **ISSUE (2026-08-07):** behaviour correct (triggered via `nmcli networking off`), but
-      every line reads "unknown — retrying (n/10)" — the error reason from the `api_retry`
-      event isn't surfaced (the final error block DOES show "Unable to connect to API
-      (ENOTIMP)", so the data is there). Also "(1/10)" rendered twice — duplicate first attempt.
+      **RESOLVED (2026-08-09) — fixed, premise corrected:** measured against the 2.1.226 binary
+      (`strings` — the third lane, since retry frames are never persisted with live spellings),
+      the "error reason" the ISSUE wanted surfaced does NOT exist on the wire: `api_retry`'s
+      `error` is a five-code enum from the CLI's classifier (529→`overloaded`, 429→`rate_limit`,
+      401|403→`authentication_failed`, ≥408→`server_error`, else the literal `unknown` — which
+      is what a no-status network failure maps to). The rich text ("Unable to connect …") is
+      TUI-in-process only. Fix: `RETRY_REASONS` in chat.html translates the enum ("API error —
+      retrying (1/10)" for unknown — the TUI's own early-attempt wording), status kept in
+      parens, unfamiliar codes degrade to the raw code (8.2's rule). The duplicate "(1/10)" is
+      the stream translator yielding the raw `api_error` AND its `api_retry` twin for the same
+      attempt (read from the binary: the raw frame falls through the chain's `else yield` first)
+      — deduped by consecutive attempt/max key (`retrySeen`, reset per turn/clear; last-key not
+      a Set, so a second same-turn storm restarting at 1/10 still shows). Twins arrive raw-first,
+      so when shapes differ the richer text is the line that stays. Fixture 09 pins both halves
+      (8 FAILs against pre-fix chat.html, 11/11 after; full suite 71/71 headless AND 71/71 on
+      real JCEF). User-verified live same day with a REAL network-off storm: all ten attempts
+      read "API error — retrying (n/10)" one line each, the CLI's rich final error block
+      ("Unable to connect to API (ENOTIMP)") followed, Retry seeded, and the resend succeeded
+      once the network returned.
+
+      **Replay half (same day):** resuming the storm session drew the error block BEFORE the
+      ten retries — the CLI persists the concluding error record first and flushes the buffered
+      `api_error` records after it (measured on session `afe39ca0…`: error at file position 21
+      / ts 09:47:24, retries at 24–33 / ts 09:44:20–09:46:45, parent-chained user → a1 → … →
+      a10 → resend). File order lies; timestamps don't. Fix in SessionStore: a retry whose
+      timestamp precedes the last emitted error item is INSERTED before that error (and before
+      its auth status line), with a younger-than-the-error guard so a later request's retries
+      never time-travel into an old turn. Replay wording stays richer than live by design
+      (`error.formatted` is persisted; the wire only carries the enum). Pinned by
+      `late-flushed retry records replay before the error that ended their storm`
+      (RenderLimitsTest; fails on the order assertion with the insertion disabled), verified
+      against the real session via `./gradlew probe`: user → retries 1–10 → error → resend.
 - [x] 9.2 Auth failure (e.g. bad ANTHROPIC_API_KEY in the sandbox env) → clear
       "sign in from a terminal" message, not an opaque error
 - [x] 9.3 CLI process death → "claude process exited (N)" status line with stderr tail
@@ -486,33 +514,54 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 
 - [x] 10.1 Model can open a file in the editor (mcp__ide__openFile)
 
-      **ISSUE (2026-08-08):** the MODEL half is dead on CLI 2.1.226 — ToolSearch finds no
-      `mcp__ide__openFile` and a direct call errors "No such tool available"; only
-      `mcp__ide__getDiagnostics` is model-facing now (upstream CLI policy change; openFile
-      worked when the checklist was written). The BRIDGE half verified end-to-end by calling
-      `tools/call openFile` over the WS directly (auth header + "mcp" subprotocol) — editor
-      tab opened. Re-scope this item (and 10.4/10.5) if the CLI keeps the restriction.
+      **RESOLVED (2026-08-09) — not a bug, upstream by design; item re-scoped to the bridge
+      half:** the model half is a deliberate, stable CLI allowlist, read verbatim from the
+      binaries: the MCP tools-listing applies `!name.startsWith("mcp__ide__") ||
+      ["mcp__ide__executeCode","mcp__ide__getDiagnostics"].includes(name)`, IDENTICAL across
+      2.1.222 / 2.1.223 / 2.1.226 — so this is not a 226 change that might revert (the "worked
+      when written" memory predates 2.1.222), and VS Code models get the same two tools.
+      Sub-agent contexts additionally strip the whole ide client. **Rejected workaround:**
+      registering the bridge under a non-"ide" server name would dodge the prefix filter but
+      the CLI finds its IDE client BY that literal name (`name === "ide"` lookup) for its own
+      IDE features — the TUI diff-in-IDE flow among them — so the dodge breaks more than it
+      restores. This item now means: bridge `openFile` works over MCP-over-WS (verified
+      2026-08-08, editor tab opened); the model not having it is upstream's contract, tracked
+      nowhere as a defect.
 - [x] 10.2 Model can read editor diagnostics (ask "what errors are in this file?")
 - [x] 10.3 Current selection is available to the model
 
-      **ISSUE (2026-08-08):** same upstream restriction as 10.1 — the model has no selection
-      tool on CLI 2.1.226 and answered "I don't have visibility into your current selection".
-      Bridge half verified directly: `tools/call getCurrentSelection` over the WS returned
-      the exact highlighted text (`private int $count;` + file path). (Auto-including the
-      selection in prompts is separately a known deferred feature, not this item.)
+      **RESOLVED (2026-08-09) — not a bug, upstream by design; re-scoped like 10.1:** same
+      stable allowlist (see 10.1's note for the measured mechanism and the rejected
+      server-rename dodge). This item now means: bridge `getCurrentSelection` works over
+      MCP-over-WS (verified 2026-08-08 — returned the exact highlighted text + file path).
+      (Auto-including the selection in prompts is separately a known deferred feature, not
+      this item.)
 - [x] 10.4 openDiff shows a diff view in the editor
       (Verified 2026-08-08 by calling `tools/call openDiff` over the bridge WS directly —
       the model cannot call it on CLI 2.1.226, same upstream restriction as 10.1.)
 - [x] 10.5 Accepting / rejecting in that editor diff view is honoured (accept saves the file,
       reject leaves it untouched and the model is told)
 
-      **ISSUE (2026-08-08):** the ACCEPT path reports "FILE_SAVED" + new content to the
-      caller but never writes anything — `DiffReview.kt:56` completes the future without a
-      document write or `FileDocumentManager.saveDocument`, so the verdict lies to the CLI
-      (editor buffer and disk both unchanged, verified). Reject path is correct
-      (DIFF_REJECTED, file untouched). Also: dead callers leave the Accept/Reject
-      notification balloon up forever, inviting stale-balloon misclicks; verified via
-      direct WS calls since the model cannot invoke openDiff on CLI 2.1.226 (see 10.1).
+      **RESOLVED (2026-08-09) — fixed, premise corrected:** the "never writes" half was NOT a
+      bug. Measured against both halves of the reference: the VS Code extension (installed
+      2.1.222) builds BOTH diff panes as temp-provider documents — the real file is never
+      touched — and returns FILE_SAVED + the right pane's final getText(); the CLI (2.1.226
+      binary) maps the verdict to {oldContent, newContent} and performs the disk write itself
+      through its own Edit/Write machinery (TAB_CLOSED → accept-as-proposed, DIFF_REJECTED →
+      keep old content). FILE_SAVED is the accept TOKEN, not a claim about disk — the 2026-08-08
+      probe saw no write because the probe, unlike the CLI, never acts on the verdict. What WAS
+      broken, fixed in DiffReview.kt: the TAB_CLOSED verdict didn't exist at all (closing the
+      diff left the caller blocked forever — now `onAssigned(false)` resolves it, debounced
+      500 ms so a side-by-side↔unified viewer switch doesn't false-fire); accept returned the
+      original proposal instead of the right pane's final text (user tweaks now travel back);
+      close_tab / closeAllDiffTabs didn't resolve pending reviews (now completed TAB_CLOSED);
+      and the stale-balloon half — balloons expire with the future whichever way it resolves,
+      dismissal no longer auto-rejects (the diff tab is the decision surface), and a dying WS
+      connection or server shutdown cancels pending reviews (IdeMcpServer.onClose / shutdown).
+      Verified 2026-08-09 over direct MCP-over-WS against the live bridge: all three verdicts
+      observed with correct part shapes — ["TAB_CLOSED"] on closeAllDiffTabs, ["FILE_SAVED",
+      pane text] on Accept, ["DIFF_REJECTED", tab_name] on Reject — file untouched on disk in
+      every case; user confirmed no stale balloons survive any round.
 
 ## 11. Dev aids
 

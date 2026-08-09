@@ -3,6 +3,79 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-09 — Edit permissions are dual-surface, first answer wins; editor close is NOT a grant
+A can_use_tool for Edit/Write/MultiEdit opens the panel card AND a real editor diff (read-only,
+balloon Accept/Reject); `ClaudeSessionService.respondPermission`'s pending map is the arbiter —
+first remove() sends, the loser no-ops. Closing the diff without deciding leaves the card as the
+sole surface.
+**Why:** keyboard users keep the card (and the always-allow rules, which stay card-only); the
+editor gets the reference-style surface the roadmap wanted. TAB_CLOSED deliberately DIVERGES
+from the bridge flow's accept-as-proposed here: a permission must never be granted by a window
+being tidied away. Read-only panes because accept answers with the ORIGINAL input — an editable
+pane would silently discard typing (tweak-travel is a possible v2).
+**Rejected:** editor-only surface (breaks panel-only workflows); editor-title buttons for v1
+(balloon ships now, buttons can follow); TAB_CLOSED→allow parity (unsafe for permissions).
+
+## 2026-08-09 — openDiff never writes; every review's diff tab closes by a HELD handle
+DiffReview implements the reference verdict contract (FILE_SAVED + final pane text /
+DIFF_REJECTED / TAB_CLOSED — the CALLER does the disk write) and opens its diff as its own
+`ChainDiffVirtualFile`, holding the file reference from creation; resolution closes exactly
+that tab.
+**Why:** measured against both halves of the reference — the VS Code extension builds both
+panes as temp documents and never touches the real file; the CLI maps the verdict to
+{oldContent, newContent} and writes itself. And `FileEditorManager.openFiles` does NOT report
+diff editors (measured live: visible diff tab, empty openFiles), so any find-then-close closes
+nothing — the old closeAllDiffTabs filter had never worked.
+**Rejected:** writing the file on accept (double-write that fights the CLI — 10.5's original
+premise, corrected); find-by-name/class tab closing (provably a no-op).
+
+## 2026-08-09 — 10.1/10.3 re-scoped: the model-facing IDE-tool allowlist is upstream policy
+The CLI drops every `mcp__ide__*` tool from the model's roster except getDiagnostics +
+executeCode — a filter byte-identical across 2.1.222/223/226. Items now mean their bridge
+halves (verified over MCP-over-WS).
+**Why:** three identical versions = deliberate policy, not a regression to wait out; VS Code
+models get the same two tools, so parity is preserved by accepting it.
+**Rejected:** registering the bridge under a non-"ide" server name to dodge the prefix filter —
+the CLI finds its IDE client BY the literal name `"ide"` for its own IDE features (TUI
+diff-in-IDE among them); the dodge breaks more than it restores.
+
+## 2026-08-09 — Retry-line wording is a chat.html table; replay reorders late-flushed retries (9.1)
+The wire's api_retry `error` is a five-code enum (network failures = literal "unknown") —
+`RETRY_REASONS` translates it, unfamiliar codes degrade to the raw code, twins dedupe by
+consecutive attempt/max key. Replay-side, SessionStore inserts an api_error record whose
+timestamp precedes the last emitted error item BEFORE that error.
+**Why:** the rich reason never rides the stream (TUI-in-process only), so translation is the
+ceiling live; and the CLI flushes buffered api_error records AFTER the concluding error record —
+file order lies, timestamps and the parent chain don't.
+**Rejected:** surfacing "the" error reason live (doesn't exist on the wire); a Set for dedupe
+(would swallow a second same-turn storm's restart at 1/10); general timestamp re-sort of replay
+(risky for every other record family — the insertion is scoped to this measured pattern).
+
+## 2026-08-09 — Model-facing tool results are suppressed by CONTENT, not tool name (7.4)
+`RenderLimits.isInternalResult()` drops the OUT box for a result whose FIRST line closes with
+the CLI's own "(This tool result is internal metadata …)" declaration; `stripPlumbing()` also
+strips a position-0 `[harness: …]` envelope.
+**Why:** the async sub-agent launch is model-facing bookkeeping end to end, but the SAME tool's
+completed result is the sub-agent's report — the one thing on that line worth reading — so
+RESULT_SKIP's name-keying cannot express the split; only the text can. Position-0-only for the
+envelope is structural safety: the CLI escapes line-initial forgeries to `[\harness:` before
+prepending its own, so an unescaped one in first position can only be real.
+**Rejected:** adding Task/Agent to RESULT_SKIP (kills the completed report); stripping
+`[harness:` anywhere in the text (a sub-agent quoting the marker — this project's own notes
+do — would lose it).
+
+## 2026-08-09 — Replay error parity: the CODE travels, the WORDING lives once in chat.html (8.2)
+SessionStore emits `status` items carrying the raw auth error code (`icon:"auth"`); replay
+resolves it through the same AUTH_BLOCKED map the live path reads. `AUTH_BLOCKED_CODES` (the
+membership set) lives in RenderLimits but is deliberately NOT spliced into LIMITS.
+**Why:** the per-code text is UI wording only chat.html needs; Kotlin needs only membership.
+A spliced set the JS never reads is dead weight — the alignment is pinned by a test instead
+(every code must appear in chat.html), and an unknown code degrades to showing the raw code
+rather than nothing. The phantom-summary suppression (`reqError`) is last-record-wins, not
+sticky, so a request that recovers after an error record keeps its summary.
+**Rejected:** duplicating the wording into Kotlin (drift); keying suppression on the presence
+of any error record (a recovered request would lose its summary).
+
 ## 2026-08-09 — Live edit diffs render OPTIMISTICALLY from tool input, superseded by the card
 Edit/Write/MultiEdit now draw replay's "Applied" card live, built from the tool_use INPUT at
 `tool_result` time, and a `permission_request` for the same edit marks the pending record

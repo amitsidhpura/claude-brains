@@ -149,6 +149,16 @@ These are what the CLI calls to act on the editor:
 tab is how "proposed changes" appear, gated behind the `acceptProposedDiff`/`rejectProposedDiff`
 commands in `package.json`.)
 
+**openDiff's verdict contract** (extension 2.1.222 + CLI 2.1.226 binary, measured 2026-08-09):
+the call blocks until one of three verdicts, returned as text parts —
+`["FILE_SAVED", <final right-pane text>]` on accept (the pane is editable; user tweaks travel
+back), `["DIFF_REJECTED", <tab_name>]` on reject, `["TAB_CLOSED"]` when the diff closes without
+a decision. **The IDE never writes the file**: both panes are temp documents in the reference,
+and the CLI maps the verdict to `{oldContent, newContent}` (TAB_CLOSED → accept-as-proposed,
+DIFF_REJECTED → old content) and does the disk write itself. FILE_SAVED is the accept token,
+not a claim about disk — a caller-less probe that expects a write will wrongly conclude the
+host is broken (manual-test 10.5 did).
+
 ---
 
 ## 5. Host→CLI notifications (webview/state channel)

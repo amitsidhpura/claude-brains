@@ -3,6 +3,34 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-09 (fourth) — 9.1 + 10.5 + editor accept/reject + 10.1/10.3: register 6 → 2 open
+- 9.1 live half: the api_retry `error` is c_r()'s five-code ENUM (read from the binary — network
+  failures are the literal "unknown"), and the stream translator double-emits each retry (raw
+  api_error falls through `else yield` before the api_retry twin). RETRY_REASONS + last-key
+  dedupe in chat.html; fixture 09 (8 pre-fix FAILs). User verified with a real nmcli storm.
+- 9.1 replay half (user's replay screenshot): the CLI WRITES the concluding error record before
+  flushing the buffered retries — file order lies, timestamps/parent chain don't. SessionStore
+  inserts younger-than-the-error retries before it; probe on the real storm session confirmed;
+  Kotlin test fails with the insertion disabled.
+- 10.5 premise CORRECTED by measuring both reference halves: the IDE never writes on accept —
+  both VS Code panes are temp docs and the CLI does the disk write from the returned verdict.
+  DiffReview rewritten to the three-verdict contract (TAB_CLOSED added, final-pane-text accept,
+  dead-caller/close_tab resolution, balloon dies with the future). All three verdicts
+  wire-verified + user-clicked. Contract documented in docs/ide-mcp-protocol.md § 4.
+- Built the roadmap-head feature on top: dual-surface edit permissions (card + editor diff,
+  first answer wins, balloon v1 — user picked both via AskUserQuestion). EditProposals rebuilds
+  the post-edit content from tool input (8 JUnit tests); __perm_answered retires the card
+  (fixture 11); pendingPermissions map arbitrates.
+- Stale-diff-tab bug (user screenshot): `FileEditorManager.openFiles` does NOT report diff
+  editors — every find-then-close ever written here closed nothing. Now the diff opens as our
+  own ChainDiffVirtualFile and the held handle closes exactly that tab on resolution.
+- 10.1/10.3 re-scoped after measuring: the model-facing allowlist (getDiagnostics+executeCode
+  only) is byte-identical across 2.1.222–226 — upstream policy, not a regression. Server-rename
+  dodge rejected: the CLI finds its IDE client by the literal name "ide".
+- New backlog: VFS refresh after CLI writes (user needed "Reload from disk"); stale ide
+  lockfiles surviving hot-reload. Left open: 3.1+9.10 pairing (user wants together), 5.14
+  scroll feel, 8.2/8.7 tail-error replay eyeball.
+
 ## 2026-08-09 (third) — 7.4 and 8.2+8.7 fixed: register 9 → 6 open; hardware sweep cleared
 - 7.4 both halves: neither payload exists in any transcript (sub-agent frames are live-only),
   so both were read VERBATIM out of the CLI binary (`strings` on

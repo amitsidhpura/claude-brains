@@ -452,6 +452,84 @@ class RenderLimitsTest {
     }
 
     /**
+     * A retry storm replays in live's order even though the FILE order lies (9.1's replay half).
+     * Measured 2026-08-09 on a real network-off session (afe39ca0…, project claude-brains-testing):
+     * the CLI writes the storm-concluding error record FIRST (file position 21, ts 09:47:24) and
+     * flushes the buffered `api_error` records after it (positions 24–33, ts 09:44:20–09:46:45) —
+     * timestamps and the parent chain are chronological, file order is not. Replay must put the
+     * retries back before the error that ended them, and must NOT teleport a retry whose timestamp
+     * is YOUNGER than the error (that one belongs to a later request).
+     */
+    @Test
+    fun `late-flushed retry records replay before the error that ended their storm`() {
+        val home = File.createTempFile("claude-home", "").let { it.delete(); it.mkdirs(); it }
+        val cwd = "/home/dev/Sites/storm-fixture"
+        val dir = File(home, ".claude/projects/${cwd.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+        dir.mkdirs()
+
+        fun retry(n: Int, ts: String, formatted: String) =
+            """{"type":"system","subtype":"api_error","uuid":"r$n","timestamp":$ts,""" +
+                """"retryAttempt":$n,"maxRetries":10,"retryInMs":500,""" +
+                """"error":{"message":"Connection error.","formatted":${q(formatted)}}}"""
+
+        File(dir, "storm.jsonl").writeText(
+            listOf(
+                """{"type":"user","uuid":"u0","timestamp":"2026-08-09T09:43:06.000Z",""" +
+                    """"message":{"role":"user","content":[{"type":"text","text":"do a thing"}]}}""",
+                // the concluding error record, written BEFORE its own retries (real file order)
+                """{"type":"assistant","uuid":"a0","timestamp":"2026-08-09T09:47:24.000Z",""" +
+                    """"error":"server_error","isApiErrorMessage":true,""" +
+                    """"message":{"id":"m0","role":"assistant","content":[{"type":"text",""" +
+                    """"text":"API Error: Unable to connect to API (ENOTIMP)"}],""" +
+                    """"usage":{"output_tokens":0}}}""",
+                retry(1, "\"2026-08-09T09:44:20.000Z\"", "Unable to connect to API (ECONNRESET)"),
+                retry(2, "\"2026-08-09T09:44:21.000Z\"", "Unable to connect to API (ENOTIMP)"),
+                retry(3, "\"2026-08-09T09:44:22.000Z\"", "Unable to connect to API (ENOTIMP)"),
+                // the resend that recovered, live-ordered in the file
+                """{"type":"user","uuid":"u1","timestamp":"2026-08-09T09:47:54.000Z",""" +
+                    """"message":{"role":"user","content":[{"type":"text","text":"do a thing"}]}}""",
+                """{"type":"assistant","uuid":"a1","timestamp":"2026-08-09T09:47:56.000Z",""" +
+                    """"message":{"id":"m1","role":"assistant","content":[{"type":"text",""" +
+                    """"text":"done it"}],"usage":{"output_tokens":7}}}""",
+                // negative control: a retry YOUNGER than the old error (a later request's storm,
+                // here flushed at the tail) must stay at its file position, not time-travel
+                retry(1, "\"2026-08-09T09:48:00.000Z\"", "Unable to connect to API (ENOTIMP)"),
+            ).joinToString("\n")
+        )
+
+        val real = SessionStore.claudeHome
+        try {
+            SessionStore.claudeHome = home
+            val items = SessionStore.readTranscript(cwd, "storm")
+            val roles = items.map { it["role"]?.jsonPrimitive?.content }
+            val texts = items.map { it["text"]?.jsonPrimitive?.contentOrNull ?: "" }
+
+            val errIdx = roles.indexOf("error")
+            val stormIdx = texts.withIndex()
+                .filter { it.value.contains("— retrying") && !it.value.contains("ECONNRESET") }
+                .map { it.index }
+            val firstIdx = texts.indexOfFirst { it.contains("ECONNRESET") }
+            assertTrue(firstIdx in 0 until errIdx,
+                "attempt 1 replays before the error block despite its later file position")
+            assertEquals(listOf(firstIdx + 1, firstIdx + 2), stormIdx.take(2),
+                "attempts 2 and 3 follow attempt 1 in arrival order, all before the error")
+            assertTrue(stormIdx.take(2).all { it < errIdx },
+                "the whole storm precedes the error that ended it, as live drew them")
+            assertEquals("Unable to connect to API (ECONNRESET) — retrying (1/10)", texts[firstIdx],
+                "`formatted` is preferred over `message`, matching the pre-fix wording rule")
+            // the negative control stayed at the tail: younger than the error, so not inserted
+            assertTrue(stormIdx.last() == items.lastIndex ||
+                roles.drop(stormIdx.last()).all { it != "error" },
+                "a retry younger than the error keeps its file position after the recovered turn")
+            assertTrue(stormIdx.last() > roles.lastIndexOf("assistant"),
+                "the later storm's retry renders after the recovered turn, never before the old error")
+        } finally {
+            SessionStore.claudeHome = real
+            home.deleteRecursively()
+        }
+    }
+
+    /**
      * The rules above decide; THIS pins that replay is actually wired to them (7.4). The rule tests
      * would stay green if `isInternalResult` were computed and then ignored, which is exactly the
      * shape of the mistake the skip condition invites — it now has three terms, one of them negated.

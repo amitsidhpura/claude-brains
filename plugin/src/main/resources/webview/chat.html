@@ -387,6 +387,26 @@
       'Your organization has disabled OAuth. Use an API key or ask your admin — signing in again will not help.',
   });
   /**
+   * The api_retry event's string `error` is NOT prose — it is a five-code ENUM, read verbatim from
+   * the 2.1.226 binary's classifier: 529/overloaded_error → "overloaded", 429 → "rate_limit",
+   * 401|403 → "authentication_failed", any other status ≥ 408 → "server_error", and no status at
+   * all — which is what a network failure looks like — → the literal "unknown" (9.1's storm read
+   * "unknown — retrying (n/10)" because that word was echoed to the screen). The rich text the TUI
+   * shows on late attempts (`error.formatted`) exists only in-process and never rides the stream,
+   * so a readable retry line has to come from this table; "API error" for unknown is the TUI's own
+   * early-attempt wording — honest, since the wire genuinely says no more. This is a DIFFERENT
+   * enum from the ten-code assistant-frame one above (AUTH_BLOCKED's); don't merge the tables:
+   * a retry line repeats, so it gets the short name, not the full route-out sentence.
+   * Null-prototype for the AUTH_BLOCKED reason; an unfamiliar code degrades to the raw code.
+   */
+  const RETRY_REASONS = Object.assign(Object.create(null), {
+    overloaded: 'API overloaded',
+    rate_limit: 'Rate limited',
+    authentication_failed: 'Authentication failed',
+    server_error: 'API server error',
+    unknown: 'API error',
+  });
+  /**
    * The UNHEALTHY half of the CLI's MCP status enum, which is
    * `["connected","failed","needs-auth","pending","disabled"]` (from the wire schema, and confirmed
    * live: a `--mcp-config` naming a missing binary reports `status:"failed"`).
@@ -993,7 +1013,8 @@
     // retraction state is per-session too: a leftover evicted uuid would delete a NEW session's
     // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
-    turnTokens = 0; msgTokens = 0; reqSeed = null;
+    permCards = Object.create(null);   // a cleared session's cards can no longer be answered
+    turnTokens = 0; msgTokens = 0; reqSeed = null; retrySeen = null;
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // The MCP notice was cleared off screen with everything else, so the next init must be free to
     // state the same failures again — otherwise a new conversation silently inherits the old one's
@@ -1950,6 +1971,7 @@
   }
 
   let lastUser = null;                 // { text, images } — for Retry
+  let retrySeen = null;                // last "attempt/max" retry line drawn — the wire emits each retry twice (see api_retry)
   let history = [], histIdx = 0, histDraft = ''; // sent-message history for ↑/↓ recall
 
   function sendTurn(t, imgs) {
@@ -1957,7 +1979,7 @@
     lastUser = { text: t, images: imgs };
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
-    turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null;
+    turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null; retrySeen = null;
     // The roster describes a LIVE process: a new conversation inherits none of it, and leaving the
     // chip up would advertise tasks belonging to a session that is no longer on screen.
     bgTasks = []; renderBgTasks();
@@ -2512,13 +2534,25 @@
           // error:"<code string>"}; transcripts persist the internal twin `api_error` with
           // {retryAttempt, maxRetries, error:{message, formatted}}. Accept both, or the live
           // banner never fires — probed 2026-08-06 with a real 401 storm.
+          //
+          // Two consequences of that both-spellings rule (9.1, read verbatim from the 2.1.226
+          // binary): the string `error` is a five-code enum, not prose — resolve it through
+          // RETRY_REASONS or a network storm reads "unknown — retrying" — and the stream-json
+          // translator yields the raw api_error AND its api_retry twin for the SAME attempt
+          // (the raw frame falls through the chain's `else yield` before the twin is emitted),
+          // so a repeat of the attempt just reported is the second half of one retry, not a new
+          // one. Twins arrive raw-first, so where the shapes differ the richer text is the one
+          // that stays on screen.
           const e = ev.error || {};
           const text = (typeof ev.error === 'string' && ev.error)
-            ? (ev.error_status ? ev.error_status + ' ' : '') + ev.error
+            ? (RETRY_REASONS[ev.error] || ev.error) + (ev.error_status ? ' (' + ev.error_status + ')' : '')
             : (e.formatted || e.message || 'API error');
           const at = ev.retryAttempt || ev.attempt, max = ev.maxRetries || ev.max_retries;
-          statusLine(text + (at && max ? ' — retrying (' + at + '/' + max + ')' : ''),
-            SVG_ALERT, 'status err');
+          const key = at && max ? at + '/' + max : null;
+          if (!key || key !== retrySeen) {
+            retrySeen = key;
+            statusLine(text + (key ? ' — retrying (' + key + ')' : ''), SVG_ALERT, 'status err');
+          }
         } else if (ev.subtype === 'model_refusal_fallback') {
           onRefusalFallback(ev);
         } else if (ev.subtype === 'task_started' || ev.subtype === 'task_progress') {
@@ -2603,6 +2637,15 @@
       case '__lineStart': {      // answer to the pre-apply gutter request (4.4); may be late or absent
         const r = toolsById[ev.id];
         if (r && typeof ev.line === 'number') r.lineStart = ev.line;
+        return;
+      }
+      // The editor diff answered an edit permission first (dual-surface, first answer wins):
+      // paint the card decided WITHOUT sending a second response — Kotlin already answered the
+      // CLI, and its arbiter would drop a duplicate anyway. Unknown id = the card answered
+      // first (or a stale frame): nothing to do.
+      case '__perm_answered': {
+        const fn = permCards[ev.id];
+        if (fn) fn(ev.allow === true || ev.allow === 'true');
         return;
       }
       // A usage limit was hit or is close. No terminal to check — the terminal is not running this
@@ -3517,6 +3560,9 @@
     activeAsk = { card: card, ev: ev };
   }
 
+  // Live permission cards by request id, so `__perm_answered` (the editor diff answered first)
+  // can retire the matching card. Entries die with the card: answered, cleared, or superseded.
+  let permCards = Object.create(null);
   function renderPermission(ev) {
     hideWorking(); awaitingUser = true; // Claude is now waiting on the user, not processing
     let inp = {}; try { inp = JSON.parse(ev.input); } catch (_) {}
@@ -3570,16 +3616,20 @@
     (curTurn || log).appendChild(card); maybeScroll();
     foldBlock(card.querySelector('.cmd'));   // whole scripts land here
     foldBlock(card.querySelector('.diff'));  // long edits fold too (was a 240px scroll box)
-    const done = function (allow, sugg) {
+    const done = function (allow, sugg, viaEditor) {
+      delete permCards[ev.id];
       card.querySelector('.card-b').innerHTML = allow
-        ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') +
+        ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + (viaEditor ? ' in the editor' : '') +
             (sugg ? ' · ' + esc(sugg.doneText) : '') +
             (sugg && sugg.rules ? ' ' + sugg.rules.map(ruleChip).join('') : '') + '</span>'
-        : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + '</span>';
+        : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + (viaEditor ? ' in the editor' : '') + '</span>';
       awaitingUser = false;
-      window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null);
+      // The editor path already answered the CLI through Kotlin's arbiter — sending again from
+      // here would be a duplicate (and would be dropped, but why knock).
+      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null);
       if (busy) showWorking(); // Claude resumes processing
     };
+    permCards[ev.id] = function (allow) { done(allow, null, true); };
     card.querySelector('.ok').onclick = function () { done(true); };
     card.querySelector('.no').onclick = function () { done(false); };
     Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt:not(.more)'), function (b) {

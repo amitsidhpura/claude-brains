@@ -60,11 +60,15 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
   `{originalWidth,originalHeight,displayWidth,displayHeight}`, not `{width,height}`.
 - Many transcript `thinking` blocks have an EMPTY body and only a `signature` (~2.1k of 6.6k
   local ones carry text) — those replay as nothing, correctly.
-- CLI 2.1.226 exposes ONLY `mcp__ide__getDiagnostics` to the MODEL — openFile / openDiff /
-  getCurrentSelection are refused ("No such tool available") even though the bridge advertises
-  them and the CLI connects fine. Verify bridge health by speaking MCP-over-WS directly (lockfile
-  `authToken` in header `x-claude-code-ide-authorization`, subprotocol "mcp", `tools/call`) —
-  that path proved openFile/selection/openDiff all work plugin-side.
+- The CLI exposes ONLY `mcp__ide__getDiagnostics` + `mcp__ide__executeCode` to the MODEL — a
+  hardcoded allowlist behind a `startsWith("mcp__ide__")` filter at MCP tools-listing, byte-
+  identical across 2.1.222/223/226 (measured 2026-08-09): stable upstream policy, not a
+  regression to wait out. openFile / openDiff / getCurrentSelection refuse TO THE MODEL while
+  the bridge half works perfectly. Do NOT dodge it by renaming the bridge server: the CLI finds
+  its IDE client by the literal name `"ide"` (`name === "ide"` lookup) for its own IDE features
+  (TUI diff-in-IDE among them) — a rename breaks more than it restores. Verify bridge health by
+  speaking MCP-over-WS directly (lockfile `authToken` in header
+  `x-claude-code-ide-authorization`, subprotocol "mcp", `tools/call`).
 - Transcript format CHANGED at 2.1.226: one assistant record per message (blocks inline), plus
   record types that didn't exist before (`queue-operation`, `attachment` = tool-roster deltas NOT
   files, `ai-title`, `last-prompt`, `mode`, `custom-title`). OLDER files persist one record PER
@@ -143,6 +147,15 @@ can't tell you: which assumptions are WRONG.** Re-read the doc before trusting m
   copy). `RenderLimitsTest` fails the build on hardcoded literals, marker count ≠ 1, or unbalanced
   script tags (the latter two silently truncate the whole script block = "dead webview"). Keep a
   captured `limits.json` in step with new keys or harness runs test stale shapes.
+- In the spliced harness, assert on `#log`, never `document.body` — `body.textContent` includes
+  chat.html's OWN script source, which legitimately contains the very literals under test
+  (the internal-metadata sentence, the AUTH_BLOCKED codes). Cost a false FAIL on 7.4's probe;
+  fixtures 07/08 carry the warning inline.
+- A payload that is NEVER persisted (sub-agent task frames, the async-launch result) has a third
+  measurement lane beyond transcripts and a live run: `strings -n 8` on the CLI binary itself
+  (`~/.local/share/claude/versions/<ver>`). That is how both 7.4 payloads were read verbatim —
+  and how the envelope's `marker-prefix-forgery` escaping rule (which makes position-0 stripping
+  safe) was found at all.
 - `.turn-body`'s `content-visibility` PAINT-CONTAINS: any popup absolutely positioned inside a
   turn is clipped at the turn's box (6.4's card menu opened as a sliver) — and containment blocks
   HIT-TESTING too, so clipped elements still pass querySelector/synthetic-click assertions. That

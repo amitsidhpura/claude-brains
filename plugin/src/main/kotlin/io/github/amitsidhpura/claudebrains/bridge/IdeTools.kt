@@ -39,6 +39,7 @@ class IdeTools(private val project: Project) {
         "openDiff" -> openDiff(args)
         "closeAllDiffTabs" -> one(closeAllDiffTabs())
         "close_tab" -> one(closeAllDiffTabs()) // best-effort: close diff tabs
+        // (both close tools also resolve any review still waiting — see closeAllDiffTabs)
         "getDiagnostics" -> one(getDiagnostics(args.str("uri")))
         "executeCode" -> one("TODO: executeCode (Jupyter) not implemented")
         else -> throw IllegalArgumentException("Unknown tool: $name")
@@ -99,14 +100,18 @@ class IdeTools(private val project: Project) {
     }
 
     private fun closeAllDiffTabs(): String {
-        ApplicationManager.getApplication().invokeLater {
-            val fem = FileEditorManager.getInstance(project)
-            fem.openFiles
-                .filter { it.javaClass.name.contains("Diff") }
-                .forEach { fem.closeFile(it) }
-        }
+        // Resolving the reviews TAB_CLOSED closes their tabs through each review's completion
+        // hook, which holds the diff file handle from creation. That handle is the ONLY close
+        // that works: FileEditorManager.openFiles does not report diff editors (measured live
+        // 2026-08-09 — a visible diff tab alongside an empty openFiles), so the old
+        // find-by-class-name filter here had been closing nothing. Every diff we ever open is
+        // a tracked review; other plugins' diffs are not ours to close.
+        diffReview.completeAllTabClosed()
         return "closed diff tabs"
     }
+
+    /** The WS client vanished: nothing can consume a verdict, so unblock any waiting openDiff. */
+    fun cancelPendingReviews() = diffReview.cancelAll()
 
     private fun getDiagnostics(pathOrUri: String?): String = readLocked {
         val fem = FileEditorManager.getInstance(project)

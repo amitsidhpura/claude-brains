@@ -74,6 +74,7 @@ Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bea
 | Symptom | Route |
 |---|---|
 | "Does the CLI even send this?" | grep `~/.claude/projects/*/*.jsonl` **by key**, or run `claude --output-format stream-json` in a terminal |
+| Payload NEVER persisted (task frames, launch results) | `strings -n 8 ~/.local/share/claude/versions/<ver>` — read it verbatim from the binary |
 | Wrong blocks after resume | `./gradlew probe` — splits a PARSER bug from a RENDERER bug, no IDE |
 | A transient state renders wrong | `window.__gallery()` — every state, without driving the CLI |
 | Live render misbehaving mid-session | `python tools/cdp.py` — the only view of real JCEF |

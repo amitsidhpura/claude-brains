@@ -56,6 +56,7 @@ class IdeMcpServer(
 
     /** Stop the server and the tool executor. */
     fun shutdown() {
+        runCatching { tools.cancelPendingReviews() }  // else their balloons outlive the server
         runCatching { toolExecutor.shutdownNow() }
         runCatching { stop() }
     }
@@ -73,7 +74,13 @@ class IdeMcpServer(
     }
 
     override fun onClose(conn: WebSocket, code: Int, reason: String?, remote: Boolean) {
-        if (conn == active) active = null
+        if (conn == active) {
+            active = null
+            // The dead caller's openDiff reviews can never deliver a verdict: cancel them so the
+            // dispatch threads unblock and their Accept/Reject balloons expire instead of
+            // inviting a click into a finished call (manual-test 10.5's stale-balloon half).
+            runCatching { tools.cancelPendingReviews() }
+        }
     }
 
     override fun onError(conn: WebSocket?, ex: Exception) {

@@ -11,6 +11,7 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import io.github.amitsidhpura.claudebrains.ClaudeSessionService
+import io.github.amitsidhpura.claudebrains.EditProposals
 import io.github.amitsidhpura.claudebrains.RenderLimits
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -49,6 +50,14 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     private val jsToKotlin = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val session = project.getService(ClaudeSessionService::class.java)
     private val json = Json { ignoreUnknownKeys = true }
+
+    // The editor half of an edit permission (dual-surface, first answer wins — 2026-08-09):
+    // when the CLI asks can_use_tool for an Edit/Write/MultiEdit, the panel card AND a real
+    // editor diff both open; ClaudeSessionService.respondPermission arbitrates. Keyed by the
+    // permission request_id so whichever surface answers can retire the other.
+    private val permDiffReview = io.github.amitsidhpura.claudebrains.bridge.DiffReview(project)
+    private val permDiffs =
+        java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<List<String>>>()
 
     val component: JComponent get() = browser.component
 
@@ -156,6 +165,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val suggs = (msg["sugg"]?.jsonPrimitive?.content ?: "")
                     .split(',').map { it.trim() }.filter { it.isNotEmpty() && it != "-1" }
                 session.respondPermission(id, allow, suggs)
+                // The card answered (or lost the race — either way the question is settled):
+                // the editor half must not keep advertising a live decision.
+                permDiffs.remove(id)?.let { permDiffReview.dismiss(it) }
             }
             "answer" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
@@ -362,6 +374,48 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     }
 
     /**
+     * The editor surface of an edit permission: a real diff (read-only, balloon Accept/Reject)
+     * opened alongside the panel card, either of which answers the can_use_tool. Verdict mapping
+     * differs from the bridge flow on ONE point — TAB_CLOSED here means "the editor bows out",
+     * not accept-as-proposed: closing the diff without deciding leaves the card as the sole
+     * surface, because a permission must never be granted by a window being tidied away.
+     */
+    private fun openEditorPermissionDiff(requestId: String, tool: String, inputJson: String) {
+        if (tool != "Edit" && tool != "Write" && tool != "MultiEdit") return
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val obj = runCatching { json.parseToJsonElement(inputJson).jsonObject }.getOrNull()
+                ?: return@executeOnPooledThread
+            val path = (obj["file_path"] ?: obj["path"])?.jsonPrimitive?.content
+                ?: return@executeOnPooledThread
+            // Degrade to card-only when the proposal can't be reconstructed (old_string not
+            // found — e.g. the file changed underneath): a wrong diff is worse than none.
+            val proposed = EditProposals.proposedContent(tool, obj, readFileText(path))
+                ?: return@executeOnPooledThread
+            val future = permDiffReview.open(path, proposed, File(path).name, readOnly = true)
+            permDiffs[requestId] = future
+            future.whenComplete { verdict, _ ->
+                permDiffs.remove(requestId)
+                when (verdict?.firstOrNull()) {
+                    "FILE_SAVED" -> respondFromEditor(requestId, allow = true)
+                    "DIFF_REJECTED" -> respondFromEditor(requestId, allow = false)
+                    // TAB_CLOSED / cancellation: no answer from the editor; the card stands.
+                }
+            }
+        }
+    }
+
+    /** Editor verdict → control response, and (when it won the race) retire the panel card. */
+    private fun respondFromEditor(requestId: String, allow: Boolean) {
+        if (session.respondPermission(requestId, allow)) {
+            pushFrame(buildJsonObject {
+                put("type", "__perm_answered")
+                put("id", requestId)
+                put("allow", allow)
+            })
+        }
+    }
+
+    /**
      * Current text of a file. Reads fresh from disk (the CLI applies edits to disk out-of-band, so
      * the IDE's VFS/document cache is stale right after an edit) — but honors the in-editor buffer
      * when it has genuine unsaved changes, since that's what Claude matched `old_string` against.
@@ -469,6 +523,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     editLineStart(toolName, inputJson)?.let { put("lineStart", it) } // for the diff gutter
                 }
                 pushFrame(frame)
+                openEditorPermissionDiff(requestId, toolName, inputJson)
             },
             onInit = { metaJson ->
                 val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull()

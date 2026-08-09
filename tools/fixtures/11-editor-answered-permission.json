@@ -1,0 +1,41 @@
+{
+  "item": "editor accept/reject (dual-surface edit permission)",
+  "branch": "__perm_answered retires the panel card without a second response",
+  "provenance": "The permission_request frame is ChatPanel's own synthetic shape (input as a raw JSON string), unchanged by this feature. __perm_answered is the NEW Kotlin→JS frame ChatPanel.respondFromEditor pushes after the editor diff's verdict WON the first-answer-wins arbitration in ClaudeSessionService.respondPermission (the arbiter is Kotlin-side and not visible to this harness — what this fixture pins is the page's half of the contract: paint the card decided, drop it from permCards, and send nothing). Self-consistency evidence only, per the harness's provenance rule.",
+  "steps": [
+    {
+      "note": "an edit permission card opens, then the editor diff accepts first",
+      "frames": [
+        {"type": "permission_request", "id": "p1", "tool": "Edit",
+         "input": "{\"file_path\":\"/tmp/demo.txt\",\"old_string\":\"a\",\"new_string\":\"b\"}"},
+        {"type": "__perm_answered", "id": "p1", "allow": true}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "Accepted in the editor", "why": "the card paints the editor's verdict, attributed"},
+        {"js": "[...document.querySelectorAll('.card')].filter(function(c){return c.querySelector('.ok')}).length", "equals": 0, "why": "the buttons are gone — the card can no longer answer"}
+      ]
+    },
+    {
+      "note": "reject variant",
+      "frames": [
+        {"type": "permission_request", "id": "p2", "tool": "Edit",
+         "input": "{\"file_path\":\"/tmp/demo.txt\",\"old_string\":\"a\",\"new_string\":\"b\"}"},
+        {"type": "__perm_answered", "id": "p2", "allow": false}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "Rejected in the editor", "why": "deny paints too, same attribution"}
+      ]
+    },
+    {
+      "note": "negative control: a __perm_answered for an unknown id must not touch a live card",
+      "frames": [
+        {"type": "permission_request", "id": "p3", "tool": "Edit",
+         "input": "{\"file_path\":\"/tmp/demo.txt\",\"old_string\":\"a\",\"new_string\":\"b\"}"},
+        {"type": "__perm_answered", "id": "p999", "allow": true}
+      ],
+      "expect": [
+        {"js": "[...document.querySelectorAll('.card')].filter(function(c){return c.querySelector('.ok')}).length", "equals": 1, "why": "p3's card is still live and answerable — a stale or wrong id resolves nothing"}
+      ]
+    }
+  ]
+}

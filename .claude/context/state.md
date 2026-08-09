@@ -3,21 +3,24 @@
 ## Current focus
 Working the standing defect register in `docs/manual-test.md`. The 92-item pass itself is
 COMPLETE (2026-08-08, commit `3278aac`); what remains is fixing what it found. Register stands
-at **6 open ISSUE notes / 18 RESOLVED**: rounds `4a64433` + `fe620ef` (committed, pushed), then
-UNCOMMITTED on 2026-08-09: 7.4 (internal-metadata suppression + harness-envelope strip, fixture
-07, 7.4(a) user-verified on real JCEF) and 8.2+8.7 (auth status line on replay via
-AUTH_BLOCKED_CODES + `icon:"auth"` items, phantom summary suppressed via `reqError`, which also
-un-blocked the tail Retry — fixture 08; not yet eyeballed on real JCEF). Per-issue detail lives
+at **2 open ISSUE notes / 22 RESOLVED** (the last two are the 3.1+9.10 pairing). UNCOMMITTED on 2026-08-09 (second session): 9.1 both
+halves (RETRY_REASONS enum translation + twin-emission dedupe in chat.html, fixture 09;
+late-flushed api_error reorder in SessionStore + Kotlin test — user-verified live AND on
+replay with a real network-off storm) and 10.5 (DiffReview rewritten to the reference openDiff
+contract — TAB_CLOSED verdict, final-pane-text accept, close-tool + dead-caller resolution;
+all three verdicts wire-verified, user confirmed no stale balloons). Per-issue detail lives
 under each checklist item in `docs/manual-test.md` — that file is the register, not this one.
 
 ## Issue register highlights (full detail in docs/manual-test.md)
-- **Real bugs, still open**: openDiff accept reports FILE_SAVED but never writes
-  (`DiffReview.kt:56`); custom commands filtered out of the `/` menu (`cmdKind` has no custom
-  detection).
-- **Cosmetic, still open**: "unknown — retrying (n/10)" + duplicated first attempt.
-- **Upstream (CLI 2.1.226)**: only `mcp__ide__getDiagnostics` is model-facing — openFile /
-  openDiff / getCurrentSelection refused TO THE MODEL. Bridge itself verified healthy by direct
-  MCP-over-WS calls. Re-scope manual-test 10.1/10.3/10.4/10.5 if the restriction sticks.
+- **Still open, user wants them worked TOGETHER later**: 3.1 custom commands missing from the
+  `/` menu (`cmdKind` has no custom detection) + 9.10 commands_changed re-test (unobservable
+  until 3.1 is fixed).
+- **10.1/10.3 re-scoped 2026-08-09**: the model-facing restriction is a hardcoded allowlist,
+  byte-identical across CLI 2.1.222–226 — upstream by design, matching VS Code. Items now mean
+  their bridge halves (verified). Server-rename dodge measured and REJECTED (gotchas.md).
+- **10.5 premise correction worth remembering**: the IDE never writes on openDiff accept —
+  FILE_SAVED is the accept TOKEN and the CLI does the disk write itself (contract now in
+  docs/ide-mcp-protocol.md § 4).
 
 ## Next steps
 - [x] **runIde re-verification sweep** — user-confirmed on real hardware/JCEF 2026-08-09:
@@ -27,18 +30,18 @@ under each checklist item in `docs/manual-test.md` — that file is the register
       finished line). Still outstanding from the old list: **5.14's heavy-turn scroll FEEL only**
       (headless proved the logic 8/8; real-JCEF rAF cadence is the production case — a
       when-next-convenient check, not a blocker).
-- [ ] Fix the remaining register issues, suggested order: **10.5 openDiff accept-save**
-      (roadmap-relevant; Kotlin-side, so verification is runIde + direct MCP-over-WS, NOT the
-      headless harness) → **3.1 custom commands** in the `/` menu (then re-test 9.10; fixture
-      `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` is in place, and the
-      harness's `system/commands_changed` seeding trick supplies the roster) → the retry-storm
-      cosmetics ("unknown — retrying" + duplicated first attempt).
-- [ ] Eyeball 8.2/8.7 on real JCEF when convenient: resume a session whose tail is an API
-      error (stitch one from the real `"error":"rate_limit"` donor records in
+- [x] ~~10.5 openDiff~~ — resolved 2026-08-09 (premise corrected + real fixes; see register).
+- [x] ~~9.1 retry storm~~ — resolved 2026-08-09, live and replay halves, user-verified both.
+- [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing, deferred to later):
+      fixture `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` is in place, and
+      the harness's `system/commands_changed` seeding trick supplies the roster.
+- [ ] Eyeball 8.2/8.7 on real JCEF when convenient: resume a session whose TAIL is an API
+      error (the 2026-08-09 storm session `afe39ca0…` recovered, so its error is mid-history —
+      stitch a tail-error one from the `"error":"rate_limit"` donor records in
       `~/.claude/projects/-home-syncroze-Sites-peers-woocommerce/b4589d75…jsonl`, or re-run
       the auth-failure manufacture) and check status line + no phantom summary + Retry.
-- [ ] Decide whether to re-scope section 10 of the checklist against the CLI 2.1.226
-      model-facing tool restriction, or wait to see if upstream reverts it.
+- [x] ~~Section 10 re-scope decision~~ — decided 2026-08-09: restriction measured as stable
+      upstream policy (identical 2.1.222–226); 10.1/10.3 re-scoped to their bridge halves.
 - [ ] Roadmap after fixes: editor-title accept/reject → @-symbol mentions → worktrees →
       extensibility status view (backlog.md).
 

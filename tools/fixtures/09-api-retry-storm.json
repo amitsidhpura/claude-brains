@@ -1,0 +1,70 @@
+{
+  "item": "manual-test 9.1",
+  "branch": "api_retry storm — enum translated to readable text, twin-emission dedupe, per-turn reset",
+  "provenance": "The api_retry frame shape and its five-code `error` enum are read VERBATIM from the 2.1.226 binary (strings on ~/.local/share/claude/versions/2.1.226): `subtype:\"api_retry\",attempt:…,max_retries:…,retry_delay_ms:…,error_status:….status??null,error:c_r(…)` where c_r maps 529→overloaded, 429→rate_limit, 401|403→authentication_failed, ≥408→server_error, else the literal \"unknown\" (a network failure has no status — 9.1's storm read `unknown — retrying (n/10)` because the enum word was echoed to the screen). The DOUBLE emission is from the same binary: the raw api_error frame falls through the stream translator's `else yield` and THEN the api_retry twin is yielded for the same attempt — raw twin first. The api_error twin's {retryAttempt, maxRetries, error:{message, formatted}} spelling is the persisted-transcript shape probed 2026-08-06 (client-parity item 32). Defect observed on the 2026-08-07 pass via `nmcli networking off`: every line read 'unknown — retrying (n/10)' and '(1/10)' rendered twice.",
+  "steps": [
+    {
+      "note": "attempt 1 arrives TWICE (raw api_error twin first, translated api_retry twin second) — one line, the richer text wins",
+      "frames": [
+        {"type": "system", "subtype": "api_error", "retryAttempt": 1, "maxRetries": 10, "retryInMs": 532, "error": {"message": "Unable to connect to API (ENOTIMP)", "formatted": "Unable to connect to API (ENOTIMP)"}},
+        {"type": "system", "subtype": "api_retry", "attempt": 1, "max_retries": 10, "retry_delay_ms": 532, "error_status": null, "error": "unknown"}
+      ],
+      "expect": [
+        {"js": "[...document.querySelectorAll('.status.err')].filter(function(e){return e.textContent.indexOf('retrying (1/10)') !== -1}).length", "equals": 1, "why": "9.1(2): the twin pair draws ONE line, not two"},
+        {"js": "document.querySelector('#log').textContent", "contains": "Unable to connect to API (ENOTIMP)", "why": "raw twin arrives first, so its richer formatted text is the line that stays"},
+        {"js": "document.querySelector('#log').textContent.includes('unknown')", "equals": false, "why": "9.1(1): the enum word never reaches the screen. Assert on #log, never document.body — body.textContent includes chat.html's own script source, which now contains these very literals"}
+      ]
+    },
+    {
+      "note": "later attempts arrive as api_retry only, error:'unknown' — translated to the TUI's own generic wording",
+      "frames": [
+        {"type": "system", "subtype": "api_retry", "attempt": 2, "max_retries": 10, "retry_delay_ms": 1064, "error_status": null, "error": "unknown"},
+        {"type": "system", "subtype": "api_retry", "attempt": 3, "max_retries": 10, "retry_delay_ms": 2128, "error_status": null, "error": "unknown"}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "API error — retrying (2/10)", "why": "9.1(1): 'unknown' resolves through RETRY_REASONS to readable wording"},
+        {"js": "document.querySelector('#log').textContent.includes('unknown')", "equals": false, "why": "still never the raw enum word"},
+        {"js": "[...document.querySelectorAll('.status.err')].filter(function(e){return e.textContent.indexOf('retrying (') !== -1}).length", "equals": 3, "why": "three attempts, three lines — dedupe suppresses twins only, not distinct attempts"}
+      ]
+    },
+    {
+      "note": "the coded reasons translate, with the HTTP status kept in parentheses",
+      "frames": [
+        {"type": "system", "subtype": "api_retry", "attempt": 4, "max_retries": 10, "retry_delay_ms": 4256, "error_status": 529, "error": "overloaded"},
+        {"type": "system", "subtype": "api_retry", "attempt": 5, "max_retries": 10, "retry_delay_ms": 8512, "error_status": 429, "error": "rate_limit"}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "API overloaded (529) — retrying (4/10)", "why": "overloaded translated, status visible"},
+        {"js": "document.querySelector('#log').textContent", "contains": "Rate limited (429) — retrying (5/10)", "why": "rate_limit translated"}
+      ]
+    },
+    {
+      "note": "negative control: a code RETRY_REASONS has never heard of degrades to the raw code, never to nothing",
+      "frames": [
+        {"type": "system", "subtype": "api_retry", "attempt": 6, "max_retries": 10, "retry_delay_ms": 8512, "error_status": null, "error": "quantum_flux"}
+      ],
+      "expect": [
+        {"js": "document.querySelector('#log').textContent", "contains": "quantum_flux — retrying (6/10)", "why": "an unfamiliar future code still surfaces (same degradation rule as AUTH_BLOCKED)"}
+      ]
+    },
+    {
+      "note": "a SECOND storm in the same turn restarts at (1/10) — last-key dedupe must not swallow it",
+      "frames": [
+        {"type": "system", "subtype": "api_retry", "attempt": 1, "max_retries": 10, "retry_delay_ms": 532, "error_status": null, "error": "unknown"}
+      ],
+      "expect": [
+        {"js": "[...document.querySelectorAll('.status.err')].filter(function(e){return e.textContent.indexOf('retrying (1/10)') !== -1}).length", "equals": 2, "why": "6/10 was the last key, so a fresh 1/10 is a NEW retry, not a twin — a Set here would wrongly hide it"}
+      ]
+    },
+    {
+      "note": "per-turn reset: after a clear, the same attempt key renders again",
+      "frames": [
+        {"type": "__clear"},
+        {"type": "system", "subtype": "api_retry", "attempt": 1, "max_retries": 10, "retry_delay_ms": 532, "error_status": null, "error": "unknown"}
+      ],
+      "expect": [
+        {"js": "[...document.querySelectorAll('.status.err')].filter(function(e){return e.textContent.indexOf('retrying (1/10)') !== -1}).length", "equals": 1, "why": "retrySeen resets with the session — a stale key from the old conversation must not suppress the new one's first retry"}
+      ]
+    }
+  ]
+}

@@ -493,6 +493,18 @@ object SessionStore {
         // "✻ Conjured for 1s" on a turn that produced nothing. Last-record-wins rather than sticky,
         // so a request that somehow recovers after an error record keeps its summary.
         var reqError = false
+        // The file ORDER of a retry storm lies (9.1's replay half): the CLI buffers `api_error`
+        // records and flushes them AFTER the error record that concluded the storm — measured
+        // 2026-08-09 on a real network-off session: the error record sits at file position 21
+        // (ts 09:47:24) while its ten retries sit at 24–33 with EARLIER timestamps
+        // (09:44:20–09:46:45), parent-chained user → attempt 1 → … → attempt 10 → resend-user.
+        // Timestamps and the parent chain are chronological; only file order is not. So track
+        // where the last error-terminated turn's items begin: a retry whose timestamp PRECEDES
+        // that error is inserted there instead of appended, and replay shows live's order —
+        // the retries, then the failure that ended them. The timestamp guard keeps a LATER
+        // request's retries (which are younger than the error) out of the old turn.
+        var apiErrIdx = -1
+        var apiErrTs: java.time.Instant? = null
         var reqSeed: String? = null            // first assistant uuid of the request (verb seed)
         val reqMsgIds = HashSet<String>()      // message.ids already counted — see the "assistant" branch
         // A compaction boundary awaiting its summary. The CLI writes the marker and the summary as
@@ -676,6 +688,11 @@ object SessionStore {
                             // text exists once. Emitted BEFORE the error item, matching live order
                             // (status at the assistant frame, error block at the `result`).
                             if (isApiError) {
+                                // Captured BEFORE the status item so late-flushed retries insert
+                                // ahead of the whole error tail (status line included), not
+                                // between its halves. See apiErrIdx's declaration.
+                                apiErrIdx = out.size
+                                apiErrTs = ts
                                 obj["error"]?.jsonPrimitive?.contentOrNull
                                     ?.takeIf { it in RenderLimits.AUTH_BLOCKED_CODES }
                                     ?.let { code ->
@@ -795,10 +812,23 @@ object SessionStore {
                                 } ?: "API error"
                                 val n = ((obj["retryAttempt"] ?: obj["attempt"]) as? JsonPrimitive)?.contentOrNull
                                 val max = ((obj["maxRetries"] ?: obj["max_retries"]) as? JsonPrimitive)?.contentOrNull
-                                out.add(Item("status").apply {
+                                val item = Item("status").apply {
                                     text = msg + if (n != null && max != null) " — retrying ($n/$max)" else ""
                                     icon = "alert"
-                                })
+                                }
+                                // Late-flushed retry: file order puts it after the error that ended
+                                // the storm, but its timestamp proves it happened before. Insert it
+                                // ahead of that error (see apiErrIdx's declaration); the range guard
+                                // degrades to append if a removal shifted the tracked index.
+                                val errTs = apiErrTs
+                                if (apiErrIdx in 0..out.size && errTs != null && ts != null &&
+                                    ts.isBefore(errTs)
+                                ) {
+                                    out.add(apiErrIdx, item)
+                                    apiErrIdx++
+                                } else {
+                                    out.add(item)
+                                }
                                 continue
                             }
                             // A safety classifier flagged the exchange: the CLI retried on another
