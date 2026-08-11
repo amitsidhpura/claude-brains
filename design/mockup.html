@@ -45,8 +45,13 @@
     m.style.display = m.style.display==='none' ? 'block' : 'none';
     m.style.left=i.left+'px'; m.style.width=i.width+'px';
     m.style.top=(i.top-Math.min(240,m.scrollHeight)-4)+'px';})(document.getElementById('mention'))">mention</button>
-  <button onclick="document.getElementById('ctxChip').classList.toggle('warn')">ctx</button>
+  <!-- sets the LAST TEXT NODE, never textContent: the chip's first child is the ring's <svg>, and
+       assigning textContent would delete it. renderContext has the same trap. -->
+  <button onclick="(function(c){var s=[8,24,49,50,72,96],n=s[(s.indexOf(+c.style.getPropertyValue('--ctx-pct'))+1)%s.length];
+    c.style.setProperty('--ctx-pct',n); c.lastChild.nodeValue=n+'%'; c.classList.toggle('warn', n>=50);})(document.getElementById('ctxChip'))">ctx</button>
   <button onclick="tgState('histEmpty', 'histFull')">no history</button>
+  <button onclick="startRename(event)">rename</button>
+  <button onclick="document.getElementById('convTitle').classList.toggle('unnamed')">unnamed</button>
   <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>
   <button class="wpreset" data-w="360">360</button>
@@ -59,7 +64,15 @@
 <div id="frame">
 <div id="app">
   <div id="head">
-    <span class="title">Create a new test.txt file</span>
+    <!-- Rename: the pencil is hover-revealed and sits OVER the end of the title (the .rm idiom from
+         the attachment chips), so it never reflows the header when it appears. Clicking swaps the
+         title for an input in place — the header becomes the editor, the way a history row becomes
+         its own delete confirmation. Enter saves, Esc cancels; the ✓/✕ pair is there so neither is
+         a secret. devbar "rename" opens it without hovering. -->
+    <span class="title" id="convTitle" onclick="startRename(event)"><span class="t-txt">Create a new test.txt file</span><button class="t-edit" title="Rename conversation"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg></button></span>
+    <span class="title-edit" id="convEdit"><input id="convInput" type="text" value="Create a new test.txt file" spellcheck="false">
+      <button class="ok" title="Save"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+      <button class="no" title="Cancel" onclick="cancelRename()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
     <span class="actions">
       <button class="icon-btn" title="Reload this conversation"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
       <button class="icon-btn" title="Past conversations" onclick="tgHist(event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
@@ -245,7 +258,11 @@ total 196K
       <div class="msg-user">Add a helper function to functions.php</div>
 
       <div class="turn-body">
-      <div class="tool-line"><b>Read</b><span class="t-desc path">D:\sites\demo\functions.php</span></div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path" title="D:\sites\demo\functions.php"><span class="p-head">D:\sites</span><span class="p-tail">\demo\functions.php</span></span></div>
+      <!-- The clamp: paths are already project-relative by the time they land here, and this one is
+           STILL long enough to wrap a narrow panel. .p-head shrinks and ellipsises, .p-tail (the
+           filename) never does, so the row is one line and never hides which file it is. -->
+      <div class="tool-line"><b>Edit</b><span class="t-desc path" title="/home/me/Sites/demo/plugin/src/test/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStoreTest.kt"><span class="p-head">plugin/src/test/kotlin/io/github/amitsidhpura/claudebrains</span><span class="p-tail">/session/SessionStoreTest.kt</span></span></div>
 
       <div class="card warn">
         <div class="card-h">Claude wants to run <b>Edit</b> on <code>D:\sites\demo\functions.php</code></div>
@@ -446,6 +463,30 @@ total 196K
     </div>
 
     <div class="turn">
+      <div class="msg-user">Read this image:<br>/home/me/Sites/demo/Icon Circle.png</div>
+      <div class="turn-body">
+      <div class="think no-body"><summary>Thought for 1s</summary></div>
+      <!-- An image a TOOL returned (client-parity item 8): Read on a PNG, or a Playwright screenshot.
+           Both size states are here on purpose, because they are the two the CSS has to get right:
+           the logo is over the 120px cap and rides it; the favicon is under it and keeps its natural
+           48px. The container must stay align-items:flex-start — a column flex box stretches by
+           default, which blew a 64x64 icon out to 474x320 (docs/limits.md). -->
+      <div class="tool-line"><b>Read</b><span class="t-desc path" title="/home/me/Sites/demo/Icon Circle.png"><span class="p-head">/home/me/Sites</span><span class="p-tail">/demo/Icon Circle.png</span></span></div>
+      <div class="tool-imgs">
+        <img class="ti" alt="Icon Circle.png" width="512" height="512" onclick="openLB('Icon Circle.png')"
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512'%3E%3Ccircle cx='256' cy='256' r='248' fill='%23ffffff'/%3E%3Cpath d='M112 300 L330 132 L196 336 Z' fill='%230f3d8c'/%3E%3Cpath d='M244 412 L226 250 L344 262 Z' fill='%230f3d8c'/%3E%3C/svg%3E">
+      </div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path" title="/home/me/Sites/demo/favicon.png"><span class="p-head">/home/me/Sites</span><span class="p-tail">/demo/favicon.png</span></span></div>
+      <div class="tool-imgs">
+        <img class="ti" alt="favicon.png" width="48" height="48" onclick="openLB('favicon.png')"
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect width='48' height='48' rx='8' fill='%230f3d8c'/%3E%3Cpath d='M14 34 L30 14 L22 36 Z' fill='%23ffffff'/%3E%3C/svg%3E">
+      </div>
+      <div class="blk"><p>The image is a stylised logo icon: an abstract geometric shape in dark navy
+        blue on a white circular background. The favicon is the same mark, squared off.</p></div>
+      </div>
+    </div>
+
+    <div class="turn">
       <div class="msg-user">Explore the codebase in the background, then summarise it.</div>
       <div class="turn-body">
       <div class="blk"><p>Done — here's the summary of what the background agent found.</p></div>
@@ -480,7 +521,7 @@ total 196K
       <details class="think"><summary>Thought for 8s<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">The user wants a small class plus a call site…</div></details>
 
       <!-- tool lines: path desc, query desc (ToolSearch/WebSearch/WebFetch), and a failure -->
-      <div class="tool-line"><b>Read</b><span class="t-desc path">src/Greeter.php</span></div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path" title="src/Greeter.php"><span class="p-head"></span><span class="p-tail">src/Greeter.php</span></span></div>
       <div class="tool-line"><b>ToolSearch</b><span class="t-desc">select:ExitPlanMode</span></div>
       <div class="tool-line fail"><b>Bash</b><span class="t-desc">Run the test suite</span></div>
       <div class="io">
@@ -582,10 +623,10 @@ total 196K
   <div id="composer">
     <div id="inputcard">
       <!-- queued messages (item 24): typed while a turn was running, waiting their turn.
-           Click a row to edit it back into the composer; the × drops it. -->
+           Click a row to edit it back into the composer; the hover-revealed remove control drops it. -->
       <div id="queue">
-        <div class="q-row"><span class="q-text">also add a test for the empty case</span><button class="q-x" type="button" title="Remove">&times;</button></div>
-        <div class="q-row"><span class="q-text">and update the changelog<span class="q-att">1 image</span></span><button class="q-x" type="button" title="Remove">&times;</button></div>
+        <div class="q-row"><span class="q-text">also add a test for the empty case</span><button class="rm" type="button" title="Remove"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <div class="q-row"><span class="q-text">and update the changelog<span class="q-att">1 image</span></span><button class="rm" type="button" title="Remove"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
       </div>
       <div id="chips">
         <span class="att click" onclick="openLB('image.png')"><span class="thumb"><span class="ph-img"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span></span>image.png<span class="meta">62 KB</span><button class="rm" title="Remove" onclick="rmAtt(this, event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
@@ -597,8 +638,11 @@ total 196K
           <button class="icon-btn" title="Attach" onclick="tg('attachMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg></button>
           <button class="icon-btn" title="Slash commands" onclick="tg('slashMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" x2="15" y1="15" y2="9"/></svg></button>
           <!-- context gauge: % of the window the next request will carry; orange past 50%,
-               click sends /compact. devbar "ctx" toggles the warn state. -->
-          <button id="ctxChip" class="chip-btn ctx">24%</button>
+               click sends /compact. The dial in front says the same thing as a shape — its filled
+               share is --ctx-pct, set alongside the text so the two cannot disagree, and it is
+               drawn in currentColor so it crosses the warn threshold with the number.
+               devbar "ctx" cycles the states. -->
+          <button id="ctxChip" class="chip-btn ctx gauge" style="--ctx-pct:24"><svg class="ctx-ring" viewBox="0 0 24 24" aria-hidden="true"><circle class="track" cx="12" cy="12" r="9" pathLength="100"/><circle class="fill" cx="12" cy="12" r="9" pathLength="100"/></svg>24%</button>
           <!-- background-task roster: a LEVEL signal (what is running NOW), so a chip rather than
                timeline lines. Hidden whenever the set is empty; rows are read-only. -->
           <span class="menu-anchor">
@@ -1028,6 +1072,29 @@ total 196K
   // log child except #welcome and restores it. Here the turns are hidden, not removed, so the
   // devbar toggle can bring the thread back.
   function newConversation() { setWelcome(true); }
+
+  // Rename, mockup half: the header swaps to an input seeded with the current name. Enter saves,
+  // Esc cancels — and cancelling restores the ORIGINAL, so a half-typed name is never kept.
+  function startRename(e) {
+    if (e) e.stopPropagation();
+    const t = document.getElementById('convTitle');
+    const input = document.getElementById('convInput');
+    input.value = t.querySelector('.t-txt').textContent;
+    document.getElementById('head').classList.add('editing');
+    input.focus(); input.select();
+  }
+  function cancelRename() { document.getElementById('head').classList.remove('editing'); }
+  function saveRename() {
+    const name = document.getElementById('convInput').value.trim();
+    // A blank name is a no-op, not an erase: there is no way to un-name a conversation.
+    if (name) document.querySelector('#convTitle .t-txt').textContent = name;
+    cancelRename();
+  }
+  document.getElementById('convInput').onkeydown = function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+  };
+  document.querySelector('#convEdit .ok').onclick = saveRename;
 
   // Live cards only. Replayed (.ask-done) cards have no <input> to wire — their options are a
   // record of what was chosen, so everything below would throw on them.

@@ -3,6 +3,10 @@
 ## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
 - 2 open issues from the 2026-08-08 pass, both in one pairing: 3.1 custom commands in the
   / menu + 9.10 re-test (user wants both together)
+- A filename longer than the whole tool line is hard-clipped with no ellipsis (the tail never
+  shrinks by design). Rare — needs ~45+ chars at a narrow panel. Offered 2026-08-12, not taken.
+- Permission cards (`.card-h code`) still wrap long paths: deliberately NOT clamped, since that
+  surface asks you to approve a write to a specific file. Revisit only if it becomes annoying.
 - Stale `~/.claude/ide/*.lock` files survive a plugin hot-reload (dispose skipped) — observed
   2026-08-09 with two dead locks; could misdirect a terminal TUI's IDE discovery. Check
   lockfile cleanup on unload if touched anyway.

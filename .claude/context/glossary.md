@@ -22,6 +22,12 @@
   the CLI.
 - **Probe** — `./gradlew probe`; dumps replay blocks for a session with no IDE, splitting
   parser bugs from renderer bugs.
+- **Project root, two sources** — `__project` is OURS (ChatPanel pushes `project.basePath` when the
+  panel opens); `system/init`'s `cwd` is the CLI's, and only arrives at the first turn. The webview
+  takes the IDE's as primary and init's as a refresh. Neither is "the" root on its own.
+- **`.p-head` / `.p-tail`** — the two halves of a tool-line path. Head is the shrinkable prefix and
+  wears the ellipsis; tail never shrinks and holds the filename (plus its parent when they fit
+  `PATH_TAIL_MAX`). What is IN the tail is decided in JS; CSS only decides what gives way.
 - **LIMITS splice** — `RenderLimits.kt` values injected into chat.html as `window.LIMITS` at
   the `LIMITS` marker (same idiom as `<!--CSS-->`); the single source for caps/formats shared
   by both render paths.

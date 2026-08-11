@@ -202,10 +202,11 @@ is a decision, not an unknown:
   CLAUDE.md §Key protocol facts: needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo,
   client-supplied uuids — which item 21's `stampMessage` now provides — and dry_run first).
   **Status: UNDECIDED — needs an explicit yes/later/no; currently in limbo on no list at all.**
-- [ ] ⬜ **Session rename / delete in the history panel** — VS Code has both (`rename_session`
-  writes the `custom-title` record we now READ per client-parity item 34; delete removes the
-  jsonl). Rename is the natural write-half of item 34. Take: small, panel-appropriate (managing
-  the artifacts of in-IDE work, not configuration).
+- [x] ✅ **Session rename / delete** — both DONE. Delete 2026-08-09 (every history row, the live one
+  routed through leave-first). Rename 2026-08-12, and it landed on the HEADER title rather than the
+  history panel this item assumed: a hover pencil turns the header into an editor in place. Writes
+  the CLI's own `custom-title` record (`SessionStore.rename`, shape read from the 2.1.226 binary),
+  so it is the same act as `/rename` in the terminal — the write-half of client-parity item 34.
 - [ ] ⬜ **Focus view** — hide tool noise, show prompts + responses only (Ctrl+Alt+F, host flag
   `viewMode:"focus"`). A reading mode for long sessions; the philosophy question is whether
   toggling it is an hourly act or a novelty. Take: worth a mockup pass before building.

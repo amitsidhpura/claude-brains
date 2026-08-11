@@ -1,0 +1,76 @@
+{
+  "item": "1",
+  "branch": "system/task_started with a description the tool line already shows",
+  "provenance": "INFERRED, and deliberately narrow. The task lifecycle is not sub-agent-only: in CLI 2.1.226 the emit site sits among `runningSubagents`, `isBackgrounded`/`is_backgrounded` and `local_workflow`/`workflowName` (read with `strings -n 8` on ~/.local/share/claude/versions/2.1.226), and a user screenshot showed an ordinary Bash whose description was repeated verbatim under its IN/OUT box — which only taskLine can draw. The exact frame a backgrounded Bash emits was NOT probed live (these frames are never persisted, so there is no transcript to check), so the shape here is task_started minus the sub-agent-only fields, and the assertions stay at what the handler must do with the shape it is given: never print a line that only repeats the tool line above it, and never lose a line that says something new. Step 2 is the negative control — the same handler, one field different, must still draw.",
+  "steps": [
+    {
+      "note": "a Bash tool line whose description is the LIM.descKeys[0] key, so .t-desc shows it",
+      "frames": [
+        { "type": "stream_event", "event": { "type": "message_start", "message": { "usage": {} } } },
+        { "type": "stream_event", "event": { "type": "content_block_start", "index": 0,
+          "content_block": { "type": "tool_use", "id": "toolu_dup1", "name": "Bash" } } },
+        { "type": "stream_event", "event": { "type": "content_block_delta", "index": 0,
+          "delta": { "type": "input_json_delta",
+            "partial_json": "{\"command\":\"echo acf\",\"description\":\"Check ACF sync status and content counts\"}" } } },
+        { "type": "stream_event", "event": { "type": "content_block_stop", "index": 0 } }
+      ],
+      "expect": [
+        { "js": "document.querySelector('#log').textContent.split('Check ACF sync status and content counts').length - 1",
+          "equals": 1, "why": "the description is on the tool line, once" }
+      ]
+    },
+    {
+      "note": "task_started repeating that description, with no subagent_type and no usage, must draw nothing",
+      "frames": [
+        { "type": "system", "subtype": "task_started", "task_id": "task_dup1",
+          "tool_use_id": "toolu_dup1", "description": "Check ACF sync status and content counts" }
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('.t-prog').length", "equals": 0,
+          "why": "no progress line: every bit of it would have been a copy of the tool line" },
+        { "js": "document.querySelector('#log').textContent.split('Check ACF sync status and content counts').length - 1",
+          "equals": 1, "why": "still exactly once on screen — this is the reported bug" }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — a frame that says something new must still draw its line",
+      "frames": [
+        { "type": "stream_event", "event": { "type": "content_block_start", "index": 1,
+          "content_block": { "type": "tool_use", "id": "toolu_dup2", "name": "Task" } } },
+        { "type": "stream_event", "event": { "type": "content_block_delta", "index": 1,
+          "delta": { "type": "input_json_delta",
+            "partial_json": "{\"description\":\"Audit the renderer\",\"prompt\":\"Look at every branch\"}" } } },
+        { "type": "stream_event", "event": { "type": "content_block_stop", "index": 1 } },
+        { "type": "system", "subtype": "task_progress", "task_id": "task_dup2",
+          "tool_use_id": "toolu_dup2", "subagent_type": "Explore",
+          "description": "Grepping for the old class name",
+          "usage": { "tool_uses": 3, "total_tokens": 1234 } }
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('.t-prog').length", "equals": 1,
+          "why": "the sub-agent line still draws — suppression is exact-match only" },
+        { "js": "document.querySelector('.t-prog').textContent", "contains": "Grepping for the old class name",
+          "why": "running commentary differs from the tool line's description, so it is kept" },
+        { "js": "document.querySelector('.t-prog').textContent", "contains": "Explore",
+          "why": "subagent_type still leads the line" },
+        { "js": "document.querySelector('.t-prog').textContent", "contains": "3 tool uses",
+          "why": "usage counts survive" }
+      ]
+    },
+    {
+      "note": "a sub-agent frame whose description DOES equal its tool line keeps the rest of the line",
+      "frames": [
+        { "type": "system", "subtype": "task_progress", "task_id": "task_dup2",
+          "tool_use_id": "toolu_dup2", "subagent_type": "Explore",
+          "description": "Audit the renderer",
+          "usage": { "tool_uses": 4, "total_tokens": 2048 } }
+      ],
+      "expect": [
+        { "js": "document.querySelector('.t-prog').textContent", "contains": "4 tool uses",
+          "why": "counts are what this frame adds, so the line stays" },
+        { "js": "document.querySelector('#log').textContent.split('Audit the renderer').length - 1",
+          "equals": 1, "why": "the duplicated description drops out, the line does not" }
+      ]
+    }
+  ]
+}

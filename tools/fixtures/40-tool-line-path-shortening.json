@@ -1,0 +1,265 @@
+{
+  "item": "UI \u2014 tool-line paths (2026-08-11)",
+  "branch": "__project + content_block_stop with a pathKeys description",
+  "provenance": "The __project frame is OURS \u2014 ChatPanel pushes the IDE's project.basePath, so its shape is a fact about our own code, not a claim about the CLI. The CLI half is the tool_use input carrying file_path, which is measured: file_path is LIM.pathKeys[0] and the frames here are the same content_block_start/delta/stop sequence every other fixture uses. The CLI also sends the same root as `cwd` on system/init (verified verbatim in the 2.1.226 binary: subtype:\"init\",cwd:e.cwd,session_id:...), which the webview accepts as a refresh \u2014 step 4 pins that path too. What is asserted is the contract that must hold whatever the root's provenance: display may be shortened, the CLICK TARGET may not.",
+  "steps": [
+    {
+      "note": "a path inside the project renders relative to it",
+      "frames": [
+        {
+          "type": "__project",
+          "root": "/home/syncroze/Sites/claude-brains"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p1",
+              "name": "Edit"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"file_path\":\"/home/syncroze/Sites/claude-brains/plugin/src/test/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStoreTest.kt\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelector('.t-desc.path').textContent",
+          "equals": "plugin/src/test/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStoreTest.kt",
+          "why": "the project root prefix is gone from the DISPLAY"
+        },
+        {
+          "js": "document.querySelector('.t-desc.path').dataset.path",
+          "equals": "/home/syncroze/Sites/claude-brains/plugin/src/test/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStoreTest.kt",
+          "why": "the CLICK TARGET is still the whole absolute path"
+        },
+        {
+          "js": "document.querySelector('.t-desc.path .p-tail').textContent",
+          "equals": "/session/SessionStoreTest.kt",
+          "why": "the never-shrinking span keeps the PARENT too \u2014 /session says what the filename alone does not"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); const lh = parseFloat(getComputedStyle(l).lineHeight) || 18; return Math.round(l.offsetHeight / lh); })()",
+          "equals": 1,
+          "why": "one line, at the panel's real width in the real browser"
+        },
+        {
+          "js": "(() => { const t = document.querySelector('.t-desc.path .p-tail'); return t.scrollWidth > t.clientWidth + 1; })()",
+          "equals": false,
+          "why": "the filename is not the part that got clipped"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL \u2014 a path OUTSIDE the project is left absolute",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 1,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p2",
+              "name": "Read"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 1,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"file_path\":\"/etc/nginx/sites-available/very-long-config-name-for-testing.conf\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 1
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.t-desc.path')[1].textContent",
+          "equals": "/etc/nginx/sites-available/very-long-config-name-for-testing.conf",
+          "why": "nothing to strip \u2014 shortening must not invent a relative path"
+        },
+        {
+          "js": "(() => { const l = document.querySelectorAll('.tool-line')[1]; const lh = parseFloat(getComputedStyle(l).lineHeight) || 18; return Math.round(l.offsetHeight / lh); })()",
+          "equals": 1,
+          "why": "still one line \u2014 the clamp does not depend on shortening"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL \u2014 a sibling directory that merely SHARES the root's prefix is not inside it",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 2,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p3",
+              "name": "Read"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 2,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"file_path\":\"/home/syncroze/Sites/claude-brains-testing/notes.md\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 2
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.t-desc.path')[2].textContent",
+          "equals": "/home/syncroze/Sites/claude-brains-testing/notes.md",
+          "why": "the match is on a SEGMENT boundary, so -testing is a different project"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL \u2014 parent + filename past LIM.pathTailMax drops the parent, so the filename is never the part the panel clips",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 3,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p4",
+              "name": "Read"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 3,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"file_path\":\"/etc/nginx/sites-available/staging.internal.example.com.conf\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 3
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.t-desc.path .p-tail')[3].textContent",
+          "equals": "/staging.internal.example.com.conf",
+          "why": "/sites-available/staging.internal.example.com.conf is 49 chars, past the 40 budget, so the parent moves into the shrinkable head"
+        },
+        {
+          "js": "document.querySelectorAll('.t-desc.path')[3].textContent",
+          "equals": "/etc/nginx/sites-available/staging.internal.example.com.conf",
+          "why": "dropping the parent from the TAIL never drops it from the path \u2014 it is still all there, just shrinkable"
+        }
+      ]
+    },
+    {
+      "note": "system/init's cwd refreshes the root \u2014 the CLI is the authority on what paths are relative to",
+      "frames": [
+        {
+          "type": "system",
+          "subtype": "init",
+          "cwd": "/home/syncroze/Sites/claude-brains/plugin"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 4,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p5",
+              "name": "Read"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 4,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"file_path\":\"/home/syncroze/Sites/claude-brains/plugin/src/main/resources/webview/chat.css\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 4
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.t-desc.path')[4].textContent",
+          "equals": "src/main/resources/webview/chat.css",
+          "why": "relative to init's cwd, which replaced the IDE-pushed root"
+        }
+      ]
+    }
+  ]
+}

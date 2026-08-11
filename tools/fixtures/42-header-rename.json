@@ -1,0 +1,106 @@
+{
+  "item": "34 (write half) — header rename (2026-08-12)",
+  "branch": "__title -> the header's rename control, and the bridge payload it emits",
+  "provenance": "The `__title` frame is OURS (ChatPanel.pushTitle), so its shape is a fact about our own code. The RECORD the rename eventually writes is the CLI's, read verbatim from the 2.1.226 binary — `{type:\"custom-title\", customTitle: title.trim(), sessionId}` appended with O_APPEND — and that half is pinned by SessionStoreRenameTest, not here. This fixture covers only what the webview owes: the control appears when there is a name, hides when there is not, seeds the editor, cancels without emitting, and emits exactly one well-formed message when it saves. window.__bridge is swapped for a recorder around the submit steps and restored afterwards, so asserting the payload does NOT actually rename the sandbox's session.",
+  "steps": [
+    {
+      "note": "a named conversation offers the pencil; the name goes in .t-txt so the control survives it",
+      "frames": [ { "type": "__title", "text": "Fix the queue spacing" } ],
+      "expect": [
+        { "js": "document.querySelector('#convTitle .t-txt').textContent", "equals": "Fix the queue spacing",
+          "why": "the title text lives in its own span" },
+        { "js": "document.querySelectorAll('#convTitle .t-edit').length", "equals": 1,
+          "why": "setTitle must not eat the pencil — writing textContent on the wrapper would" },
+        { "js": "document.getElementById('convTitle').classList.contains('unnamed')", "equals": false,
+          "why": "there is a transcript to append to, so the control is offered" }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — an unnamed thread has no transcript yet, so no rename is offered",
+      "frames": [ { "type": "__title", "text": "" } ],
+      "expect": [
+        { "js": "document.getElementById('convTitle').classList.contains('unnamed')", "equals": true,
+          "why": "empty title means no session on disk" },
+        { "js": "(() => { const b = document.querySelector('#convTitle .t-edit'); return getComputedStyle(b).display; })()",
+          "equals": "none", "why": "hidden rather than offering a click that could only fail" },
+        { "js": "(() => { document.querySelector('#convTitle .t-edit').click(); return document.getElementById('head').classList.contains('editing'); })()",
+          "equals": false, "why": "and clicking it anyway opens nothing" }
+      ]
+    },
+    {
+      "note": "the pencil turns the header into an editor seeded with the current name",
+      "frames": [ { "type": "__title", "text": "Fix the queue spacing" } ],
+      "expect": [
+        { "js": "(() => { document.querySelector('#convTitle .t-edit').click(); return document.getElementById('head').classList.contains('editing'); })()",
+          "equals": true, "why": "the header becomes the editor in place" },
+        { "js": "(() => { document.getElementById('convEdit').querySelector('.no').click(); document.querySelector('#convTitle .t-txt').click(); return document.getElementById('head').classList.contains('editing'); })()",
+          "equals": true, "why": "clicking the NAME opens it too — the pencil is the hint, not the only way in" },
+        { "js": "document.getElementById('convInput').value", "equals": "Fix the queue spacing",
+          "why": "seeded with the current name, so a small correction is a small edit" },
+        { "js": "(() => { const t = getComputedStyle(document.getElementById('convTitle')); return t.display; })()",
+          "equals": "none", "why": "the static title and the editor never show at once" }
+      ]
+    },
+    {
+      "note": "Escape cancels and keeps the original name — a half-typed rename is never kept",
+      "frames": [],
+      "expect": [
+        { "js": "(() => { const i = document.getElementById('convInput'); i.value = 'half typed'; i.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); return document.getElementById('head').classList.contains('editing'); })()",
+          "equals": false, "why": "editor closed" },
+        { "js": "document.querySelector('#convTitle .t-txt').textContent", "equals": "Fix the queue spacing",
+          "why": "and the name is untouched" }
+      ]
+    },
+    {
+      "note": "saving emits exactly one rename message carrying the trimmed name and no id — Kotlin owns which session that is",
+      "frames": [],
+      "expect": [
+        { "js": "(() => { const real = window.__bridge; const sent = []; window.__bridge = function (j) { sent.push(j); }; try { document.querySelector('#convTitle .t-edit').click(); const i = document.getElementById('convInput'); i.value = '  Queue spacing fix  '; i.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true})); } finally { window.__bridge = real; } return JSON.stringify(sent.map(JSON.parse)); })()",
+          "equals": "[{\"kind\":\"rename\",\"title\":\"Queue spacing fix\"}]",
+          "why": "one message, trimmed title, no id" },
+        { "js": "document.getElementById('head').classList.contains('editing')", "equals": false,
+          "why": "and the editor closes on save" }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — a blank name is a no-op, not an erase: nothing is sent",
+      "frames": [],
+      "expect": [
+        { "js": "(() => { const real = window.__bridge; const sent = []; window.__bridge = function (j) { sent.push(j); }; try { document.querySelector('#convTitle .t-edit').click(); const i = document.getElementById('convInput'); i.value = '   '; i.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true})); } finally { window.__bridge = real; } return sent.length; })()",
+          "equals": 0, "why": "there is no record that un-names a conversation, and the CLI refuses an empty title too" },
+        { "js": "document.querySelector('#convTitle .t-txt').textContent", "equals": "Fix the queue spacing",
+          "why": "the name stands" }
+      ]
+    },
+    {
+      "note": "an unasked-for sessions frame re-renders the list WITHOUT opening it — Kotlin re-pushes after a rename, and that must not pop the panel open",
+      "frames": [
+        { "type": "sessions", "items": [ { "id": "s1", "title": "Queue spacing fix", "time": 0, "size": 1024, "tokens": 10 } ] }
+      ],
+      "expect": [
+        { "js": "document.getElementById('histPanel').classList.contains('show')", "equals": false,
+          "why": "nobody asked for the panel, so it stays shut" },
+        { "js": "document.querySelectorAll('#histList .hist-item').length", "equals": 1,
+          "why": "but the rows are refreshed, so opening it later shows the new name" }
+      ]
+    },
+    {
+      "note": "the history BUTTON still opens it — the flag must not break the path it protects",
+      "frames": [],
+      "expect": [
+        { "js": "(() => { const real = window.__bridge; window.__bridge = function () {}; try { document.getElementById('histBtn').click(); } finally { window.__bridge = real; } window.onClaudeEvent(JSON.stringify({type:'sessions', items:[{id:'s1', title:'Queue spacing fix', time:0, size:1024, tokens:10}]})); return document.getElementById('histPanel').classList.contains('show'); })()",
+          "equals": true, "why": "asked for, so it opens" },
+        { "js": "(() => { document.getElementById('histPanel').classList.remove('show'); window.onClaudeEvent(JSON.stringify({type:'sessions', items:[{id:'s1', title:'x', time:0, size:1, tokens:1}]})); return document.getElementById('histPanel').classList.contains('show'); })()",
+          "equals": false, "why": "and the flag is spent — the NEXT unasked frame does not reopen it" }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — re-saving the SAME name sends nothing either",
+      "frames": [],
+      "expect": [
+        { "js": "(() => { const real = window.__bridge; const sent = []; window.__bridge = function (j) { sent.push(j); }; try { document.querySelector('#convTitle .t-edit').click(); document.getElementById('convInput').dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true})); } finally { window.__bridge = real; } return sent.length; })()",
+          "equals": 0, "why": "an unchanged name is not a rename — no record, no re-push" }
+      ]
+    }
+  ]
+}

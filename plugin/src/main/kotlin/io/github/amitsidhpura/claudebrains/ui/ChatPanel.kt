@@ -228,6 +228,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "tasks" -> pushTasks(msg["id"]?.jsonPrimitive?.content)
             "more" -> pushEarlier()
             "history" -> pushSessions()
+            // No id: the header renames the thread you are IN, and Kotlin owns which that is.
+            // pushTitle skips an unchanged name, so re-pushing after a no-op rename costs nothing.
+            "rename" -> msg["title"]?.jsonPrimitive?.contentOrNull?.let { title ->
+                if (session.renameSession(title)) { pushTitle(session.currentSessionId()); pushSessions() }
+            }
             "delete" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
                 if (id == session.currentSessionId()) {
                     // Deleting the live thread leaves it first — same reset the "new" action
@@ -605,6 +610,13 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         // Seed the mode chip with the persisted mode the CLI was just launched with —
         // it isn't in the initialize payload, and the chip's built-in default is "default".
         pushFrame(buildJsonObject { put("type", "__mode"); put("mode", session.selectedMode()) })
+
+        // The project root, so a tool line can show `plugin/src/…` instead of repeating the whole
+        // prefix on every row. From the IDE rather than the CLI's `system/init` cwd, which carries
+        // the same value but only arrives at the FIRST TURN — a resumed transcript renders before
+        // that, and would show absolute paths until the user spoke. The webview refreshes from
+        // init's cwd anyway, since that is what the model's paths are actually relative to.
+        project.basePath?.let { pushFrame(buildJsonObject { put("type", "__project"); put("root", it) }) }
 
         // Feed the file list for @-mention autocomplete.
         runCatching {

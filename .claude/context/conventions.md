@@ -20,6 +20,15 @@
   (cost/usage display, 2026-08-06) are decisions, not queue positions.
 - Feature bar: *is it reached many times an hour while writing code?* Yes → panel. No → terminal.
 
+## Working style (reinforced across the 2026-08-11/12 session)
+- **UI changes go to `design/mockup.html` + `chat.css` FIRST**, shown as a render, and only wired
+  into `chat.html` once the look is agreed. The user iterates visually and will hand back DevTools
+  screenshots with the exact values they want — apply those verbatim rather than re-deciding.
+- When a visual choice is genuinely open (size, thickness, padding), **render the candidates side
+  by side** and let the user pick; do not iterate one guess at a time.
+- Every new test suite gets its negative control RUN, not just written: assert a wrong value (or
+  run the fixture against `git show HEAD:` of the file) and confirm it fails.
+
 ## Code & assets
 - **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/`
   stays out of git. Personal use only.

@@ -208,6 +208,20 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     }
 
     /**
+     * Name the LIVE conversation, by appending the same `custom-title` record the terminal's
+     * `/rename` writes. Unlike [deleteSession] this does NOT refuse the live thread — appending is
+     * the safe direction (the CLI opens the transcript O_APPEND per write, so it cannot overwrite
+     * the line), and the conversation you are in is the one you want to name.
+     *
+     * Returns false when there is no session on disk yet: a thread that has not spoken has no
+     * transcript, and there is nothing to append to.
+     */
+    fun renameSession(title: String): Boolean {
+        val id = cli?.sessionId ?: return false
+        return io.github.amitsidhpura.claudebrains.session.SessionStore.rename(cwd.path, id, title)
+    }
+
+    /**
      * Delete the LIVE conversation — the one [deleteSession] refuses. Leave it first: restart
      * on a fresh conversation, wait (bounded, off the EDT) for the OLD process to actually die,
      * THEN delete the file it can no longer resurrect. [onDone] fires from that pooled thread

@@ -3,6 +3,44 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-12 — Rename writes the CLI's own `custom-title` record, from the header title
+`SessionStore.rename` appends `{type:"custom-title", customTitle: title.trim(), sessionId}` + "\n"
+with O_APPEND — the CLI's writer, read verbatim from the 2.1.226 binary, three fields, no uuid or
+timestamp. UI is the header title: hover pencil, click the title OR the pencil, header becomes the
+editor, Enter saves / Esc cancels. Safe on the LIVE session, unlike delete.
+**Why:** byte-identical writes mean a rename here and a `/rename` in the terminal are one act, so
+neither client sees a name the other cannot explain. The header (not the history row) was the
+user's explicit choice. Appending is safe live because the CLI opens O_APPEND per write.
+**Rejected:** the `rename_session` control subtype — it answers "onRenameSession callback not
+registered", dispatching to an SDK embedder's callback, unreachable over stream-json. Also
+rejected: a `/rename` slash command, and rename in the conversations list (user picked the header).
+
+## 2026-08-12 — Tool-line paths: project-relative, one line, and a CHARACTER budget for the tail
+Display drops the project root (segment-boundary match only) and splits into a shrinking `.p-head`
+and a never-shrinking `.p-tail`. The tail carries the filename plus its parent when the two fit
+`RenderLimits.PATH_TAIL_MAX` (40 chars), else the filename alone. The absolute path rides
+`dataset.path`; the click handler prefers it over `textContent`.
+**Why:** a character budget needs no layout measurement — the alternative forces a synchronous
+layout per tool line during a replay that renders hundreds. CSS alone cannot express "shrink the
+parent only once the prefix is gone": flex distributes shrink proportionally, so any factor big
+enough to save the filename also nibbles the parent on a path that had room (both regimes measured
+on real JCEF). Storing the absolute separately also fixed a path past DESC_MAX being *clicked*
+truncated.
+**Rejected:** filename-only tail (loses the disambiguating folder); parent always in the tail
+(a narrow panel then clips the FILENAME); three spans with shrink ordering (proportional shrink
+cost the parent a character it didn't need to lose); `direction: rtl` for a left-side ellipsis
+(`unicode-bidi: plaintext` cancels it, and without it the leading `/` reorders).
+
+## 2026-08-12 — The context gauge is an SVG arc, drawn with the composer's Lucide geometry
+A ring in front of the percentage: `pathLength="100"` so `stroke-dasharray` IS the percentage,
+both strokes `currentColor`, `--ctx-pct` set beside the digits in `renderContext`.
+**Why:** `currentColor` makes the ring cross the 50% warn threshold with the number for free, with
+no second rule to keep in step. `pathLength` removes the 2*pi*r constant. Lucide geometry (24
+viewBox, r=9, stroke 2, 19px box, 3-unit inset) makes it measure identically to the square-slash
+beside it — 13.5x13.5, confirmed in DevTools.
+**Rejected:** a conic-gradient pie behind a radial mask — a third of the code and no markup, but
+Chromium anti-aliases neither the sweep edge nor the mask, so it rendered visibly stepped.
+
 ## 2026-08-09 — Deleting the LIVE conversation = leave it first, then delete
 Every history row now offers delete, the current one included. The live path routes through
 `ClaudeSessionService.deleteCurrentSession`: restart on a fresh conversation, `awaitExit(5s)`

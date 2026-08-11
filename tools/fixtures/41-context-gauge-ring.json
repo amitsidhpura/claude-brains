@@ -1,0 +1,70 @@
+{
+  "item": "UI — context gauge ring (2026-08-12)",
+  "branch": "stream_event/message_start usage -> setContext -> the .ctx chip's ring",
+  "provenance": "The driver is measured: `message_start` carries the prompt-side usage and is the only live feed into setContext (chat.html sums input_tokens + cache_read_input_tokens + cache_creation_input_tokens). Nothing here asserts an absolute percentage, and that is deliberate rather than lazy: the harness drives a panel with a REAL CLI attached, whose own model events set ctxWindowFromCli whenever they arrive, so the same usage renders 24% against a 200k window and 5% against a 1M one — measured mid-run, a first draft of this fixture failed exactly that way. What is pinned instead is what the ring must satisfy for ANY window: the arc equals the digits, the threshold agrees with both, and the ring survives an update — the previous code wrote `textContent`, which would delete the <svg> on the first refresh.",
+  "steps": [
+    {
+      "note": "first usage draws the ring and the number together",
+      "frames": [
+        { "type": "stream_event", "event": { "type": "message_start",
+          "message": { "usage": { "input_tokens": 1000, "cache_read_input_tokens": 47000 } } } }
+      ],
+      "expect": [
+        { "js": "document.querySelector('#ctxChip .ctx-ring .fill') ? 1 : 0", "equals": 1,
+          "why": "the ring exists" },
+        { "js": "document.getElementById('ctxChip').classList.contains('gauge')", "equals": true,
+          "why": "the .gauge gate is on, so chat.css actually draws it" },
+        { "js": "(() => { const c = document.getElementById('ctxChip'); return c.style.getPropertyValue('--ctx-pct') + '%' === c.lastChild.nodeValue; })()",
+          "equals": true, "why": "the arc is driven by the same number the digits show" },
+        { "js": "(() => { const c = document.getElementById('ctxChip'); const p = +c.style.getPropertyValue('--ctx-pct'); return c.classList.contains('warn') === (p >= 50); })()",
+          "equals": true, "why": "the threshold agrees with the figure, whatever the window turned out to be" },
+        { "js": "document.querySelector('#ctxChip .ctx-ring .fill').getAttribute('pathLength')", "equals": "100",
+          "why": "the dash array is a percentage only because the path is 100 units long" },
+        { "js": "document.getElementById('ctxChip').title.indexOf('48k of') === 0", "equals": true,
+          "why": "the usage side IS deterministic — 1k + 47k — even when the window is not" }
+      ]
+    },
+    {
+      "note": "a heavier turn updates BOTH, and the ring survives it — the regression this fixture exists for",
+      "frames": [
+        { "type": "stream_event", "event": { "type": "message_start",
+          "message": { "usage": { "input_tokens": 4000, "cache_read_input_tokens": 140000 } } } }
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#ctxChip .ctx-ring').length", "equals": 1,
+          "why": "still exactly one ring: not deleted by the update, not duplicated by it" },
+        { "js": "document.getElementById('ctxChip').title.indexOf('144k of') === 0", "equals": true,
+          "why": "the new usage landed" },
+        { "js": "(() => { const c = document.getElementById('ctxChip'); return c.style.getPropertyValue('--ctx-pct') + '%' === c.lastChild.nodeValue; })()",
+          "equals": true, "why": "arc still equals digits after a re-render" },
+        { "js": "(() => { const c = document.getElementById('ctxChip'); const p = +c.style.getPropertyValue('--ctx-pct'); return c.classList.contains('warn') === (p >= 50); })()",
+          "equals": true, "why": "and the threshold still agrees — the ring turns with the text, both being currentColor" }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — the ring is geometry copied from the composer's Lucide icons, so it must MEASURE like one",
+      "frames": [],
+      "expect": [
+        { "js": "(() => { const r = document.querySelector('#ctxChip .ctx-ring .track').getBoundingClientRect(); return Math.round(r.width * 10) / 10; })()",
+          "equals": 13.5,
+          "why": "the same 13.5px the square-slash's rect measures: r=9 in a 24 viewBox spans units 3..21, exactly like <rect x=3 width=18>" },
+        { "js": "(() => { const a = document.querySelector('#ctxChip .ctx-ring').getBoundingClientRect(); const b = document.querySelectorAll('#inputbar .icon-btn')[1].querySelector('svg').getBoundingClientRect(); return Math.round(a.width) === Math.round(b.width); })()",
+          "equals": true,
+          "why": "same box as the slash icon beside it, so the two glyphs sit on one rhythm" }
+      ]
+    },
+    {
+      "note": "a new conversation leaves nothing stale behind — __clear is the path that zeroes the gauge, setContext(0) returns early by design",
+      "frames": [ { "type": "__clear" } ],
+      "expect": [
+        { "js": "document.getElementById('ctxChip').hidden", "equals": true, "why": "hidden with no usage" },
+        { "js": "document.getElementById('ctxChip').style.getPropertyValue('--ctx-pct')", "equals": "",
+          "why": "the arc is cleared too — otherwise the next first render flashes the previous session's fill" },
+        { "js": "document.getElementById('ctxChip').lastChild.nodeValue", "equals": "",
+          "why": "and the digits are blanked without taking the ring with them" },
+        { "js": "document.querySelectorAll('#ctxChip .ctx-ring').length", "equals": 1,
+          "why": "the ring is still there, ready for the next session" }
+      ]
+    }
+  ]
+}

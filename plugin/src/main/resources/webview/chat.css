@@ -70,8 +70,51 @@ img { max-width: 100%; height: auto; }
 #head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); }
 /* flex:1 + min-width:0 so a long conversation title ellipsises instead of shoving the actions
    out of the panel (a flex item's default min-width:auto refuses to shrink below its text). */
+/* flex:1 + min-width:0 so a long conversation title ellipsises instead of shoving the actions
+   out of the panel (a flex item's default min-width:auto refuses to shrink below its text). */
 #head .title { font-size: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 #head .actions { display: flex; gap: 10px; flex: none; }
+/* Rename. The pencil is a SIBLING of the title text, never an overlay on it: the chip's .rm idiom
+   lays the control over the end of the text, which is right for a chip whose text is decoration but
+   wrong here — it covered the last characters of the name. The text takes the width and the pencil
+   is pushed to the far right, landing exactly where ✓/✕ appear once editing starts, at the same
+   19px as them and as .icon-btn — the control does not move when the header changes state. Nothing
+   is reserved: it is display:none until the header row is hovered.
+
+   The whole title is the click target, not just the pencil, so the obvious gesture works and the
+   pencil is only the hint that it does. */
+#head .title { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; }
+#head .title.unnamed { cursor: default; }
+#head .title .t-txt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#head .t-edit { display: none; flex: none;
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 0; border-radius: 3px; }
+#head .t-edit:hover { color: var(--fg); }
+#head .t-edit svg { width: 19px; height: 19px; display: block; }
+#head .title:hover .t-edit { display: inline-flex; }
+/* A conversation with no name has no transcript on disk yet, so there is nothing to append a
+   custom-title record to — the control hides rather than failing on click. */
+#head .title.unnamed .t-edit { display: none; }
+/* Editing state: the header BECOMES the editor, so there is no dialog to mis-click. Hidden until
+   .editing, which also hides the static title — the two never show at once.
+
+   The input wears NO box: no background, no border, no padding, and the title's own font. Editing
+   the name should look like editing the name, not like a form field that has landed in the header —
+   the caret and the two buttons are enough to say what is happening. The buttons are 19px on the
+   same 10px rhythm as .icon-btn beside them, so the confirm pair reads as part of the header rather
+   than as something bolted into it. */
+#head { gap: 10px; }
+#head .title-edit { display: none; flex: 1; min-width: 0; align-items: center; gap: 9px; }
+#head.editing .title { display: none; }
+#head.editing .title-edit { display: flex; }
+#head .title-edit input { flex: 1; min-width: 0; font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--fg); background: none; border: none; padding: 0; outline: none; }
+/* Same colours as the permission card's verdict pair, so a confirm reads the same everywhere. */
+#head .title-edit button { flex: none; background: transparent; border: 0; cursor: pointer; padding: 0;
+  border-radius: 3px; display: inline-flex; }
+#head .title-edit .ok { color: var(--green); }
+#head .title-edit .no { color: var(--muted); }
+#head .title-edit .no:hover { color: var(--fg); }
+#head .title-edit svg { width: 19px; height: 19px; display: block; }
 .icon-btn { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 14px;
   padding: 0; width: auto; height: auto; border-radius: var(--radius); display: inline-flex; align-items: center; justify-content: center; }
 /* Hover brightens the glyph only — no background plate. The header icons used to grow a
@@ -294,7 +337,15 @@ blockquote > *:last-child { margin-bottom: 0; }
 .done svg { width: 12px; height: 12px; vertical-align: -2px; margin: 0 1px 0 3px; }
 
 /* tool line + IN/OUT */
-.tool-line { position: relative; padding-left: 22px; font-size: 13px; color: var(--muted); }
+/* flex so the description can be told to SHRINK — a block box would let a long path push the row
+   wider and wrap it. The ::before dot is absolutely positioned, so it does not become a flex item.
+   max-width/min-width are not decoration: nowrap flex children give this row a min-content width of
+   label + filename, and inside an ancestor that sizes to content that made the ROW wider than the
+   panel — the clamp still produced one line, but the overflow ran off the right edge and the panel
+   clipped the filename. Bounding the row is what points the shrink at .p-head instead. */
+.tool-line { position: relative; display: flex; align-items: baseline; max-width: 100%; min-width: 0;
+  padding-left: 22px; font-size: 13px; color: var(--muted); box-sizing: border-box; }
+.tool-line b { flex: 0 0 auto; }
 .tool-line::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
 .tool-line.fail::before { background: var(--red); }
 .tool-line b { color: var(--fg); font-weight: 600; }
@@ -307,6 +358,20 @@ blockquote > *:last-child { margin-bottom: 0; }
 .tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: 12px; }
 .tool-line .t-desc.path, .card-h code { cursor: pointer; }
 .tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
+/* A path is clamped to ONE line: it is already project-relative by the time it gets here, and what
+   is left is still long enough to wrap a narrow panel three times. .p-head is the shrinkable prefix
+   and wears the ellipsis; .p-tail never shrinks, and holds the filename plus — when fillPath judged
+   there was room in LIM.pathTailMax — its parent folder. So the ellipsis lands in the MIDDLE and
+   only ever eats the least useful end. WHICH segments are in the tail is decided in JS, not here:
+   flex distributes shrink proportionally, so no combination of factors expresses "shrink the parent
+   only once the prefix is gone" — measured both ways on real JCEF, and each factor that saved the
+   filename on a long path also nibbled the parent on a short one. min-width:0 is load-bearing on
+   the flex item and the head: a flex child's default min-width is its content, which would refuse
+   to shrink and put the wrap straight back. */
+.tool-line .t-desc { min-width: 0; }
+.tool-line .t-desc.path { display: inline-flex; align-items: baseline; overflow: hidden; }
+.tool-line .t-desc.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-line .t-desc.path .p-tail { flex: 0 0 auto; white-space: nowrap; }
 .path { font-family: ui-monospace, Consolas, monospace; }
 .io { margin: -6px 0 0 22px; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
@@ -346,10 +411,18 @@ blockquote > *:last-child { margin-bottom: 0; }
    Write) have no IN/OUT box for it to ride in; same 22px column and ↳ glyph as .io-note so the two
    read as one idiom. Amber rather than red: the edit DID apply, so this is a caveat, not a failure. */
 .t-note { margin: 2px 0 0 22px; color: var(--amber); font-size: 11px; }
-.tool-imgs { margin: 2px 0 0 22px; display: flex; flex-direction: column; gap: 6px; }
-.tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 320px; object-fit: contain;
+/* align-items is load-bearing: a column flex container defaults to STRETCH, which blew every image
+   out to the full panel width — a 64x64 icon measured 474x320, a mostly-empty bordered box with the
+   picture pinned into its top-left corner by object-position. flex-start lets each image size to
+   itself, so small ones stay small and the caps below only bite on genuinely big ones. */
+.tool-imgs { margin: 2px 0 0 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+/* A preview, not the artwork: 120px is the tallest a result image gets inline — click opens the
+   lightbox at full size. The padding keeps the picture off its own border. object-fit stays as the
+   guard for a record whose declared dimensions disagree with the actual pixels: it letterboxes
+   inside the box rather than distorting the image. */
+.tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 120px; object-fit: contain;
   object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--code-bg); cursor: zoom-in; display: block; }
+  padding: 4px; background: var(--code-bg); cursor: zoom-in; display: block; }
 .tool-imgs .ti-missing { color: var(--muted); font-size: 11px; }
 .io-cut, .io-note { flex: 0 0 100%; margin-left: 32px; color: var(--muted); font-size: 11px;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -551,12 +624,15 @@ blockquote > *:last-child { margin-bottom: 0; }
 #chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--user-divider); }
 .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--user-raised);
   border: 1px solid var(--user-border); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
-.att .rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
+/* Remove control, shared by the attachment chip and the queue row (.q-row) so the two cannot
+   drift: hidden until its row is hovered, then absolutely placed over the text end with a fade
+   so revealing it never reflows the row. Reserving space for it instead was rejected. */
+.rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
   background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 3px;
   box-shadow: -6px 0 6px var(--user-raised); }
-.att .rm:hover { color: var(--fg); }
-.att .rm svg { width: 12px; height: 12px; display: block; }
-.att:hover .rm { display: inline-flex; }
+.rm:hover { color: var(--fg); }
+.rm svg { width: 12px; height: 12px; display: block; }
+.att:hover .rm, .q-row:hover .rm { display: inline-flex; }
 .att .thumb { width: 16px; height: 16px; border-radius: 3px; overflow: hidden; display: inline-flex; flex: 0 0 auto; }
 .att .thumb .ph-img { width: 100%; height: 100%; }
 .att .thumb .ph-img svg { width: 10px; height: 10px; }
@@ -606,7 +682,9 @@ blockquote > *:last-child { margin-bottom: 0; }
 .todo-ic { flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--dot); }
 .todo-ic svg { width: 13px; height: 13px; display: block; }
 .todo.completed { color: var(--muted); }
-.todo.completed .todo-t { text-decoration: line-through; text-decoration-color: var(--border); }
+/* currentColor, not a fainter rule: the strike belongs to the text, so it tracks whatever colour
+   the row is wearing rather than reading as a separate line drawn over it. */
+.todo.completed .todo-t { text-decoration: line-through; text-decoration-color: currentColor; }
 .todo.completed .todo-ic { color: var(--green); }
 .todo.in_progress { color: var(--fg); }
 .todo.in_progress .todo-ic { color: var(--accent); }
@@ -648,22 +726,25 @@ blockquote > *:last-child { margin-bottom: 0; }
 #inputbar { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 8px -12px 0; padding: 8px 12px 0; border-top: 1px solid var(--user-divider); }
 #inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 10px; }
 /* Queued messages (client-parity item 24) — typed while a turn was running, waiting their turn.
-   Wears the composer's own raised surface so they read as part of the input, not as transcript. */
-#queue { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+   Wears the composer's own raised surface so they read as part of the input, not as transcript.
+   Divided off below by the #chips idiom (full-bleed rule), so the pending rows read as their own
+   band rather than running into the attachment chips or the input right under them. */
+#queue { display: flex; flex-direction: column; gap: 4px; margin: 0 -12px 8px; padding: 0 12px 8px;
+  border-bottom: 1px solid var(--user-divider); }
 /* Same trap as .chip-btn: the display:flex above beats the UA's [hidden]{display:none} (ID
-   outranks attribute selector), so an EMPTY queue still rendered — zero height but its
-   margin-bottom stayed, a permanent 6px of dead space above the composer's first row. */
+   outranks attribute selector), so an EMPTY queue still rendered — zero height but its margin,
+   padding and now its divider stayed, dead space and a stray rule above the composer's first row. */
 #queue[hidden] { display: none; }
-.q-row { display: flex; align-items: center; gap: 8px; background: var(--user-raised);
-  border: 1px solid var(--user-divider); border-radius: var(--radius); padding: 5px 6px 5px 9px; }
+/* Wears the attachment chip's surface exactly (.att): same raised background, same border. */
+.q-row { position: relative; display: flex; align-items: center; gap: 8px; background: var(--user-raised);
+  border: 1px solid var(--user-border); border-radius: var(--radius); padding: 5px 9px; }
 .q-row:hover { background: var(--user-raised-hover); }
+/* No override of .rm's fade colour here, deliberately: .att.click lifts on hover too and keeps its
+   remove control on the base --user-raised pill, so matching the attachment means matching that. */
 /* One line, ellipsised: the row is a reminder of what is pending, not a place to re-read a draft. */
 .q-text { flex: 1; min-width: 0; color: var(--fg); font-size: 12px; cursor: text;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .q-att { color: var(--user-muted); margin-left: 8px; font-size: 11px; }
-.q-x { flex: none; background: transparent; border: 0; color: var(--user-muted); cursor: pointer;
-  font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 3px; }
-.q-x:hover { color: var(--fg); }
 .chip-btn { background: transparent; border: 0; color: var(--user-muted); cursor: pointer; font: inherit; font-size: 12px; line-height: 1;
   border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
 /* display:inline-flex above beats the UA's [hidden]{display:none} — without this re-assert a
@@ -675,6 +756,32 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* context gauge: share of the window the next request will carry. Click to /compact.
    Wears .chip-btn (same as the model selector); only the over-threshold tint is its own. */
 .ctx.warn, .ctx.warn:hover { color: var(--accent); }
+/* The dial in front of the number: the same figure as a shape, so the chip reads at a glance
+   without parsing digits. A RING — the stroke fills round the circle as the window fills, which is
+   the shape the eye already reads as "how far through".
+
+   An SVG arc, NOT a conic-gradient behind a radial mask. The CSS version is a third of the code and
+   needs no markup, but Chromium anti-aliases neither the sweep's leading edge nor the mask's inner
+   circle, so at chip size the ring came out visibly stepped on both edges. A stroked circle is
+   drawn by the path rasteriser and comes out smooth.
+
+   `pathLength="100"` is what keeps it honest: it redefines the circle's length as 100 units, so the
+   dash is literally the percentage — no 2*pi*r constant to recompute whenever the radius changes.
+   Both strokes are currentColor (the track at low alpha via color-mix), which is what makes the
+   ring follow the number across the warn threshold for free, with no second rule to keep in step.
+   `.gauge` gates it so the chip is unchanged until the renderer opts in. */
+/* Geometry copied from the composer's Lucide icons rather than invented, down to the numbers: the
+   square-slash beside it is `<rect x=3 y=3 width=18 height=18>` with stroke-width 2 in a 24 viewBox,
+   so its path spans units 3..21 and its painted edge 2..22. The ring matches by construction —
+   r=9 about (12,12) spans exactly the same 3..21, which is why r is 9 and not the 8 that merely
+   looked right: at r=8 DevTools measured the circle 12x12 against the rect's 13.5x13.5, a unit
+   short, and the ring sat visibly deeper inside its own box than its neighbour.
+   `r * 2 + stroke-width` must stay 20 if either is ever touched. Same 19px box as .icon-btn svg,
+   so the two glyphs are the same size with the same air around them. */
+.ctx.gauge .ctx-ring { flex: none; width: 19px; height: 19px; transform: rotate(-90deg); }
+.ctx.gauge .ctx-ring circle { fill: none; stroke-width: 2; }
+.ctx.gauge .ctx-ring .track { stroke: color-mix(in srgb, currentColor 22%, transparent); }
+.ctx.gauge .ctx-ring .fill { stroke: currentColor; stroke-dasharray: var(--ctx-pct, 0) 100; }
 /* background-task roster (client-parity item 4): a LEVEL signal, so it is a chip that reflects what
    is running now, not a timeline entry. Wears .chip-btn like the rest; the pulsing dot is the only
    thing of its own, and it marks the roster as live rather than historical. */

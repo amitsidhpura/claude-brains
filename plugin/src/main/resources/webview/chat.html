@@ -13,7 +13,13 @@
 <body>
 <div id="app">
   <div id="head">
-    <span class="title" id="convTitle">New conversation</span>
+    <!-- Rename. The pencil is hover-revealed and the header becomes the editor in place, the way a
+         history row becomes its own delete confirmation. Writing the name appends the CLI's own
+         `custom-title` record, so a rename here and a /rename in the terminal are the same act. -->
+    <span class="title unnamed" id="convTitle"><span class="t-txt">New conversation</span><button class="t-edit" title="Rename conversation"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg></button></span>
+    <span class="title-edit" id="convEdit"><input id="convInput" type="text" spellcheck="false">
+      <button class="ok" title="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+      <button class="no" title="Cancel"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
     <span class="actions">
       <button id="refreshBtn" class="icon-btn" title="Reload this conversation"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
       <button id="histBtn" class="icon-btn" title="Past conversations"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
@@ -52,7 +58,7 @@
     <div id="inputcard">
       <!-- Messages typed while a turn is in flight (client-parity item 24). Held here rather than
            sent, because a mid-turn send corrupts the running request's accounting. Click a row to
-           edit it back into the composer; the × drops it. -->
+           edit it back into the composer; the hover-revealed remove control drops it. -->
       <div id="queue" hidden></div>
       <div id="chips" style="display:none"></div>
       <textarea id="input" rows="1" placeholder="Ask Claude…  (Ctrl+Enter to send, Enter for newline)"></textarea>
@@ -246,7 +252,10 @@
     if (cutRef) { bridge({ kind: 'open', path: cutRef.dataset.path }); return; }
     const ref = e.target.closest('.t-desc.path, .card-h code');
     if (!ref) return;
-    const p = (ref.textContent || '').trim();
+    // dataset.path first: a tool line SHOWS the project-relative path (and an ellipsis where the
+    // middle was), so its text is no longer something the editor could open. Same idiom as the
+    // .io-cut branch above. The text stays the fallback for surfaces that carry no data attribute.
+    const p = (ref.dataset.path || ref.textContent || '').trim();
     // A Read that named a range selects it; everything else opens at the top exactly as before.
     if (p) bridge({ kind: 'open', path: p, line: ref.dataset.line, endLine: ref.dataset.endLine });
   });
@@ -917,11 +926,53 @@
   // Header title: empty text means an unnamed thread, which reads as "New conversation" rather
   // than a blank strip. Kotlin re-sends after every turn, since the CLI names threads late.
   const convTitle = document.getElementById('convTitle');
+  const convTxt = convTitle.querySelector('.t-txt');
   function setTitle(t) {
     const name = (t || '').trim();
-    convTitle.textContent = name || 'New conversation';
+    // .t-txt, not the span itself: the rename pencil is its sibling and textContent would eat it.
+    convTxt.textContent = name || 'New conversation';
     convTitle.title = name || 'New conversation';
+    // An unnamed thread has no transcript on disk yet, so there is no file to append a
+    // custom-title record to — the pencil hides rather than offering a click that would fail.
+    convTitle.classList.toggle('unnamed', !name);
+    if (!name) endRename();
   }
+
+  /**
+   * Rename the conversation from the header (the write half of client-parity item 34).
+   *
+   * The header becomes the editor in place — same idiom as a history row becoming its own delete
+   * confirmation, and for the same reason: a dialog for a one-field edit is a mis-click waiting to
+   * happen. Kotlin owns WHICH session this is, so the message carries only the name.
+   */
+  const convEdit = document.getElementById('convEdit');
+  const convInput = document.getElementById('convInput');
+  const headEl = document.getElementById('head');
+  function endRename() { headEl.classList.remove('editing'); }
+  function startRename() {
+    if (convTitle.classList.contains('unnamed')) return;
+    convInput.value = convTxt.textContent;
+    headEl.classList.add('editing');
+    convInput.focus(); convInput.select();
+  }
+  function saveRename() {
+    const name = convInput.value.trim();
+    // Blank is a no-op, not an erase: there is no record that un-names a conversation, and the CLI
+    // refuses an empty title too ("title must be non-empty"). Kotlin re-pushes __title on success,
+    // so the header shows what actually landed on disk rather than what was typed.
+    if (name && name !== convTxt.textContent) bridge({ kind: 'rename', title: name });
+    endRename();
+  }
+  // The whole title opens the editor; the pencil is the hint, not the only way in. One handler on
+  // the container covers both, so they can never disagree about what a click does.
+  convTitle.onclick = function (e) { e.stopPropagation(); startRename(); };
+  convEdit.querySelector('.ok').onclick = saveRename;
+  convEdit.querySelector('.no').onclick = endRename;
+  convInput.onkeydown = function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+    // stopPropagation so the document-level Escape rung doesn't also close a menu behind this
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endRename(); }
+  };
   document.getElementById('newBtn').onclick = function () { bridge({ kind: 'new' }); setTitle(''); };
   // Reload = re-resume the same session: the transcript on disk is the source of truth, so this
   // both refreshes out-of-band changes and recovers a dead CLI without losing the thread.
@@ -951,9 +1002,15 @@
     }
     if (h > 0) list.style.maxHeight = Math.ceil(h) + 'px';
   }
+  // Set only by the button, so a `sessions` frame that ARRIVES unasked (Kotlin re-pushes the list
+  // after a rename or a delete, to keep it true) re-renders the rows without opening the panel.
+  // Rendering data and opening a popup used to be the same act here, because asking was the only
+  // way a frame could arrive — a rename made that assumption visible by popping the list open.
+  let histWanted = false;
   document.getElementById('histBtn').onclick = function (e) {
     e.stopPropagation();
     if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
+    histWanted = true;
     bridge({ kind: 'history' }); // Kotlin answers with a 'sessions' event -> renderHistory shows the panel
   };
   function renderHistory(items, current) {
@@ -989,9 +1046,15 @@
       row.querySelector('.hist-confirm').onclick = function (e) { e.stopPropagation(); };
       histList.appendChild(row);
     });
-    histPanel.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';
-    histPanel.classList.add('show');
-    capToRows(histList, 5, '.hist-item');   // after .show — see capToRows
+    // Show only when the user asked, or when the panel is already open (a delete re-pushes the list
+    // from under an open panel and must not close it). capToRows measures, so it only runs while
+    // the panel is actually visible — a hidden list measures 0 and pins max-height:0px.
+    if (histWanted || histPanel.classList.contains('show')) {
+      histPanel.style.top = (document.getElementById('head').offsetHeight + 4) + 'px';
+      histPanel.classList.add('show');
+      capToRows(histList, 5, '.hist-item');   // after .show — see capToRows
+    }
+    histWanted = false;
   }
 
   function clearLogUI() {
@@ -1284,6 +1347,9 @@
     // against the real frames), so it is remembered — otherwise the finished line drops the one
     // word that says which kind of agent ran.
     if (ev.subagent_type) st.type = String(ev.subagent_type);
+    // Fetched here rather than at element-creation time because the tool line's OWN description is
+    // needed while `bits` is built — see the duplicate check below.
+    const tool = ev.tool_use_id ? toolsById[ev.tool_use_id] : null;
     const u = ev.usage || {};
     const bits = [];
     if (st.type) bits.push(st.type);
@@ -1295,22 +1361,35 @@
     // "Explore · [harness: subagent output matched instruction-shaped pattern(s): settings-json …]"
     // — because the marker is longer than descMax, so the real summary never made it on screen.
     const what = stripPlumbing(String((done ? (ev.summary || ev.description) : ev.description) || ''));
-    if (what) bits.push(what.replace(/\s+/g, ' ').slice(0, LIM.descMax));
+    // The task lifecycle is NOT sub-agent-only — the CLI's emit site sits among `runningSubagents`,
+    // `isBackgrounded` and `local_workflow` (2.1.226, read with `strings`), so an ordinary tracked
+    // tool use produces task_started carrying a `description` and no subagent_type or usage. For a
+    // Bash that description is the very string `.t-desc` already shows on the tool line, so the
+    // whole progress line came out a word-for-word copy of the line above it.
+    // EXACT match only, and not "never show the description": for a real sub-agent it is running
+    // commentary that changes as it works (see the note above), and dropping it would gut item 1.
+    const norm = function (s) { return String(s || '').replace(/\s+/g, ' ').trim(); };
+    const td = tool && tool.el ? tool.el.querySelector('.t-desc') : null;
+    if (what && norm(what) !== norm(td && td.textContent)) bits.push(what.replace(/\s+/g, ' ').slice(0, LIM.descMax));
     const n = u.tool_uses;
     if (typeof n === 'number' && n > 0) bits.push(n + (n === 1 ? ' tool use' : ' tool uses'));
     if (typeof u.total_tokens === 'number' && u.total_tokens > 0) bits.push(fmtTok(u.total_tokens) + ' tokens');
     if (done && ev.status && ev.status !== 'completed') bits.push(String(ev.status));
     // Decided BEFORE touching the DOM: building the element first left an empty div behind whenever
     // a frame carried nothing worth printing (a task_started with no description, zeroed counts).
-    if (!bits.length) return;
+    if (!bits.length) {
+      // A finished frame with nothing left to say must not leave an earlier line wearing the
+      // in-flight colour (.t-prog.run) forever.
+      if (done && st.el) st.el.classList.remove('run');
+      return;
+    }
     if (!st.el || !st.el.isConnected) {
-      const t = ev.tool_use_id ? toolsById[ev.tool_use_id] : null;
-      if (!t) return;   // no tool line to hang it on (the Agent line was never opened)
+      if (!tool) return;   // no tool line to hang it on (the Agent line was never opened)
       st.el = document.createElement('div');
       st.el.className = 't-prog run';
       // After the IN box when there is one, so it reads: what it is · what it was asked · how it
       // is going.
-      (t.io || t.el).after(st.el);
+      (tool.io || tool.el).after(st.el);
     }
     st.el.textContent = bits.join(' · ');
     st.el.classList.toggle('run', !done);
@@ -1403,6 +1482,69 @@
     d.className = 't-note';
     d.textContent = '↳ ' + note;   // same "which means" glyph as the IN/OUT note from item 9
     return d;
+  }
+  /**
+   * The project root, for shortening the paths on tool lines.
+   *
+   * Pushed by ChatPanel as `__project` when the panel opens, and refreshed from `system/init`'s
+   * `cwd` (the CLI builds that frame as `subtype:"init",cwd:e.cwd,…` — read from the 2.1.226
+   * binary). The IDE is the primary because init only arrives at the first TURN, and a resumed
+   * transcript renders before that.
+   */
+  let projectRoot = '';
+  function setProjectRoot(r) {
+    r = String(r || '').replace(/[\/\\]+$/, '');
+    if (r) projectRoot = r;
+  }
+  /**
+   * Draw a file path into a `.t-desc`, project-relative and on ONE line.
+   *
+   * Three things have to stay true at once, and each was a bug waiting to happen:
+   *   1. the click must open the file — so the ABSOLUTE path rides on `dataset.path`, never the
+   *      shortened text. That also fixes a path longer than LIM.descMax, which used to be clicked
+   *      in its truncated form;
+   *   2. the filename must survive the clamp, and so should its PARENT FOLDER — `controls/preview.d.ts`
+   *      says what `preview.d.ts` alone does not. So the display is cut in two: `.p-tail` is the
+   *      part that never shrinks, and `.p-head` is everything before it, which the CSS ellipsis eats
+   *      from its END — putting the ellipsis in the MIDDLE of the path. The parent joins the tail
+   *      only when the two together fit LIM.pathTailMax, because a tail that outgrows the line is
+   *      one the panel clips, and it clips the filename. Letting CSS decide that instead was tried
+   *      and measured on real JCEF: flex shrinks proportionally, so any factor large enough to save
+   *      the filename on a long path also nibbles the parent on a short one;
+   *   3. `textContent` must still read as the whole displayed path, since that is the fallback the
+   *      click handler and every text assertion use.
+   * Used by BOTH the live and the replay site, so the two cannot drift.
+   */
+  function fillPath(dEl, abs, shown) {
+    const full = String(abs || shown || '');
+    let disp = String(shown || full);
+    // Only inside the project, and only on a SEGMENT boundary — /home/me/project-notes must not be
+    // reported as living inside /home/me/project.
+    if (projectRoot && full.indexOf(projectRoot + '/') === 0) disp = full.slice(projectRoot.length + 1);
+    else if (projectRoot && full.indexOf(projectRoot + '\\') === 0) disp = full.slice(projectRoot.length + 1);
+    // Two cuts: before the filename, and before the segment above it. A path with fewer segments
+    // than that just leaves the earlier spans empty rather than inventing structure.
+    // Each cut lands BEFORE its separator, so the slash leads the span it belongs to. That matters
+    // once a span is ellipsised: cutting after the slash turned "controls/" into "control…" and the
+    // line read as loose fragments — leading slashes keep it reading as a path, "…/control…/x.ts".
+    const nameAt = Math.max(0, Math.max(disp.lastIndexOf('/'), disp.lastIndexOf('\\')));
+    const upTo = disp.slice(0, nameAt);
+    const parentAt = Math.max(0, Math.max(upTo.lastIndexOf('/'), upTo.lastIndexOf('\\')));
+    // Parent + filename when they fit the budget, otherwise the filename alone.
+    const cut = (disp.length - parentAt) <= LIM.pathTailMax ? parentAt : nameAt;
+    dEl.textContent = '';
+    dEl.classList.add('path');
+    dEl.dataset.path = full;
+    dEl.title = full;
+    const part = function (cls, text) {
+      const s = document.createElement('span');
+      s.className = cls; s.textContent = text;
+      dEl.appendChild(s);
+      return s;
+    };
+    part('p-head', disp.slice(0, cut));
+    part('p-tail', disp.slice(cut));
+    return dEl;
   }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
   function toolLine(name) {
@@ -1637,8 +1779,10 @@
           if (it.isError) t.classList.add('fail');
           if (it.desc) {
             const d = t.querySelector('.t-desc');
-            d.textContent = it.desc;
-            if (it.isPath) d.classList.add('path');
+            // `fullPath` is the UNCAPPED path (SessionStore sends it beside the DESC_MAX-capped
+            // desc) — the click needs the whole thing, the display does not.
+            if (it.isPath) fillPath(d, it.fullPath || it.desc, it.desc);
+            else d.textContent = it.desc;
             if (it.suffix) {
               const sEl = document.createElement('span');
               sEl.className = 't-sfx'; sEl.textContent = it.suffix;
@@ -2032,7 +2176,8 @@
         txt.appendChild(c);
       }
       const x = document.createElement('button');
-      x.className = 'q-x'; x.type = 'button'; x.title = 'Remove'; x.textContent = '×';
+      // Same control as the attachment chip's remove: class .rm, same glyph, hover-revealed.
+      x.className = 'rm'; x.type = 'button'; x.title = 'Remove'; x.innerHTML = SVG_X;
       x.onclick = function () { queue.splice(i, 1); renderQueue(); };
       row.appendChild(txt); row.appendChild(x);
       q.appendChild(row);
@@ -2512,6 +2657,9 @@
       case 'system':
         if (typeof ev.permissionMode === 'string') applyCliMode(ev.permissionMode);
         if (ev.subtype === 'init') {
+          // The cwd the CLI is actually resolving paths against — the same value ChatPanel pushed
+          // as __project, but from the authority. Only ever arrives at the first turn.
+          if (ev.cwd) setProjectRoot(ev.cwd);
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }
@@ -2684,6 +2832,7 @@
       case '__clear':            return clearLogUI();
       case '__title':            return setTitle(ev.text);
       case '__mode':             return applyCliMode(ev.mode);   // persisted mode, at startup
+      case '__project':          return setProjectRoot(ev.root); // shortens tool-line paths
       case '__ctl_error':        return errorBlock(ev.error || 'control request failed');
       case '__exit': {
         setBusy(false);
@@ -2910,8 +3059,11 @@
             }
             if (descKey) {
               const dEl = openTool.el.querySelector('.t-desc');
-              dEl.textContent = String(inp[descKey]).slice(0, LIM.descMax);
-              if (LIM.pathKeys.indexOf(descKey) !== -1) dEl.classList.add('path');
+              const raw = String(inp[descKey]);
+              // A path is drawn through the shared helper (project-relative, one line, absolute on
+              // dataset.path); the cap applies to descriptions, which have no clickable half.
+              if (LIM.pathKeys.indexOf(descKey) !== -1) fillPath(dEl, raw, raw.slice(0, LIM.descMax));
+              else dEl.textContent = raw.slice(0, LIM.descMax);
               // Outside the cap and outside .t-desc.path: the range must survive a truncated path,
               // and it is not part of the filename the click handler sends to the editor.
               const sfx = descSuffix(openTool.name, inp.offset, inp.limit);
@@ -3229,17 +3381,43 @@
     ctxUsed = used;
     renderContext();
   }
+  /**
+   * The gauge ring in front of the percentage — the same figure as a shape, so the chip reads
+   * without parsing digits.
+   *
+   * Geometry is the composer's Lucide geometry, not its own: a 24 viewBox with the shape spanning
+   * units 3..21, which is what `r=9` about (12,12) draws and what the square-slash beside it draws
+   * as `<rect x=3 width=18>`. `pathLength="100"` redefines the circumference as 100 units, so the
+   * dash array in chat.css is literally the percentage — no 2*pi*r constant to keep in step.
+   *
+   * Built ONCE and kept: the chip is now [ring, text node], so the `textContent = pct + '%'` this
+   * function used to do would delete the <svg> on the first update and never bring it back.
+   */
+  const CTX_RING = '<svg class="ctx-ring" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<circle class="track" cx="12" cy="12" r="9" pathLength="100"></circle>' +
+    '<circle class="fill" cx="12" cy="12" r="9" pathLength="100"></circle></svg>';
+  let ctxNum = null;
+  function ctxLabel() {
+    if (ctxNum && ctxNum.isConnected) return ctxNum;
+    ctxChip.classList.add('gauge');
+    ctxChip.innerHTML = CTX_RING;
+    ctxNum = ctxChip.appendChild(document.createTextNode(''));
+    return ctxNum;
+  }
   function renderContext() {
     if (!ctxChip) return;
     if (!ctxUsed) {   // clear, not just hide, so a stale figure can never flash back
-      ctxChip.hidden = true; ctxChip.textContent = ''; ctxChip.title = '';
+      ctxChip.hidden = true; ctxLabel().nodeValue = ''; ctxChip.title = '';
       ctxChip.classList.remove('warn');
+      ctxChip.style.removeProperty('--ctx-pct');   // and no stale arc behind the next first render
       return;
     }
     const win = ctxWindow();
     const pct = Math.min(100, Math.round(ctxUsed / win * 100));
     ctxChip.hidden = false;
-    ctxChip.textContent = pct + '%';
+    ctxLabel().nodeValue = pct + '%';
+    // Set beside the text, from the same number, so the ring and the digits cannot disagree.
+    ctxChip.style.setProperty('--ctx-pct', pct);
     ctxChip.classList.toggle('warn', pct >= CTX_WARN_PCT);
     ctxChip.title = fmtTok(ctxUsed) + ' of ' + fmtTok(win) + ' context used — click to /compact';
   }
@@ -3685,7 +3863,18 @@
 
     // tool line — success (with path)
     const t1 = el('tool-line', '');
-    t1.innerHTML = '<b>Read</b><span class="t-desc path">src/components/App.tsx</span>';
+    t1.innerHTML = '<b>Read</b><span class="t-desc"></span>';
+    fillPath(t1.querySelector('.t-desc'), 'src/components/App.tsx');
+    // …and the state the clamp exists for: a path long enough to wrap the panel three times. It is
+    // drawn under the gallery's own root so the project-relative half is visible too.
+    const t1b = el('tool-line', '');
+    t1b.innerHTML = '<b>Edit</b><span class="t-desc"></span>';
+    // Built from the LIVE root so the project-relative half is exercised, and with a tail that adds
+    // no segment the root might already end in — appending a fixed "/plugin/…" produced
+    // "plugin/plugin/…" in a sandbox whose project IS the plugin directory.
+    fillPath(t1b.querySelector('.t-desc'),
+      (projectRoot || '/home/you/project') +
+      '/src/test/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStoreTest.kt');
 
     // tool line — Bash with IN/OUT
     const t2 = el('tool-line', '');
@@ -3737,19 +3926,24 @@
     // stale-edit caveat (item 11) — the file changed on disk between the read and the write. The
     // card still says Applied, because it did apply; the note is the part nothing else says.
     { const te = track(toolLine('Edit'));
-      te.querySelector('.t-desc').textContent = '/home/you/project/timestamp.txt';
-      te.querySelector('.t-desc').classList.add('path');
+      fillPath(te.querySelector('.t-desc'), '/home/you/project/timestamp.txt');
       const n = noteLine('the file had been modified on disk since you last read it — the edit ' +
         'applied cleanly, but the file contains other changes not in your context.');
       if (n) te.after(n); }
 
-    // tool-returned image (item 8) — a Read on a PNG or a Playwright screenshot. Two states:
-    // the image itself, and the budget-trimmed chip a replay shows when the bytes were dropped.
+    // tool-returned image (item 8) — a Read on a PNG or a Playwright screenshot. THREE states, and
+    // all three are needed to review the sizing: over the height cap, under it, and bytes dropped.
+    // The 2x2 sample is not a curiosity — it is the state that was broken, rendering full-panel-width
+    // by 320px because a column flex container stretches by default (docs/limits.md).
     { const ti = track(toolLine('Read'));
-      ti.querySelector('.t-desc').textContent = '/home/you/project/screenshot.png';
-      ti.querySelector('.t-desc').classList.add('path');
-      const box = toolImages([{ media_type: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z4AATAxQxhArAgQAAP//G6QCFVmA6TsAAAAASUVORK5CYII=',
-        name: 'screenshot.png', dimensions: { displayWidth: 2, displayHeight: 2 } }]);
+      fillPath(ti.querySelector('.t-desc'), '/home/you/project/screenshot.png');
+      const box = toolImages([
+        { media_type: 'image/svg+xml', name: 'screenshot.png',
+          data: 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5MDAiIGhlaWdodD0iNTIwIj48cmVjdCB3aWR0aD0iOTAwIiBoZWlnaHQ9IjUyMCIgZmlsbD0iIzFlMjczMyIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjgyMCIgaGVpZ2h0PSI1NiIgcng9IjgiIGZpbGw9IiMyZjNkNGYiLz48cmVjdCB4PSI0MCIgeT0iMTMwIiB3aWR0aD0iNTAwIiBoZWlnaHQ9IjIyIiByeD0iNiIgZmlsbD0iIzNiNGE1ZSIvPjxyZWN0IHg9IjQwIiB5PSIxNzgiIHdpZHRoPSI2MjAiIGhlaWdodD0iMjIiIHJ4PSI2IiBmaWxsPSIjM2I0YTVlIi8+PHJlY3QgeD0iNDAiIHk9IjIyNiIgd2lkdGg9IjM2MCIgaGVpZ2h0PSIyMiIgcng9IjYiIGZpbGw9IiMzYjRhNWUiLz48cmVjdCB4PSI1OTYiIHk9IjMwMCIgd2lkdGg9IjI2NCIgaGVpZ2h0PSIxODAiIHJ4PSIxMCIgZmlsbD0iI2Q5NjEyYyIvPjwvc3ZnPg==',
+          dimensions: { displayWidth: 900, displayHeight: 520 } },
+        { media_type: 'image/png', name: 'favicon.png',
+          data: 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z4AATAxQxhArAgQAAP//G6QCFVmA6TsAAAAASUVORK5CYII=',
+          dimensions: { displayWidth: 2, displayHeight: 2 } }]);
       if (box) ti.after(box);
       const ti2 = track(toolLine('Read'));
       ti2.querySelector('.t-desc').textContent = '/home/you/project/huge-capture.png';

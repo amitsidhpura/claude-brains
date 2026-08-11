@@ -16,6 +16,22 @@ object RenderLimits {
     const val DESC_MAX = 140
 
     /**
+     * How much of a file path, in characters, the tool line refuses to shrink — the filename plus,
+     * when it fits in this budget, its parent folder (`controls/preview.d.ts` identifies a file
+     * where `preview.d.ts` alone does not). Everything to the left of it is the shrinkable part
+     * that the ellipsis eats.
+     *
+     * A character budget rather than a measurement, and that is the whole point: the alternative is
+     * asking the browser for a width per tool line, which forces a synchronous layout on every one
+     * of them during a replay that renders hundreds. CSS alone cannot express "shrink the parent
+     * only once the prefix is gone" — flex distributes shrink proportionally, so a factor big
+     * enough to save the filename also nibbles the parent on paths that had room to spare (both
+     * regimes measured on real JCEF). 40 is a hair over a third of DESC_MAX and comfortably inside
+     * a narrow tool window at the panel's 13px monospace.
+     */
+    const val PATH_TAIL_MAX = 40
+
+    /**
      * Bash command, in characters — the SAME cap wherever a command is shown or kept: the
      * permission card's preview, the IN box that records what ran, and replay. The card used to
      * preview 4000 while only 2000 was stored, so the record of what ran was shorter than what was
@@ -358,7 +374,7 @@ object RenderLimits {
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
-        return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX," +
+        return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX,pathTailMax:$PATH_TAIL_MAX," +
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
             "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}}"
     }

@@ -199,6 +199,48 @@ object SessionStore {
         return transcript.isFile && transcript.delete()
     }
 
+    /**
+     * Name a conversation — the write half of the `custom-title` record [computeTitle] already
+     * reads (client-parity item 34).
+     *
+     * The record is the CLI's own, read verbatim out of the 2.1.226 binary rather than guessed:
+     *
+     *     let line = JSON.stringify({type:"custom-title", customTitle: title.trim(), sessionId}) + "\n";
+     *     await Def(sessionId, line, opts);      // -> open(O_WRONLY|O_APPEND), append
+     *
+     * Three fields, no uuid, no timestamp, appended. Matching it byte for byte is the point: a
+     * rename here and a `/rename` in the terminal produce the same line, so neither client sees a
+     * name the other cannot explain.
+     *
+     * Safe on the LIVE transcript, and that is not an accident of ours — the CLI opens with
+     * O_APPEND per write, so it cannot land on top of this line. (The same fact is why *deleting*
+     * a live session is not safe and goes the long way round; see [delete].)
+     *
+     * Returns false rather than throwing on a blank title, an unsafe id, or a missing transcript.
+     */
+    fun rename(cwd: String, id: String, title: String): Boolean {
+        val name = title.trim()
+        if (name.isEmpty()) return false            // the CLI refuses this too: "title must be non-empty"
+        // the id arrives from the webview: never let it walk out of the project directory
+        if (!id.matches(Regex("[A-Za-z0-9_-]{1,128}"))) return false
+        val dir = projectDir(cwd)
+        val transcript = File(dir, "$id.jsonl")
+        if (transcript.parentFile?.canonicalFile != dir.canonicalFile) return false
+        if (!transcript.isFile) return false        // no file yet = a conversation with nothing in it
+        val line = buildJsonObject {
+            put("type", "custom-title")
+            put("customTitle", name)
+            put("sessionId", id)
+        }
+        return runCatching {
+            transcript.appendText(json.encodeToString(JsonObject.serializer(), line) + "\n")
+            // The cache keys on (mtime,size) and the append moves both, so it would re-read anyway;
+            // dropping the entry makes that a fact rather than a timing question.
+            statsCache.remove(transcript.path)
+            true
+        }.getOrElse { log.warning("rename $id: $it"); false }
+    }
+
     private val json = Json { ignoreUnknownKeys = true }
 
     // java.util.logging, NOT the IntelliJ Logger: SessionStore stays platform-free so the plain
@@ -382,6 +424,10 @@ object SessionStore {
         var text: String = ""              // user text / assistant markdown / thinking / tool name
         var desc: String? = null           // tool description or file path
         var isPath: Boolean = false
+        // The path UNCAPPED, when desc is one. `desc` is cut to DESC_MAX for display, and a path is
+        // exactly the string where the tail matters most: the webview shortens it for display and
+        // clicks THIS, so a 140-char cap can never send a half path to the editor.
+        var fullPath: String? = null
         var cmd: String? = null            // Bash IN
         var out: String? = null            // Bash OUT
         var cmdCut: RenderLimits.Cut? = null   // what CMD_MAX dropped from cmd, if anything
@@ -445,6 +491,7 @@ object SessionStore {
             line?.let { put("line", it) }
             endLine?.let { put("endLine", it) }
             if (isPath) put("isPath", true)
+            fullPath?.let { put("fullPath", it) }
             cmd?.let { put("cmd", it) }
             out?.let { put("out", it) }
             cmdCut?.let { put("cmdCut", cutJson(it)) }
@@ -977,6 +1024,7 @@ object SessionStore {
                 if (descKey != null) {
                     desc = str(descKey)!!.take(RenderLimits.DESC_MAX)
                     isPath = descKey in RenderLimits.PATH_KEYS
+                    if (isPath) fullPath = str(descKey)
                     // A Read of lines 40-80 used to render exactly like a Read of the whole file.
                     // Appended AFTER the cap so the range survives a long path being truncated —
                     // it is the part that changes what the line means.

@@ -1371,6 +1371,23 @@ locally. A session renamed in the TUI showed a stale name in our history panel.
 derived source, and the NEWEST rename wins (like `ai-title`, later records supersede). The rest of
 our precedence is unchanged; pinned by a test with all four sources present at once.
 
+**Write half shipped 2026-08-12.** The header title renames in place (hover pencil → the header
+becomes the editor), through `SessionStore.rename`. The record is the CLI's own, read verbatim from
+the 2.1.226 binary rather than inferred — `{type:"custom-title", customTitle: title.trim(),
+sessionId}` appended with `O_APPEND`, three fields, no uuid or timestamp — so a rename here and a
+`/rename` in the terminal produce the same line and neither client sees a name the other cannot
+explain. `SessionStoreRenameTest` pins that byte for byte (reordering the fields fails it).
+
+Appending is safe on the LIVE transcript, which is worth stating because *deleting* one is not: the
+CLI opens with `O_APPEND` per write, so it cannot land on top of our line. Verified end to end —
+renamed a live session from the panel, appended a record through a second `O_APPEND` handle exactly
+as the CLI does, and the rename survived with the header and the conversations list both showing it.
+
+The control-protocol route was measured and rejected: `rename_session` exists beside `set_model`,
+but the binary answers `"rename_session is not supported in this context (onRenameSession callback
+not registered)"` — it dispatches to a callback an SDK embedder registers, unreachable over
+stream-json.
+
 ### 35. `system/status` — a failed `/compact` is invisible — was P2, DONE 2026-08-06
 
 We read `permissionMode` off every system event (the mode chip) and drop the rest of `status`. The

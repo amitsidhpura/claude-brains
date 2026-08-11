@@ -55,6 +55,18 @@ trusting memory here.
   `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` — which also bloats EVERY transcript with
   file-history snapshots — plus a git repo and client-supplied uuids; dry_run first.
 
+- The task lifecycle is NOT sub-agent-only. `task_started`/`task_progress` hang off ordinary tool
+  uses too — the 2.1.226 emit site sits among `runningSubagents`, `isBackgrounded`/`is_backgrounded`
+  and `local_workflow`/`workflowName` — so a plain Bash can produce a frame whose `description` is
+  the string its tool line already shows. `taskLine` suppresses that on an exact match only, since
+  for a real sub-agent the description is running commentary that changes.
+- `system/init` carries `cwd` (`subtype:"init",cwd:e.cwd,session_id:…`), but ONLY at the first turn
+  of a session — a resumed transcript renders before it arrives. That is why the project root is
+  pushed by ChatPanel as `__project` and init's cwd is only a refresh.
+- The CLI appends session sidecar records with `open(O_WRONLY|O_APPEND)` per write (`vRn` in the
+  binary). That is why APPENDING to a live transcript is safe — a rename's `custom-title` record
+  survives the CLI's next write — while DELETING one is not. Two different halves of the same fact.
+
 ## Build / toolchain
 - Build JVM must be **Java 21**: Gradle 8.10.2 refuses to run above JDK 23, and recent PhpStorm's
   bundled JBR is JDK 25. There is no `java` on PATH here — prefix
@@ -148,6 +160,30 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **CSS layout claims must be measured on REAL JCEF, not headless.** Beyond the rAF/RO caveats
+  below, headless disagreed on *rendered output*: it showed a flex child ellipsised where JCEF
+  measured it whole (70/70), and two headless runs of the same page disagreed with each other
+  once a probe's own `<pre>` widened the container. Iterating on the ring/path work only stopped
+  going in circles after switching to `tools/cdp.py` against the live panel. Headless is fine for
+  click/class logic; for anything about WIDTH, ask the browser it ships in.
+- **A column flex container stretches its children.** `.tool-imgs` had no `align-items`, so a
+  64x64 result image rendered 474x320 — full panel width, the picture letterboxed into a corner by
+  `object-position`. `align-items: flex-start` is what makes an image size to itself. Any
+  column-flex box holding intrinsically-sized content has this.
+- **Making a row `display: flex` lets it outgrow its container.** Turning `.tool-line` into a flex
+  row with nowrap children gave it a min-content width of label + filename; inside an ancestor that
+  sizes to content, the ROW got wider than the panel and the panel clipped the filename — one line,
+  but the wrong content lost. `max-width: 100%` + `min-width: 0` on the row is what points the
+  shrink at the intended child.
+- **`textContent = …` deletes sibling controls.** Three surfaces now hold [icon, text]: the context
+  chip (ring + digits), the header title (`.t-txt` + pencil), the queue row. Writing `textContent`
+  on the wrapper removes the icon on the first refresh and never brings it back — write the text
+  node / `.t-txt`, not the parent. `renderContext` and `setTitle` both do.
+- **Rendering a list and OPENING it are different acts.** `renderHistory` ended with an
+  unconditional `histPanel.classList.add('show')`, safe only while a `sessions` frame could arrive
+  for one reason. The moment Kotlin re-pushed the list after a rename, saving popped the panel
+  open. Guard: a `histWanted` flag set by the button, plus "already open" so a delete under an open
+  panel doesn't close it. Any future unsolicited push has the same shape.
 - Headless Chrome is a DIFFERENT browser: (1) don't copy `mockup.html` elsewhere to probe — its
   stylesheet link is relative and silently resolves to nothing, measuring an UNSTYLED page; write
   probe copies into `design/`. (2) no compositor → rAF fires ~2.5/s, so rAF-driven animation

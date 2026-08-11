@@ -74,6 +74,8 @@ Fade colour stays per-surface — a user message must blend to its own bubble, n
 | history list `.hist-list` | 5 rows, MEASURED at render (`capToRows`); 271px CSS fallback |
 | slash-command menu `#slashList` | 5 rows, MEASURED at render (`capToRows`); 274px CSS fallback |
 | composer textarea `#input` | 200px (~10 lines) |
+| tool-line file path `.t-desc.path` | one line, always. Shown project-relative (root from ChatPanel's `__project`, refreshed by `system/init`'s `cwd`), then split into `.p-head` (shrinks, ellipsises) + `.p-tail` (never shrinks: the filename, plus its parent folder when the two fit `PATH_TAIL_MAX` = 40 chars) so the ellipsis lands in the middle. The DISPLAY is shortened; the CLICK TARGET is not — the whole absolute path rides on `dataset.path` (`fullPath` from SessionStore on replay), which is also why a path past `DESC_MAX` is no longer *opened* in its truncated form. Pinned by `SessionStorePathTest` and fixture 40. |
+| tool-returned image `.tool-imgs .ti` | 120px tall; below that the image keeps its natural size. Click opens the lightbox at full size. The container needs `align-items: flex-start` to hold this — a column flex box stretches by default, which rendered a 64×64 icon at 474×320 (measured 2026-08-10). |
 
 Both lists cap at 5 rows through one helper, `capToRows(list, n, sel)` in chat.html. A row is NOT a
 whole number of pixels (54.19px for history) and its height follows the IDE's font, so any
