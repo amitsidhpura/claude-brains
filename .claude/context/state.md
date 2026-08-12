@@ -1,9 +1,10 @@
 # State
 
 ## Current focus
-**Rename read-back fix + Marketplace upload automation, 2026-08-12.** Both complete and verified;
-committed this session. The work sits on top of released **0.5.0** and is NOT yet released — an
-installed IDE still runs 0.5.0, so the rename fix needs a 0.5.1 cut to reach the user's own IDE.
+**Nothing in flight. 0.5.1 is released** (2026-08-12): the rename read-back fix, shipped through the
+new automatic Marketplace upload, which worked on its first live run. The Marketplace listed 0.5.1 as
+"Under review" with JetBrains' own verifier reporting Compatible on every build 2024.2.6 → 2026.2.1 —
+check it has flipped to approved/listed. Next work is whatever is picked from the list below.
 
 The defect register in `docs/manual-test.md` is untouched by this session and still stands at
 **2 open ISSUE notes / 22 RESOLVED** — the open pair is 3.1 + 9.10, worked TOGETHER per the user.
@@ -19,6 +20,12 @@ happens on **Windows 11**, `D:\sites\claude-brains`, home `C:\Users\Supple-7`. C
 - Java 21 + Gradle 8.10.2 are on PATH here; `./gradlew` from `plugin/` needs no prefix.
 - `~/.claude/ide/` holds several stale lockfiles (the known hot-reload dispose gap, backlog).
 
+## The release path, as it now stands
+`docs/release.md` is the procedure and it is current. Two things changed on 2026-08-12 and both are
+already exercised: step 10 (Marketplace upload) is automatic, and step 1b (changeNotes) is enforced
+by `buildPlugin` rather than remembered. A red `marketplace-upload` run sitting in the Actions
+history is EXPECTED — run #2 is the deliberate `v9.9.9` negative control, not a broken release.
+
 ## What shipped this session
 - **Rename looked broken and was not** (user report, real project `D:\sites\metrobuildsuppliers`):
   four `custom-title` records were on disk and correct; `SessionStore.computeTitle` only scanned the
@@ -32,14 +39,14 @@ happens on **Windows 11**, `D:\sites\claude-brains`, home `C:\Users\Supple-7`. C
   and step 1b (changeNotes); the "uploads are manual via the web form" bullet is rewritten.
   The `JETBRAINS_MARKETPLACE_TOKEN` repo secret was set BY THE USER on 2026-08-12 (value never seen
   here; `gh secret list` shows the name only).
+- **0.5.1 released** through that path end to end: asset `cmp`s identical to the local zip, feed
+  serves 0.5.1, and the upload ran itself in 8s (API returned update id 1135613, Stable channel).
+- **`changeNotes` is now enforced, not remembered**: `buildPlugin` fails if `changeNotesHtml` in
+  `plugin/build.gradle.kts` has no `<b>X.Y.Z</b>` entry for the version being built. Both directions
+  were run. The notes also caught up — 0.5.1, 0.5.0 and 0.4.0 are all listed, since Marketplace users
+  had never seen the last two.
 
 ## Next steps
-- [ ] **Dry-run the workflow now that it is on main**: `gh workflow run marketplace-upload.yml
-      -f tag=v0.5.0 -f dry_run=true`, then `gh run watch`. Proves the download + filename assertion;
-      the upload half cannot be rehearsed (the Marketplace refuses a duplicate version).
-- [ ] **Cut 0.5.1** — the rename fix is user-visible and the user's own IDE is still on 0.5.0.
-      This will be the automation's first real upload. `changeNotes` in `plugin/build.gradle.kts:98`
-      is STALE (still 0.3.3; 0.4.0 and 0.5.0 both shipped those notes) — fix it as step 1b.
 - [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing): recreate the fixture at
       `D:\sites\claude-brains-test\.claude\commands\dummy-cmd.md` first. `cmdKind` (chat.html) has no
       custom-command detection, so everything outside {clear, compact} is greyed as 'tui'.

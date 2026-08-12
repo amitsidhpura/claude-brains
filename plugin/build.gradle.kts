@@ -77,25 +77,16 @@ tasks.register<JavaExec>("probe") {
     mainClass = "io.github.amitsidhpura.claudebrains.session.SessionProbeKt"
 }
 
-intellijPlatform {
-    // We use no GUI forms and don't need @NotNull bytecode instrumentation.
-    // Disabling it avoids the buggy :instrumentCode task in this plugin version.
-    instrumentCode = false
-
-    // No settings UI yet, so this only costs a headless IDE launch per build (~30s).
-    // Re-enable when the deferred settings page lands.
-    buildSearchableOptions = false
-
-    pluginConfiguration {
-        id = "io.github.amitsidhpura.claude-brains"
-        name = "Claude Brains"
-        version = project.version.toString()
-        ideaVersion {
-            sinceBuild = "242"
-            untilBuild = provider { null }
-        }
-        // Shown on the Marketplace plugin page for the current version.
-        changeNotes = """
+/**
+ * Release notes for THIS version, baked into plugin.xml and read straight off it by the Marketplace.
+ *
+ * Kept honest by the `buildPlugin` check below, because this string is easy to forget and nothing
+ * downstream notices: it was last written for 0.3.3 and rode along unread through 0.4.0 and 0.5.0,
+ * publishing the wrong notes twice. Now that .github/workflows/marketplace-upload.yml uploads on its
+ * own, not even a human at an upload form would catch it. Older versions stay listed while they are
+ * what users are updating FROM.
+ */
+val changeNotesHtml = """
             <b>0.5.1</b>
             <ul>
               <li>Renaming a conversation sticks on long threads. The new name was saved correctly
@@ -121,6 +112,51 @@ intellijPlatform {
               <li>Removed a permanent gap above the composer's first row</li>
             </ul>
         """.trimIndent()
+
+/**
+ * A distributable zip must carry notes for the version it IS — docs/release.md step 1b, enforced.
+ *
+ * On `buildPlugin` only: a stale entry matters when something is about to be SHIPPED, and failing
+ * every `runIde` mid-feature would just teach everyone to ignore it. It fires at release.md step 2,
+ * before the tag and before the version number can be spent on a bad upload.
+ */
+tasks.named("buildPlugin") {
+    // Locals, evaluated HERE at configuration time. A task action that reads a script-level `val`
+    // (or `project`) captures the script object itself, which the configuration cache refuses to
+    // serialize — "cannot serialize Gradle script object references". Closing over two plain
+    // Strings is the whole fix.
+    val entry = "<b>${project.version}</b>"
+    val hasEntry = changeNotesHtml.contains(entry)
+    val problem = """
+        changeNotes has no entry for ${project.version} (looked for "$entry").
+        The Marketplace shows these notes for the version being uploaded, and since the upload is
+        automatic (.github/workflows/marketplace-upload.yml), nothing downstream catches a stale
+        one — 0.4.0 and 0.5.0 both shipped 0.3.3's notes that way.
+        Add this release's user-visible items to changeNotesHtml in plugin/build.gradle.kts, then
+        build again. See docs/release.md step 1b.
+    """.trimIndent()
+    doFirst { if (!hasEntry) throw GradleException(problem) }
+}
+
+intellijPlatform {
+    // We use no GUI forms and don't need @NotNull bytecode instrumentation.
+    // Disabling it avoids the buggy :instrumentCode task in this plugin version.
+    instrumentCode = false
+
+    // No settings UI yet, so this only costs a headless IDE launch per build (~30s).
+    // Re-enable when the deferred settings page lands.
+    buildSearchableOptions = false
+
+    pluginConfiguration {
+        id = "io.github.amitsidhpura.claude-brains"
+        name = "Claude Brains"
+        version = project.version.toString()
+        ideaVersion {
+            sinceBuild = "242"
+            untilBuild = provider { null }
+        }
+        // Shown on the Marketplace plugin page for the current version — see changeNotesHtml.
+        changeNotes = changeNotesHtml
     }
 
     pluginVerification {

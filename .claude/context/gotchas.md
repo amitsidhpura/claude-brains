@@ -83,6 +83,16 @@ trusting memory here.
   downloaded `phpstorm("2024.2")` dependency (JBR 21 `-jcef` with `libcef.so`) — that's what
   makes the webview work. First run downloads ~1 GB.
   (`instrumentCode`/`buildSearchableOptions` being off is explained in build.gradle.kts itself.)
+- `org.gradle.configuration-cache=true` is ON (plugin/gradle.properties): a task action (`doFirst`,
+  `doLast`) that reads a script-level `val` — or `project` — captures the whole build-script object,
+  and the build dies with "cannot serialize Gradle script object references". Evaluate what the
+  action needs into LOCALS inside the configuration block and let the lambda close over those.
+  The failure names the task, not the capture, so it reads like a plugin bug.
+- The Marketplace runs the Plugin Verifier on every upload itself (0.5.1: Compatible on 2024.2.6 →
+  2026.2.1, verifier 1.408, visible on the plugin's Versions page). So a local `./gradlew
+  verifyPlugin` earns its keep only when a change touches platform API and you want the answer
+  BEFORE spending a version number — it is not a per-release ritual. Worth knowing before paying for
+  seven IDE downloads on a fresh machine.
 - GitHub Actions: a `workflow_dispatch` trigger only appears once the workflow file is on the
   DEFAULT branch — `gh workflow run` on an unpushed workflow just says it doesn't exist. So the
   first dry run of `.github/workflows/marketplace-upload.yml` can only happen after a push to main,

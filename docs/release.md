@@ -51,10 +51,13 @@ approved plugin generally publish without a human review pass).
 ## Cutting a release
 
 1. Bump `version = "X.Y.Z"` in `plugin/build.gradle.kts`.
-1b. Update `changeNotes` in the same file to THIS release's user-visible items. `plugin.xml` has no
-   `<change-notes>` of its own, so the Gradle value is what gets baked into the zip and shown on the
-   Marketplace version page. It went stale twice (0.4.0 and 0.5.0 both shipped 0.3.3's notes) back
-   when a human watched every upload — now that step 10 is automatic, nothing else will catch it.
+1b. Update `changeNotesHtml` in the same file to THIS release's user-visible items. `plugin.xml` has
+   no `<change-notes>` of its own, so the Gradle value is what gets baked into the zip and shown on
+   the Marketplace version page. It went stale twice (0.4.0 and 0.5.0 both shipped 0.3.3's notes)
+   back when a human watched every upload — and step 10 is automatic now, so nothing downstream
+   would catch it either. **`buildPlugin` therefore refuses to build a zip whose notes carry no
+   `<b>X.Y.Z</b>` entry for its own version** — step 2 fails with an explanatory message rather than
+   producing a shippable zip. Keep older versions listed: they are what users are updating FROM.
 2. `cd plugin && ./gradlew test buildPlugin` → `build/distributions/claude-brains-X.Y.Z.zip`.
 3. Sanity: `unzip -l` the zip — must contain ONLY our jar + open-source deps
    (never any Anthropic assets).

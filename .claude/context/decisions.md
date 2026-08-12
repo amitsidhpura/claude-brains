@@ -3,6 +3,20 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-12 — Release notes are enforced by the build, not by the checklist
+`buildPlugin` fails when `changeNotesHtml` (`plugin/build.gradle.kts`) carries no `<b>X.Y.Z</b>`
+entry for the version being built, with a message pointing at `docs/release.md` step 1b. Older
+versions stay listed in the notes — they are what users are updating FROM.
+**Why:** the checklist line added earlier the same day was the same class of guard that had already
+failed twice (0.4.0 and 0.5.0 both published 0.3.3's notes), and automating the upload removed the
+last human who might have noticed. This fires at step 2, before the tag and before a version number
+can be spent on a bad upload. The user asked for it after reading the checklist-only version.
+**Rejected:** a configuration-time check (would fail `runIde` mid-feature, which teaches people to
+ignore it) and validating the built plugin.xml instead of the source string (more machinery, same
+answer). Trap hit on the way: with `org.gradle.configuration-cache=true`, a task action that reads a
+script-level `val` captures the script object and the cache refuses to serialize it — evaluate into
+locals in the configuration block. See gotchas.md.
+
 ## 2026-08-12 — The Marketplace upload is automated, but only the UPLOAD
 `.github/workflows/marketplace-upload.yml` (the repo's first workflow) fires on `release: published`,
 downloads the zip `gh release create` just attached, and POSTs it to

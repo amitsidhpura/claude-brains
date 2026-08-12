@@ -28,6 +28,15 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - `journal.md` itself held a literal NUL byte — inside the 2026-08-09 bullet describing a literal NUL
   byte — which made ripgrep call the whole memory file binary and silently return nothing for every
   search. Patched by byte replace to `\0`. Grep failing on a file is not always the pattern's fault.
+- **0.5.1 cut and released the same day**, and the automation carried it: `gh release create` → the
+  workflow uploaded on its own in 8s → Marketplace update id 1135613 on Stable. JetBrains then ran
+  THEIR verifier on the upload, Compatible on every build 2024.2.6 → 2026.2.1, which is the run that
+  was skipped locally (no verifier IDE cache on this machine, and the change touched no platform API).
+- The user pushed back on `changeNotes` being only a checklist line — rightly, since a checklist is
+  what had already failed twice. It is now enforced: `buildPlugin` refuses a zip whose notes carry no
+  entry for its own version. First attempt broke the CONFIGURATION CACHE (a task action that reads a
+  script-level `val` captures the script object); fixed by evaluating into locals in the config
+  block. Both directions run — stale notes go red with the explanatory message, correct notes build.
 
 ## 2026-08-11/12 — a UI-polish session: five user-reported defects, then rename
 - All five started as a user screenshot, and each was MEASURED before touching the renderer.
