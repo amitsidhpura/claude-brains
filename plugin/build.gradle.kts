@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.5.0"
+version = "0.5.1"
 
 repositories {
     mavenCentral()
@@ -96,20 +96,29 @@ intellijPlatform {
         }
         // Shown on the Marketplace plugin page for the current version.
         changeNotes = """
-            <b>0.3.3</b>
+            <b>0.5.1</b>
             <ul>
-              <li><b>Auto mode changed meaning.</b> It now matches Claude Code's own Auto —
-                  actions that pass a safety check are approved, anything risky still pauses.
-                  It previously approved everything with no checks</li>
-              <li>Modes match the official names — Manual / Edit automatically / Plan / Auto —
-                  and switching between them no longer restarts the CLI or interrupts a reply</li>
-              <li>The composer's focus border and Send button take the colour of the current
-                  mode, so the panel shows how much it is allowed to do on its own</li>
-              <li>"Always allow" is now a split button: the main half grants every rule the CLI
-                  suggests, the arrow opens the list to grant just one</li>
-              <li>Tables in replies render as tables — they used to print as raw pipe characters —
-                  and match the code block styling</li>
-              <li>Header icons no longer grow a background box on hover</li>
+              <li>Renaming a conversation sticks on long threads. The new name was saved correctly
+                  but never read back, so the header kept showing the auto-generated title</li>
+            </ul>
+            <b>0.5.0</b>
+            <ul>
+              <li>Rename a conversation from the panel header — hover the title and click the
+                  pencil. It writes the same record the CLI's own /rename does, so a name set here
+                  and one set in the terminal are the same thing</li>
+              <li>File paths on tool lines are project-relative and stay on one line, keeping the
+                  filename readable in a narrow panel; clicking still opens the real file</li>
+              <li>The context gauge gains a ring that fills as the window fills</li>
+              <li>Queued messages match the attachment chips, and their remove control appears on
+                  hover instead of taking up space</li>
+              <li>Images returned by tools no longer stretch out of shape</li>
+            </ul>
+            <b>0.4.0</b>
+            <ul>
+              <li>MCP servers that need your shell's PATH (nvm, asdf) now start when the IDE was
+                  launched from the desktop — they used to fail silently</li>
+              <li>The conversation you are in can be deleted, not just past ones</li>
+              <li>Removed a permanent gap above the composer's first row</li>
             </ul>
         """.trimIndent()
     }
