@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.5.1"
+version = "0.5.2"
 
 repositories {
     mavenCentral()
@@ -96,6 +96,26 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.5.2</b>
+            <ul>
+              <li>Resuming a long conversation brings back its most recent turns. Past a certain
+                  length the panel replayed the oldest part instead, so a thread could come back
+                  looking days out of date; when one is too long to load whole, the top now says
+                  how many earlier blocks were left out</li>
+              <li>The Stop button is there whenever Claude is working — including the turn the CLI
+                  starts on its own when a background command finishes, which used to print with
+                  the button on Send and no way to interrupt it</li>
+              <li>A background command no longer leaves the panel spinning. The turn ends with its
+                  summary while the task chip keeps showing the command still running</li>
+              <li>Tool calls that carry code, such as Playwright's browser_evaluate, show it in the
+                  IN box instead of a cut-off fragment on the tool line</li>
+              <li>Long tool descriptions stay on one line, with the full text on hover</li>
+              <li>IN and OUT boxes match the permission card: the scrollbar sits on the border, and
+                  a collapsed box no longer shows one</li>
+              <li>Clicking outside the rename editor discards the edit, the same as Escape</li>
+              <li>A Bash command is no longer repeated beneath its own IN box while a sub-agent
+                  reports progress</li>
+            </ul>
             <b>0.5.1</b>
             <ul>
               <li>Renaming a conversation sticks on long threads. The new name was saved correctly
