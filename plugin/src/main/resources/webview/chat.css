@@ -138,7 +138,16 @@ img { max-width: 100%; height: auto; }
    which scrolling content bleeds into); it then softens to transparent. z-index sits BELOW the
    sticky .msg-user (z 6) so the pinned message stays fully crisp, but above normal content. */
 #fade-top { position: absolute; left: 0; right: 0; top: var(--head-h, 39px); height: 48px; z-index: 5;
-  pointer-events: none; background: linear-gradient(to bottom, var(--bg) 0, var(--bg) 18px, transparent 48px); }
+  pointer-events: none; background: linear-gradient(to bottom, var(--bg) 0, var(--bg) 18px, transparent 48px);
+  transition: opacity .12s; }
+/* At the true top there is nothing scrolled under the header, so the fade describes content that
+   does not exist — and it washes out whatever the first block happens to be. A sticky .msg-user
+   (z 6) rides ABOVE the fade, which is why every conversation looked fine and this went unseen;
+   the `truncated` marker is ordinary content at z-auto and sat unreadable under it at rest
+   (user report 2026-08-12). Toggled rather than restyled: the fade is right in every other
+   position, and raising the marker's z-index instead would leave one crisp line hanging over
+   content correctly fading beneath it. */
+body.at-top #fade-top { opacity: 0; }
 
 /* scroll-to-bottom button — floats just above the composer, shown only when scrolled up */
 /* floats just above the composer, so it wears the same blue user-input surface */

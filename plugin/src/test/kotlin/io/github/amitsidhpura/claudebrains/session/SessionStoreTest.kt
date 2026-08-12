@@ -1107,6 +1107,84 @@ class SessionStoreTest {
     }
 
     /**
+     * The block cap keeps the NEWEST turns. It used to be applied by stopping the read, which kept
+     * the OLDEST: a real 38 MB session (11,638 records, ~6,000 blocks) resumed on 2026-08-12 and
+     * replayed as though it had ended on 2026-08-06 — six days of work missing, "Resumed" drawn
+     * under the stale tail, and nothing on screen to say anything had been dropped.
+     *
+     * Negative control RUN against the pre-fix parser (`git checkout HEAD --` of SessionStore.kt,
+     * 2026-08-12): failed exactly where it should — `expected "ask 40" to survive the window`.
+     *
+     * TURNS ARE LONG HERE ON PURPOSE. The first version of this fixture used one user + one
+     * assistant per turn, and passed against an eviction that scanned only a chunk ahead for the
+     * turn boundary — with a boundary every 3 blocks it could not miss. Real transcripts are
+     * nothing like that: the retained window of `metrobuildsuppliers` held 9 user messages in 253
+     * blocks, so the bounded scan gave up and the panel opened mid-turn, on an assistant reply with
+     * no question above it (user screenshot, 2026-08-12). 14 blocks a turn reproduces that shape.
+     */
+    @Test
+    fun `the block window keeps the newest turns, not the oldest`() {
+        val turns = 40
+        val perTurn = 12   // assistant blocks per turn; with the user block and the summary -> 14
+        val jsonl = (1..turns).flatMap { n ->
+            val t = "2026-07-28T10:%02d:00.000Z".format(n)
+            listOf("""{"type":"user","timestamp":"$t","message":{"role":"user","content":[{"type":"text","text":"ask $n"}]}}""") +
+                (1..perTurn).map { i ->
+                    """{"type":"assistant","timestamp":"$t","message":{"role":"assistant","content":[{"type":"text","text":"reply $n.$i"}],"usage":{"output_tokens":1}}}"""
+                }
+        }.joinToString("\n")
+        val total = turns * (perTurn + 2)   // user + perTurn assistant + the per-request summary
+
+        val tmpHome = File.createTempFile("claude-home-window", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "window.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            // 40 turns of 14 blocks = 560, so a cap of 40 is comfortably exceeded and the direction
+            // of the drop is unambiguous. 40 also holds under three turns, so the boundary the
+            // eviction has to find is never the one it started from.
+            val max = 40
+            val blocks = SessionStore.readTranscript(CWD, "window", max = max)
+            val texts = blocks.mapNotNull { it["text"]?.jsonPrimitive?.contentOrNull }
+
+            // Direction first: it is the assertion that separates this window from the old one,
+            // and a size check firing ahead of it would mask which end actually survived.
+            assertTrue(texts.contains("ask $turns"), "expected \"ask $turns\" to survive the window")
+            assertTrue(texts.contains("reply $turns.$perTurn"),
+                "expected the newest turn's last block to survive the window")
+            assertFalse(texts.contains("ask 1"), "the OLDEST turn is the one the window must drop")
+            assertEquals("truncated", blocks.first()["role"]?.jsonPrimitive?.content,
+                "a windowed transcript must say so at its top edge")
+            // The regression the long turns exist for: a window that opens on an assistant reply
+            // with no question above it reads as a broken conversation, not a windowed one.
+            assertEquals("user", blocks[1]["role"]?.jsonPrimitive?.content,
+                "past the marker, the retained window must start at a turn boundary, not mid-turn")
+            // Eviction fires at max + chunk and cuts at a turn boundary, so the retained count
+            // lands NEAR the cap from either side — the ceiling is the slack, not `max` itself.
+            assertTrue(blocks.size <= max + max / 8 + 1,
+                "window held ${blocks.size} blocks, past the cap of $max plus its chunk of slack")
+
+            // The count must be the blocks actually dropped: whatever survived, marker excluded.
+            // A hardcoded or stale number here would read as authoritative.
+            val kept = blocks.size - 1
+            assertEquals((total - kept).toLong(), blocks.first()["dropped"]?.jsonPrimitive?.long,
+                "the marker must count what was dropped, not what was kept")
+            // NEGATIVE CONTROL for the marker: the same transcript under a cap it cannot reach must
+            // carry no marker at all. A marker on every conversation would be worse than none —
+            // it would claim history is missing from sessions that are complete.
+            val whole = SessionStore.readTranscript(CWD, "window", max = 4000)
+            assertEquals(total, whole.size, "fixture should parse to $total blocks with no window in play")
+            assertTrue(whole.none { it["role"]?.jsonPrimitive?.content == "truncated" },
+                "nothing was dropped, so nothing may claim it was")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * An API error ("session limit", "usage credits") is persisted as an ordinary assistant record
      * carrying `isApiErrorMessage`. Live draws it as an `.error` block, so replay must emit a
      * distinct role rather than letting it render as prose in a normal assistant bubble.

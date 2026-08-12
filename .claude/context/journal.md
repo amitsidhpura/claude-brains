@@ -3,6 +3,39 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-12 (third) — the replay window kept the wrong end
+- User screenshot: a live session resumed showing work from SIX DAYS earlier, "Resumed" drawn under
+  a stale `Edit`. Cause: `readTranscript` capped by `break`ing out of the read, so it kept the
+  OLDEST 4,000 blocks and dropped everything newer. Their session parses to 6,034.
+- Measuring first paid again — a node scan of the real transcript put the cut at record ~7,668
+  (2026-08-06 10:32), which is exactly the `search.php` Edit in the screenshot. Diagnosis confirmed
+  before a line was changed.
+- Rewritten as a newest-N window: evict from the FRONT, cap 4,000 → 20,000. Then THREE follow-on
+  defects, each found by the user in the panel, not by me:
+  1. Top of the window was silent — indistinguishable from the conversation's start. Added the
+     `truncated` head block + `.status` marker (candidate D of four, rendered side by side in
+     `design/history-edge-probe.html` and picked by the user).
+  2. Window opened MID-TURN — an assistant reply with no question above it. My eviction scanned
+     only one chunk ahead for a turn boundary; real turns are ~28 blocks (9 user messages in 253),
+     so it gave up constantly. Now an unbounded forward scan to the first `user` block.
+  3. The marker was unreadable under `#fade-top`. Sticky `.msg-user` (z 6) rides above that fade,
+     which is why no one had ever seen it; ordinary content does not. Fade now switches off at
+     `scrollTop <= 1`.
+- **The test fixture was the real bug in (2).** It used 3-block turns, where a bounded scan cannot
+  miss a boundary. Rebuilt at 14 blocks/turn; the negative control then failed exactly right
+  (`expected: <user> but was: <assistant>`). A fixture that cannot express the failure is not a test.
+- Also fixed, same session: the `.t-prog` line repeated a Bash command the IN box already showed,
+  cut to 140 chars. This was the SECOND LANE of a bug the user reported earlier — the existing guard
+  compared against `.t-desc`, which is blank for Bash by design, so it never fired. Fixture `01b`
+  extended; live harness 137/137 in real JCEF.
+- Lost most of the afternoon to `pluginVerification { ides { recommended() } }`: it resolves the
+  Android Studio releases list from `jb.gg` → `teamcity.jetbrains.com` at CONFIGURATION time, and
+  that host was unreachable, so EVERY Gradle task died with a bare "Connection timed out" naming
+  neither the URL nor the verifier. `--offline` does not skip it. Worked around it by compiling
+  `SessionStore` with the cached `kotlin-compiler-embeddable` and running the assertions as a
+  `main`; re-ran everything under Gradle once the host returned.
+- Next: nothing in flight. Backlog has the `recommended()` fragility.
+
 ## 2026-08-12 (second) — the rename that wasn't broken, and the last manual release step dies
 - First session on **Windows** (`D:\sites\claude-brains`); every path in the context files was from
   the old Linux box, and `state.md` still said 0.5.0 was unreleased when git showed it tagged and

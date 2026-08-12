@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Claude Brains — top-of-window history marker</title>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/chat.css"/>
+<style>
+  /* PROBE-ONLY scaffolding — never shipped. Same idiom as fold-fade-probe.html: the candidates
+     are built from chat.css alone, and everything here only lays them out side by side. */
+  body { background: #101114; margin: 0; padding: 18px; display: flex; gap: 18px; align-items: flex-start;
+    font-family: ui-sans-serif, system-ui, sans-serif; }
+  .col { width: 420px; flex: 0 0 auto; }
+  .cap { color: #ddd; font-size: 11px; font-family: ui-monospace, monospace; margin: 0 0 6px 2px; }
+  .cap b { color: var(--accent); }
+  .pane { background: var(--bg); box-shadow: 0 0 0 1px var(--border); border-radius: 4px;
+    padding: 12px 14px 16px; }
+  /* the log scrolls in the real panel; here it is just the top of one */
+  .log { color: var(--fg); font-size: 13px; line-height: 1.55; }
+
+  /* ---- CANDIDATE B: rule with a centred caption ------------------------------------------ */
+  .hist-edge { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px;
+    color: var(--muted); font-size: 12px; }
+  .hist-edge::before, .hist-edge::after { content: ''; height: 1px; background: var(--border); flex: 1; }
+
+  /* ---- CANDIDATE C: boxed note ------------------------------------------------------------ */
+  .hist-note { margin: 2px 0 12px; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--code-bg); color: var(--muted); font-size: 12px;
+    display: flex; gap: 8px; align-items: flex-start; }
+  .hist-note svg { width: 12px; height: 12px; flex: 0 0 auto; margin-top: 3px; }
+  .hist-note b { color: var(--fg); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- The same turn follows every candidate, so only the marker differs between columns. -->
+<script>
+  const HISTORY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
+  const TURN = `
+      <div class="turn">
+        <div class="msg-user">also check the taxonomy template renders</div>
+        <div class="turn-body">
+          <div class="tool-line"><b>Read</b><span class="t-desc path"><span class="p-head">wp-content/themes/metrobuildsuppliers</span><span class="p-tail">/taxonomy-product_cat.php</span></span></div>
+          <div class="tool-line"><b>Bash</b></div>
+          <div class="io">
+            <div class="io-row"><span class="io-k">IN</span><span class="io-v">php -l taxonomy-product_cat.php</span></div>
+            <div class="io-row"><span class="io-k">OUT</span><span class="io-v">No syntax errors detected</span></div>
+          </div>
+        </div>
+      </div>`;
+
+  const CANDIDATES = [
+    ['A — status line (existing <b>.status</b> idiom, as "Resumed" uses)',
+     '<div class="status"><span class="s-ic">' + HISTORY_SVG + '</span>Earlier history not loaded</div>'],
+    ['B — rule with a centred caption (<b>.hist-edge</b>)',
+     '<div class="hist-edge">12,400 earlier blocks not loaded</div>'],
+    ['C — boxed note with the reason (<b>.hist-note</b>)',
+     '<div class="hist-note">' + HISTORY_SVG + '<div><b>Earlier history not loaded.</b> This conversation is past the 20,000 blocks the panel keeps; the full transcript is on disk.</div></div>'],
+    ['D — status line carrying the count',
+     '<div class="status"><span class="s-ic">' + HISTORY_SVG + '</span>12,400 earlier blocks not loaded</div>'],
+  ];
+
+  document.write(CANDIDATES.map(function (c) {
+    return '<div class="col"><p class="cap">' + c[0] + '</p><div class="pane"><div class="log">' +
+      c[1] + TURN + '</div></div></div>';
+  }).join(''));
+</script>
+
+</body>
+</html>

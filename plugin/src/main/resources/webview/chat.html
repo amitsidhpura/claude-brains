@@ -268,12 +268,16 @@
   // the direction rule it can never unpin. renderEarlier only ever INCREASES scrollTop
   // (prepended content pushes the anchor down), so windowed replay can't false-trigger it.
   let lastScrollTop = 0;
+  // The top fade only means something while content is scrolled under the header — see
+  // `body.at-top #fade-top` in chat.css. Called from the scroll handler AND after any render,
+  // because a render can leave the log at the top without a scroll event ever firing.
+  function updateTopFade() { document.body.classList.toggle('at-top', log.scrollTop <= 1); }
   log.addEventListener('scroll', function () {
     const up = log.scrollTop < lastScrollTop - 1;
     lastScrollTop = log.scrollTop;
     if (up && !atBottom()) pinned = false;       // wheel/drag/keys away from the bottom
     else if (atBottom()) pinned = true;          // any route back to the bottom re-pins
-    updateScrollBtn(); maybeLoadEarlier();
+    updateScrollBtn(); maybeLoadEarlier(); updateTopFade();
   });
   if (scrollBtn) scrollBtn.onclick = function () { smoothToBottom(); input.focus(); };
 
@@ -1368,9 +1372,22 @@
     // whole progress line came out a word-for-word copy of the line above it.
     // EXACT match only, and not "never show the description": for a real sub-agent it is running
     // commentary that changes as it works (see the note above), and dropping it would gut item 1.
+    // The check has to cover the IN box too, and that is the half this originally missed. Bash's
+    // `.t-desc` is blank BY DESIGN — its command belongs in the IN box, which is why `command` is
+    // in LIM.inKeys and not LIM.descKeys — so a Bash called WITHOUT a `description` has an empty
+    // `.t-desc`, the frame's description falls back to the command itself, and the copy sailed
+    // straight past a guard that only ever looked at the tool line. Reported from a screenshot
+    // 2026-08-12: the command in full inside the box, and again underneath it cut to descMax
+    // mid-word. Located by the `IN` key rather than by position, since a box can hold OUT alone.
     const norm = function (s) { return String(s || '').replace(/\s+/g, ' ').trim(); };
     const td = tool && tool.el ? tool.el.querySelector('.t-desc') : null;
-    if (what && norm(what) !== norm(td && td.textContent)) bits.push(what.replace(/\s+/g, ' ').slice(0, LIM.descMax));
+    const inRow = tool && tool.io ? Array.prototype.filter.call(
+      tool.io.querySelectorAll('.io-row'),
+      function (r) { const k = r.querySelector('.io-k'); return k && norm(k.textContent) === 'IN'; })[0] : null;
+    const dup = function (e) { return !!e && norm(what) === norm(e.textContent); };
+    if (what && !dup(td) && !dup(inRow && inRow.querySelector('.io-v'))) {
+      bits.push(what.replace(/\s+/g, ' ').slice(0, LIM.descMax));
+    }
     const n = u.tool_uses;
     if (typeof n === 'number' && n > 0) bits.push(n + (n === 1 ? ' tool use' : ' tool uses'));
     if (typeof u.total_tokens === 'number' && u.total_tokens > 0) bits.push(fmtTok(u.total_tokens) + ' tokens');
@@ -1739,6 +1756,14 @@
         case 'info':
           infoLine(it.text, it.level, null);
           break;
+        // The top edge of a windowed transcript. Only ever the FIRST block, and only when the
+        // parser actually dropped something, so it appears exactly when the reader has scrolled
+        // past everything that was kept — where "load earlier" goes quiet and, without this, a
+        // truncated window is indistinguishable from the real start of the conversation.
+        // The COUNT travels and the wording lives here, the same split `auth` uses below.
+        case 'truncated':
+          statusLine((it.dropped || 0).toLocaleString() + ' earlier blocks not loaded', SVG_HISTORY);
+          break;
         case 'status':
           // icon 'auth' (8.2): `text` is the CLI's error CODE, not prose — resolve it through the
           // same AUTH_BLOCKED map the live path uses, so the wording exists once. The `|| it.text`
@@ -1836,6 +1861,7 @@
     Array.prototype.slice.call(log.querySelectorAll('.turn-body')).slice(-8)
       .forEach(function (b) { b.style.contentVisibility = 'visible'; });
     settleToBottom(); // heights still resolve over several frames: images, highlighting, folds
+    updateTopFade();  // a transcript too short to scroll fires no scroll event at all
     setTimeout(maybeLoadEarlier, 250);   // tail shorter than the viewport: auto-fill upward
   }
 
@@ -1882,6 +1908,9 @@
     lastDoneVerb = savedVerb;                    // ...and still must not repeat the verb at the bottom
     updateLoadMore(more || 0);
     updateScrollBtn();
+    // A prepend can leave the log sitting AT the top with no scroll event to follow — which is
+    // exactly the moment the `truncated` marker becomes the first thing on screen.
+    updateTopFade();
     maybeLoadEarlier();   // still near the top (fast scroll / short chunk): chain the next one
   }
 

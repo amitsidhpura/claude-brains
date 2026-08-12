@@ -160,7 +160,7 @@ being cut with no indication.
 
 | what | limit | note |
 |---|---|---|
-| replay blocks per session | 4000 | `readTranscript(max)`. A 5.7 MB session yields ~876, so rarely reached. |
+| replay blocks per session | 20,000 (newest) | `SessionStore.MAX_BLOCKS`. Blocks past it are dropped from the FRONT — the tail is what is on screen. Was 4,000 applied by stopping the read, which kept the OLDEST and silently truncated a live session six days short (2026-08-12; see "The window kept the wrong end" below). A 38 MB / 11,638-record session parses to 6,034 blocks, so the cap is a runaway guard, not a paging window. |
 | transcript images | 4 MB of base64 | `IMAGE_BUDGET`, spent newest-block-first so the visible tail keeps its bytes; past it, chips render name-only. Budgeted over the whole PARSE, not per frame — a frame carries only its own window's images (0.02 MB at 250 blocks, measured 2026-08-03). |
 | history list | 40 sessions | `SessionStore.list(limit)` |
 | title scan | first 400 lines | `titleOf` |
@@ -209,6 +209,31 @@ Fixed alongside it: the preview sliced the ESCAPED string, so a cut could land i
 (`&amp;`) and the effective limit shrank with every special character in the command. It slices
 first, then escapes.
 
+**The window kept the wrong end — FIXED 2026-08-12.** `readTranscript` capped the parse by breaking
+out of the read (`if (out.size >= max) break`), so on any transcript over the cap it kept the OLDEST
+blocks and dropped everything newer. Reported from a real session: `D:\sites\metrobuildsuppliers`
+(38 MB, 11,638 records, 6,034 blocks) resumed on 2026-08-12 and replayed as though it had ended on
+2026-08-06 — the panel's last card was an `Edit` on `includes/features/search.php` from record 7,668,
+with the "Resumed" line drawn directly under it. Six days and ~3,950 records were never parsed, and
+nothing said so: the webview's "load earlier" affordance is silent by design, and reaching index 0
+of a truncated list is indistinguishable from reaching the start of the conversation.
+
+That second half is now closed too. When the window drops anything, the parser prepends a
+`truncated` block carrying the COUNT, and chat.html draws it as a `.status` line — "12,400 earlier
+blocks not loaded", the history icon, the same idiom "Resumed" uses at the other end of the same
+replayed conversation. It rides at the head of the list rather than on a wire field of its own, so
+it needs no new frame and appears exactly when the reader has scrolled past everything kept. Under
+the cap, no block and no marker: a conversation that IS complete must never claim otherwise, which
+is what its negative control pins.
+
+Blocks are now evicted from the FRONT, in chunks, aligned forward to a `user` block so the top of
+the window is never a tool result whose tool line was just dropped (the same rule `alignedStart`
+applies when shipping). The cap rose 4,000 → 20,000 in the same change, because 4,000 was set when
+the largest measured session yielded 876 blocks and is now exceeded by ordinary work. `apiErrIdx` is
+re-based on every eviction — it indexes `out`, and a stale index would insert a late-flushed retry
+into an unrelated turn. Pinned by `SessionStoreTest.the block window keeps the newest turns, not the
+oldest`, whose negative control was run against the pre-fix parser.
+
 **Token/size scans are cached, not free.** `SessionStore.tokensOf` scans the whole transcript to
 sum `message.usage.output_tokens`, rejecting lines on a substring before parsing. Cached by
 `(mtime, size)`, so a 177 MB session is scanned once (~0.5s) rather than on every panel open.
@@ -229,6 +254,12 @@ Parsing is not the bottleneck:
 |---|---|---|---|---|
 | claude-brains | 10 MB | 1,848 | 175 ms | 4.18 MB |
 | syncroze-core | 177 MB | 4,000 (capped) | 91 ms | 4.29 MB |
+
+The `core` row is why the truncation went unnoticed for so long: "4,000 (capped)" was recorded as a
+volume fact and never read as "this session is being cut off, at the wrong end". The 91 ms is also
+not comparable to the others — the read STOPPED at the cap, so it is the cost of part of the file.
+Under the newest-N window a capped session pays a full scan (`tokensOf` already pays one, ~0.5s
+cached on that same 177 MB file).
 
 What the frame is made of differs sharply by session, so there is no single fix:
 

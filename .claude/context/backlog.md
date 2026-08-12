@@ -11,6 +11,14 @@
 - Stale `~/.claude/ide/*.lock` files survive a plugin hot-reload (dispose skipped) — observed
   2026-08-09 with two dead locks; could misdirect a terminal TUI's IDE discovery. Check
   lockfile cleanup on unload if touched anyway.
+- Make `pluginVerification { ides { recommended() } }` skippable (e.g. behind a Gradle property).
+  It resolves a release list from `teamcity.jetbrains.com` at CONFIGURATION time, so one
+  unreachable host stops `test`, `runIde` and `probe` alike with an error naming neither — see
+  gotchas.md. Not done on 2026-08-12 because it means editing the release-critical build file to
+  work around a transient outage; worth doing deliberately, with CI/release keeping the real list.
+- Re-run `python tools/live_harness.py` once a sandbox is up: the full 137 passed on 2026-08-12
+  BEFORE the `#fade-top`/`updateTopFade` change, and the panel was closed before it could be
+  re-run. No fixture asserts the fade, so the risk is low but the sweep is owed.
 
 ## Next up
 - VFS refresh after CLI writes: an accepted edit needs "Reload from disk" to show in an open

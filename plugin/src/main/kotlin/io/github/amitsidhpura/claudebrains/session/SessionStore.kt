@@ -254,6 +254,22 @@ object SessionStore {
      */
     private const val IMAGE_BUDGET = 4 * 1024 * 1024
 
+    /**
+     * Blocks [readTranscript] keeps. A runaway guard, NOT a paging window — every real transcript
+     * measured fits inside it (the largest local one, 38 MB / 11,638 records, parses to ~6,000).
+     *
+     * The number was 4,000 and the cap was applied by stopping the read, which kept the OLDEST
+     * 4,000 blocks and silently dropped everything after them: a session resumed on 2026-08-12
+     * replayed as if it had ended on 2026-08-06, with the "Resumed" line drawn under a six-day-old
+     * turn. Blocks are now dropped from the FRONT — what is on screen is the tail, so the tail is
+     * what must survive. See the eviction in [readTranscript].
+     *
+     * 20,000 blocks is ~21 MB once serialized (extrapolated from the 4.29 MB measured at 4,000 in
+     * docs/limits.md), which is affordable because the per-block cost is bounded: `RenderLimits`
+     * caps IN/OUT/description, and [IMAGE_BUDGET] is applied to whatever survives the window.
+     */
+    const val MAX_BLOCKS = 20_000
+
     /** Root holding `.claude/projects`. Overridable so tests can point at a fixture tree. */
     internal var claudeHome: File = File(System.getProperty("user.home"))
 
@@ -492,6 +508,10 @@ object SessionStore {
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
         var tokens: Long? = null           // output tokens for the request summary
+        // Blocks the window dropped, on the `truncated` head block. The COUNT travels and the
+        // wording lives in chat.html, the same split the `auth` status line uses: the panel says
+        // it once, and replay cannot word it differently from live.
+        var dropped: Long? = null
         var seed: String? = null           // first assistant uuid — picks the summary's whimsical verb
         var prevSeed: String? = null       // previous summary's seed, so two in a row can't share a verb
 
@@ -503,6 +523,7 @@ object SessionStore {
             icon?.let { put("icon", it) }
             durMs?.let { put("durMs", it) }
             tokens?.let { put("tokens", it) }
+            dropped?.let { put("dropped", it) }
             seed?.let { put("seed", it) }
             prevSeed?.let { put("prevSeed", it) }
             desc?.let { put("desc", it) }
@@ -539,8 +560,13 @@ object SessionStore {
      * markdown, tool lines (description, Bash IN/OUT, failure), Edit/Write diffs, and answered
      * AskUserQuestion cards. Tool results arrive in later records, so tool items are indexed by
      * `tool_use_id` and patched in place as their results are read.
+     *
+     * The whole file is read even when it holds more than [max] blocks: a mid-file range cannot be
+     * parsed in isolation (results patch earlier blocks by `tool_use_id`, the task list is rebuilt
+     * from increments, a compact summary attaches to its boundary by `parentUuid`), so the scan is
+     * the price of the answer either way. What [max] bounds is what is HELD — see the eviction below.
      */
-    fun readTranscript(cwd: String, id: String, max: Int = 4000): List<JsonObject> {
+    fun readTranscript(cwd: String, id: String, max: Int = MAX_BLOCKS): List<JsonObject> {
         val f = File(projectDir(cwd), "$id.jsonl")
         if (!f.isFile) return emptyList()
         val out = ArrayList<Item>()
@@ -615,10 +641,59 @@ object SessionStore {
             reqSeed = null; reqMsgIds.clear()
         }
 
+        // Blocks dropped by the window. Reaching the top of a windowed list is otherwise
+        // indistinguishable from reaching the start of the conversation — the webview's "load
+        // earlier" is silent by design — so this count becomes a `truncated` head block below, and
+        // a log line. A cap that trims history in silence is the failure this window was rewritten
+        // to stop; going quiet at the other end would be the same failure, one edge along.
+        var droppedCount = 0
+
+        /**
+         * Hold [max] blocks by dropping the OLDEST, never by stopping the read. Eviction is done in
+         * chunks rather than one block at a time so the O(n) shift of an ArrayList is amortised, and
+         * the retained list is aligned FORWARD to a `user` block — the same turn-boundary rule
+         * [alignedStart] applies when shipping, so the top of the window is never a tool result
+         * whose tool line was just evicted, and never an assistant reply to a question that is no
+         * longer there.
+         *
+         * The cut is the FIRST `user` block at or after the minimum that has to go, scanned with no
+         * bound short of the list itself. A bounded scan is what the first version did — one chunk,
+         * then give up and cut where it stood — and on a real transcript it gave up constantly:
+         * 253 retained blocks of `metrobuildsuppliers` hold just 9 user messages (~28 blocks a
+         * turn), so a 37-block window missed the boundary most times and the panel opened on an
+         * assistant reply with no question above it. Unbounded costs at most one turn of extra
+         * blocks and is the only version that always lands on a boundary.
+         *
+         * Eviction is therefore triggered on `max + chunk`, not `max`: the slack is what amortises
+         * the O(n) shift, since each cut now removes at least a chunk. So the list is held in
+         * [max - one turn, max + chunk] and can finish slightly OVER the cap — 321 of 300 on a real
+         * session — because whatever arrives after the last cut is kept. `max` bounds the order of
+         * magnitude, not the exact count.
+         *
+         * One giant turn (no `user` block after the cut at all) falls back to the unaligned cut
+         * rather than emptying the list.
+         */
+        fun evictOldest() {
+            val chunk = maxOf(1, max / 8)
+            if (out.size <= max + chunk) return
+            val plain = out.size - max
+            var k = plain
+            while (k < out.size && out[k].role != "user") k++
+            if (k >= out.size) k = plain
+            out.subList(0, k).clear()
+            droppedCount += k
+            // apiErrIdx indexes `out`; shift it, and forget it entirely once its turn is gone —
+            // a stale index would insert a late-flushed retry into an unrelated turn.
+            if (apiErrIdx >= 0) {
+                apiErrIdx = if (apiErrIdx >= k) apiErrIdx - k else -1
+                if (apiErrIdx < 0) apiErrTs = null
+            }
+        }
+
         runCatching {
             f.bufferedReader().useLines { lines ->
                 for (line in lines) {
-                    if (out.size >= max) break
+                    evictOldest()
                     if (line.isBlank()) continue
                     val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
                     val ts = obj["timestamp"]?.jsonPrimitive?.content
@@ -994,7 +1069,19 @@ object SessionStore {
                 }
             }
             flushSummary() // the last request has no following user turn to close it
+            evictOldest()  // the closing summary can be the block that tips it over
         }.onFailure { log.warning("readTranscript $id truncated at ${out.size} blocks: $it") }
+        if (droppedCount > 0) {
+            // `out.size` and not `max`: the retained count is not the cap — eviction runs on
+            // `max + chunk` and cuts at a turn boundary, so it lands near it from either side
+            // (321 of 300 on a real 6,034-block session). Logging the cap would report a number
+            // the panel never held.
+            log.info("readTranscript $id: window capped at $max, kept ${out.size}, dropped $droppedCount older")
+            // Head of the list, so it ships only once the reader has scrolled all the way up —
+            // the same reason it needs no wire field of its own: `more` reaching 0 is what puts
+            // this block on screen, and until then it is simply further up the list.
+            out.add(0, Item("truncated").apply { dropped = droppedCount.toLong() })
+        }
         trimAttachments(out)
         return out.map { it.toJson() }
     }

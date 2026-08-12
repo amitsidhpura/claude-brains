@@ -71,6 +71,47 @@
         { "js": "document.querySelector('#log').textContent.split('Audit the renderer').length - 1",
           "equals": 1, "why": "the duplicated description drops out, the line does not" }
       ]
+    },
+    {
+      "note": "SECOND LANE — a Bash with NO description: .t-desc is blank by design and the command lives in the IN box",
+      "frames": [
+        { "type": "stream_event", "event": { "type": "content_block_start", "index": 2,
+          "content_block": { "type": "tool_use", "id": "toolu_dup3", "name": "Bash" } } },
+        { "type": "stream_event", "event": { "type": "content_block_delta", "index": 2,
+          "delta": { "type": "input_json_delta",
+            "partial_json": "{\"command\":\"gradlew probe --args=zzq-marker-42 | tail -25\"}" } } },
+        { "type": "stream_event", "event": { "type": "content_block_stop", "index": 2 } }
+      ],
+      "expect": [
+        { "js": "document.querySelector('#log').textContent.split('zzq-marker-42').length - 1",
+          "equals": 1, "why": "the command is on screen once, in the IN box" }
+      ]
+    },
+    {
+      "note": "task_started falling back to the command as its description must draw nothing — the IN box already shows it",
+      "frames": [
+        { "type": "system", "subtype": "task_started", "task_id": "task_dup3",
+          "tool_use_id": "toolu_dup3", "description": "gradlew probe --args=zzq-marker-42 | tail -25" }
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('.t-prog').length", "equals": 1,
+          "why": "still only the sub-agent's line from step 3; this frame adds nothing new" },
+        { "js": "document.querySelector('#log').textContent.split('zzq-marker-42').length - 1",
+          "equals": 1, "why": "the command must not appear a second time under its own box" }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL for this lane — a description that is NOT the command still draws",
+      "frames": [
+        { "type": "system", "subtype": "task_progress", "task_id": "task_dup3",
+          "tool_use_id": "toolu_dup3", "description": "Still running the probe" }
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('.t-prog').length", "equals": 2,
+          "why": "suppression is exact-match only; new commentary gets its line" },
+        { "js": "document.querySelectorAll('.t-prog')[1].textContent", "contains": "Still running the probe",
+          "why": "the frame said something the IN box does not" }
+      ]
     }
   ]
 }

@@ -511,6 +511,14 @@ total 196K
          buttons, no hover, no expanding. Only the ask tabs stay clickable,
          matching a live card that has already been answered.
          ================================================================ -->
+    <!-- TOP EDGE of a windowed transcript (`truncated` block). Only drawn when the parser's
+         20,000-block window actually dropped something, and only ever as the FIRST block — so it
+         is what the reader meets after scrolling past everything that WAS kept. Same .status
+         idiom and same history icon as "Resumed" below, deliberately: they are the two ends of
+         the same replayed conversation. Without it, the top of a truncated window looks exactly
+         like the start of the conversation, which is how a six-day gap went unnoticed. -->
+    <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>12,400 earlier blocks not loaded</div>
+
     <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>Resumed</div>
 
     <div class="turn">
@@ -863,9 +871,14 @@ total 196K
       else { logEl.scrollTop = logEl.scrollHeight; updateScrollBtn(); }
     })(t0);
   }
-  logEl.addEventListener('scroll', updateScrollBtn);
+  // Mirrors chat.html: #fade-top only means something while content is scrolled under the header,
+  // and at the true top it just washes out the first block (the `truncated` marker, which is
+  // ordinary content — unlike the sticky .msg-user, which rides above the fade).
+  function updateTopFade() { document.body.classList.toggle('at-top', logEl.scrollTop <= 1); }
+  logEl.addEventListener('scroll', function () { updateScrollBtn(); updateTopFade(); });
   scrollBtn.onclick = function () { smoothToBottom(); document.getElementById('input').focus(); };
   updateScrollBtn();
+  updateTopFade();
   syncGutter();
 
   inp.addEventListener('input', function () {

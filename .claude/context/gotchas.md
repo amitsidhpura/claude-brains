@@ -76,6 +76,20 @@ trusting memory here.
   at an arbitrary one?
 
 ## Build / toolchain
+- **`pluginVerification { ides { recommended() } }` can take the WHOLE project offline.** It
+  resolves the Android Studio releases list from `jb.gg/android-studio-releases-list.xml` →
+  `teamcity.jetbrains.com` at CONFIGURATION time, so if that one host is unreachable, EVERY task
+  fails — `test`, `runIde`, `probe` — after ~23s with a bare "Connection timed out: connect" that
+  names neither the URL nor the verifier. `--offline` does NOT skip it (the value source ignores
+  offline mode). A stored configuration-cache entry masks it until something invalidates the cache,
+  which is why it appears to strike at random. Cost a whole afternoon on 2026-08-12.
+  Diagnosis order that worked: `curl` the three JetBrains hosts with `-w "%{time_connect}"` — the
+  IDE repo and `data.services` were fine and only the `jb.gg` redirect target hung. Do NOT chase
+  IPv6 first (it was ruled out with a 6-line Java program: 1.1s either way).
+  Escape hatch when it happens: `SessionStore` is platform-free, so compile it with the cached
+  `kotlin-compiler-embeddable` (`java -cp <compiler>;<stdlib>+coroutines+reflect+annotations+trove4j
+  org.jetbrains.kotlin.cli.jvm.K2JVMCompiler …`) and run the assertions as a `main`. Needs `cygpath
+  -w` for every path and `;` separators, and the jar globs must exclude `-sources`.
 - Build JVM must be **Java 21**: Gradle 8.10.2 refuses to run above JDK 23, and recent PhpStorm's
   bundled JBR is JDK 25. On the current Windows machine `java` IS on PATH and `JAVA_HOME` is set
   (`~/.jdks/ms-21.0.12`), so `./gradlew` just works — on a machine where it isn't, prefix
@@ -182,6 +196,18 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **A synthetic fixture whose turns are 3 blocks long cannot catch a turn-boundary bug.** The
+  windowed-replay eviction scanned a bounded number of blocks ahead for a `user` block; the test
+  fixture emitted user+assistant+summary, so a boundary was never more than 2 blocks away and it
+  passed. Real transcripts are ~28 blocks a turn (9 user messages in 253 retained blocks of
+  `metrobuildsuppliers`), the scan gave up constantly, and the panel opened mid-turn on an
+  assistant reply with no question above it. Shape the fixture like the real data, or the green
+  run means only that the fixture agrees with the code.
+- **`#fade-top` sits above ordinary content but below the sticky `.msg-user` (z 6).** So anything
+  that is normally FIRST in the log is invisibly protected by that stickiness, and any NEW kind of
+  first block (the `truncated` marker) lands under a 48px wash and is unreadable. It is now
+  switched off at `scrollTop <= 1`, where it was describing content that does not exist anyway.
+  Check the top-of-log state whenever a new block type can be first.
 - **CSS layout claims must be measured on REAL JCEF, not headless.** Beyond the rAF/RO caveats
   below, headless disagreed on *rendered output*: it showed a flex child ellipsised where JCEF
   measured it whole (70/70), and two headless runs of the same page disagreed with each other

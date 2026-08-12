@@ -3,6 +3,47 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-12 — The replay window keeps the NEWEST blocks, and says so at its top edge
+`readTranscript` reads the whole file and evicts from the FRONT once it holds more than
+`MAX_BLOCKS` (20,000, was 4,000). The cut is the first `user` block at or after the minimum that
+must go — unbounded forward scan — and eviction triggers at `max + chunk` so each cut removes at
+least a chunk. When anything is dropped the parser prepends a `truncated` block carrying the COUNT,
+which chat.html draws as a `.status` line ("12,400 earlier blocks not loaded").
+**Why:** the old cap `break`ed out of the read, keeping the OLDEST blocks — a session resumed on
+2026-08-12 replayed as though it had ended on 2026-08-06 (user screenshot; 6,034 blocks against a
+4,000 cap). The tail is what is on screen, so the tail is what must survive. The count rides at the
+HEAD of the list rather than on a wire field because `more` reaching 0 is already exactly the moment
+it should appear — no new frame, no ChatPanel change. Wording lives in chat.html, the same split
+`auth` uses. 20,000 is affordable because per-block cost is bounded by `RenderLimits` and
+`IMAGE_BUDGET`; it is a runaway guard, not a paging window.
+**Rejected:** a bidirectional paging window that re-parses on scroll (the user's first proposal) —
+a mid-file range cannot be parsed in isolation (results patch earlier blocks by `tool_use_id`, tasks
+rebuild from increments, compact summaries link by `parentUuid`), so every page-up would cost a full
+file scan to save memory that `RenderLimits` already bounds. Also rejected: a BOUNDED forward scan
+for the turn boundary — shipped, and it failed on the first real transcript (below).
+
+## 2026-08-12 — A cap that trims history must not do it silently, at EITHER end
+Two edges, same rule. The window announces what it dropped (above), and `#fade-top` now switches
+off at `scrollTop <= 1` so the first block is legible.
+**Why:** the fade exists to dissolve content scrolling under the header, but at the true top there
+is nothing under it — it was describing content that does not exist while washing out the marker.
+Sticky `.msg-user` (z 6) rides above the fade, which is why this never showed in five months of
+use; ordinary content at z-auto does not.
+**Rejected:** raising the marker's z-index instead — it would leave one crisp line hanging over
+content that is correctly fading beneath it. Also rejected: padding the marker clear of the 48px
+band, which trades an unreadable line for a hole at the top of every windowed conversation.
+
+## 2026-08-12 — The task-progress line dedupes against the IN box, not just the tool line
+`taskLine` suppresses a `task_started`/`task_progress` description that exactly matches EITHER the
+tool line's `.t-desc` OR its IN box row.
+**Why:** the `.t-desc` half shipped earlier from a user screenshot, but Bash's `.t-desc` is blank
+BY DESIGN — `command` is in `IN_KEYS`, not `DESC_KEYS` — so a Bash called without a `description`
+had nothing to compare against, the CLI's frame fell back to the command itself, and the command
+printed twice: in full in the box and again beneath it cut to `descMax`. Exact-match only, both
+surfaces, so a real sub-agent's running commentary still draws.
+**Rejected:** a prefix or fuzzy match (would eat commentary that legitimately quotes the command),
+and locating the IN row by position (a box can hold OUT alone — it is found by its `IN` key).
+
 ## 2026-08-12 — Release notes are enforced by the build, not by the checklist
 `buildPlugin` fails when `changeNotesHtml` (`plugin/build.gradle.kts`) carries no `<b>X.Y.Z</b>`
 entry for the version being built, with a message pointing at `docs/release.md` step 1b. Older
