@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-13 — the runIde sweep closes; a fixture that was only half a test
+- User verified 8.13 (rename outside-click) and 8.14 (MCP tool lines) in `runIde` and ticked both.
+- **Live harness in real JCEF: 154/154.** That is the run that mattered for the io-box
+  restructure — moving the cut/note markers out of `.io-row` and changing which element `foldBlock`
+  receives regressed nothing, with fixture 04's background chip, 01b and 40's tool-line paths all
+  still green.
+- Fixture 44 passed 17/17 first time, which is also what a vacuous fixture looks like — so it was
+  replayed against 89f1714 (pre-fix). It failed on the stuck-busy defect and **passed** on the
+  CLI-initiated-turn one: the first bug leaves `busy` already true, so "a turn we did not start
+  sets busy" read as satisfied when nothing had set it. The two defects mask each other inside the
+  fixture exactly as they do in the panel. A forced `setBusy(false)` step now separates the halves,
+  and the fixture fails on BOTH against 89f1714 (5 assertions). Lesson in conventions.md.
+- **8.15 closed against a real CLI**, driven entirely over CDP: compose + `submit()` to send a real
+  turn, with `window.onClaudeEvent` wrapped to timestamp every frame against `busy` and the button.
+  The lifecycle came out exactly as the wire capture predicted — 3.5s roster gains `local_bash`,
+  4.8s `result` finalizes while the chip still shows the task, 33.6s shell exits and the CLI opens
+  a NEW request on its own, 35.8s `message_start` flips busy back to true. No `user` frame anywhere
+  between, which independently confirms `message_start` is the only available hook. Decisive
+  number: **0 content deltas rendered while the button read Send**.
+- That technique is now in gotchas: cdp.py can ACT as well as observe, which turns a "watch the
+  panel and hope you catch it" item into a replayable timeline with a number to assert on.
+- Register: 2 open ISSUE / 22 RESOLVED, and **zero unticked checklist items** — the sweep that had
+  been accumulating since 2026-08-12 is done.
+- Next: 3.1 custom commands + 9.10, worked together, now top of the queue.
+
 ## 2026-08-12 (fifth) — the IN/OUT box learns the diff's geometry; a contract falls out
 - One user request — "make IN/OUT same as the write permission panel, scrollbar to the border and
   spacing inside" — that took four rounds because each fix exposed the next thing the old layout
@@ -243,30 +268,18 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   lockfiles surviving hot-reload. Left open: 3.1+9.10 pairing (user wants together), 5.14
   scroll feel, 8.2/8.7 tail-error replay eyeball.
 
-## 2026-08-09 (third) — 7.4 and 8.2+8.7 fixed: register 9 → 6 open; hardware sweep cleared
-- 7.4 both halves: neither payload exists in any transcript (sub-agent frames are live-only),
-  so both were read VERBATIM out of the CLI binary (`strings` on
-  `~/.local/share/claude/versions/2.1.226`) — which also revealed the harness envelope is
-  longer than descMax, so it wasn't just ugly, it crowded the real summary off the finished
-  line. `isInternalResult()` (content-keyed — the same tool's COMPLETED result is worth
-  reading, so RESULT_SKIP's name-keying couldn't express it) + leading-`[harness:]` strip in
-  `stripPlumbing()` (safe at position 0 only: the CLI escapes line-initial forgeries first).
-- 8.2 measured first: the transcript persists the SAME top-level `error` enum live keys off —
-  replay just never read it. Fix: `AUTH_BLOCKED_CODES` in RenderLimits, `icon:"auth"` status
-  items resolving through chat.html's AUTH_BLOCKED map (wording stated once), and `reqError`
-  suppressing the phantom summary. That phantom turned out to BE 8.7's root cause: the done
-  item was the actual tail, so `tail.role === 'error'` never matched and Retry never seeded —
-  8.7 closed with zero 8.7-specific code.
-- Fixtures 07 + 08 committed, each proven to pin the DEFECT by running against pre-fix
-  chat.html (5 and 3 failures respectively). Negative controls on every new Kotlin test.
-- New trap (in fixtures + gotchas): assert on `#log`, never `document.body` — body.textContent
-  includes chat.html's own script source, which now contains the very literals under test.
-- User cleared the hardware re-verification sweep on real JCEF (2.9, 2.14, Escape menus, 4.4,
-  6.4) and 7.4(a) live; only 5.14's scroll FEEL and an 8.2/8.7 error-tail eyeball remain.
-- Next: 10.5 openDiff accept-save, then 3.1 custom commands.
-
 ## Digest
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
+
+- **2026-08-09 (third)** — 7.4 and 8.2+8.7 fixed, register 9 → 6 open. Both 7.4 payloads exist
+  only live, so they were read VERBATIM out of the CLI binary — which also showed the harness
+  envelope is longer than descMax, crowding the real summary off the line; fixed with a
+  CONTENT-keyed `isInternalResult()` (RESULT_SKIP's name-keying could not express "this tool's
+  COMPLETED result is still worth reading"). 8.2's phantom summary turned out to BE 8.7's root
+  cause, so 8.7 closed with zero 8.7-specific code — measuring first is what found that. Fixtures
+  07 + 08 each proven to pin the defect against pre-fix chat.html. Trap promoted to gotchas:
+  assert on `#log`, never `document.body`, whose textContent includes chat.html's own script
+  source and therefore the literals under test.
 
 - **2026-08-09 (later)** — fixing round two, register 13 → 9 open, committed as `4a64433` +
   `fe620ef`. 4.4 live edit diffs built optimistically from the tool_use INPUT, because under

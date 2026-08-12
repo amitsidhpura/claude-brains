@@ -447,20 +447,32 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       the CURRENT session's row offers no delete
 - [x] 8.12 Attachment chips: clicking an image opens the lightbox overlay (Esc or click
       closes); clicking a PDF/text chip opens a native Save As dialog
-- [ ] 8.13 Header rename editor: clicking anywhere outside it DISCARDS the edit (like Esc and ✕).
+- [x] 8.13 Header rename editor: clicking anywhere outside it DISCARDS the edit (like Esc and ✕).
       The cases that actually broke: the composer, an open popup, and the neighbouring header
       controls (history button, model/mode chips, effort dots) — those stopPropagation, which is
       why this dismissal listens on the CAPTURE phase. ✓ and Enter still commit; leaving the IDE
       panel entirely leaves it open, matching the popups
-- [ ] 8.14 An MCP `browser_evaluate` renders like Bash: tool line blank, the JS body in a folded IN
+- [x] 8.14 An MCP `browser_evaluate` renders like Bash: tool line blank, the JS body in a folded IN
       box that scrolls sideways rather than wrapping. And any long description (a big ToolSearch
       query) sits on ONE line with an ellipsis, full text on hover — check a path line too, which
       must still ellipsise in the MIDDLE with the filename intact
-- [ ] 8.15 Background shell lifecycle (real `Bash run_in_background:true`): the turn finalizes with
+- [x] 8.15 Background shell lifecycle (real `Bash run_in_background:true`): the turn finalizes with
       its summary while the chip still shows the task (a shell does not suspend); when the shell
       completes and the CLI streams its notification turn, the button flips to STOP while it
       prints — that turn arrives with no user frame, and Stop must be reachable (the 2026-08-12
       report). Fixture 44 replays the recorded wire; this item is the live-CLI confirmation
+
+      **Confirmed 2026-08-13** against a real CLI in `runIde` (`sleep 30` backgrounded), recorded
+      over CDP by wrapping `window.onClaudeEvent`. Timeline, seconds from send:
+      3.54 `background_tasks_changed` → `local_bash` on the roster, chip "1 task" ·
+      4.84 `result` → busy true→false, button back to Send, **chip still showing the task** ·
+      33.56 shell exits, roster empties, `task_notification` · 33.59 `system/init` (the CLI opens
+      a NEW request on its own) · **35.84 `message_start` → busy false→TRUE, button back to Stop**
+      · 36.23 its own `result` finalizes it. No `user` frame anywhere between 33.59 and 35.84,
+      which is why `message_start` is the only possible hook. Decisive metric: **0** content
+      deltas rendered while the button read Send. Two done lines, 123 and 20 tokens — separately
+      counted, so the request-scoped reset works and the notification turn is not billed the
+      previous request's usage.
 
 ## 9. Resilience & notices
 

@@ -50,15 +50,26 @@ reasoning, gotchas.md for the traps.
   file in each case.
 - Browser-measured through the REAL spliced `chat.html` (not just the mockup) at 420px and default
   width; the busy-state fix was verified against **real captured CLI wire frames**.
-- **`runIde`: partly done.** The user ran it and confirmed the IN/OUT + fold work renders
-  correctly. NOT separately confirmed: register items 8.13 (rename outside-click), 8.14 (MCP tool
-  lines) and 8.15 (background shell lifecycle) are still unticked, and the live harness has not
-  been re-run — `tools/fixtures/44-background-shell-busy-state.json` has **never** been executed
-  (`python tools/live_harness.py` needs the panel up).
+- **`runIde` sweep DONE 2026-08-13**, except one item. User confirmed the IN/OUT + fold work and
+  ticked **8.13** and **8.14**. `python tools/live_harness.py` ran in real JCEF: **154/154**, so
+  the io-box restructure regressed nothing (fixture 04's bg chip, 01b, 40's tool-line paths all
+  still green), and fixture 44 passes 17/17.
+- **Fixture 44 gained a step during that run, and the reason matters.** Its first all-green run was
+  partly vacuous: replayed against 89f1714 (pre-fix) it failed on the stuck-busy defect but PASSED
+  on the CLI-initiated-turn defect, because the first bug leaves busy already true — the two mask
+  each other in the fixture exactly as they do in the panel. A forced `setBusy(false)` step now
+  sits before the notification turn, and the fixture fails on BOTH against 89f1714 (5 assertions).
+- **8.15 confirmed 2026-08-13 against a real CLI**, driven and recorded over CDP (compose +
+  `submit()` from `tools/cdp.py`, with `window.onClaudeEvent` wrapped to timestamp every frame
+  against `busy`/button state). Full evidence is in the 8.15 note in `docs/manual-test.md`; the
+  decisive number is **0 content deltas rendered while the button read Send**. The technique is
+  worth reusing — see gotchas.
+- Register: **2 open ISSUE notes / 22 RESOLVED**, unchanged (8.13-8.15 are checklist items, not
+  defects). The whole `runIde` sweep is now closed.
 
 ## Next steps
-- [ ] **Finish the `runIde` sweep**: tick manual-test 8.13 / 8.14 / 8.15 deliberately, and run
-      `python tools/live_harness.py` (137/137 baseline + the never-executed fixture 44).
+- [ ] **3.1 custom commands + 9.10 together** — see below; the fixture exists on this machine, so
+      it is unblocked. This is the top of the queue now.
 - [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing). `cmdKind` (chat.html) has
       no custom-command detection, so everything outside {clear, compact} greys as 'tui'.
       Constraint: the CLI's `commands` payload has NO type field. Fixture already in place.

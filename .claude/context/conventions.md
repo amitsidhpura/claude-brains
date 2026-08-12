@@ -39,6 +39,11 @@
   by side** and let the user pick; do not iterate one guess at a time.
 - Every new test suite gets its negative control RUN, not just written: assert a wrong value (or
   run the fixture against `git show HEAD:` of the file) and confirm it fails.
+- **When two defects can mask each other, a fixture that replays them in sequence pins only the
+  first.** Fixture 44 went green against the PRE-FIX build on its second defect, because the first
+  one left `busy` already true and the assertion read as satisfied. Reset the state explicitly
+  between the halves so each step starts from a known baseline — and run the whole fixture against
+  the pre-fix build to find out which assertions actually discriminate, not just that it passes.
 - **A check that skips its own assertion is indistinguishable from a passing one.** A 2026-08-12
   audit reported "no failures" while never running its main rule: it read `overflow-x` after
   restoring the fold class, so folded elements looked "not scrollable" and fell out of the branch.

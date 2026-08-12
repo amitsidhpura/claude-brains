@@ -245,6 +245,15 @@ trusting memory here.
   emits NO user frame for it at all — measured across two captures. A hypothesis built from
   transcripts alone named a hook (`onUserEvent`) that can never fire live. Transcripts prove what
   the CLI RECORDS; only a stream capture proves what it SENDS.
+- **Driving a real end-to-end test from outside the IDE**: `tools/cdp.py` can both ACT and OBSERVE.
+  Set `#input`'s value and call `submit()` to send a real turn to the real CLI, having first
+  wrapped `window.onClaudeEvent` to timestamp every frame alongside the state you care about
+  (`busy`, `send.className`, chip text). That turns a "watch the panel and hope you catch it" item
+  like manual-test 8.15 — where the interesting moment lands ~35s after the prompt — into a
+  replayable timeline. Assert on a NUMBER, not a screenshot: "0 content deltas rendered while the
+  button read Send" is what actually closed it. Neutralise the recorder afterwards (swap the array
+  for a no-op `push`) or it accumulates for the rest of the session; a panel Refresh clears the
+  wrapper.
 - **Reproducing a live-path bug without the IDE**: spawn `claude` with `ClaudeCli.kt`'s own flags
   (`--input-format stream-json --output-format stream-json --include-partial-messages --verbose`),
   keep stdin OPEN so the session outlives the turn — the interesting frames arrive after it — and

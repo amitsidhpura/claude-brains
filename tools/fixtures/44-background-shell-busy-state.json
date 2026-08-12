@@ -27,6 +27,13 @@
       ]
     },
     {
+      "note": "setup: the panel is idle, as the previous step's result left it. Forced rather than inherited ON PURPOSE — the two defects mask each other, and without this the next step's assertions pass against the BROKEN code for the wrong reason: the stuck-busy shell bug leaves busy already true, so 'a turn we did not start sets busy' looks satisfied when nothing set it. Verified: with this reset the fixture fails on both defects against 89f1714, without it only on the first",
+      "frames": [],
+      "expect": [
+        {"js": "(setBusy(false), busy)", "equals": false, "why": "idle before the notification turn arrives"}
+      ]
+    },
+    {
       "note": "the shell completes and the CLI starts its notification turn — NO user frame precedes it on the wire (measured; the transcript persists one, the stream does not), so message_start must flip busy itself or Stop is unreachable while text prints",
       "frames": [
         {"type": "system", "subtype": "background_tasks_changed", "tasks": []},
