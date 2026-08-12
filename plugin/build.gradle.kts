@@ -78,6 +78,15 @@ tasks.register<JavaExec>("probe") {
 }
 
 /**
+ * The local escape hatch for an unreachable JetBrains host (see `pluginVerification.ides` below).
+ * Declared HERE, above `intellijPlatform`, because a Kotlin build script executes top-down and
+ * cannot reference a val declared later — the same reason `changeNotesHtml` sits up here.
+ * `providers.gradleProperty` is configuration-cache-safe; a task action that touched it (or any
+ * script-level val) would capture the build-script object and break the cache.
+ */
+val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
+
+/**
  * Release notes for THIS version, baked into plugin.xml and read straight off it by the Marketplace.
  *
  * Kept honest by the `buildPlugin` check below, because this string is easy to forget and nothing
@@ -161,8 +170,35 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // `recommended()` resolves its IDE list over the NETWORK at CONFIGURATION time — the
+            // JetBrains half from data.services.jetbrains.com, the Android Studio half from
+            // jb.gg -> teamcity.jetbrains.com — so it runs for every task in the project, not just
+            // `verifyPlugin`. When one of those hosts is unreachable, `test`, `runIde` and `probe`
+            // all die after ~23s with a bare "Connection timed out: connect" that names neither the
+            // URL nor the verifier, and `--offline` does NOT skip it (the value source ignores
+            // offline mode). A stored configuration-cache entry hides this until something
+            // invalidates the cache, so it appears to strike at random. Measured 2026-08-12:
+            // teamcity.jetbrains.com unreachable for an afternoon, whole project unbuildable.
+            //
+            // -PskipVerifierIdes is the escape hatch for exactly that outage. It is guarded below,
+            // because the failure mode it would otherwise introduce — a verifier run with no IDEs
+            // to check against, passing vacuously — is worse than the outage it works around.
+            if (!skipVerifierIdes) recommended()
         }
+    }
+}
+
+// With no IDEs in the list the verifier checks nothing and reports success, which would turn the
+// release gate into a rubber stamp on precisely the run that is supposed to catch binary
+// incompatibility. Fail instead, and say how to get the real list back.
+tasks.named("verifyPlugin") {
+    val skip = skipVerifierIdes   // local: the doFirst lambda must not close over the script object
+    doFirst {
+        if (skip) throw GradleException(
+            "verifyPlugin cannot run with -PskipVerifierIdes: the IDE list is empty, so it would " +
+                "verify nothing and pass. Drop the flag (it exists only so `test`/`runIde` survive " +
+                "an unreachable jb.gg / teamcity.jetbrains.com) and re-run once the host is back.",
+        )
     }
 }
 

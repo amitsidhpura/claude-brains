@@ -48,6 +48,12 @@ the IDE update dialog shows one version, and nobody diffs the sequence. Risk is 
 warnings" does NOT block publication (0.2.0 cleared moderation carrying warnings; updates to an
 approved plugin generally publish without a human review pass).
 
+**Never release with `-PskipVerifierIdes`.** That flag empties the verifier's IDE list so the rest
+of the project still builds when `jb.gg` / `teamcity.jetbrains.com` is unreachable (the list is
+resolved at configuration time, so one dead host otherwise stops `test` and `runIde` too — see
+gotchas). `verifyPlugin` refuses to run under it rather than verifying nothing and reporting
+success.
+
 ## Cutting a release
 
 1. Bump `version = "X.Y.Z"` in `plugin/build.gradle.kts`.

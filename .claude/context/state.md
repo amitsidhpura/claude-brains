@@ -32,6 +32,8 @@ the reasoning and gotchas.md for the traps.
   in mockup.html) — it was washing out the marker.
 - **`.t-prog` dedupes against the IN box**, closing the second lane of the duplicate-description
   bug; fixture `01b` gained three steps including its own negative control.
+- **`-PskipVerifierIdes`** so one unreachable JetBrains host no longer stops the whole project.
+  `verifyPlugin` refuses to run under it, and docs/release.md forbids releasing with it.
 
 ## Verification standing at the end of that session
 - `./gradlew test` — 86 tests green, including `the block window keeps the newest turns, not the
@@ -39,8 +41,9 @@ the reasoning and gotchas.md for the traps.
   bounded-scan eviction) and failed correctly both times.
 - `./gradlew probe D:\sites\metrobuildsuppliers edac4a84-…` — 6,034 blocks, no `truncated` (under
   the cap), which is the check that the marker does not cry wolf.
-- `python tools/live_harness.py` — 137/137 in real JCEF, but taken BEFORE the `#fade-top` change.
-  Re-run is in backlog.md.
+- `python tools/live_harness.py` — 137/137 in real JCEF, re-run AFTER the `#fade-top` change.
+- `-PskipVerifierIdes` exercised in all three directions: `test` green with and without it,
+  `verifyPlugin` refusing under it.
 
 ## Next steps
 - [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing): recreate the fixture at
@@ -49,7 +52,6 @@ the reasoning and gotchas.md for the traps.
       Constraint: the CLI's `commands` payload has NO type field.
 - [ ] VFS refresh after CLI writes (backlog "Next up") — accepted edits still need "Reload from
       disk"; fix shape already worked out.
-- [ ] Re-run the live harness; consider making `recommended()` skippable (both in backlog.md).
 
 ## Known gaps (deliberately left)
 - Sidechain/subagent replay ordering untested — still no `isSidechain` records locally.

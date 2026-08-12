@@ -33,8 +33,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   that host was unreachable, so EVERY Gradle task died with a bare "Connection timed out" naming
   neither the URL nor the verifier. `--offline` does not skip it. Worked around it by compiling
   `SessionStore` with the cached `kotlin-compiler-embeddable` and running the assertions as a
-  `main`; re-ran everything under Gradle once the host returned.
-- Next: nothing in flight. Backlog has the `recommended()` fragility.
+  `main`; re-ran everything under Gradle once the host returned. Then fixed the cause rather than
+  leaving it: `-PskipVerifierIdes`, guarded so `verifyPlugin` refuses to run under it — an empty
+  IDE list passes vacuously, which would be a rubber stamp on the one run that matters.
+- Closed the loop on the harness too: 137/137 re-run AFTER the `#fade-top` change, in the sandbox
+  that was still open. Both backlog items from this session are done.
+- Next: nothing in flight.
 
 ## 2026-08-12 (second) — the rename that wasn't broken, and the last manual release step dies
 - First session on **Windows** (`D:\sites\claude-brains`); every path in the context files was from

@@ -86,7 +86,11 @@ trusting memory here.
   Diagnosis order that worked: `curl` the three JetBrains hosts with `-w "%{time_connect}"` — the
   IDE repo and `data.services` were fine and only the `jb.gg` redirect target hung. Do NOT chase
   IPv6 first (it was ruled out with a 6-line Java program: 1.1s either way).
-  Escape hatch when it happens: `SessionStore` is platform-free, so compile it with the cached
+  **Fixed 2026-08-12: `-PskipVerifierIdes` empties the list so the rest of the project builds
+  through the outage.** `verifyPlugin` REFUSES to run under it (an empty list verifies nothing and
+  reports success — a rubber stamp on the one run meant to catch incompatibility), and
+  docs/release.md says never to release with it.
+  Escape hatch if the flag is ever unavailable: `SessionStore` is platform-free, so compile it with the cached
   `kotlin-compiler-embeddable` (`java -cp <compiler>;<stdlib>+coroutines+reflect+annotations+trove4j
   org.jetbrains.kotlin.cli.jvm.K2JVMCompiler …`) and run the assertions as a `main`. Needs `cygpath
   -w` for every path and `;` separators, and the jar globs must exclude `-sources`.
