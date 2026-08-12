@@ -326,6 +326,13 @@ object SessionStore {
         return computeTitle(f).also { s.title = it }
     }
 
+    /**
+     * Lines parsed in full. Everything the DERIVED title can come from (the first user message, a
+     * legacy `summary`) is at the head of the transcript, so paying for a JSON parse past this is
+     * only worth it for the two records that can still change the answer — see [computeTitle].
+     */
+    private const val TITLE_HEAD_LINES = 400
+
     private fun computeTitle(f: File): String {
         var firstUser: String? = null
         var aiTitle: String? = null
@@ -333,24 +340,37 @@ object SessionStore {
         var summary: String? = null
         runCatching {
             f.bufferedReader().useLines { lines ->
-                for (line in lines.take(400)) {
+                var n = 0
+                for (line in lines) {
                     if (line.isBlank()) continue
+                    // A rename is appended WHERE IT HAPPENS, which on a long-lived thread is
+                    // thousands of records in (measured: a 10,458-line transcript whose renames sat
+                    // on lines 10455-10458, so a head-only scan showed the derived title forever and
+                    // the rename looked like it had done nothing). Neither a head window nor a tail
+                    // one is safe — the record can be anywhere — so scan the whole file, and past the
+                    // head reject on a substring before paying for a JSON parse. That is the rule
+                    // tokensOf already uses to stay under a second on the largest local transcript
+                    // (177 MB), and list() pays exactly that scan for every session anyway.
+                    val head = ++n <= TITLE_HEAD_LINES
+                    if (!head && !line.contains("\"custom-title\"") && !line.contains("\"ai-title\"")) continue
                     val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
                     when (obj["type"]?.jsonPrimitive?.content) {
-                        // the user's own rename — a `/rename` in the TUI, or a fork's "… (fork)"
-                        // stamp (client-parity item 34). An explicit name outranks every derived
-                        // one, and later renames supersede earlier ones, so keep scanning.
+                        // the user's own rename — a `/rename` in the TUI, the panel's own header
+                        // rename, or a fork's "… (fork)" stamp (client-parity item 34). An explicit
+                        // name outranks every derived one, and later renames supersede earlier ones,
+                        // so keep scanning.
                         "custom-title" -> obj["customTitle"]?.jsonPrimitive?.content?.trim()
                             ?.takeIf { it.isNotBlank() }?.let { customTitle = it }
-                        "summary" -> obj["summary"]?.jsonPrimitive?.content?.trim()
+                        "summary" -> if (head) obj["summary"]?.jsonPrimitive?.content?.trim()
                             ?.takeIf { it.isNotBlank() }?.let { if (summary == null) summary = it }
                         // keep scanning: later ai-title records supersede earlier ones
                         "ai-title" -> obj["aiTitle"]?.jsonPrimitive?.content?.trim()
                             ?.takeIf { it.isNotBlank() }?.let { aiTitle = it }
                         // fall back to the first REAL user message: skip caveat/stdout/task wrappers
                         // (isMeta + cleanInjected) exactly as replay does, so the title isn't a
-                        // <local-command-caveat> blob
-                        "user" -> if (firstUser == null && obj["isMeta"]?.jsonPrimitive?.content != "true") {
+                        // <local-command-caveat> blob. Head-only: a user message that merely quotes
+                        // the string "ai-title" must not become a late first-user candidate.
+                        "user" -> if (head && firstUser == null && obj["isMeta"]?.jsonPrimitive?.content != "true") {
                             firstUser = userText(obj)?.let { cleanInjected(it) }?.trim()?.takeIf { it.isNotBlank() }
                         }
                     }

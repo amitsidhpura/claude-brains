@@ -76,6 +76,38 @@ class SessionStoreRenameTest {
         assertEquals(2, transcript.readLines().count { it.contains("custom-title") }, "append-only: both records survive")
     }
 
+    /**
+     * A rename is appended WHERE IT HAPPENS, so on a long-lived thread it lands thousands of records
+     * past the head window [SessionStore.computeTitle] parses in full. This is the defect 0.5.0
+     * shipped with: on a real 10,458-line transcript the renames sat on lines 10455-10458, were
+     * written perfectly, and were never read back — so the header kept showing the derived
+     * first-message title and the rename looked like it had done nothing at all.
+     */
+    @Test
+    fun `a rename far past the head window is still the name`() {
+        val filler = (0 until 900).joinToString("\n") { i ->
+            """{"parentUuid":"u1","uuid":"f$i","type":"assistant","message":{"role":"assistant","content":"turn $i"}}"""
+        }
+        transcript.appendText(filler + "\n")
+        assertEquals("Doing the thing", SessionStore.titleOf(cwd, id), "derived title before the rename")
+        assertTrue(SessionStore.rename(cwd, id, "metrobuildsuppliers main development"))
+        assertTrue(transcript.readLines().size > 400, "the fixture must be longer than the head window to test anything")
+        assertEquals("metrobuildsuppliers main development", SessionStore.titleOf(cwd, id),
+            "a rename must be permanent, however long the conversation it names")
+    }
+
+    /**
+     * Past the head window lines are rejected on a substring before being parsed, so a message that
+     * merely QUOTES a title record's key gets parsed after all — and must not be mistaken for one.
+     */
+    @Test
+    fun `a late message quoting a title key does not become the title`() {
+        transcript.appendText((0 until 500).joinToString("\n") { i ->
+            """{"parentUuid":"u1","uuid":"q$i","type":"user","message":{"role":"user","content":"what writes the \"ai-title\" record?"}}"""
+        } + "\n")
+        assertEquals("Doing the thing", SessionStore.titleOf(cwd, id), "the ai-title at the head is still the name")
+    }
+
     @Test
     fun `the title is trimmed, exactly as the CLI trims it`() {
         SessionStore.rename(cwd, id, "   Padded name  ")
