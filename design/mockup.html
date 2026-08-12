@@ -175,12 +175,12 @@
            horizontally once expanded (white-space: pre); 1-line rows never fold. -->
       <div class="tool-line"><b>Bash</b><span class="t-desc">Build, then verify the bundle</span></div>
       <div class="io">
-        <div class="io-row"><span class="io-k">IN</span><span class="io-v fold" title="Show more" onclick="this.classList.toggle('open')">set -e
+        <div class="io-row fold" title="Show more" onclick="this.classList.toggle('open')"><span class="io-k">IN</span><span class="io-v">set -e
 npm run build -- --mode production --sourcemap hidden --outDir dist/release --emptyOutDir
 ls -la dist/release
 du -sh dist/release
 sha256sum dist/release/assets/*.js | tee dist/release/checksums.txt</span></div>
-        <div class="io-row"><span class="io-k">OUT</span><span class="io-v fold" title="Show more" onclick="this.classList.toggle('open')">vite v5.2.0 building for production…
+        <div class="io-row fold" title="Show more" onclick="this.classList.toggle('open')"><span class="io-k">OUT</span><span class="io-v">vite v5.2.0 building for production…
 ✓ 214 modules transformed.
 dist/release/index.html                  0.46 kB │ gzip:  0.30 kB
 dist/release/assets/index-BqT4pZm2.css  12.18 kB │ gzip:  3.02 kB
@@ -192,19 +192,20 @@ total 196K
       </div>
 
       <!-- TRUNCATION MARKER (.io-cut): what a cap PERMANENTLY dropped, as against .fold above,
-           which still holds everything it hides. Sibling of .io-v, never a child — inside it the
-           fold would hide the very notice that content was cut. Second row: no newlines at all, so
+           which still holds everything it hides. It sits outside the .io-row entirely — the row is
+           the horizontal scroll box, so a marker inside it scrolls away with the text, and inside
+           .io-v the fold would hide the very notice that content was cut. Second row: no newlines, so
            it reports size only; third: the CLI spilled the whole result to a file, so the true
            total is shown and the marker opens it. -->
       <div class="tool-line"><b>Bash</b><span class="t-desc">Index every log file</span></div>
       <div class="io">
-        <div class="io-row"><span class="io-k">OUT</span><span class="io-v fold" title="Show more" onclick="this.classList.toggle('open')">/var/log/app-0.log
+        <div class="io-row fold" title="Show more" onclick="this.classList.toggle('open')"><span class="io-k">OUT</span><span class="io-v">/var/log/app-0.log
 /var/log/app-1.log
 /var/log/app-2.log
 /var/log/app-3.log
-/var/log/app-4.log</span><span class="io-cut">⋯ +842 lines · 19 KB not shown</span></div>
-        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">{"rows":[{"id":1,"v":"x"},{"id":2,"v":"y"},…</span><span class="io-cut">⋯ +4.8 KB not shown</span></div>
-        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span></div>
+/var/log/app-4.log</span></div><span class="io-cut">⋯ +842 lines · 19 KB not shown</span>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">{"rows":[{"id":1,"v":"x"},{"id":2,"v":"y"},…</span></div><span class="io-cut">⋯ +4.8 KB not shown</span>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span></div><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span>
       </div>
 
       <!-- TODO CHECKLIST (TodoWrite). Whole list arrives on every call, so no aggregation: the
@@ -231,17 +232,18 @@ total 196K
       </div>
 
       <!-- RESULT NOTE (.io-note): what the CLI said ABOUT the result, as against .io-cut's "a cap
-           removed this". Same geometry — below the value, outside .io-v, so the fold cannot hide it.
+           removed this". Same geometry — below the row, outside it, so neither the fold nor the
+           row's horizontal scrolling can take it away.
            The grep case is why it exists: without the note the box says only that nothing came back
            and drops the reason. Replay-only; the live stream carries no toolUseResult. -->
       <div class="tool-line"><b>Bash</b><span class="t-desc">Search for the old class name</span></div>
       <div class="io">
         <div class="io-row"><span class="io-k">IN</span><span class="io-v">grep -rn "ClaudeCodeSyncroze" src/</span></div>
-        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">(Bash completed with no output)</span><span class="io-note">↳ No matches found</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">(Bash completed with no output)</span></div><span class="io-note">↳ No matches found</span>
       </div>
       <div class="tool-line fail"><b>Bash</b><span class="t-desc">Wait for the port to open</span></div>
       <div class="io">
-        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">waiting for 127.0.0.1:8080…</span><span class="io-note">⏹ Interrupted</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">waiting for 127.0.0.1:8080…</span></div><span class="io-note">⏹ Interrupted</span>
       </div>
 
       <!-- "Thought" with NO duration: replay path when the transcript has no timestamp gap -->
@@ -460,7 +462,7 @@ total 196K
            slice, wrapped across the line. -->
       <div class="tool-line"><b>PlaywrightBrowserEvaluate</b><span class="t-desc"></span></div>
       <div class="io">
-        <div class="io-row"><span class="io-k">IN</span><span class="io-v fold">() =&gt; {
+        <div class="io-row fold"><span class="io-k">IN</span><span class="io-v">() =&gt; {
   const head = document.getElementById('head');
   const editing = () =&gt; head.classList.contains('editing');
   const fire = el =&gt; el.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));

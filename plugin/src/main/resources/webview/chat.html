@@ -1229,14 +1229,26 @@
   // .io-v to three lines, so either one inside it would itself be folded away — the notice that
   // content was cut, cut.
   function ioRow(kind, text, cut, total, path, note, interrupted) {
+    const frag = document.createDocumentFragment();
     const row = document.createElement('div'); row.className = 'io-row';
     row.innerHTML = '<span class="io-k"></span><span class="io-v"></span>';
     row.querySelector('.io-k').textContent = kind;
     row.querySelector('.io-v').textContent = text;
-    foldBlock(row.querySelector('.io-v'));   // measured on the post-insert frame (callers mount same-tick)
-    if (cut || total) row.appendChild(cutEl(cut || { lines: 0, bytes: 0 }, total, path));
-    if (note || interrupted) row.appendChild(noteEl(note, interrupted));
-    return row;
+    frag.appendChild(row);
+    // Fold the ROW, not the value inside it — the row is the scroll box, and .fold:not(.open)'s
+    // `overflow: hidden` only crops the element it is applied to. Folding .io-v instead left a
+    // collapsed row still scrolling sideways, where the permission card's .diff (one box that is
+    // padded, scrollable AND foldable) crops while folded and scrolls only once expanded. Same
+    // element for both is what makes that behaviour fall out for free.
+    foldBlock(row);                          // measured on the post-insert frame (callers mount same-tick)
+    // Marker and note are siblings of the ROW, not children of it: the row is the horizontal
+    // scroll box, so anything inside it slides out of view with the text — and a `flex: 0 0 100%`
+    // item is 32px wider than the container once indented, which gave every row carrying one a
+    // phantom 32px of scroll. Outside it they stay put and cost nothing. Still outside .io-v too,
+    // for the older reason: foldBlock collapses it to three lines and would fold the notice away.
+    if (cut || total) frag.appendChild(cutEl(cut || { lines: 0, bytes: 0 }, total, path));
+    if (note || interrupted) frag.appendChild(noteEl(note, interrupted));
+    return frag;   // a fragment, so every caller's appendChild still mounts row + markers together
   }
   function ioBox(rows) {
     const io = document.createElement('div'); io.className = 'io';

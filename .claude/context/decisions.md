@@ -3,6 +3,26 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-12 — One contract for every foldable block, stated in chat.css
+Two rules, written above the `.fold` rules so they cannot drift: (1) `8px 10px` padding, and
+whichever element carries it is ALSO the one that scrolls; (2) foldable AND scrollable ⇒ the
+scrollbar appears only when EXPANDED. Holders: `.diff`, `.card .cmd`, `.codeblock pre`, `.io-row`,
+`.compact-sum` (not scrollable — it wraps).
+**Why:** rule 2 is not extra work, it falls out of rule 1 — a scrollbar is painted at the bottom of
+its container's padding box, and `.fold:not(.open)`'s `overflow: hidden` crops the element it lands
+on. One element for both and the behaviour is free; split across two and you get a bar floating
+mid-box that survives collapsing, which is exactly what `.io` did. `.io-row` was the only surface
+that deviated (6px vertical, and the fold on `.io-v` while the row scrolled). `foldBlock` is now
+given the ROW.
+**Rejected:** `:has()` to reach the row from the folded value — one line, but it makes the
+behaviour depend on a selector feature we cannot test outside real JCEF, and it would have left
+the two surfaces structurally different for no gain. Also rejected: keeping `.io-row` at 6px
+because it is denser — the point of the change was that these read as one family.
+**Exception, deliberate:** `.io-row`'s left 10px lives on its sticky `.io-k`, not on the row.
+Sticky clamps to the containing block, so padding on the row makes the label unable to reach the
+padding edge; it gets pushed right and eats the column gap. The 10px is still there, just owned by
+the label — recorded at both sites.
+
 ## 2026-08-12 — Busy is a fact about the STREAM, not about who sent the turn
 `message_start` sets busy when it is false, resetting the request-scoped counters (`turnTokens`,
 `reqTokens`, `reqSeed`, `retrySeen`) exactly as `sendTurn` does. Separately, `pendingBgTasks`

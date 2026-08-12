@@ -244,7 +244,19 @@ body.at-top #fade-top { opacity: 0; }
    WHOLE block is the toggle — click to expand, click again to collapse (a click that ends a text
    selection never toggles; see foldBlock). `lh` makes the 3-line cap exact for each block's own
    line-height; --fold-pad is the block's vertical padding+border, so the cap bounds CONTENT lines
-   rather than the border box. --fold-fade matches the surface the block is drawn on. */
+   rather than the border box. --fold-fade matches the surface the block is drawn on.
+
+   ONE CONTRACT for every foldable block, so they cannot drift apart:
+     1. 8px 10px padding, and whichever element carries that padding is ALSO the one that scrolls —
+        a scrollbar is painted at the bottom of its container's padding box, so the two together
+        put it flush on the border across the full width, with the content clear of it.
+     2. Foldable AND scrollable => the scrollbar appears only when EXPANDED. That falls out of
+        rule 1 for free: `overflow: hidden` below crops the element it lands on, which is the same
+        element that scrolls. Split them across two elements and a collapsed block keeps its
+        scrollbar — the bug .io-row had until 2026-08-12.
+   Holders: .diff · .card .cmd · .codeblock pre · .io-row · .compact-sum (not scrollable, it wraps).
+   .io-row's left padding sits on its sticky .io-k instead — see there for why; the 10px is still
+   there, just owned by the label. */
 .fold { cursor: pointer; }
 /* --fold-extra: non-text overhead inside the block (an attachment-chip row), measured by
    foldBlock, so the 3-line cap counts TEXT lines */
@@ -265,13 +277,15 @@ body.at-top #fade-top { opacity: 0; }
 /* Same fight over overflow: `.card .cmd` (0,2,0, declared later) beat the collapsed rule's
    overflow:hidden, so a folded command kept its horizontal scrollbar — and the scrollbar eats the
    bottom of the 3-line content box, clipping the 3rd line to a third of its height. Every other
-   surface (.diff / .io-v / .codeblock pre) is a weaker selector and already crops while collapsed,
-   which is the intent: wide content scrolls when EXPANDED, crops while folded. */
+   surface (.diff / .io-row / .codeblock pre) is a weaker selector and already crops while
+   collapsed, which is the intent: wide content scrolls when EXPANDED, crops while folded.
+   That rule is why .io-row, not .io-v, is the element foldBlock is given: the collapsed overflow
+   only crops the box it lands on, so folding the inner value left the outer row scrolling. */
 .card .cmd.fold:not(.open) { overflow: hidden; }
 .msg-user.fold { --fold-fade: var(--user-bg); --fold-pad: 18px; --fold-bpad: 9px; }  /* 8+8 padding, 1+1 border */
 .card .cmd.fold, .diff.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
 .codeblock pre.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; --fold-bpad: 8px; }  /* border lives on .codeblock */
-.io-v.fold { --fold-fade: var(--code-bg); }                             /* padding lives on .io-row, so --fold-bpad stays 0 */
+.io-row.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; --fold-bpad: 8px; }  /* 8+8 padding, border lives on .io */
 
 /* markdown blockquote: a quiet left rule, not a panel — a quoted line inside an assistant block
    should read as an aside, not compete with the permission/ask cards. Nothing else in the UI uses
@@ -389,22 +403,45 @@ blockquote > *:last-child { margin-bottom: 0; }
 .path { font-family: ui-monospace, Consolas, monospace; }
 .io { margin: -6px 0 0 22px; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-.io-row { display: flex; gap: 10px; padding: 6px 10px; }
-.io-row + .io-row { border-top: 1px solid var(--border); }
-/* 22px is the floor: "OUT" measures 21.11px here, and anything narrower either overflows the
-   label into the gap or (below ~18px) breaks alignment between the IN and OUT rows. */
-.io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 22px; }
-/* pre (no wrap): long lines scroll horizontally like .diff / codeblock pre; min-width lets the
-   flex item shrink so the scrollbar appears instead of the row growing */
-.io-v { white-space: pre; flex: 1; min-width: 0; overflow-x: auto; }
+/* The ROW is the scroll box, and it is the box that carries the padding — the same one-element
+   arrangement .diff uses, and the whole reason its scrollbar looks right. A scrollbar is painted
+   at the bottom of its container's PADDING box, so putting both here lands it flush on the border
+   across the full width, with the content padded clear of it. Scrolling .io-v instead (what this
+   did until 2026-08-12) inset the bar 42px from the left — 10px padding + 22px label + 10px gap —
+   and floated it above the row's 6px bottom padding. */
+/* No LEFT padding: the sticky label carries it instead (see .io-k). A sticky item is clamped to
+   its containing block — the row's CONTENT box — so with padding here the label could not reach
+   the padding edge, got shoved 10px right, and ate the column gap between it and the value. */
+.io-row { display: flex; gap: 10px; padding: 8px 10px 8px 0; overflow-x: auto; }
+/* NOT `.io-row + .io-row`: a cut marker or note sits between two rows now, so the adjacent
+   sibling combinator stopped matching and the IN/OUT divider vanished. */
+.io .io-row:not(:first-child) { border-top: 1px solid var(--border); }
+/* Sticky because the row scrolls: unlike .diff's line-number gutter there is only ONE label per
+   row, so letting it scroll away leaves a wide box with nothing saying which half is which. The
+   background is what the text passes UNDER.
+   It owns the row's left padding (the row has none) so its sticky box reaches the padding edge and
+   its background covers that 10px gutter when scrolled. Doing the reverse — padding on the row and
+   pulling the label out with a negative margin — does NOT work: sticky clamps to the containing
+   block, so the label was pushed 10px right and the column gap between it and .io-v collapsed to 0,
+   leaving "OUT" jammed against the value.
+   32px is the floor, and it is 22 + 10 on purpose: "OUT" measures 21.11px, so 22px is the real
+   minimum — anything narrower overflows the label into the gap or (below ~18px) breaks IN/OUT
+   alignment. box-sizing is border-box globally, so that padding-left counts against min-width. */
+.io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 32px; padding-left: 10px;
+  position: sticky; left: 0; z-index: 1; background: var(--code-bg); }
+/* pre (no wrap): long lines keep their width and the ROW scrolls, like .diff / codeblock pre.
+   flex: none (not flex: 1 + min-width: 0) so the row's scrollWidth is driven by the text itself
+   rather than by overflow leaking out of a shrunk flex item — which also lets the fold's fade
+   gradient span the full scrollable width instead of stopping at the visible edge. */
+.io-v { white-space: pre; flex: none; }
 /* Truncation marker: what a cap PERMANENTLY dropped, as opposed to .fold, which only hides content
-   it still holds. It is a sibling of .io-v rather than a child precisely because foldBlock collapses
-   .io-v to three lines — inside it, the notice that content was cut would itself be cut. flex-basis
-   100% wraps it onto its own line under the value; the 32px indent is .io-k's 22px min-width plus
-   the row's 10px gap, so it aligns with .io-v (keep the three in step if any of them changes). */
-/* row-gap overrides the shorthand's 10px for the wrapped line only — the 10px column gap between
-   .io-k and .io-v is still what the label alignment depends on. */
-.io-row { flex-wrap: wrap; row-gap: 4px; }
+   it still holds. It sits OUTSIDE .io-row entirely — two reasons, and both must hold. The row is
+   the horizontal scroll box, so a marker inside it slides away with the text; and foldBlock
+   collapses .io-v to three lines, so a marker inside THAT would be folded away — the notice that
+   content was cut, cut. Its 42px indent aligns it with .io-v: the row's 10px padding + .io-k's
+   22px min-width + the 10px gap (keep the four in step if any of them changes).
+   The row is deliberately NOT flex-wrap now that nothing needs to wrap onto a second line: with
+   .io-v content-sized, wrapping dropped a wide value onto its own line beneath the label. */
 /* UI font, not the box's monospace: this is prose ABOUT the output, not more output — the switch
    is what keeps it from reading as a last line of the result. .io-note shares the geometry for the
    same reason it exists (one line about the row, below the value, outside the fold) but says a
@@ -438,7 +475,7 @@ blockquote > *:last-child { margin-bottom: 0; }
   object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 4px; background: var(--code-bg); cursor: zoom-in; display: block; }
 .tool-imgs .ti-missing { color: var(--muted); font-size: 11px; }
-.io-cut, .io-note { flex: 0 0 100%; margin-left: 32px; color: var(--muted); font-size: 11px;
+.io-cut, .io-note { display: block; padding: 0 10px 8px 42px; color: var(--muted); font-size: 11px;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
 .io-cut.click { cursor: pointer; }
 .io-cut.click:hover { color: var(--fg); text-decoration: underline; }

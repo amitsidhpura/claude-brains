@@ -200,6 +200,34 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **A scrollbar is painted at the bottom of its container's PADDING box.** So the element that
+  carries the padding must ALSO be the one that scrolls, or the bar floats mid-box: `.io` had
+  border on `.io`, padding on `.io-row` and `overflow-x` on `.io-v`, which inset the bar 42px from
+  the left and left a 6px gap under it. `.diff` puts all three on one element, which is the whole
+  reason it looks right. Same element for both is now a written contract in chat.css.
+- **`overflow: hidden` from `.fold:not(.open)` crops only the element it lands on.** Fold the
+  inner value while the outer row scrolls and a COLLAPSED block keeps its scrollbar. Give
+  `foldBlock` the scroll box itself and "crops folded, scrolls expanded" costs nothing.
+- **`position: sticky` is clamped to its containing block, and that beats your offsets.** The
+  idiom "padding on the parent + equal negative margin on the child, so the sticky box reaches the
+  padding edge" does NOT work: the child cannot move left of the parent's CONTENT box, so it gets
+  shoved right by exactly the padding and silently eats the flex `gap` after it — `OUT` ended up
+  jammed against its value. Put the padding on the sticky element instead and give the parent none
+  on that side.
+- **Sticky cannot rescue a `flex: 0 0 100%` item**: it fills its containing block, so there is no
+  slack to shift and it drifts with the scroll anyway. Worse, `100% + margin-left` is WIDER than
+  the container, so every row carrying one gained phantom scroll (32px) even with short content.
+  Anything that must not scroll belongs outside the scroll container, full stop.
+- **`flex-wrap: wrap` + a content-sized child = the child on its own line.** `.io-row` wrapped only
+  because the cut marker needed a second line; once `.io-v` became `flex: none`, a wide value
+  dropped below its label. Removing the wrap was only possible after the marker moved out.
+- **`box-sizing: border-box` is global here, so padding counts against `min-width`.** Adding 10px
+  of padding to `.io-k` silently dropped its 22px content floor to 12px, and IN/OUT rows stopped
+  agreeing on where the value starts. Floors on padded boxes must be written as content + padding.
+- **The mockup links `chat.css` with no cache-buster**, so a `?v=N` on the HTML re-fetches the page
+  and serves the STALE stylesheet — a CSS fix measured that way reads as "no effect". Swap the
+  `<link>` for a cache-busted one from JS before measuring, or you will debug a fix that already
+  worked.
 - **A bubbling document listener cannot see a click on any control that `stopPropagation`s.** The
   rename outside-click dismissal was built in the existing handler at `chat.html`'s
   `document.addEventListener('click', …)` and failed on `#histBtn`, the model/mode chips and the

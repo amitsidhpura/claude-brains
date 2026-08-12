@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-12 (fifth) — the IN/OUT box learns the diff's geometry; a contract falls out
+- One user request — "make IN/OUT same as the write permission panel, scrollbar to the border and
+  spacing inside" — that took four rounds because each fix exposed the next thing the old layout
+  had been hiding. Every round was caught by MEASURING, never by looking.
+- The difference was structural: `.diff` puts padding AND `overflow-x` on one element, so the
+  scrollbar lands at the bottom of its padding box (flush, full width). `.io` split them across
+  three, insetting the bar 42px. Moving the scroll to `.io-row` fixed that and broke three things
+  the markers had been papering over — see gotchas, all four are recorded there.
+- Round 2 (user's DevTools screenshots): `OUT` jammed against the value. Sticky clamps to its
+  containing block, so `padding on the row + negative margin on the label` shoved the label 10px
+  right and ate the column gap. Fixed by moving the row's left padding onto the label itself.
+- Round 3 (user): folded rows kept their scrollbar, where the Accept/Reject diff shows one only
+  when expanded. Cause: `overflow: hidden` crops only the element it lands on, and I had folded
+  `.io-v` while scrolling `.io-row`. Now `foldBlock(row)` — same element for both, like `.diff`.
+- Round 4 (user generalised it): every foldable block obeys one contract now, written into
+  chat.css above the fold rules. Audited all five surfaces; only `.io-row` deviated (6px→8px).
+- **The audit lied the first time and I nearly shipped it.** It reported "no failures" while
+  having skipped rule 2 entirely: I read `overflow-x` after restoring the fold class, so folded
+  elements reported `hidden` → "not scrollable" → the assertion never ran. Re-measured in the
+  expanded state, then force-folded the two surfaces the gallery never folds.
+- **User confirmed in runIde: "showing perfect".** That clears the real-JCEF question for this
+  work specifically — the scrollbar geometry was exactly the class of thing headless gets wrong.
+- Next: the register items 8.13/8.14/8.15 are still formally unticked, and fixture 44 has still
+  never been executed.
+
 ## 2026-08-12 (fourth) — three user reports; the third one taught the method
 - **Machine drift caught on load**: the context files said Windows `D:\sites\…`, the session was on
   Linux `/home/syncroze/Sites/…`. Both machines are real — state.md now says to check first. The
@@ -240,36 +265,19 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   6.4) and 7.4(a) live; only 5.14's scroll FEEL and an 8.2/8.7 error-tail eyeball remain.
 - Next: 10.5 openDiff accept-save, then 3.1 custom commands.
 
-## 2026-08-09 (later) — fixing round two: register 13 → 9 open, both rounds committed
-- 4.4 live edit diffs: in acceptEdits (or under a saved rule, or a pre-authorized path) the CLI
-  never sends `can_use_tool` at all, and the permission card was the ONLY live diff producer —
-  so live was strictly poorer than replay. Fixed optimistically from the tool_use INPUT the page
-  already had: stash at `content_block_stop`, ask Kotlin for the gutter line over a new
-  `lineStart` bridge round-trip, mount replay's own "Applied" card at `tool_result` unless a
-  permission card superseded it. MultiEdit gained an `edits[]` branch everywhere, which also
-  fixed its EMPTY permission-card preview — multi-hunk edits were being approved blind.
-- 5.9 plumbing strip (`RenderLimits.PLUMBING_TAGS`, shared via LIMITS) and 5.14 scroll pin
-  (keys off scroll DIRECTION now — the old at-bottom test lost the pin to any mid-turn reflow).
-- 5.13 addendum, and a diagnosis the user corrected: I read the duplicated-checklist screenshots
-  as "collapse consecutive lists"; the user pointed out replay was the CORRECT one and live was
-  missing the status titles. Real fix was relocating each live checklist under the tool line
-  that asked (tool_use_id echoed on the `__tasks` frame). Lesson: when live and replay disagree,
-  establish WHICH is right before designing the fix.
-- 6.4 split-button caret: parts were built one-per-suggestion, but a compound command is ONE
-  suggestion carrying several rules — wire-probed first, and the CLI does persist exactly the
-  picked subset when the echoed suggestion is narrowed. Then two defects only live testing could
-  find: the menu was clipped by `content-visibility` containment (which also defeats
-  synthetic-click assertions, so the harness was structurally blind), and it resized on hover.
-- User rejected my first sizing fix (always reserve 32px) — "lets do like conversations drop
-  down". The conversations list uses the same hover-only gutter and is stable only because
-  `#histPanel` is a FIXED width; copying that (310px + `min-width:0` to beat `.popup`'s 330px
-  base) was the right answer. Copy the working idiom whole, don't reinvent half of it.
-- Committed both rounds: `4a64433` (six issues) and `fe620ef` (four). Tests green; pushed.
-- Next: 10.5 openDiff accept-save — Kotlin-side, so runIde + direct MCP-over-WS, not the
-  headless harness. Plus the accumulated hardware re-verification sweep (state.md).
-
 ## Digest
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
+
+- **2026-08-09 (later)** — fixing round two, register 13 → 9 open, committed as `4a64433` +
+  `fe620ef`. 4.4 live edit diffs built optimistically from the tool_use INPUT, because under
+  acceptEdits the CLI never sends `can_use_tool` and the permission card had been the only live
+  diff producer (MultiEdit's empty preview fell out of the same fix — multi-hunk edits were being
+  approved blind); 5.9 plumbing strip and 5.14 scroll pin keyed off scroll DIRECTION; 6.4
+  split-button caret wire-probed first, then hit two defects only live testing finds
+  (`content-visibility` containment clipping the menu AND defeating synthetic-click assertions).
+  Two lessons promoted: when live and replay disagree, establish WHICH is right before designing
+  the fix; and copy a working idiom WHOLE (the conversations list's hover gutter is stable only
+  because its panel is a fixed width).
 
 - **2026-08-09 (first)** — the fixing session, register 19 → 13 open. All three webview keyboard
   chords removed (the plugin binds NO shortcuts); 1.7's Escape-reopen proved a SANDBOX artifact but

@@ -1,9 +1,13 @@
 # State
 
 ## Current focus
-**Nothing in flight.** The 2026-08-12 (fourth) session shipped three independent webview fixes,
-all committed to `main` and pushed, with **no version bump** — they ride the next release. 0.5.1
-remains the released version. Next work is whatever is picked from backlog.md.
+**Nothing in flight.** Two sessions on 2026-08-12 shipped four webview fixes, all on `main` and
+pushed, with **no version bump** — they ride the next release. 0.5.1 remains the released version.
+Next work is whatever is picked from backlog.md.
+
+The fourth fix (the IN/OUT box matching the permission card's diff, plus the foldable-block
+contract) was **confirmed by the user in `runIde`** — "showing perfect" — which is what the
+scrollbar geometry needed, since headless is unreliable for exactly that.
 
 The defect register in `docs/manual-test.md` still stands at **2 open ISSUE notes / 22 RESOLVED**
 (the open pair is 3.1 + 9.10, worked TOGETHER per the user). Three unchecked `[ ]` items were
@@ -31,6 +35,12 @@ reasoning, gotchas.md for the traps.
 3. **Busy state vs background tasks** — `message_start` now sets busy for a turn the panel did not
    send, and `pendingBgTasks` excludes background shells. Also `ClaudeCli.kt` now guards
    `if (!stopped) onEvent(line)`.
+4. **The IN/OUT box now has the diff's geometry** (2026-08-12, fifth session). `.io-row` is the
+   scroll box and carries the padding, so the scrollbar is flush on the border and full width;
+   `.io-k` is sticky and owns the left 10px; the cut/note markers moved OUT of the row (they are
+   siblings inside `.io`, mounted via a DocumentFragment from `ioRow`); `foldBlock` is given the
+   ROW, so a folded row crops instead of scrolling. All five foldable surfaces now obey one
+   contract written above the `.fold` rules in chat.css.
 
 ## Verification standing at the end of that session
 - `./gradlew test --rerun-tasks` — **87 tests** green (86 before; +1 for the browser_evaluate IN
@@ -40,13 +50,15 @@ reasoning, gotchas.md for the traps.
   file in each case.
 - Browser-measured through the REAL spliced `chat.html` (not just the mockup) at 420px and default
   width; the busy-state fix was verified against **real captured CLI wire frames**.
-- **Not run: `runIde`.** All three fixes are unconfirmed in real JCEF, and the live harness fixture
-  `tools/fixtures/44-background-shell-busy-state.json` has never been executed (`python
-  tools/live_harness.py 44` needs the panel up). This is the top of the next session's list.
+- **`runIde`: partly done.** The user ran it and confirmed the IN/OUT + fold work renders
+  correctly. NOT separately confirmed: register items 8.13 (rename outside-click), 8.14 (MCP tool
+  lines) and 8.15 (background shell lifecycle) are still unticked, and the live harness has not
+  been re-run — `tools/fixtures/44-background-shell-busy-state.json` has **never** been executed
+  (`python tools/live_harness.py` needs the panel up).
 
 ## Next steps
-- [ ] **`runIde` sweep**: manual-test 8.13 / 8.14 / 8.15, plus `python tools/live_harness.py`
-      (137/137 baseline + the new fixture 44).
+- [ ] **Finish the `runIde` sweep**: tick manual-test 8.13 / 8.14 / 8.15 deliberately, and run
+      `python tools/live_harness.py` (137/137 baseline + the never-executed fixture 44).
 - [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing). `cmdKind` (chat.html) has
       no custom-command detection, so everything outside {clear, compact} greys as 'tui'.
       Constraint: the CLI's `commands` payload has NO type field. Fixture already in place.

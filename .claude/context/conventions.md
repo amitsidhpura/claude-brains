@@ -39,6 +39,11 @@
   by side** and let the user pick; do not iterate one guess at a time.
 - Every new test suite gets its negative control RUN, not just written: assert a wrong value (or
   run the fixture against `git show HEAD:` of the file) and confirm it fails.
+- **A check that skips its own assertion is indistinguishable from a passing one.** A 2026-08-12
+  audit reported "no failures" while never running its main rule: it read `overflow-x` after
+  restoring the fold class, so folded elements looked "not scrollable" and fell out of the branch.
+  When an audit filters what it inspects, print WHAT IT ACTUALLY CHECKED and confirm the list is
+  the one you meant — an empty failure list proves nothing on its own.
 
 ## Code & assets
 - **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/`
