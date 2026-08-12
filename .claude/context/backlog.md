@@ -13,6 +13,11 @@
   lockfile cleanup on unload if touched anyway.
 
 ## Next up
+- Kill a background process from the panel: the roster rows (`renderBgTasks`) are display-only and
+  `interrupt()` only stops the in-flight response — the CLI kills shells via the `TaskStop` tool,
+  which only the model can call. Needs a bridge verb + an action on the roster row (conversations-
+  list hover-gutter idiom). Found 2026-08-12 while fixing the busy-state defects; the CLI has no
+  host-side control request for this today, so check the protocol first.
 - VFS refresh after CLI writes: an accepted edit needs "Reload from disk" to show in an open
   editor — the CLI writes out-of-band and the plugin never refreshes the VirtualFile (verified
   2026-08-09: no refresh call anywhere; sandbox has no native file watcher, and frame-activation

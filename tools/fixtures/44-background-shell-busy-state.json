@@ -1,0 +1,88 @@
+{
+  "item": "manual-test 8.15",
+  "branch": "busy state vs background tasks — shells don't suspend, CLI-initiated turns still show Stop",
+  "provenance": "Every frame shape here is from a REAL stream-json capture (2026-08-12, CLI 2.1.228, scratchpad wire-short.jsonl / wire.jsonl): a `Bash run_in_background:true` turn, recorded end to end. The captures established both defects this pins: (1) `background_tasks_changed` reports background shells as task_type local_bash, but the CLI's own busy set (fVy in the binary) excludes local_bash — the shell's `result` IS the true end of the request, so counting it in pendingBgTasks parked busy=true for the life of the process; (2) after the shell completes, the CLI starts a notification turn with NO user frame on the wire — message_start is the only render-time signal — and the panel stayed on Send while it printed. The setBusy(true) in the setup steps stands in for sendTurn's busy half without bridging a real message to the CLI.",
+  "steps": [
+    {
+      "note": "setup: the panel is mid-turn, as after a real send",
+      "frames": [],
+      "expect": [
+        {"js": "(setBusy(true), busy)", "equals": true, "why": "busy on, as sendTurn leaves it"},
+        {"js": "send.classList.contains('stop')", "equals": true, "why": "button offers Stop"}
+      ]
+    },
+    {
+      "note": "a background SHELL joins the roster and the turn's true result arrives while it runs (sleep-30 ordering) — the result must finalize, because the CLI is idle from here",
+      "frames": [
+        {"type": "system", "subtype": "background_tasks_changed",
+         "tasks": [{"task_id": "bkzbro3ds", "task_type": "local_bash", "description": "Sleep for 30 seconds"}]},
+        {"type": "result", "subtype": "success", "is_error": false, "duration_ms": 4159,
+         "num_turns": 2, "result": "Started sleep in the background.", "usage": {"output_tokens": 40}}
+      ],
+      "expect": [
+        {"js": "busy", "equals": false, "why": "a shell does not suspend the turn — this result is the true end"},
+        {"js": "send.classList.contains('stop')", "equals": false, "why": "button back to Send"},
+        {"js": "document.getElementById('bgChip').hidden", "equals": false, "why": "the chip still shows the live shell — filtering is pendingBgTasks-only, the roster is untouched"},
+        {"js": "document.getElementById('bgChip').textContent", "equals": "1 task", "why": "still on the roster"}
+      ]
+    },
+    {
+      "note": "the shell completes and the CLI starts its notification turn — NO user frame precedes it on the wire (measured; the transcript persists one, the stream does not), so message_start must flip busy itself or Stop is unreachable while text prints",
+      "frames": [
+        {"type": "system", "subtype": "background_tasks_changed", "tasks": []},
+        {"type": "stream_event", "event": {"type": "message_start",
+          "message": {"model": "claude-opus-5", "id": "msg_011Cdy8xDzqSg1d63UrjzzCQ", "type": "message",
+                      "role": "assistant", "content": [], "stop_reason": null,
+                      "usage": {"input_tokens": 2, "output_tokens": 1}}}}
+      ],
+      "expect": [
+        {"js": "busy", "equals": true, "why": "a turn WE did not start is still a turn"},
+        {"js": "send.classList.contains('stop')", "equals": true, "why": "Stop is reachable while the notification turn streams — the reported bug"},
+        {"js": "send.title", "equals": "Stop", "why": "and the tooltip agrees"}
+      ]
+    },
+    {
+      "note": "the notification turn's own result finalizes it normally",
+      "frames": [
+        {"type": "result", "subtype": "success", "is_error": false, "duration_ms": 1797,
+         "num_turns": 1, "result": "It finished — exit code 0.", "usage": {"output_tokens": 12}}
+      ],
+      "expect": [
+        {"js": "busy", "equals": false, "why": "back to idle"},
+        {"js": "send.classList.contains('stop')", "equals": false, "why": "Send again"}
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — a background SUBAGENT still suspends: its intermediate result must NOT finalize the turn. This is the branch the local_bash filter must not eat, and an unknown task_type must land on this side too (deny-list)",
+      "frames": [],
+      "expect": [
+        {"js": "(setBusy(true), busy)", "equals": true, "why": "mid-turn again"}
+      ]
+    },
+    {
+      "note": "agent-type task on the roster, then an intermediate result — swallowed, spinner keeps going",
+      "frames": [
+        {"type": "system", "subtype": "background_tasks_changed",
+         "tasks": [{"task_id": "ag1", "task_type": "local_agent", "description": "Research task"}]},
+        {"type": "result", "subtype": "success", "is_error": false, "duration_ms": 2000,
+         "num_turns": 1, "result": "suspending", "usage": {"output_tokens": 5}}
+      ],
+      "expect": [
+        {"js": "busy", "equals": true, "why": "an agent task suspends — the intermediate result must not finalize"},
+        {"js": "send.classList.contains('stop')", "equals": true, "why": "still interruptible"}
+      ]
+    },
+    {
+      "note": "the agent reports back: roster empties, the real result finalizes",
+      "frames": [
+        {"type": "system", "subtype": "background_tasks_changed", "tasks": []},
+        {"type": "result", "subtype": "success", "is_error": false, "duration_ms": 9000,
+         "num_turns": 3, "result": "done", "usage": {"output_tokens": 80}}
+      ],
+      "expect": [
+        {"js": "busy", "equals": false, "why": "true end finalizes"},
+        {"js": "document.getElementById('bgChip').hidden", "equals": true, "why": "roster empty, chip gone"}
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains.session
 
+import io.github.amitsidhpura.claudebrains.RenderLimits
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
@@ -575,6 +576,89 @@ class SessionStoreTest {
 
             assertNull(tools[2]["cmd"], "a tool with no command and no prompt gets no IN box")
             assertNull(tools[3]["cmd"], "a whitespace-only prompt is not an instruction")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * `mcp__playwright__browser_evaluate`'s JS body belongs in the IN box, not on the tool line.
+     *
+     * `function` sat in [RenderLimits.DESC_KEYS] from 2026-08-05, added to close the blank-tool-line
+     * gap on the assumption its value reads like prose. It does not: measured across the nine real
+     * `browser_evaluate` records in local transcripts it runs 230-2965 characters of multi-line JS,
+     * so at [RenderLimits.DESC_MAX] the panel showed a mid-token slice of the first line, wrapped
+     * across the tool line. It moved to [RenderLimits.IN_KEYS] on 2026-08-12 — the same shape as
+     * Bash, whose line is blank because the command is in the box.
+     *
+     * THE FIXTURE IS THE POINT. The case that let this through used `() => document.title` — 21
+     * characters on one line — which cannot express the failure at all: it fits under every cap and
+     * has nothing to wrap. This one is multi-line and kilobyte-scale, like the real records.
+     */
+    @Test
+    fun `a browser_evaluate's JS body fills the IN box, and its tool line stays blank`() {
+        // Shaped like the real thing — an arrow function whose body is a run of DOM assertions —
+        // and sized into the middle of the measured 230-2965 band rather than to a round number.
+        val fn = buildString {
+            append("() => {\n")
+            append("  const head = document.getElementById('head');\n")
+            append("  const editing = () => head.classList.contains('editing');\n")
+            append("  const fire = el => el.dispatchEvent(new MouseEvent('click', {bubbles: true}));\n")
+            append("  const r = [];\n")
+            repeat(16) { i ->
+                append("  startRename(); fire(document.getElementById('target-$i'));\n")
+                append("  r.push(['case $i closes the editor', editing() === false]);\n")
+            }
+            append("  return r.map(x => (x[1] ? 'PASS  ' : 'FAIL  ') + x[0]);\n")
+            append("}")
+        }
+        val huge = fn + "\n" + "// pad\n".repeat(RenderLimits.CMD_MAX)   // deliberately past the cap
+
+        fun toolUse(id: String, name: String, input: String) =
+            """{"type":"assistant","uuid":"$id","timestamp":"2026-08-12T10:00:00.000Z","message":""" +
+                """{"id":"m$id","role":"assistant","content":[{"type":"tool_use","id":"$id",""" +
+                """"name":"$name","input":$input}]}}"""
+        fun jsonStr(s: String) = Json.encodeToString(String.serializer(), s)
+
+        val jsonl = listOf(
+            toolUse("t1", "mcp__playwright__browser_evaluate", """{"function":${jsonStr(fn)}}"""),
+            // over CMD_MAX: the box must say what it dropped, which a description never could
+            toolUse("t2", "mcp__playwright__browser_evaluate", """{"function":${jsonStr(huge)}}"""),
+            // `element` still describes the line for the Playwright tools that carry one — moving
+            // `function` must not disturb the rest of the chain
+            toolUse("t3", "mcp__playwright__browser_click", """{"element":"the Submit button","target":"e42"}"""),
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-evaluate", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "evaluate.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val tools = SessionStore.readTranscript(CWD, "evaluate")
+                .filter { it["role"]?.jsonPrimitive?.contentOrNull == "tool" }
+            assertEquals(3, tools.size)
+
+            assertTrue(
+                fn.length > RenderLimits.DESC_MAX * 10 && fn.contains('\n'),
+                "the fixture must be able to express the bug: multi-line and far past DESC_MAX, " +
+                    "not the 21-char one-liner that shipped with it (was ${fn.length} chars)",
+            )
+            assertNull(tools[0]["desc"], "the tool line is blank by design — the body is in the box")
+            assertEquals(fn, tools[0]["cmd"]?.jsonPrimitive?.contentOrNull,
+                "and the box holds the function whole, newlines and all")
+            assertNull(tools[0]["cmdCut"], "a real-world function is under CMD_MAX, so nothing is cut")
+
+            assertNull(tools[1]["desc"])
+            assertEquals(RenderLimits.CMD_MAX, tools[1]["cmd"]!!.jsonPrimitive.content.length,
+                "past the cap it is cut to CMD_MAX, the same rule as a Bash command")
+            assertNotNull(tools[1]["cmdCut"], "and the cut is announced, unlike the silent DESC_MAX")
+
+            assertEquals("the Submit button", tools[2]["desc"]?.jsonPrimitive?.contentOrNull,
+                "the rest of DESC_KEYS is untouched")
+            assertNull(tools[2]["cmd"], "and a tool with no IN key still gets no box")
         } finally {
             SessionStore.claudeHome = home
             tmpHome.deleteRecursively()

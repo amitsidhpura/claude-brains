@@ -3,6 +3,58 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-12 — Busy is a fact about the STREAM, not about who sent the turn
+`message_start` sets busy when it is false, resetting the request-scoped counters (`turnTokens`,
+`reqTokens`, `reqSeed`, `retrySeen`) exactly as `sendTurn` does. Separately, `pendingBgTasks`
+counts only tasks whose `task_type` is NOT `local_bash`.
+**Why:** `setBusy(true)` had exactly one call site — inside `sendTurn` — so a turn the CLI started
+on its own streamed with the button on Send, and Stop (the only interrupt control) was unreachable.
+That happens on every background-shell completion: the CLI injects its notification prompt and
+starts a turn. **Measured, not inferred** — a real stream-json capture (CLI 2.1.228, kept at
+`_local/wire-short.jsonl`) shows the notification turn arriving with NO user frame on the wire,
+which is what makes `message_start` the only possible hook; the transcript persists a `user`
+record, the live stream does not. The counter reset is required because it IS a new request (the
+CLI brackets it with `system/init` + `status:"requesting"`); without it the done line billed the
+previous request's tokens (142 vs its own 12, measured). The shell half is the same premise from
+the other side: the CLI's own busy set excludes `local_bash`, so a shell's `result` is the true end
+and counting it parked busy for the life of the process.
+**Rejected:** the CLI's allow-list form for the filter — an unknown `task_type` must count as
+SUSPENDING, because finalizing a live request early corrupts its accounting and drains the queue
+into it, while failing to un-suspend is a visible spinner that heals when the roster empties.
+Also rejected: hooking `system/status:"requesting"` (fires ~3x per ordinary turn) or a `user` frame
+(does not exist on the wire). `ClaudeCli.route` gained `if (!stopped) onEvent(line)` as a
+consequence — a stale buffered `message_start` after a restart would now set busy with no result
+coming.
+
+## 2026-08-12 — A value that IS the work goes in the IN box, not the description
+`"function"` moved from `RenderLimits.DESC_KEYS` to `IN_KEYS`, so `mcp__playwright__browser_evaluate`
+renders like Bash: blank tool line, JS body in the IN box. `.t-desc` also gained a one-line clamp
+(`nowrap` + ellipsis) with the SHOWN text mirrored onto `title`.
+**Why:** `function` joined DESC_KEYS on 2026-08-05 to close 15 blank lines, assuming its value reads
+like prose. Measured across the nine real calls in local transcripts it is 230-2965 characters of
+multi-line JS — `DESC_MAX` produced a mid-token slice, wrapped across the line. IN_KEYS' own rule
+already covered it: "whose value is the instruction ITSELF". The IN box is `white-space: pre`,
+scrolls sideways, folds to three lines and caps at `CMD_MAX`, which no real call reaches. Neither
+reference client puts code on the line either. The tooltip carries the post-`DESC_MAX` string
+deliberately: it reveals what the CLAMP hid, never what the CAP dropped.
+**Rejected:** keeping it in both lists (the duplicate-description bug fixed the day before), and
+clamping the description without moving it (the code stays unreachable). `toolLabel()` left alone —
+changing `PlaywrightBrowserEvaluate` to VS Code's `Playwright [browser_evaluate]` would reopen a
+settled 2026-07-30 decision and add the first MCP branch to a deliberately universal rule.
+
+## 2026-08-12 — The rename editor dismisses on CAPTURE, the one place the popup idiom does not fit
+An outside click discards the rename (like Escape and ✕, never commits), via a document listener
+registered with `capture: true` — unlike every other dismissal in chat.html, which bubbles.
+**Why:** built first in the existing bubbling handler, per plan, and it failed on exactly the
+clicks most likely to follow: `#histBtn`, the model/mode chips and the effort dots all
+`stopPropagation` in their own handlers, so their clicks never reach a bubbling document listener.
+Capture runs before any target handler. Discard rather than commit because a stray click would
+append a `custom-title` record with no undo. Excluding `#convTitle` as well as `#convEdit` keeps
+the opening click from closing the editor it just opened.
+**Rejected:** a `blur`/focus-loss dismissal — there is ZERO `blur` handling in the webview, and
+every popup stays open when the panel loses focus; rename must not become the only surface that
+does otherwise. Also rejected: adding blur to every surface (wider blast radius, no request).
+
 ## 2026-08-12 — The replay window keeps the NEWEST blocks, and says so at its top edge
 `readTranscript` reads the whole file and evicts from the FRONT once it holds more than
 `MAX_BLOCKS` (20,000, was 4,000). The cut is the first `user` block at or after the minimum that

@@ -389,6 +389,10 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       absence is the correct end state either way. (b) stays pinned by fixture 07 + unit tests.
 - [x] 7.5 During a background suspend, the turn does NOT show a completion summary early;
       one summary at the true end
+      **(scope corrected 2026-08-12:** this holds for AGENT-type tasks only. A background SHELL
+      (`task_type "local_bash"`) does not suspend — the CLI goes idle and its `result` IS the true
+      end, so there the summary SHOULD appear while the chip still shows the shell. Validated
+      originally against sub-agents; the shell case is 8.15 and fixture 44.)
 
 ## 8. Sessions & replay
 
@@ -443,6 +447,20 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       the CURRENT session's row offers no delete
 - [x] 8.12 Attachment chips: clicking an image opens the lightbox overlay (Esc or click
       closes); clicking a PDF/text chip opens a native Save As dialog
+- [ ] 8.13 Header rename editor: clicking anywhere outside it DISCARDS the edit (like Esc and ✕).
+      The cases that actually broke: the composer, an open popup, and the neighbouring header
+      controls (history button, model/mode chips, effort dots) — those stopPropagation, which is
+      why this dismissal listens on the CAPTURE phase. ✓ and Enter still commit; leaving the IDE
+      panel entirely leaves it open, matching the popups
+- [ ] 8.14 An MCP `browser_evaluate` renders like Bash: tool line blank, the JS body in a folded IN
+      box that scrolls sideways rather than wrapping. And any long description (a big ToolSearch
+      query) sits on ONE line with an ellipsis, full text on hover — check a path line too, which
+      must still ellipsise in the MIDDLE with the filename intact
+- [ ] 8.15 Background shell lifecycle (real `Bash run_in_background:true`): the turn finalizes with
+      its summary while the chip still shows the task (a shell does not suspend); when the shell
+      completes and the CLI streams its notification turn, the button flips to STOP while it
+      prints — that turn arrives with no user frame, and Stop must be reachable (the 2026-08-12
+      report). Fixture 44 replays the recorded wire; this item is the live-CLI confirmation
 
 ## 9. Resilience & notices
 

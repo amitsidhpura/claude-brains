@@ -748,6 +748,18 @@
     closeCardMenus();
     closeMenus();
   });
+  // An outside click DISCARDS the rename, like Escape and ✕ — never commits, since a stray click
+  // would append a custom-title record with no way back.
+  //
+  // CAPTURE, unlike every other dismissal in this file, and the one place the popup idiom does not
+  // fit: the controls nearest the title (#histBtn, the model/mode chips, the effort dots) all
+  // stopPropagation in their own handlers, so their clicks never reach the bubbling listener above
+  // — the editor would survive exactly the clicks most likely to follow it. Capture runs before any
+  // target handler, so no stopPropagation can hide a click from this. Excluding #convTitle is what
+  // keeps the opening click from closing the editor it just opened.
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#convEdit') && !e.target.closest('#convTitle')) endRename();
+  }, true);
   lightbox.addEventListener('click', function (e) {
     if (e.target === lightbox || e.target.closest('.lb-x')) lightbox.classList.remove('show');
   });
@@ -1807,7 +1819,7 @@
             // `fullPath` is the UNCAPPED path (SessionStore sends it beside the DESC_MAX-capped
             // desc) — the click needs the whole thing, the display does not.
             if (it.isPath) fillPath(d, it.fullPath || it.desc, it.desc);
-            else d.textContent = it.desc;
+            else d.title = d.textContent = it.desc;   // shown text, not the raw value — see live
             if (it.suffix) {
               const sEl = document.createElement('span');
               sEl.className = 't-sfx'; sEl.textContent = it.suffix;
@@ -2759,9 +2771,19 @@
           compactBlock('', cm.trigger, cm.pre_tokens || cm.preTokens || 0);
           ctxUsed = 0; renderContext();
         } else if (ev.subtype === 'background_tasks_changed') {
-          // A background subagent suspends the turn: each suspension emits a `result`, and the
-          // CLI resumes with another once the task reports back. `pendingBgTasks` is what lets
-          // onResult tell an intermediate suspend from the request's true end.
+          // The roster mixes two kinds of task, and only one suspends the turn. A background
+          // SUBAGENT does: the CLI emits an intermediate `result` and resumes with the real one
+          // when the task reports back — `pendingBgTasks` is what lets onResult tell that suspend
+          // from the request's true end. A background SHELL (task_type "local_bash") does NOT:
+          // measured 2026-08-12 (CLI 2.1.228 — its busy set deliberately excludes local_bash), the
+          // CLI goes idle and the `result` that arrives IS the true end. Counting shells here
+          // parked busy=true for the life of the process: stuck Stop, no summary, queued messages
+          // never draining.
+          //
+          // A deny-list on purpose, not the CLI's allow-list: an UNKNOWN task_type must count as
+          // suspending. Finalizing a live request early corrupts its accounting and drains the
+          // queue into it (the harm sendTurn's busy guard exists to prevent); failing to
+          // un-suspend is only a visible spinner that heals when the roster empties.
           //
           // REPLACE semantics, in the schema's own words: "Every live background task after the
           // change. REPLACE semantics: swap your set for this payload." So this assigns — it must
@@ -2769,7 +2791,9 @@
           // not an edge one, which is why the roster is a chip that reflects the present rather
           // than a timeline entry that accumulates.
           bgTasks = Array.isArray(ev.tasks) ? ev.tasks : [];
-          pendingBgTasks = bgTasks.length;
+          pendingBgTasks = bgTasks.filter(function (t) {
+            return !t || t.task_type !== 'local_bash';
+          }).length;
           renderBgTasks();
         } else if (ev.subtype === 'status') {
           // Item 35. `permissionMode` on this frame is already read above, like every system event.
@@ -3012,6 +3036,19 @@
   function onStream(e) {
     switch (e.type) {
       case 'message_start': {
+        // A turn WE did not start is still a turn. Measured 2026-08-12 (real stream-json capture,
+        // CLI 2.1.228): when a background task completes, the CLI injects its notification prompt
+        // and streams a response with NO user frame on the wire — the transcript persists one, the
+        // live stream does not — so message_start is the only render-time signal there is. Without
+        // this the panel kept reading idle: text printing with the button on Send, and Stop (the
+        // only interrupt control) unreachable. The counters reset exactly as sendTurn's do, because
+        // this IS a new request — the CLI brackets it with system/init + status "requesting" — and
+        // carrying them over would bill the previous request's tokens to this done line and reuse
+        // its seed. bgTasks/pendingBgTasks stay: the roster is a level signal with its own frames.
+        if (!busy) {
+          turnTokens = 0; reqTokens = 0; reqSeed = null; retrySeen = null;
+          setBusy(true);
+        }
         flushMd();
         curBubble = null; curRaw = '';
         curMsgUuid = null; curMsgEls = [];
@@ -3092,7 +3129,9 @@
               // A path is drawn through the shared helper (project-relative, one line, absolute on
               // dataset.path); the cap applies to descriptions, which have no clickable half.
               if (LIM.pathKeys.indexOf(descKey) !== -1) fillPath(dEl, raw, raw.slice(0, LIM.descMax));
-              else dEl.textContent = raw.slice(0, LIM.descMax);
+              // title carries the SHOWN text, not `raw`: the tooltip exists to reveal what the
+              // one-line CSS clamp hid, never what descMax deliberately dropped.
+              else dEl.title = dEl.textContent = raw.slice(0, LIM.descMax);
               // Outside the cap and outside .t-desc.path: the range must survive a truncated path,
               // and it is not part of the filename the click handler sends to the editor.
               const sfx = descSuffix(openTool.name, inp.offset, inp.limit);
@@ -3523,7 +3562,10 @@
     // A background subagent suspends the turn: the CLI emits an intermediate `result` while the
     // task runs, then resumes and emits the real one after it reports back (same session_id, so
     // that can't discriminate). Don't finalize — no summary, keep the loader spinning — while any
-    // background task is still pending. background_tasks_changed empties just before the last result.
+    // SUSPENDING task is still pending. pendingBgTasks already excludes background shells
+    // (task_type "local_bash", see background_tasks_changed): a shell outlives its turn, so for
+    // those this result IS the true end. background_tasks_changed empties just before the last
+    // result in the subagent case.
     if (!ev.is_error && pendingBgTasks > 0) return;
     // Total request wall-clock (workStart persists across suspends since we don't setBusy(false)
     // on the intermediate results); reqTokens is summed across every turn in the request.

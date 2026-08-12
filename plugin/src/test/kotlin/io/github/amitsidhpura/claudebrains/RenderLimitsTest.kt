@@ -85,11 +85,11 @@ class RenderLimitsTest {
             "{descMax:140,cmdMax:4000,outMax:2000,pathTailMax:40," +
                 "descKeys:[\"description\",\"file_path\",\"path\",\"pattern\",\"query\",\"url\"," +
                 "\"element\",\"filename\",\"target\",\"skill\",\"status\",\"taskId\",\"task_id\"," +
-                "\"function\",\"uri\"]," +
+                "\"uri\"]," +
                 "pathKeys:[\"file_path\",\"path\"]," +
                 "resultSkip:[\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\",\"ExitPlanMode\"," +
                 "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\",\"TaskList\"]," +
-                "inKeys:[\"command\",\"prompt\"]," +
+                "inKeys:[\"command\",\"prompt\",\"function\"]," +
                 "plumbingTags:[\"tool_use_error\",\"system-reminder\"]}",
             RenderLimits.asJs(),
         )
@@ -767,8 +767,9 @@ class RenderLimitsTest {
             Triple("TaskUpdate", """{"taskId":"t-42","status":"in_progress"}""", "in_progress" to false),
             Triple("TaskStop", """{"task_id":"t-42"}""", "t-42" to false),
             Triple("Skill", """{"skill":"pdf","args":"x"}""", "pdf" to false),
-            Triple("mcp__playwright__browser_evaluate", """{"function":"() => document.title"}""",
-                "() => document.title" to false),
+            // `function` is deliberately NOT here: it moved to IN_KEYS 2026-08-12, so
+            // browser_evaluate's line is blank by design and its body is in the IN box. Covered by
+            // `a browser_evaluate's JS body fills the IN box, and its tool line stays blank`.
         )
         val lines = cases.mapIndexed { i, (name, input, _) ->
             """{"type":"assistant","uuid":"u$i","timestamp":"2026-08-02T10:00:0$i.000Z",""" +

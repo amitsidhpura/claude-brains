@@ -96,8 +96,13 @@ panel is for AFTER you know the data exists.
   `amitsidhpura`. Upload token: created in the **My Tokens** tab of
   `plugins.jetbrains.com/author/me/tokens`, stored ONLY as the GitHub repo secret
   `JETBRAINS_MARKETPLACE_TOKEN` (set 2026-08-12). Never in the repo, never in a file.
-- **Current machine (since 2026-08-12): Windows 11.** Repo `D:\sites\claude-brains`, home
-  `C:\Users\Supple-7`, transcripts `C:\Users\Supple-7\.claude\projects\D--sites-<project>\`, CLI at
-  `~/.local/bin/claude`, JDK 21 at `~/.jdks/ms-21.0.12` (on PATH, `JAVA_HOME` set), Gradle via the
-  committed wrapper (8.10.2). Anything in these files reading `/home/syncroze/…`, `~/Sites/…` or
-  `.zshrc` predates the move and refers to a machine that is gone.
+- **TWO machines, both real — check which one you are on** (corrected 2026-08-12; an earlier save
+  wrongly declared the Linux box "gone"):
+  - **Linux**: repo `/home/syncroze/Sites/claude-brains`, home `/home/syncroze`, transcripts
+    `~/.claude/projects/-home-syncroze-Sites-<project>/`, CLI `~/.local/bin/claude` (versions under
+    `~/.local/share/claude/versions/`), Java 21.0.12 Temurin on PATH. Sibling test repo
+    `~/Sites/claude-brains-testing` (**-testing**, not -test).
+  - **Windows 11**: repo `D:\sites\claude-brains`, home `C:\Users\Supple-7`, transcripts
+    `C:\Users\Supple-7\.claude\projects\D--sites-<project>\`, JDK 21 at `~/.jdks/ms-21.0.12`.
+    Sibling test repo `D:\sites\claude-brains-test`.
+  Gradle via the committed wrapper (8.10.2) on both.

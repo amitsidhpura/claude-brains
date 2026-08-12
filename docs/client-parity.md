@@ -241,6 +241,17 @@ What the sub-agent was actually asked to do.
 ### 4. Background task roster
 Which background tasks are running while the turn is suspended.
 
+> **Premise corrected 2026-08-12.** "While the turn is suspended" is true only for AGENT-type
+> tasks. The roster also reports background shells (`task_type: "local_bash"`), which do NOT
+> suspend — the CLI's own busy set excludes `local_bash` (verified in the 2.1.228 binary), it goes
+> idle, and the request's `result` is its true end. Counting shells in `pendingBgTasks` parked the
+> panel busy for the life of the process; and the notification turn the CLI starts when a shell
+> completes carries NO user frame on the wire (measured — the transcript persists one, the live
+> stream does not), so the panel showed Send while it printed. Both fixed: `pendingBgTasks` now
+> excludes `local_bash` (deny-list — an unknown type still suspends), and `message_start` sets
+> busy for a turn the panel did not send. The terminal's own split (a live list AND `/bashes` for
+> shells) was the tell. Pinned by fixture 44.
+
 - **Terminal:** ✅ live list; `/bashes` for shells.
 - **VS Code:** ✅ `subagentTasks` map driven by `system/task_started`, `task_progress`,
   `task_notification`.
@@ -302,6 +313,13 @@ an empty description — a tool line with nothing on it.
   getDiagnostics 1. Still blank BY DESIGN: Bash 458, AskUserQuestion 49, ExitPlanMode 11,
   TodoWrite 11 (wants item 14's checklist). `todos`/`plan` stay out — stringifying a structure into
   140 characters is worse than the blank it replaces.
+  **Corrected 2026-08-12:** `function` was the wrong fix for 15 of those 74. A JS body is neither
+  prose nor a reference but the WORK ITSELF — the same class of mistake as `todos`/`plan`, in a
+  third shape — and at 230-2965 characters it rendered as a mid-token slice wrapped across the
+  line. Moved to `IN_KEYS`, so `browser_evaluate` now reads like Bash: blank line, body in the box.
+  59 lines are fixed by the chain, 15 by the box. Neither reference client puts code on the line
+  either — the TUI shows `playwright - browser_evaluate (MCP)` with no argument at all, and VS Code
+  omits `function` from its own 9-key chain and returns `null` from `renderInput` for MCP tools.
 
 ## B. Tool results
 

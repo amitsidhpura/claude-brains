@@ -1,61 +1,62 @@
 # State
 
 ## Current focus
-**Nothing in flight.** 0.5.1 is released and listed; the 2026-08-12 (third) session shipped the
-windowed-replay fixes described below, committed to `main` and pushed, with no version bump — they
-ride the next release. Next work is whatever is picked from backlog.md.
+**Nothing in flight.** The 2026-08-12 (fourth) session shipped three independent webview fixes,
+all committed to `main` and pushed, with **no version bump** — they ride the next release. 0.5.1
+remains the released version. Next work is whatever is picked from backlog.md.
 
-The defect register in `docs/manual-test.md` is untouched by that session and still stands at
-**2 open ISSUE notes / 22 RESOLVED** — the open pair is 3.1 + 9.10, worked TOGETHER per the user.
+The defect register in `docs/manual-test.md` still stands at **2 open ISSUE notes / 22 RESOLVED**
+(the open pair is 3.1 + 9.10, worked TOGETHER per the user). Three unchecked `[ ]` items were
+ADDED this session — 8.13, 8.14, 8.15 — which are live-CLI confirmations of this session's work,
+not defects.
 
-## The machine: Windows
-Repo `D:\sites\claude-brains`, home `C:\Users\Supple-7`. Transcripts live in
-`C:\Users\Supple-7\.claude\projects\D--sites-<project>\` (non-alphanumerics → `-`). Java 21 +
-Gradle 8.10.2 on PATH; run `./gradlew` from `plugin/`. Chrome for headless probes is at
-`/c/Program Files/Google/Chrome/Application/chrome.exe`. The sibling test repo is
-`D:\sites\claude-brains-test`; the fixture `.claude/commands/dummy-cmd.md` (for 3.1/9.10) still
-has to be recreated there. Anything in these files reading `/home/syncroze/…` or `.zshrc` predates
-the move and refers to a machine that is gone.
+## The machine: Linux (corrected 2026-08-12)
+Earlier saves claimed Windows `D:\sites\claude-brains`; this session ran on **Linux**, repo
+`/home/syncroze/Sites/claude-brains`, home `/home/syncroze`, Java 21.0.12 (Temurin), `claude` at
+`~/.local/bin/claude` (versions under `~/.local/share/claude/versions/`, 2.1.228 current).
+Transcripts at `~/.claude/projects/-home-syncroze-Sites-<project>/`. The sibling test repo is
+`~/Sites/claude-brains-testing` (**not** `-test`), and its fixture
+`.claude/commands/dummy-cmd.md` **exists** — so 3.1/9.10 is unblocked, contrary to older notes.
+Both machines are real; check which one you are on before trusting a path.
 
-## What shipped in the 2026-08-12 (third) session
-All from one user screenshot — a session resumed showing work six days stale. See decisions.md for
-the reasoning and gotchas.md for the traps.
-- **`SessionStore.readTranscript` holds the NEWEST blocks**, evicting from the front instead of
-  stopping the read. `MAX_BLOCKS` 4,000 → 20,000. Cut lands on a `user` block via an unbounded
-  forward scan; eviction triggers at `max + chunk`, so the retained count lands near the cap from
-  either side rather than exactly on it.
-- **`truncated` head block + `.status` marker** ("N earlier blocks not loaded") when anything was
-  dropped, and none at all when nothing was. Candidate D of four, rendered side by side in
-  `design/history-edge-probe.html` (kept, same idiom as `fold-fade-probe.html`) and chosen by the
-  user.
-- **`#fade-top` switches off at the top** (`body.at-top`, `updateTopFade()` in chat.html, mirrored
-  in mockup.html) — it was washing out the marker.
-- **`.t-prog` dedupes against the IN box**, closing the second lane of the duplicate-description
-  bug; fixture `01b` gained three steps including its own negative control.
-- **`-PskipVerifierIdes`** so one unreachable JetBrains host no longer stops the whole project.
-  `verifyPlugin` refuses to run under it, and docs/release.md forbids releasing with it.
+## What shipped in the 2026-08-12 (fourth) session
+Three user-reported issues, each measured before it was touched. See decisions.md for the
+reasoning, gotchas.md for the traps.
+1. **Rename editor closes on an outside click** — discards, like Escape/✕. Listens on the
+   **CAPTURE** phase (the only such dismissal in the file) because the header controls next to the
+   title all `stopPropagation`.
+2. **MCP tool lines** — `"function"` moved `DESC_KEYS` → `IN_KEYS` in `RenderLimits.kt`, so
+   `browser_evaluate`'s JS body renders in the IN box like a Bash command and its line is blank by
+   design. Plus `.t-desc` clamped to one line with an ellipsis + `title` tooltip.
+3. **Busy state vs background tasks** — `message_start` now sets busy for a turn the panel did not
+   send, and `pendingBgTasks` excludes background shells. Also `ClaudeCli.kt` now guards
+   `if (!stopped) onEvent(line)`.
 
 ## Verification standing at the end of that session
-- `./gradlew test` — 86 tests green, including `the block window keeps the newest turns, not the
-  oldest`, whose negative control was RUN twice (once against the pre-fix parser, once against the
-  bounded-scan eviction) and failed correctly both times.
-- `./gradlew probe D:\sites\metrobuildsuppliers edac4a84-…` — 6,034 blocks, no `truncated` (under
-  the cap), which is the check that the marker does not cry wolf.
-- `python tools/live_harness.py` — 137/137 in real JCEF, re-run AFTER the `#fade-top` change.
-- `-PskipVerifierIdes` exercised in all three directions: `test` green with and without it,
-  `verifyPlugin` refusing under it.
+- `./gradlew test --rerun-tasks` — **87 tests** green (86 before; +1 for the browser_evaluate IN
+  box, whose fixture is multi-line and ~2,200 chars because the 21-char one-liner it replaced
+  could not express the bug).
+- Every fix had its **negative control RUN**, not just written — against `git show HEAD:` of the
+  file in each case.
+- Browser-measured through the REAL spliced `chat.html` (not just the mockup) at 420px and default
+  width; the busy-state fix was verified against **real captured CLI wire frames**.
+- **Not run: `runIde`.** All three fixes are unconfirmed in real JCEF, and the live harness fixture
+  `tools/fixtures/44-background-shell-busy-state.json` has never been executed (`python
+  tools/live_harness.py 44` needs the panel up). This is the top of the next session's list.
 
 ## Next steps
-- [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing): recreate the fixture at
-      `D:\sites\claude-brains-test\.claude\commands\dummy-cmd.md` first. `cmdKind` (chat.html) has no
-      custom-command detection, so everything outside {clear, compact} is greyed as 'tui'.
-      Constraint: the CLI's `commands` payload has NO type field.
+- [ ] **`runIde` sweep**: manual-test 8.13 / 8.14 / 8.15, plus `python tools/live_harness.py`
+      (137/137 baseline + the new fixture 44).
+- [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing). `cmdKind` (chat.html) has
+      no custom-command detection, so everything outside {clear, compact} greys as 'tui'.
+      Constraint: the CLI's `commands` payload has NO type field. Fixture already in place.
 - [ ] VFS refresh after CLI writes (backlog "Next up") — accepted edits still need "Reload from
       disk"; fix shape already worked out.
 
 ## Known gaps (deliberately left)
+- **No way to kill a background process from the panel** — found this session, now in backlog:
+  `interrupt()` only stops the in-flight response, and the roster rows are display-only.
 - Sidechain/subagent replay ordering untested — still no `isSidechain` records locally.
 - Windowed replay: DOM search only sees loaded blocks.
-- Editor permission diff: Accept / Accept all edits / Reject on a bar under the diff editor;
-  panes still read-only (tweak-travel is the remaining v2 half, in backlog).
+- Editor permission diff: tweak-travel is the remaining v2 half (backlog).
 - A filename longer than the whole tool line is hard-clipped with no ellipsis (offered, declined).

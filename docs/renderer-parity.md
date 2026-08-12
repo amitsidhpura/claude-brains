@@ -353,6 +353,16 @@ Not renderer-parity, but the live threads to resume:
   best; `target` ("exact target element reference from the page snapshot") is the last resort.
   Test `MCP tool lines describe themselves with element, filename, then target` covers all four
   precedences, incl. `url` still winning for `browser_navigate`.
+  · **`function` moved to the IN box — 2026-08-12.** It joined `DESC_KEYS` on 2026-08-05 to close
+  `browser_evaluate`'s 15 blank lines, on the assumption a JS body reads like prose. It does not:
+  the nine real calls in local transcripts run 230-2965 characters over 9-59 lines, so `DESC_MAX`
+  produced a mid-token slice of the first line. Moved to `IN_KEYS`, which makes `browser_evaluate`
+  the Bash of MCP — blank line by design, body in the box, where `.io-v` is `white-space: pre`,
+  scrolls sideways, folds to three lines and caps at `CMD_MAX` (no real call reaches it). The name
+  rule above is UNCHANGED: still `PlaywrightBrowserEvaluate`, still no MCP branch in `toolLabel()`.
+  Pinned by `a browser_evaluate's JS body fills the IN box, and its tool line stays blank`, whose
+  fixture is multi-line and kilobyte-scale — the 21-char one-liner in the old test is exactly why
+  this shipped.
 - [x] Audit 3 mockup-coverage gaps — all closed 2026-07-30 (clamped block, @-mention popup, name-only
   chip, multi-OUT, no-duration thinking; reverted-status line and `.status .undo` moot with the
   revert removal).

@@ -7,6 +7,17 @@
   transcripts BY KEY (not substring) or a live stream-json run BEFORE touching the renderer.
   Two of four client-parity "P0s" described bugs that didn't exist; the real one was
   mis-described — every time because the premise was never measured first.
+- **Do not fix what you cannot reproduce** (user, 2026-08-12, after rejecting two plans built on a
+  plausible story). A mechanism read out of the code or the CLI binary is a HYPOTHESIS, however
+  well evidenced: it names something that CAN happen, not what DID. Reproduce first, then fix —
+  and say plainly which parts are proven and which are inferred. Two things this caught: six
+  different code paths produced the reported symptom and none had been ruled out, and the
+  reproduction disproved the stated mechanism (see gotchas: transcript vs live wire). If it will
+  not reproduce, the right outcome may be no change at all, just diagnostics for next time.
+- **A third-party report describes a SYMPTOM, not a diagnosis, and often not even accurately.**
+  "Submit button not disabled" was literally a non-bug (the button is a Send/Stop toggle and is
+  never disabled) while pointing at two real defects. Ask what was on screen at the moment of the
+  problem before choosing what to fix.
 - Enable slash commands one at a time, each verified in `runIde`, then ticked in
   `docs/slash-commands.md`. The menu is an allowlist — unconfirmed commands stay hidden.
 - Test fixtures must state their `provenance`: a shape copied from our own handler proves

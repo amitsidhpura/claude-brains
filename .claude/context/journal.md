@@ -3,6 +3,35 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-12 (fourth) — three user reports; the third one taught the method
+- **Machine drift caught on load**: the context files said Windows `D:\sites\…`, the session was on
+  Linux `/home/syncroze/Sites/…`. Both machines are real — state.md now says to check first. The
+  3.1 fixture the files called "dead with the old machine" exists here as
+  `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` (note `-testing`, not `-test`).
+- **Rename outside-click.** Built it in the existing bubbling dismiss handler, tested, and it FAILED
+  on `#histBtn` / model chip / mode chip / effort dots — every control beside the title
+  `stopPropagation`s, so their clicks never reach that listener. Moved to capture phase. The plan
+  was approved with the wrong hook; only running the matrix found it.
+- **MCP tool lines.** `"function"` had been in `DESC_KEYS` since 2026-08-05 to fix 15 blank
+  `browser_evaluate` lines — on the assumption a JS body reads like prose. It runs 230-2965 chars
+  over 9-59 lines. Moved to `IN_KEYS` (the Bash shape: blank line, body in the box). The test that
+  let it through used `() => document.title`, 21 chars, one line.
+- **The third report, and the correction that mattered.** "Submit button not disabled while a
+  background process runs." I diagnosed it from the CLI binary and a 7-week-old transcript and
+  proposed a fix. The user rejected the plan twice and said: *don't fix what you can't reproduce.*
+  They were right — six `setBusy(false)` sites produce that symptom and I had ruled out none.
+- Reproduced it properly: spawned `claude` exactly as `ClaudeCli.kt` does, captured the wire for a
+  real background-bash turn, then replayed those REAL frames through the REAL `chat.html`
+  headlessly. Both defects appeared, and they are ordering-dependent — a short-lived process gives
+  the reported Send-mode bug, a long-lived one gives the opposite (stuck on Stop). The captures are
+  kept at `_local/wire.jsonl` / `_local/wire-short.jsonl`.
+- The capture also KILLED my stated mechanism: I had said the notification arrives as a `user`
+  frame that `onUserEvent` ignores. The transcript persists one; **the live stream sends none**. So
+  `message_start` is not one option for the hook, it is the only one.
+- A model switch to Fable mid-session re-checked the finding from the raw captures; it held, with
+  that mechanism correction.
+- Next: none of the three fixes has been through `runIde`, and fixture 44 has never run.
+
 ## 2026-08-12 (third) — the replay window kept the wrong end
 - User screenshot: a live session resumed showing work from SIX DAYS earlier, "Resumed" drawn under
   a stale `Edit`. Cause: `readTranscript` capped by `break`ing out of the read, so it kept the
@@ -239,39 +268,18 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Next: 10.5 openDiff accept-save — Kotlin-side, so runIde + direct MCP-over-WS, not the
   headless harness. Plus the accumulated hardware re-verification sweep (state.md).
 
-## 2026-08-09 — the fixing session: register 19 → 13 open
-- Removed all three webview keyboard chords (Ctrl+N / Ctrl+Alt+G / F12) instead of re-homing
-  them as IDE actions — the plugin now binds NO shortcuts (decision logged). Every capability
-  kept a route: New button / `/clear`, `window.__gallery()`, the DevTools Find Action.
-- Re-tested 1.7 against the installed IDE: the Escape-reopen glitch is a SANDBOX artifact
-  (CDP proved Escape and click-toggle leave identical DOM). Found + fixed two real Escape
-  defects instead: slash-menu re-assert (`slashEscaped`) and card menus invisible to the
-  Escape chain (`closeCardMenus()` rung). Register vocabulary unified: ISSUE = open,
-  RESOLVED (date) — how = closed.
-- 2.8 @-mentions: the menu opened INVISIBLY all along — `#mention`/`.mi` had zero CSS, so
-  `position: static` ignored `openMenu()`'s viewport coords. CSS-only fix, verified by
-  injecting into the live panel. Then built out the full dismissal contract from user
-  reports: outside-click close, popup exclusivity both directions, soft-reopen on
-  focus/click-return (Escape stays hard) — and gave the slash menu the identical contract
-  via the `slashAuto()` extraction.
-- New standing item 2.14: JCEF-Linux Delete key inserts keyChar 0x7F as a tofu char.
-  Two-layer workaround: manual forward-delete on keydown + capture-phase control-char strip.
-- 7.3 bg chip: `.chip-btn[hidden]{display:none}` (specificity defeat) + textContent clear;
-  fixture 04 gained a computed-display assertion (the old `hidden`-property check was
-  structurally blind to this bug). Verified END-TO-END with a real background task watched
-  over CDP: appear "1 task" → full vanish when the sleep ended.
-- 2.9 drag-drop: JCEF never delivers OS file drags to the DOM — added the AWT `DropTarget`
-  delivery layer (`installFileDrop`, 25 MB cap) feeding the page's `__dropFiles`; page JS
-  was proven correct all along. Hardware drag still needs the next runIde.
-- Big technique win, now in gotchas: the spliced-chat.html headless harness (chat.css +
-  live-captured `window.LIMITS` + `__bridge` stub, events via `onClaudeEvent`, assert via
-  document.title) — used for every JS fix today; and `system/commands_changed` seeds the
-  slash roster for future 3.1 testing.
-- Next runIde carries the accumulated re-verification list: hardware drag, hardware Delete,
-  Escape flags, mention menu under real JCEF. Then 10.5 openDiff accept-save (queue head).
-
 ## Digest
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
+
+- **2026-08-09 (first)** — the fixing session, register 19 → 13 open. All three webview keyboard
+  chords removed (the plugin binds NO shortcuts); 1.7's Escape-reopen proved a SANDBOX artifact but
+  two real Escape defects found instead; 2.8 @-mention menu had been opening INVISIBLY (zero CSS,
+  so `position: static` ignored the viewport coords) and gained a full dismissal contract shared
+  with the slash menu; 2.14 logged (JCEF-Linux Delete inserts 0x7F tofu); 7.3 bg chip fixed
+  (`[hidden]` specificity defeat) and confirmed end-to-end against a real background task; 2.9
+  drag-drop needed an AWT `DropTarget` layer because JCEF never delivers OS drags to the DOM. The
+  spliced-chat.html headless harness was invented here — it is in gotchas and has been used in
+  every session since.
 
 - **2026-08-07/08** — the full 92/92 manual-test pass, 19 ISSUE notes logged. Hard-to-trigger states
   were manufactured, not skipped (network cut, auth failure, exit-2 hook, broken `.mcp.json`, CDP

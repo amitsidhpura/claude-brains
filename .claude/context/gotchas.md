@@ -200,6 +200,34 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **A bubbling document listener cannot see a click on any control that `stopPropagation`s.** The
+  rename outside-click dismissal was built in the existing handler at `chat.html`'s
+  `document.addEventListener('click', …)` and failed on `#histBtn`, the model/mode chips and the
+  effort dots — every control BESIDE the title, i.e. the likeliest next click. `tg(id, e)`,
+  `histBtn.onclick` and the effort dots all stop propagation so they don't self-close. Capture
+  phase (`…, true`) runs before any target handler and is immune. Check what stops propagation
+  before adding a dismissal to the shared handler.
+- **`grep` silently returns NOTHING for transcript files — they trip binary detection.** A search
+  for `task-notification` across `~/.claude/projects/*/*.jsonl` printed zero hits and nearly killed
+  a correct hypothesis; `grep -a` found three files instantly. Same family as the NUL byte that
+  made ripgrep call `journal.md` binary. **Always `-a` on transcripts**, and treat "no hits" in a
+  jsonl search as unproven until re-run with it.
+- **The transcript and the live wire disagree about what exists.** A background task's completion
+  notification is persisted as a `user` record (visible in the jsonl), but the live stream-json
+  emits NO user frame for it at all — measured across two captures. A hypothesis built from
+  transcripts alone named a hook (`onUserEvent`) that can never fire live. Transcripts prove what
+  the CLI RECORDS; only a stream capture proves what it SENDS.
+- **Reproducing a live-path bug without the IDE**: spawn `claude` with `ClaudeCli.kt`'s own flags
+  (`--input-format stream-json --output-format stream-json --include-partial-messages --verbose`),
+  keep stdin OPEN so the session outlives the turn — the interesting frames arrive after it — and
+  record stdout with timestamps. Then replay those real lines into `window.onClaudeEvent` on the
+  spliced chat.html (below) and assert on DOM state. Real frames + real renderer, no IDE, and the
+  capture doubles as fixture provenance. Captures kept in `_local/wire*.jsonl`.
+- **Background-task bugs are ORDERING-dependent, so one repro is not enough.** The same code gave
+  opposite symptoms: a short-lived background process (roster empties BEFORE the turn's `result`)
+  left the button on Send while a CLI-started turn printed; a long-lived one (roster still full at
+  the `result`) stuck it on Stop for the whole process. Each masked the other. When a defect
+  involves an async task, vary its DURATION relative to the turn.
 - **A synthetic fixture whose turns are 3 blocks long cannot catch a turn-boundary bug.** The
   windowed-replay eviction scanned a bounded number of blocks ahead for a `user` block; the test
   fixture emitted user+assistant+summary, so a boundary was never more than 2 blocks away and it

@@ -198,7 +198,11 @@ class ClaudeCli(
                 (obj?.get("session_id") ?: obj?.get("sessionId"))?.jsonPrimitive?.content
                     ?.takeIf { it.isNotBlank() }
                     ?.let { if (it != sessionId) { sessionId = it; log.info("live session $it") } }
-                onEvent(line)
+                // Same idiom as `if (!stopped) onExit(code)`: a restart pushes __clear before the
+                // old process dies, so a frame still buffered in this reader could land in the NEW
+                // conversation's log. Worse than a stray block: a stale message_start would set the
+                // webview busy with no result ever coming to clear it.
+                if (!stopped) onEvent(line)
             }
         }
     }

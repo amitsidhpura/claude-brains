@@ -13,6 +13,11 @@
   inside the foldable region.
 - **Level vs edge signal** — `background_tasks_changed` describes the present set (level) →
   rendered as a chip, replace-assigned; timeline entries are for edge events that happened.
+  The roster mixes two kinds: AGENT-type tasks suspend the turn (intermediate `result`, real one
+  later); background SHELLS (`task_type "local_bash"`) do not — the CLI goes idle and their
+  `result` is the true end. `pendingBgTasks` counts only the suspending kind (deny-list: unknown
+  types suspend). And a shell's completion notification starts a turn with NO user frame on the
+  wire — `message_start` is the only signal, which is why it sets busy.
 - **Bridge** — the plugin's MCP-over-WebSocket server the CLI connects to for `mcp__ide__*`
   tools (lockfile + `--mcp-config`).
 - **Windowed replay** — Kotlin parses the whole transcript but ships only the newest ~250

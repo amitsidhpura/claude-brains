@@ -377,7 +377,12 @@ blockquote > *:last-child { margin-bottom: 0; }
    filename on a long path also nibbled the parent on a short one. min-width:0 is load-bearing on
    the flex item and the head: a flex child's default min-width is its content, which would refuse
    to shrink and put the wrap straight back. */
-.tool-line .t-desc { min-width: 0; }
+/* A free-text description is ONE line too, for the same reason the path above is: descMax lets
+   through 140 characters, which wrap a narrow panel three times and push the next tool line down.
+   The cap drops content silently; this clamp does not, since the ellipsis is visible and chat.html
+   puts the shown text on `title`. The .path variant overrides display/overflow below and carries
+   its own middle-ellipsis rule — nowrap here is what its .p-head/.p-tail already assume. */
+.tool-line .t-desc { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tool-line .t-desc.path { display: inline-flex; align-items: baseline; overflow: hidden; }
 .tool-line .t-desc.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tool-line .t-desc.path .p-tail { flex: 0 0 auto; white-space: nowrap; }

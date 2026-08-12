@@ -454,6 +454,28 @@ total 196K
            server stays visible and it sits beside Read/Bash/ExitPlanMode. -->
       <div class="tool-line"><b>PlaywrightBrowserNavigate</b><span class="t-desc">https://example.com/login</span></div>
       <div class="tool-line"><b>PlaywrightBrowserClick</b><span class="t-desc"></span></div>
+      <!-- browser_evaluate is the Bash of MCP: `function` is in IN_KEYS, so the line is blank BY
+           DESIGN and the JS body goes in the IN box, where .io-v is white-space:pre and scrolls
+           sideways. It was in DESC_KEYS until 2026-08-12 and rendered as a 140-char mid-token
+           slice, wrapped across the line. -->
+      <div class="tool-line"><b>PlaywrightBrowserEvaluate</b><span class="t-desc"></span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v fold">() =&gt; {
+  const head = document.getElementById('head');
+  const editing = () =&gt; head.classList.contains('editing');
+  const fire = el =&gt; el.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+  const r = [];
+  startRename();
+  r.push(['A open via startRename -&gt; editing', editing() === true]);
+  fire(document.getElementById('log'));
+  r.push(['B outside click closes', editing() === false]);
+  return r.map(x =&gt; (x[1] ? 'PASS  ' : 'FAIL  ') + x[0]);
+}</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">["PASS  A open via startRename -&gt; editing","PASS  B outside click closes"]</span></div>
+      </div>
+      <!-- A long free-text description: clamped to ONE line with an ellipsis (chat.css), the same
+           way .t-desc.path already was. It used to wrap to three lines on a narrow panel. -->
+      <div class="tool-line"><b>ToolSearch</b><span class="t-desc" title="select:mcp__playwright__browser_evaluate,mcp__playwright__browser_click,mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot">select:mcp__playwright__browser_evaluate,mcp__playwright__browser_click,mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot</span></div>
       <div class="generating">
         <span class="spin" id="workSpin">✳</span>
         <span class="verb" id="workVerb">Wandering…</span>
@@ -823,6 +845,12 @@ total 196K
     if (e.target.closest('.popup')) return;
     MENUS.forEach(function (x) { document.getElementById(x).classList.remove('show'); });
   });
+  // An outside click discards the rename, like Escape and ✕ — never commits. CAPTURE, because the
+  // controls nearest the title stopPropagation in their own handlers and would otherwise leave the
+  // editor open; excluding #convTitle keeps the opening click from closing it. Mirrors chat.html.
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#convEdit') && !e.target.closest('#convTitle')) cancelRename();
+  }, true);
   var inp = document.getElementById('input');
   // auto-grow: starts at one line, expands up to 10 lines, then scrolls
   var LINE = 20, MAXLINES = 10;

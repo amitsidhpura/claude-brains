@@ -53,19 +53,26 @@ object RenderLimits {
      * 2026-08-05. Every one of these keys is owned by exactly ONE tool — checked for collisions
      * before adding, because the chain is global and a generic key would hijack other tools' lines:
      *   `skill` Skill · `status`+`taskId` TaskUpdate · `task_id` TaskStop ·
-     *   `function` mcp__playwright__browser_evaluate · `uri` mcp__ide__getDiagnostics
+     *   `uri` mcp__ide__getDiagnostics
      * `status` precedes `taskId` deliberately: "in_progress" says what happened, an opaque id does
-     * not. Together they account for the 74 tool lines that rendered blank and shouldn't have.
+     * not. Together they account for 59 of the 74 tool lines that rendered blank and shouldn't have;
+     * the other 15 were `browser_evaluate`, which went to [IN_KEYS] instead — see below.
      *
      * Tools that are STILL blank are blank BY DESIGN, not by omission: Bash (458 — the command is
      * in the IN box), AskUserQuestion (49 — the card is the content), ExitPlanMode (11 — the plan
-     * card), TodoWrite (11 — the checklist below it IS the content, item 14). `todos` and `plan` are
-     * deliberately NOT in the chain: both are structures, and stringifying one into a 140-char
-     * description would be worse than the blank it replaces.
+     * card), TodoWrite (11 — the checklist below it IS the content, item 14),
+     * mcp__playwright__browser_evaluate (15 — its `function` is in the IN box, exactly like Bash).
+     * `todos` and `plan` are deliberately NOT in the chain: both are structures, and stringifying
+     * one into a 140-char description would be worse than the blank it replaces. `function` was in
+     * this chain until 2026-08-12 and is the same mistake in a third shape: a value that is neither
+     * prose nor a reference but the WORK ITSELF. Measured across local transcripts, the nine real
+     * `browser_evaluate` calls carry 230-2965 characters of multi-line JS; at [DESC_MAX] that is a
+     * mid-token slice of the first line, wrapped across the tool line. The test that let it through
+     * used a 21-character one-liner.
      */
     val DESC_KEYS = listOf(
         "description", "file_path", "path", "pattern", "query", "url", "element", "filename", "target",
-        "skill", "status", "taskId", "task_id", "function", "uri",
+        "skill", "status", "taskId", "task_id", "uri",
     )
 
     /** Of [DESC_KEYS], the ones whose value is a file path — rendered clickable (`.t-desc.path`). */
@@ -81,12 +88,19 @@ object RenderLimits {
      * description is a handful of words while its prompt runs to 2121 characters, and none of that
      * reached the screen. "What did it just go off and do?" was unanswerable from the panel.
      *
+     * `function` (mcp__playwright__browser_evaluate) joins them 2026-08-12, moving OUT of
+     * [DESC_KEYS]: a JS body is the instruction itself by this list's own rule, and the IN box is
+     * the only surface that renders it honestly — `.io-v` is `white-space: pre` with horizontal
+     * scroll and folds to three lines, where a description has one line and a 140-char cap. It also
+     * moves the cap from [DESC_MAX] to [CMD_MAX], which no measured call reaches. Kept out of both
+     * lists would be worse than either: the line would go blank with the code nowhere at all.
+     *
      * Deliberately a KEY list and not a tool list, for the same reason [RESULT_SKIP] is a structural
      * rule: a future tool that takes a prompt gets an IN box without anyone remembering to add it.
      * Every key here must be one whose value is the instruction ITSELF — not a reference to it, and
      * not a structure. Capped by [CMD_MAX], the same box and the same cut marker as the command.
      */
-    val IN_KEYS = listOf("command", "prompt")
+    val IN_KEYS = listOf("command", "prompt", "function")
 
     /**
      * Tools whose RESULT text is not worth an OUT box, because the panel already shows the outcome

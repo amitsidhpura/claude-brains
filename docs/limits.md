@@ -75,6 +75,7 @@ Fade colour stays per-surface — a user message must blend to its own bubble, n
 | slash-command menu `#slashList` | 5 rows, MEASURED at render (`capToRows`); 274px CSS fallback |
 | composer textarea `#input` | 200px (~10 lines) |
 | tool-line file path `.t-desc.path` | one line, always. Shown project-relative (root from ChatPanel's `__project`, refreshed by `system/init`'s `cwd`), then split into `.p-head` (shrinks, ellipsises) + `.p-tail` (never shrinks: the filename, plus its parent folder when the two fit `PATH_TAIL_MAX` = 40 chars) so the ellipsis lands in the middle. The DISPLAY is shortened; the CLICK TARGET is not — the whole absolute path rides on `dataset.path` (`fullPath` from SessionStore on replay), which is also why a path past `DESC_MAX` is no longer *opened* in its truncated form. Pinned by `SessionStorePathTest` and fixture 40. |
+| tool-line description `.t-desc` | one line, always — `white-space: nowrap` + `text-overflow: ellipsis` in chat.css, added 2026-08-12. `DESC_MAX` lets 140 characters through, which wrapped a narrow panel three times; the ellipsis is visible and chat.html mirrors the SHOWN text onto `title`, so the clamp announces itself even though the cap above it does not. The tooltip deliberately carries the post-`DESC_MAX` string: it reveals what the CLAMP hid, never what the CAP dropped. |
 | tool-returned image `.tool-imgs .ti` | 120px tall; below that the image keeps its natural size. Click opens the lightbox at full size. The container needs `align-items: flex-start` to hold this — a column flex box stretches by default, which rendered a 64×64 icon at 474×320 (measured 2026-08-10). |
 
 Both lists cap at 5 rows through one helper, `capToRows(list, n, sel)` in chat.html. A row is NOT a
@@ -113,6 +114,7 @@ this cap is future-proofing rather than a live fix.
 | Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number | ✅ `.io-cut` |
 | Bash output | 2000 chars | `RenderLimits.OUT_MAX` (live + replay) | ✅ `.io-cut` |
 | card command preview | 4000 chars | `RenderLimits.CMD_MAX` — same cap as the IN box, by construction | ✅ `.cmd-cut` |
+| IN box (any `IN_KEYS` value) | 4000 chars | `RenderLimits.CMD_MAX` — `command`, `prompt` and, since 2026-08-12, `browser_evaluate`'s `function` | ✅ `.io-cut` |
 | tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) | ❌ one line, accepted |
 | session title fallback | 80 chars | `SessionStore.titleOf` | ❌ a title, not content |
 
