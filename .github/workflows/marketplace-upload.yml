@@ -1,0 +1,75 @@
+# Uploads a published release's zip to the JetBrains Marketplace.
+#
+# This workflow does NOT build. It downloads the asset that `gh release create` just attached and
+# posts THAT to the Marketplace, so the Marketplace copy is byte-identical to the GitHub asset —
+# which docs/release.md step 9 already proves is the zip built and smoke-tested locally. Building in
+# CI would publish an artifact nobody ever ran.
+#
+# Everything before the upload stays manual on purpose: the local build, the smoke test, and the
+# release-notes approval gate (docs/release.md step 6).
+#
+# Secret: JETBRAINS_MARKETPLACE_TOKEN — a permanent token from the "My Tokens" tab of the Marketplace
+# profile (plugins.jetbrains.com/author/me/tokens), set with `gh secret set`.
+name: marketplace-upload
+
+on:
+  release:
+    types: [published]
+  # Manual re-run: after a red run, or to exercise the download half without spending a version
+  # number (the Marketplace refuses a duplicate, so a successful upload can never be re-tested).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to upload, e.g. v0.5.1
+        required: true
+      dry_run:
+        description: Download and check the asset, but do not upload
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    # A prerelease must never land on the Stable channel by accident. workflow_dispatch has no
+    # release payload, so this clause only applies to the automatic trigger.
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$REPO" --pattern '*.zip' --dir dist
+          # The asset is named for the BARE version (the `v` lives only on the tag) — same
+          # convention updatePlugins.xml encodes. A mismatch means the wrong zip was attached, and
+          # failing here is far better than burning a version number on the Marketplace.
+          test -f "dist/claude-brains-${TAG#v}.zip"
+          ls -l dist
+
+      - name: Upload to the JetBrains Marketplace
+        # Spelled out rather than `!inputs.dry_run`: on the release trigger the `inputs` context is
+        # empty and the negation only works by null being falsy. The failure mode of getting that
+        # wrong is a GREEN run that silently skipped the upload on a real release — worth two clauses
+        # to make it impossible.
+        if: github.event_name == 'release' || inputs.dry_run == false
+        env:
+          TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          # --fail-with-body: a 401/409/4xx must be a RED run carrying the API's own message, not a
+          # green run that uploaded nothing. No `channel` field — omitting it means Stable, which is
+          # what the web form did by hand. The zip goes up unsigned, exactly as before; the
+          # Marketplace signs its own copy.
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -F xmlId=io.github.amitsidhpura.claude-brains \
+            -F "file=@dist/claude-brains-${TAG#v}.zip" \
+            https://plugins.jetbrains.com/api/updates/upload
+          echo
+          echo "Listing: https://plugins.jetbrains.com/plugin/io.github.amitsidhpura.claude-brains"

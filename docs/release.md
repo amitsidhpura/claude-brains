@@ -51,6 +51,10 @@ approved plugin generally publish without a human review pass).
 ## Cutting a release
 
 1. Bump `version = "X.Y.Z"` in `plugin/build.gradle.kts`.
+1b. Update `changeNotes` in the same file to THIS release's user-visible items. `plugin.xml` has no
+   `<change-notes>` of its own, so the Gradle value is what gets baked into the zip and shown on the
+   Marketplace version page. It went stale twice (0.4.0 and 0.5.0 both shipped 0.3.3's notes) back
+   when a human watched every upload — now that step 10 is automatic, nothing else will catch it.
 2. `cd plugin && ./gradlew test buildPlugin` → `build/distributions/claude-brains-X.Y.Z.zip`.
 3. Sanity: `unzip -l` the zip — must contain ONLY our jar + open-source deps
    (never any Anthropic assets).
@@ -69,6 +73,14 @@ approved plugin generally publish without a human review pass).
 9. Verify: the asset URL returns 200 and `cmp`s equal to the local zip, and the feed served
    from `raw.githubusercontent.com` advertises the new version. IDEs pick it up within
    minutes (CDN cache) on their next plugin-update check.
+10. **Marketplace: nothing to do.** `.github/workflows/marketplace-upload.yml` fires on
+   `release: published` and uploads the asset step 8 just attached — the same bytes step 9 proved
+   equal to the local zip. Confirm it: `gh run list --workflow=marketplace-upload.yml --limit 1`
+   is green, and the plugin page lists X.Y.Z.
+   Red run, or CI unavailable? Nothing is lost — a FAILED upload does not burn the version (see
+   above; only an accepted-then-rejected moderation does). Fix and re-run:
+   `gh workflow run marketplace-upload.yml -f tag=vX.Y.Z -f dry_run=false`, or fall back to the web
+   form. `dry_run` defaults to true, so a manual dispatch never uploads unless you say so.
 
 ## Release notes
 
@@ -161,9 +173,13 @@ hard way:
   auto-context) is the real gap list — update it when one falls.
 - Screenshots live in `design/marketplace/` (2400×1520 = 1200×760 @2x), composed from the real
   renderer by driving chat.html state-by-state.
-- Uploads are manual via the web form; JetBrains signs Marketplace builds themselves. Run
-  `./gradlew verifyPlugin` first (needs the `pluginVerifier()` dependency; IDE downloads are
-  cached after the first run).
+- Uploads are automatic since 2026-08-12 (step 10): the `marketplace-upload` workflow re-posts the
+  published GitHub asset to `https://plugins.jetbrains.com/api/updates/upload` (`xmlId` + `file`,
+  bearer token in the `JETBRAINS_MARKETPLACE_TOKEN` repo secret, no `channel` field = Stable). The
+  zip goes up UNSIGNED exactly as the web form sent it — JetBrains signs Marketplace builds
+  themselves, and this project configures no signing key, so nothing about the artifact changed.
+  Still run `./gradlew verifyPlugin` locally first (needs the `pluginVerifier()` dependency; IDE
+  downloads are cached after the first run) — CI does not verify, it only ships.
 - All verifier warnings from the 0.2.0 run were resolved after submission (rides the next
   release): `DaemonCodeAnalyzerImpl.getHighlights` → `DocumentMarkupModel` +
   `HighlightInfo.fromRangeHighlighter` (public API, same data); the 8 `ReadAction.compute`

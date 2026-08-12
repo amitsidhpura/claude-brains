@@ -3,6 +3,39 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-12 — The Marketplace upload is automated, but only the UPLOAD
+`.github/workflows/marketplace-upload.yml` (the repo's first workflow) fires on `release: published`,
+downloads the zip `gh release create` just attached, and POSTs it to
+`https://plugins.jetbrains.com/api/updates/upload` with `xmlId` + `file` and a bearer token from the
+`JETBRAINS_MARKETPLACE_TOKEN` repo secret. Steps 1-9 of `docs/release.md` stay manual and local.
+**Why:** the web-form upload was the one release step with nothing enforcing it, and the step that
+decides whether Marketplace users see the release at all. Re-posting the PUBLISHED asset rather than
+building in CI keeps "the zip users get is the zip that was smoke-tested on this machine" — the
+guarantee step 9's `cmp` check already establishes. It also needs no Gradle and no 1.5 GB IDE
+download in CI, so the run is seconds. Signing is unaffected: the zip goes up unsigned exactly as the
+web form sent it (`signPlugin` is `onlyIf`-guarded on a key this project doesn't configure, and five
+releases were accepted this way).
+**Rejected:** `./gradlew publishPlugin` — it works (IPGP 2.1.0 falls back to `buildPlugin`'s archive
+when signing is unconfigured), but it is still a command to remember, which IS the problem. Also
+rejected: building the zip in CI on a tag push (publishes an artifact nobody ran, and moves the
+release-notes approval gate somewhere worse); and a `channel` field (Stable is what the web form did).
+**Consequence, handled:** stale `changeNotes` used to be caught by the human doing the upload —
+0.4.0 and 0.5.0 both shipped 0.3.3's notes. It is now step 1b of the checklist.
+
+## 2026-08-12 — A conversation's title is derived from the WHOLE transcript, not a window
+`computeTitle` reads every line: the first `TITLE_HEAD_LINES` (400) are parsed in full for the
+derived title (first user message, legacy `summary`), and past that a line is rejected on a substring
+unless it holds `custom-title` or `ai-title`.
+**Why:** those two records are appended WHERE THEY HAPPEN, so on a long thread they are thousands of
+records in — a rename on a real 10,458-line transcript sat on lines 10455-10458 and the 400-line head
+scan never saw it, so the panel showed the derived title forever and the rename looked broken. The
+cost is the scan `tokensOf` already pays for every session in `list()` (measured on the same 35 MB
+file: 521 ms cold, 0 ms cached), so this adds no new class of work.
+**Rejected:** a tail window (`tailLines`, as `lastActivityOf` uses) — 256 KB is ~75 records on a
+transcript with large tool results, so the name would evaporate after ~10 more turns, which is worse
+than a consistent bug; and caching the name in our own state — a second source of truth is exactly
+what the byte-identical `custom-title` record exists to avoid.
+
 ## 2026-08-12 — Rename writes the CLI's own `custom-title` record, from the header title
 `SessionStore.rename` appends `{type:"custom-title", customTitle: title.trim(), sessionId}` + "\n"
 with O_APPEND — the CLI's writer, read verbatim from the 2.1.226 binary, three fields, no uuid or

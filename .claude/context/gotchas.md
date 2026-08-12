@@ -66,15 +66,27 @@ trusting memory here.
 - The CLI appends session sidecar records with `open(O_WRONLY|O_APPEND)` per write (`vRn` in the
   binary). That is why APPENDING to a live transcript is safe — a rename's `custom-title` record
   survives the CLI's next write — while DELETING one is not. Two different halves of the same fact.
+- **A record that is appended when something HAPPENS can be anywhere in the file, so no window scan
+  can find it.** `custom-title` and `ai-title` land at whatever offset the thread had reached — a
+  rename on a 10,458-line transcript sat on the last four lines and a 400-line head scan showed the
+  derived title forever, so the rename looked like it had done nothing (0.5.0 shipped this). A tail
+  window is no safer: it just moves the blind spot to "renamed, then kept working". Full scan with a
+  substring pre-filter is the only correct shape — the cost is what `tokensOf` already pays. Ask of
+  any new transcript reader: is this record written at a FIXED position (session head, last turn) or
+  at an arbitrary one?
 
 ## Build / toolchain
 - Build JVM must be **Java 21**: Gradle 8.10.2 refuses to run above JDK 23, and recent PhpStorm's
-  bundled JBR is JDK 25. There is no `java` on PATH here — prefix
-  `JAVA_HOME=~/.jdks/jdk-21.0.12+8` (the .zshrc export doesn't reach tool-run shells), and run
-  every `./gradlew` from `plugin/`, not the repo root. `runIde` itself runs on the JBR inside the
+  bundled JBR is JDK 25. On the current Windows machine `java` IS on PATH and `JAVA_HOME` is set
+  (`~/.jdks/ms-21.0.12`), so `./gradlew` just works — on a machine where it isn't, prefix
+  `JAVA_HOME=<jdk-21>`. Run every `./gradlew` from `plugin/`, not the repo root. `runIde` itself runs on the JBR inside the
   downloaded `phpstorm("2024.2")` dependency (JBR 21 `-jcef` with `libcef.so`) — that's what
   makes the webview work. First run downloads ~1 GB.
   (`instrumentCode`/`buildSearchableOptions` being off is explained in build.gradle.kts itself.)
+- GitHub Actions: a `workflow_dispatch` trigger only appears once the workflow file is on the
+  DEFAULT branch — `gh workflow run` on an unpushed workflow just says it doesn't exist. So the
+  first dry run of `.github/workflows/marketplace-upload.yml` can only happen after a push to main,
+  and pushing it also arms the automatic upload for the very next `gh release create`.
 - Do NOT re-add `testFramework(TestFrameworkType.Platform)` without platform tests: it registers
   a JUnit `LauncherSessionListener` that can't instantiate outside an IDE fixture and kills the
   test JVM. `SessionStore.claudeHome` is `internal var` so tests use a temp tree.

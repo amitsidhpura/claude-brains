@@ -21,6 +21,8 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 ## Repo layout
 - `plugin/` — Kotlin source + Gradle root (IntelliJ Platform Gradle Plugin 2.x, JCEF webview UI);
   every `./gradlew` command runs from here
+- `.github/workflows/marketplace-upload.yml` — the only CI: on `release: published` it re-posts the
+  published GitHub asset to the JetBrains Marketplace. Nothing is built in CI
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
 - `docs/feature-checklist.md` — feature parity checklist + status (the working TODO list)
 - `docs/limits.md` — every size cap (folded/scrolled/truncated/volume) and where it is set
@@ -90,5 +92,12 @@ panel is for AFTER you know the data exists.
 ## External references
 - Official extension for reverse-engineering: `~/.vscode/extensions/anthropic.claude-code-<ver>/`
 - Release repo: `github.com/amitsidhpura/claude-brains` (`updatePlugins.xml` at repo root)
-- Local toolchain: Temurin 21 at `~/.jdks/jdk-21.0.12+8`; Gradle 8.10.2 at
-  `~/.local/opt/gradle-8.10.2`; `~/.zshrc` exports `JAVA_HOME`.
+- Marketplace listing: `plugins.jetbrains.com/plugin/io.github.amitsidhpura.claude-brains`, vendor
+  `amitsidhpura`. Upload token: created in the **My Tokens** tab of
+  `plugins.jetbrains.com/author/me/tokens`, stored ONLY as the GitHub repo secret
+  `JETBRAINS_MARKETPLACE_TOKEN` (set 2026-08-12). Never in the repo, never in a file.
+- **Current machine (since 2026-08-12): Windows 11.** Repo `D:\sites\claude-brains`, home
+  `C:\Users\Supple-7`, transcripts `C:\Users\Supple-7\.claude\projects\D--sites-<project>\`, CLI at
+  `~/.local/bin/claude`, JDK 21 at `~/.jdks/ms-21.0.12` (on PATH, `JAVA_HOME` set), Gradle via the
+  committed wrapper (8.10.2). Anything in these files reading `/home/syncroze/…`, `~/Sites/…` or
+  `.zshrc` predates the move and refers to a machine that is gone.

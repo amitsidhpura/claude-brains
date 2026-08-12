@@ -2,7 +2,8 @@
 
 ## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
 - 2 open issues from the 2026-08-08 pass, both in one pairing: 3.1 custom commands in the
-  / menu + 9.10 re-test (user wants both together)
+  / menu + 9.10 re-test (user wants both together). The fixture died with the old machine —
+  recreate `D:\sites\claude-brains-test\.claude\commands\dummy-cmd.md` first.
 - A filename longer than the whole tool line is hard-clipped with no ellipsis (the tail never
   shrinks by design). Rare — needs ~45+ chars at a narrow panel. Offered 2026-08-12, not taken.
 - Permission cards (`.card-h code`) still wrap long paths: deliberately NOT clamped, since that
@@ -41,6 +42,9 @@
   so the `/context` workflow itself does NOT travel to a fresh clone — un-ignore if wanted.
 
 ## Someday / conditional
+- Author-signing the plugin (`signPlugin` + a generated key/chain, key in a GitHub secret). Today the
+  zip goes up UNSIGNED and the Marketplace signs its own copy — five releases accepted that way, so
+  this buys only the "installed from disk" trust path. Take it if that ever matters.
 - Same leak family as 7.4, found in the CLI binary but never observed live: a COMPLETED
   sub-agent result gets `agentId: … (use SendMessage …)` + `<usage>subagent_tokens…</usage>`
   appended (skipped for some agent types). Deliberately not fixed on an unverified premise —
