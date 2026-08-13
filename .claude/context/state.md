@@ -1,9 +1,8 @@
 # State
 
 ## Current focus
-**Nothing in flight.** Two pieces of 2026-08-13 work are finished, verified and on `main`: the
-header-title fix (8.16) and the attached-block spacing contract. Next work is whatever is picked
-from the list below or backlog.md.
+**Nothing in flight, and nothing unreleased.** Everything from 2026-08-13 shipped in 0.5.3. Next
+work is whatever is picked from the list below or backlog.md.
 
 The spacing contract is worth knowing before touching `webview/chat.css`: `:root` carries
 `--block-gap` (18px, independent blocks) and `--attach-gap` (8px, a line and what hangs off it), and
@@ -11,17 +10,17 @@ a new block under a line takes the attach gap — see glossary.md for the vocabu
 for which FORM, since a flex parent needs `calc(attach - block)` and a block parent takes the value
 directly. `design/tool-gap-probe.html` renders the candidates that were compared.
 
-## Released: 0.5.2 (2026-08-13), Marketplace-Approved
-`plugin/build.gradle.kts`, `updatePlugins.xml`, tag `v0.5.2` and the GitHub release asset
-`claude-brains-0.5.2.zip` all agree. The Marketplace listing shows **Approved** — uploaded 13 Aug,
-2.6 MB, compatibility range 242.0+, both verification rows green (IDE run "no issues occurred";
-verifier 1.408 "Compatible" on IntelliJ IDEA 2026.2.1). `release: published` →
-`.github/workflows/marketplace-upload.yml` ran with no manual step; sixth release, still unsigned
-(the Marketplace signs its own copy — see backlog "Someday").
+## Released: 0.5.3 (2026-08-13), Marketplace-Approved
+Commit `f751503`, tag `v0.5.3`. The GitHub asset was verified HTTP 200 and `cmp`-identical to the
+local zip, the feed advertises 0.5.3, and the Marketplace accepted it as version id 1137360 —
+**Approved**, 2.6 MB, 242.0+, four green verification rows (IDE run clean; verifier 1.408 Compatible
+on 2026.2.1 / 2026.1.5 / 2025.3.6.1). Seventh release, still unsigned (the Marketplace signs its own
+copy — see backlog "Someday"). It ships the 8.16 header-title fix and the attached-block spacing.
 
-**Everything since 0.5.2 is UNRELEASED and rides the next version** — currently the 8.16 header-title
-fix. User-facing wording for shipped versions is the `changeNotesHtml` block in
-`plugin/build.gradle.kts`, which `buildPlugin` refuses to let go stale.
+`./gradlew verifyPlugin` for it, run WITHOUT `-PskipVerifierIdes`: Compatible on all seven PhpStorm
+branches 242→262, zero warnings. User-facing wording lives in the `changeNotesHtml` block of
+`plugin/build.gradle.kts`, which `buildPlugin` refuses to let go stale; the GitHub release body
+follows the structure in `docs/release.md` § Release notes.
 
 ## Which machine — check this FIRST, both are real
 Two consecutive loads found the recorded machine was the wrong one. **This save was written on

@@ -50,6 +50,16 @@
   When an audit filters what it inspects, print WHAT IT ACTUALLY CHECKED and confirm the list is
   the one you meant — an empty failure list proves nothing on its own.
 
+## Docs
+- **A doc outlives the decision that created it.** `docs/release.md` was still titled "Path B —
+  no Marketplace" and the README still said "distributed rather than the JetBrains Marketplace"
+  two weeks after the plugin was listed there; the README's Docs list linked a `CLAUDE.md` deleted
+  on 2026-08-07. Audit the PREMISE of a doc, not just its details, whenever its subject changes —
+  and check that every relative link still resolves.
+- Release notes and status prose must keep **By design / Declined / Deferred** apart (glossary.md).
+  The README had usage/token display under "deferred but wanted" when it was declined outright on
+  2026-08-06 — a reader takes that as a promise.
+
 ## Code & assets
 - **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/`
   stays out of git. Personal use only.

@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-13 (fifth) — 0.5.3 released; the docs stop describing a project that no longer exists
+- **0.5.3 released and Marketplace-Approved** (`f751503`, tag `v0.5.3`): the header-title fix and
+  the attached-block spacing. Full release.md run, gate held at step 6 for the user. Asset HTTP 200
+  and `cmp`-identical to the local zip; feed advertises 0.5.3; the upload workflow went green in 8s
+  and the Marketplace accepted it as version id 1137360. Approved with four green verification rows
+  (IDE run + verifier 1.408 on 2026.2.1 / 2026.1.5 / 2025.3.6.1).
+- `verifyPlugin` run WITHOUT `-PskipVerifierIdes`: **Compatible on all seven PhpStorm branches
+  242→262, zero warnings, zero compatibility problems**. First run downloads the ladder (~25 min);
+  cached after.
+- **Nearly shipped a stale artifact.** A `chat.css` edit landed AFTER `buildPlugin`, so the zip on
+  disk was behind. Rather than assume either way, extracted the CSS from the zip (it had the new
+  rule) and then read exact mtimes: css 17:30:31 → zip 17:30:50 → verdicts 17:47:40. `verifyPlugin`
+  had rebuilt it, so the verified bytes were the shipped bytes. Gotcha recorded.
+- **Docs truth pass**, prompted by finding the README's Install section false: the plugin has been
+  on the Marketplace since 2026-07-31 while README and `docs/release.md`'s title both still said
+  "not the Marketplace". Also six dead `CLAUDE.md` references (migrated 2026-08-07, one of them a
+  broken link in the README's own Docs list), README listing usage/token display as "deferred" when
+  it was DECLINED on 2026-08-06, one "FIXED same day" left in the retired register vocabulary, and
+  `feature-checklist.md` describing the header behaviour this very release changed.
+- `#log` was the last place hardcoding the 18px block gap — on `--block-gap` now, `limits.md` updated.
+- **One doc I called stale was not:** `verifier-matrix.md` says `verifyPlugin` checks PhpStorm only,
+  and that is still true — `recommended()` resolves to the DECLARED platform's branches, so it is
+  PhpStorm's ladder, not a cross-product matrix. Read the doc before "correcting" it.
+- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
+
 ## 2026-08-13 (fourth) — one gap for everything that hangs off a line
 - User asked why `.io` sits at `-6px` while `.tool-imgs` and `.todos` sit at `+2px`. The margins were
   never the answer: `.turn-body` is a flex column with `gap: 18px`, so the gap you SEE is 18 + the
@@ -255,26 +280,17 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   popped the conversations panel open because `renderHistory` treated rendering and showing as one
   act. Both now pinned by fixtures.
 
-## 2026-08-09 (seventh) — 0.4.0 release prep; smoke test catches the MCP shell-env gap
-- User verified spacing + delete-current in runIde; 3.1+9.10 explicitly scoped OUT of 0.4.0.
-- Release prep done to the approval gate: version 0.4.0, zip built + content-verified,
-  updatePlugins.xml feed bumped (all uncommitted per release.md step 7).
-- Plugin Verifier: clean "Compatible", zero warnings, all seven IDEs 242→262 — run three
-  times as APIs landed (baseline, +EnvironmentUtil, +ShellEnv final).
-- The zip smoke test earned its keep immediately: playwright MCP "failed to start" —
-  first-ever real firing of the banner shipped 2026-08-06. Root cause: GUI-session PATH
-  lacks nvm; 0.3.3 failed identically but SILENTLY (env code diff v0.3.3..pre-fix is empty —
-  measured, not assumed). First fix (EnvironmentUtil overlay) was a NO-OP on Linux — its
-  shell loading is mac-only (bytecode). Real fix: ShellEnv.kt captures `$SHELL -l -i -c
-  "command env -0"` once per IDE run (watchdogged, warmed at service init); capture+parse
-  proven on this machine (93 entries, npx found) before the user's re-test confirmed
-  playwright connects. Gotcha recorded; full story also in the ShellEnv KDoc.
-- A literal NUL byte snuck into ShellEnv.kt via a heredoc-written char literal ('\0'
-  must be the ESCAPE in source) — strict XML/Kotlin tooling both objected; patched by byte
-  replace.
-
 ## Digest
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
+
+- **2026-08-09 (seventh)** — 0.4.0 release prep, and the zip smoke test earning its keep on its
+  first outing: playwright MCP "failed to start", the first real firing of the banner shipped three
+  days earlier. Root cause was a GUI-session PATH without nvm — 0.3.3 had failed identically but
+  SILENTLY (proven by an empty env-code diff, not assumed). The first fix, an `EnvironmentUtil`
+  overlay, was a NO-OP on Linux because its shell loading is mac-only in the bytecode; the real one
+  is `ShellEnv.kt` capturing `$SHELL -l -i -c "command env -0"` once per IDE run. Verifier clean on
+  all seven IDEs, run three times as the APIs landed. Lessons in gotchas + the ShellEnv KDoc,
+  including the literal NUL byte a heredoc put into a Kotlin char literal.
 
 - **2026-08-09 (sixth)** — composer phantom spacing + delete-current-conversation. The 6px dead
   space above the composer was `#queue { display:flex }` outranking the UA's `[hidden]{display:none}`

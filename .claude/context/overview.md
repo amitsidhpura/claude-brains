@@ -96,9 +96,9 @@ panel is for AFTER you know the data exists.
   `amitsidhpura`. Upload token: created in the **My Tokens** tab of
   `plugins.jetbrains.com/author/me/tokens`, stored ONLY as the GitHub repo secret
   `JETBRAINS_MARKETPLACE_TOKEN` (set 2026-08-12). Never in the repo, never in a file. The
-  `release: published` → `marketplace-upload.yml` path is proven end to end: 0.5.2 went up with no
-  manual step and was **Approved** 2026-08-13 (verifier 1.408, Compatible on IntelliJ IDEA
-  2026.2.1). The Marketplace runs its own verifier on every upload and signs its own copy.
+  `release: published` → `marketplace-upload.yml` path is routine now: 0.5.2 and 0.5.3 both went up
+  with no manual step and were **Approved** the same day. The Marketplace runs its own verifier on
+  every upload and signs its own copy.
 - **TWO machines, both real — check which one you are on** (corrected 2026-08-12; an earlier save
   wrongly declared the Linux box "gone"):
   - **Linux**: repo `/home/syncroze/Sites/claude-brains`, home `/home/syncroze`, transcripts

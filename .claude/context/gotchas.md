@@ -89,6 +89,14 @@ trusting memory here.
   sharp edge is test fixtures that live OUTSIDE the repo: the 3.1 `dummy-cmd.md` sits in the
   sibling test repo, is not in git, and is therefore absent on whichever machine did not create it
   — while the context files cheerfully say it exists. Verify the file, don't read about it.
+- **The zip in `build/distributions/` can be OLDER than your last edit — check the bytes, not the
+  clock.** An edit after `buildPlugin` leaves a stale artifact that every downstream step (verify,
+  release, upload) then treats as current. Settle it by extracting the file you changed
+  (`unzip -p <zip> claude-brains/lib/<jar>` then `unzip -p <jar> webview/chat.css`) and looking for
+  the change, THEN by exact mtimes (`stat -c %y`, not `ls`, whose minute granularity hides the
+  ordering). Useful side effect found 2026-08-13: `verifyPlugin` depends on `buildPlugin`, so it
+  refreshes the zip — the bytes it verified were the bytes that shipped, but only by luck of
+  ordering. Rebuild before a release rather than relying on that.
 - **Killing `./gradlew runIde` does NOT kill the sandbox IDE, and the survivor will fake a test
   result.** The IDE is a forked JVM: kill the Gradle process and it keeps running, holding
   `build/idea-sandbox/PS-*/plugins/claude-brains/lib/*.jar` mapped, so the next `runIde` dies in
