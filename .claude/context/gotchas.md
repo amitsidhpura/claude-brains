@@ -372,6 +372,22 @@ trusting memory here.
   duplicated-checklist bug looked like live over-rendering and was actually live UNDER-rendering
   (missing per-tool placement and status titles). Replay is usually the reference.
 - Windowed replay means DOM search (browser find) only sees loaded blocks.
+- **In a flex column the margin is NOT the gap, and neither is a collapsed margin in a block.** Two
+  different arithmetics sit side by side in this file and both defeat a DevTools reading:
+  `.turn-body` is `display:flex` with `gap: var(--block-gap)`, so a child's spacing is **gap +
+  margin-top** (flex margins never collapse) — `.io` at `-6px` was really 12px; while `.card`,
+  `.compact` and `.think` are ordinary blocks where adjacent margins **collapse**, so `.card-h`'s
+  `margin-bottom` and `.card .blk`'s `margin-top` produce one 8px gap, not 16px, and changing only
+  one of them moves nothing until it becomes the larger. Consequences, both live: a block-parented
+  element must NOT join the flex family's `calc(attach - block)` rule (it would be pulled 10px INTO
+  the line above), and both ends of a collapsing pair must name the same token. Always MEASURE the
+  gap — previous sibling's `bottom` to this element's `top` — never read the margin and believe it.
+- **Cross-checking spacing takes one probe, not a rebuild.** `window.__gallery()` draws every
+  transient state, so one pass over `#log *` comparing each element to its previous sibling maps the
+  panel's whole spacing language in a single run (2026-08-13: 29 pairs, which is how the 10px action
+  rows and 0/2/3/6px list rhythms got separated from the attached family). For the negative control,
+  inject `git show HEAD:` of the stylesheet as a trailing `<style>` in the SAME live page — equal
+  specificity plus later source order means the old rules win, and no rebuild or restart is needed.
 - **Push-driven surfaces lag disk-driven ones by a whole turn.** The header title is pushed by
   Kotlin; the history list re-reads disk every time it opens. Both go through the same `titleOf`,
   so they can only ever disagree about WHEN — and `pushTitle` had one live-turn caller, the

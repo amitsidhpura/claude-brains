@@ -3,6 +3,33 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-13 (fourth) — one gap for everything that hangs off a line
+- User asked why `.io` sits at `-6px` while `.tool-imgs` and `.todos` sit at `+2px`. The margins were
+  never the answer: `.turn-body` is a flex column with `gap: 18px`, so the gap you SEE is 18 + the
+  margin. Measured: **12 / 16 / 20 / 20 / 20px** — and three of the five sat FARTHER from their own
+  tool line than an unrelated block at 18px, i.e. attached content read as detached.
+- Two tokens now, `--block-gap` (independent blocks) and `--attach-gap` (a line and what hangs off
+  it), with one rule for the five tool-line followers written as
+  `calc(var(--attach-gap) - var(--block-gap))` so what is stated is the TARGET gap, not a nudge.
+- **8px, picked by the user from `design/tool-gap-probe.html`** — 12/8/6/4 rendered side by side,
+  every column driven by the real rule rather than a copy. 8px is what `.card-h` already put between
+  a card's header and its body, so the panel's two "this belongs to that" idioms now agree.
+- Extended on the user's ask to `.compact-sum` (was 4px), `.card-h → .diff/.cmd/.blk` (was 8px
+  hardcoded) and `.think summary → .body` (was 4px).
+- **Two container traps, both now written at the site.** `.compact-sum` cannot join the shared
+  selector list — its parent is an ordinary block with no flex gap to cancel, so the subtraction
+  would pull it 10px INTO the status line. And `.card-h`'s `margin-bottom` COLLAPSES with
+  `.card .blk`'s `margin-top` rather than adding, so both ends had to name the token or the larger
+  would silently win the next time the value changes.
+- Verified in real JCEF through `window.__gallery()`: every attached pair exactly 8px, every
+  unattached pair exactly 18px, 29 pairs, zero deviations. **Negative control RUN** by injecting
+  `git show HEAD:`'s stylesheet into the same live page — the old 12/20/20 spread came straight
+  back. Harness 154/154, `./gradlew test` 87 green.
+- Surveyed every gap tighter than 18px so the rest is on record: action rows at 10px, list rhythm
+  (0/2/3/6), label→sub-line at 1px. Left alone. One odd value outstanding — `.ask-panel → .ask-b` at
+  4px where every other body→buttons gap is 10px (backlog).
+- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
+
 ## 2026-08-13 (third) — a header that lagged a whole turn, and a control that nearly lied
 - User screenshot, explicitly NOT reproducible for them: header "New conversation" beside a history
   row marked `current` that HAD a title. Diagnosed from the real transcript before touching code —
@@ -246,25 +273,17 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   must be the ESCAPE in source) — strict XML/Kotlin tooling both objected; patched by byte
   replace.
 
-## 2026-08-09 (sixth) — composer phantom spacing + delete-current-conversation
-- Queue spacing (user screenshot, user's own diagnosis was right): `#queue { display:flex;
-  margin-bottom:6px }` beats the UA's `[hidden]{display:none}` (ID outranks attribute), so
-  the EMPTY hidden queue still rendered its margin — permanent 6px dead space above the
-  composer's first row. Fix: `#queue[hidden]{display:none}` re-assert, the `.chip-btn[hidden]`
-  idiom. Audited the other hidden-toggled composer elements — only #queue was affected.
-- Delete current conversation (long-standing user annoyance): the refusal existed because the
-  CLI reopens the transcript per write — a live delete truncates instead of removing. Shipped
-  leave-first delete: history rows now ALL carry the trash control; for the current row
-  ChatPanel does the "new"-action reset then `deleteCurrentSession` restarts fresh, waits
-  bounded (new `ClaudeCli.awaitExit(5s)` — `stop()` only SENDS the signal, a dying CLI can
-  still flush a resurrecting write) for the OLD process to die off-EDT, then deletes the file
-  and re-pushes the list. `deleteSession`'s live refusal stays as the backstop. Mid-turn
-  delete = mid-turn "New conversation", deliberately consistent. mockup.html current-row
-  sample mirrored (it had documented "no delete control" as a design fact).
-- Both changes compile/test green; NOT yet runIde-verified and NOT committed.
-
 ## Digest
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
+
+- **2026-08-09 (sixth)** — composer phantom spacing + delete-current-conversation. The 6px dead
+  space above the composer was `#queue { display:flex }` outranking the UA's `[hidden]{display:none}`
+  on specificity, so an EMPTY hidden queue still painted its margin; fixed by re-asserting
+  `#queue[hidden]`, the `.chip-btn[hidden]` idiom (trap in gotchas). Delete-current-conversation
+  shipped as leave-first: the refusal had existed because the CLI reopens the transcript per write,
+  so ChatPanel now does the "new" reset, waits bounded off-EDT for the old process to actually die
+  (`ClaudeCli.awaitExit(5s)` — `stop()` only SENDS the signal and a dying CLI can still flush a
+  resurrecting write), then deletes and re-pushes the list.
 
 - **2026-08-09 (fifth)** — the editor accept/reject v2 BUTTONS half, through four user-driven
   iterations each measured against 242 AND 262 bytecode before coding: toolbar icons (rejected on

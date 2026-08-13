@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Attached-block gap — candidates side by side</title>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/chat.css"/>
+<style>
+  /* Every column renders through the REAL rule in chat.css — each one only sets --attach-gap, so
+     what you are comparing is the shipped contract at four values, not four copies of it. The
+     "18px" column is the flat block gap, there to show what "unrelated" looks like: three of the
+     followers used to sit FARTHER apart than that. */
+  body { background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; padding: 20px; margin: 0; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0 0 18px; }
+  .cols { display: flex; gap: 18px; align-items: flex-start; }
+  .col { flex: 1 1 0; min-width: 0; max-width: 340px; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .col > .name { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .col > .why { color: var(--muted); font-size: 11px; margin-bottom: 14px; min-height: 28px; }
+  .col.pick .name { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>What gap should a block have from the tool line it belongs to?</h1>
+<p class="sub">Every column is the same markup through the same rule; only <code>--attach-gap</code> differs.
+   Today the family is inconsistent: <code>.io</code> 12px, <code>.t-prog</code> 16px, <code>.t-note</code> /
+   <code>.tool-imgs</code> / <code>.todos</code> 20px — against an 18px gap between unrelated blocks.</p>
+
+<div class="cols">
+
+  <div class="col" style="--attach-gap: 12px">
+    <div class="name">12px</div>
+    <div class="why">What <code>.io</code> had before 2026-08-13 — the one value that already read as attached.</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Search for Enquire and price filters</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">grep -rn "Enquire" --include=*.php</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">loader.php:1129: // Enquire override</span></div>
+      </div>
+      <div class="t-prog run">Searching the plugin tree · 2 tool uses</div>
+      <div class="t-note">↳ the file had been modified on disk since you last read it</div>
+      <div class="tool-line"><b>TodoWrite</b><span class="t-desc"></span></div>
+      <div class="todos">
+        <div class="todo completed"><span class="todo-t">Add the canonical cut rule</span></div>
+        <div class="todo in_progress"><span class="todo-t">Wiring the marker into the webview</span></div>
+      </div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path">favicon.png</span></div>
+      <div class="tool-imgs"><div class="ti-missing">screenshot.png — image not kept in this replay</div></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">unrelated block, for reference</span></div>
+    </div></div>
+  </div>
+
+  <div class="col pick" style="--attach-gap: 8px">
+    <div class="name">8px — PICKED 2026-08-13</div>
+    <div class="why">The card's own header→body gap (<code>.card-h</code> → <code>.diff</code>), so the panel's two "this belongs to that" idioms agree.</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Search for Enquire and price filters</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">grep -rn "Enquire" --include=*.php</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">loader.php:1129: // Enquire override</span></div>
+      </div>
+      <div class="t-prog run">Searching the plugin tree · 2 tool uses</div>
+      <div class="t-note">↳ the file had been modified on disk since you last read it</div>
+      <div class="tool-line"><b>TodoWrite</b><span class="t-desc"></span></div>
+      <div class="todos">
+        <div class="todo completed"><span class="todo-t">Add the canonical cut rule</span></div>
+        <div class="todo in_progress"><span class="todo-t">Wiring the marker into the webview</span></div>
+      </div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path">favicon.png</span></div>
+      <div class="tool-imgs"><div class="ti-missing">screenshot.png — image not kept in this replay</div></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">unrelated block, for reference</span></div>
+    </div></div>
+  </div>
+
+  <div class="col" style="--attach-gap: 6px">
+    <div class="name">6px</div>
+    <div class="why">Between the two anchors.</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Search for Enquire and price filters</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">grep -rn "Enquire" --include=*.php</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">loader.php:1129: // Enquire override</span></div>
+      </div>
+      <div class="t-prog run">Searching the plugin tree · 2 tool uses</div>
+      <div class="t-note">↳ the file had been modified on disk since you last read it</div>
+      <div class="tool-line"><b>TodoWrite</b><span class="t-desc"></span></div>
+      <div class="todos">
+        <div class="todo completed"><span class="todo-t">Add the canonical cut rule</span></div>
+        <div class="todo in_progress"><span class="todo-t">Wiring the marker into the webview</span></div>
+      </div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path">favicon.png</span></div>
+      <div class="tool-imgs"><div class="ti-missing">screenshot.png — image not kept in this replay</div></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">unrelated block, for reference</span></div>
+    </div></div>
+  </div>
+
+  <div class="col" style="--attach-gap: 4px">
+    <div class="name">4px</div>
+    <div class="why">What the compaction summary hangs at (<code>.status</code> → <code>.compact-sum</code>).</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Search for Enquire and price filters</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">grep -rn "Enquire" --include=*.php</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">loader.php:1129: // Enquire override</span></div>
+      </div>
+      <div class="t-prog run">Searching the plugin tree · 2 tool uses</div>
+      <div class="t-note">↳ the file had been modified on disk since you last read it</div>
+      <div class="tool-line"><b>TodoWrite</b><span class="t-desc"></span></div>
+      <div class="todos">
+        <div class="todo completed"><span class="todo-t">Add the canonical cut rule</span></div>
+        <div class="todo in_progress"><span class="todo-t">Wiring the marker into the webview</span></div>
+      </div>
+      <div class="tool-line"><b>Read</b><span class="t-desc path">favicon.png</span></div>
+      <div class="tool-imgs"><div class="ti-missing">screenshot.png — image not kept in this replay</div></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">unrelated block, for reference</span></div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

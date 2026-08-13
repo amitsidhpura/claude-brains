@@ -1,8 +1,15 @@
 # State
 
 ## Current focus
-**Nothing in flight.** The 2026-08-13 header-title work is finished, verified and committed to
-`main`. Next work is whatever is picked from the list below or backlog.md.
+**Nothing in flight.** Two pieces of 2026-08-13 work are finished, verified and on `main`: the
+header-title fix (8.16) and the attached-block spacing contract. Next work is whatever is picked
+from the list below or backlog.md.
+
+The spacing contract is worth knowing before touching `webview/chat.css`: `:root` carries
+`--block-gap` (18px, independent blocks) and `--attach-gap` (8px, a line and what hangs off it), and
+a new block under a line takes the attach gap — see glossary.md for the vocabulary and gotchas.md
+for which FORM, since a flex parent needs `calc(attach - block)` and a block parent takes the value
+directly. `design/tool-gap-probe.html` renders the candidates that were compared.
 
 ## Released: 0.5.2 (2026-08-13), Marketplace-Approved
 `plugin/build.gradle.kts`, `updatePlugins.xml`, tag `v0.5.2` and the GitHub release asset

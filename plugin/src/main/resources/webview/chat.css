@@ -36,6 +36,15 @@
   --danger: #6e1f1f;     /* destructive confirm (Delete) — solid like --ok, not the light --red */
   --danger-hover: #8b2626;
   --radius: 6px;
+  /* The two spacings in a turn. --block-gap separates INDEPENDENT blocks (one tool line from the
+     next, a card from an error); --attach-gap is the distance from a line to whatever HANGS OFF it.
+     Stated here because both are used in more than one place and drifted apart when they were not:
+     the five attached blocks carried -6/-2/+2/+2/+2 against an 18px flex gap, i.e. 12/16/20/20/20px,
+     and three of them ended up FARTHER from their own tool line than an unrelated block. */
+  --block-gap: 18px;
+  --attach-gap: 8px;   /* picked from design/tool-gap-probe.html against 12/8/6/4; 8px is the gap
+                          .card-h already puts between a card's header and its body, so the panel's
+                          two "this belongs to that" idioms agree */
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
@@ -199,7 +208,7 @@ body.at-top #fade-top { opacity: 0; }
    size is only a scrollbar placeholder; `auto` lets the browser remember a turn's real height once
    it has been rendered, which matters because turns range from one line to a 400-row diff. */
 .turn { display: block; }
-.turn > * + * { margin-top: 18px; }   /* spaces .msg-user from the .turn-body that follows it */
+.turn > * + * { margin-top: var(--block-gap); }   /* spaces .msg-user from the .turn-body that follows it */
 /* The skipped subtree is .turn-body, NOT .turn: content-visibility creates a stacking context,
    and .msg-user (z 6) has to stay outside it or #fade-top (z 5) paints over the pinned message. */
 /* The 1000px placeholder is MEASURED, not guessed: 298 real turns from two sessions, rendered at
@@ -207,7 +216,7 @@ body.at-top #fade-top { opacity: 0; }
    1324-2320, skewed by the odd 14000px turn). The old 250px came from synthetic turns and
    under-reported the scrollbar by roughly 4x. `auto` still decays the error as turns are visited
    and their real size is remembered — this only sets where unvisited turns start. */
-.turn-body { display: flex; flex-direction: column; gap: 18px;
+.turn-body { display: flex; flex-direction: column; gap: var(--block-gap);
   content-visibility: auto; contain-intrinsic-size: auto 1000px; }
 /* The split-button card menu is the ONE popup living inside a turn-body, and the paint
    containment above clips it at the turn's box — it opened as a few-px sliver cut off at the
@@ -336,7 +345,9 @@ blockquote > *:last-child { margin-bottom: 0; }
 .think summary::-webkit-details-marker { display: none; }
 .think summary .chev { width: 13px; height: 13px; transition: transform .15s ease; }
 .think[open] summary .chev { transform: rotate(90deg); }   /* chevron-right → points down */
-.think .body { white-space: pre-wrap; font-style: italic; margin-top: 4px; }
+/* summary → its body is the attached idiom too (a line, then the block it introduces), so it takes
+   --attach-gap. <details> is an ordinary block, so the margin IS the gap. */
+.think .body { white-space: pre-wrap; font-style: italic; margin-top: var(--attach-gap); }
 
 /* live progress: thinking-in-progress + generating */
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
@@ -401,7 +412,19 @@ blockquote > *:last-child { margin-bottom: 0; }
 .tool-line .t-desc.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tool-line .t-desc.path .p-tail { flex: 0 0 auto; white-space: nowrap; }
 .path { font-family: ui-monospace, Consolas, monospace; }
-.io { margin: -6px 0 0 22px; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+/* THE ATTACHED-BLOCK CONTRACT. Everything that hangs off the line above it — the tool line, or the
+   .io that already follows it — shares this one column and this one gap. Nothing else may set a top
+   margin on these five.
+   The subtraction is the point, not an accident: .turn-body is a flex COLUMN, so the distance a
+   reader sees is the flex gap PLUS this margin, and writing the target gap here (rather than the
+   nudge) is what stops the family drifting again. They had drifted to -6/-2/+2/+2/+2 — 12/16/20/20/
+   20px — and three of them sat FARTHER from their own tool line than an unrelated block at
+   --block-gap. Ordering under one tool line is .io, then .t-prog / .t-note / .tool-imgs (chat.html
+   inserts those after `t.io || t.el`), so the whole stack reads as one unit at the same gap. */
+.io, .t-prog, .t-note, .tool-imgs, .todos {
+  margin: calc(var(--attach-gap) - var(--block-gap)) 0 0 22px;
+}
+.io { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 /* The ROW is the scroll box, and it is the box that carries the padding — the same one-element
    arrangement .diff uses, and the whole reason its scrollbar looks right. A scrollbar is painted
@@ -450,7 +473,7 @@ blockquote > *:last-child { margin-bottom: 0; }
    box at 22px, and reports what the sub-agent is doing WHILE it runs. LIVE ONLY, unavoidably: the
    CLI never persists task_started/task_progress/task_notification (measured — zero in any
    transcript), so a resumed session keeps the tool line and its result and loses this. */
-.t-prog { margin: -2px 0 0 22px; font-size: 12px; color: var(--dot); }
+.t-prog { font-size: 12px; color: var(--dot); }   /* margin: the attached-block contract */
 .t-prog.run { color: var(--muted); }
 /* Images a tool returned (client-parity item 8): a Playwright screenshot, or Read on a PNG.
    Aligned with the IN/OUT box at 22px so it reads as that tool's output. Capped in height rather
@@ -461,12 +484,12 @@ blockquote > *:last-child { margin-bottom: 0; }
    modified on disk since you last read it". Standalone because the tools it applies to (Edit,
    Write) have no IN/OUT box for it to ride in; same 22px column and ↳ glyph as .io-note so the two
    read as one idiom. Amber rather than red: the edit DID apply, so this is a caveat, not a failure. */
-.t-note { margin: 2px 0 0 22px; color: var(--amber); font-size: 11px; }
+.t-note { color: var(--amber); font-size: 11px; }   /* margin: the attached-block contract */
 /* align-items is load-bearing: a column flex container defaults to STRETCH, which blew every image
    out to the full panel width — a 64x64 icon measured 474x320, a mostly-empty bordered box with the
    picture pinned into its top-left corner by object-position. flex-start lets each image size to
    itself, so small ones stay small and the caps below only bite on genuinely big ones. */
-.tool-imgs { margin: 2px 0 0 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.tool-imgs { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }   /* margin: the attached-block contract */
 /* A preview, not the artwork: 120px is the tallest a result image gets inline — click opens the
    lightbox at full size. The padding keeps the picture off its own border. object-fit stays as the
    guard for a record whose declared dimensions disagree with the actual pixels: it letterboxes
@@ -495,7 +518,11 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* permission / plan / question card */
 .card { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 10px 12px; background: #232528; }
 .card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
-.card-h { margin-bottom: 8px; }
+/* The header and the body it introduces — the same attached relationship as a tool line and its
+   IN/OUT box, and the gap --attach-gap was chosen FROM. On the token so it cannot drift away from
+   the family it anchors. Written on the header (not on each body) because the bodies vary: .diff,
+   .cmd, .blk. .card is an ordinary block, so this margin IS the gap — no flex gap to cancel. */
+.card-h { margin-bottom: var(--attach-gap); }
 .card-h code { font-family: ui-monospace, Consolas, monospace; color: var(--fg); }
 .card-b { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }  /* wrap: suggestion buttons can crowd the row */
 .card-b button, .ask-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
@@ -573,7 +600,9 @@ blockquote > *:last-child { margin-bottom: 0; }
   color: var(--muted); opacity: .5; user-select: none; }
 
 /* markdown inside a card (e.g. plan) — drop the timeline dot */
-.card .blk { padding-left: 0; margin-top: 8px; }
+/* Collapses with .card-h's margin-bottom rather than adding to it (ordinary block margins), so both
+   ends of the pair must name the same token or whichever is larger silently wins. */
+.card .blk { padding-left: 0; margin-top: var(--attach-gap); }
 .card .blk::before { display: none; }
 
 /* AskUserQuestion option text */
@@ -728,7 +757,7 @@ blockquote > *:last-child { margin-bottom: 0; }
    reads as that call's content rather than a new topic. Completed items dim and strike; the one
    in flight takes the accent, because "which of these is happening now" is the question the list
    is glanced at to answer. */
-.todos { margin: 2px 0 0 22px; display: flex; flex-direction: column; gap: 3px; }
+.todos { display: flex; flex-direction: column; gap: 3px; }   /* margin: the attached-block contract */
 .todo { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: var(--fg); }
 .todo-ic { flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--dot); }
 .todo-ic svg { width: 13px; height: 13px; display: block; }
@@ -750,8 +779,12 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* Compaction boundary: the marker wears the plain status metrics, and the CLI's summary hangs
    beneath it at the same 22px indent — folded, because it runs to 25-41k characters in real
    sessions. It used to replay as a .msg-user box, i.e. as something the user had typed; the muted
-   code surface is what says "this is the transcript talking, not you". */
-.compact .compact-sum { margin: 4px 0 0 22px; padding: 8px 10px; background: var(--code-bg);
+   code surface is what says "this is the transcript talking, not you".
+   Same attached-block relationship as a tool line and its IN/OUT box, so it takes --attach-gap —
+   but NOT the shared rule above, and this is the whole reason it is written out here: .compact is
+   an ordinary block, so there is no flex gap to cancel and the margin IS the gap. Putting it in
+   that selector list would subtract --block-gap from it and pull it 10px INTO the status line. */
+.compact .compact-sum { margin: var(--attach-gap) 0 0 22px; padding: 8px 10px; background: var(--code-bg);
   border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted);
   font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
 .compact .compact-sum.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }

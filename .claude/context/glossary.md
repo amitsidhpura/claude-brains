@@ -33,6 +33,13 @@
 - **`.p-head` / `.p-tail`** — the two halves of a tool-line path. Head is the shrinkable prefix and
   wears the ellipsis; tail never shrinks and holds the filename (plus its parent when they fit
   `PATH_TAIL_MAX`). What is IN the tail is decided in JS; CSS only decides what gives way.
+- **Block gap vs attach gap** — the panel's two spacings, as `:root` tokens. `--block-gap` (18px)
+  separates INDEPENDENT blocks: one tool line from the next, a card from an error. `--attach-gap`
+  (8px) is the distance from a line to what HANGS OFF it: a tool line to its IN/OUT box, progress,
+  caveat, images or checklist; a card header to its body; a status line to the compaction summary;
+  a `.think` summary to its text. Neither is the same as a container's own internal rhythm (a
+  `.card-b` action row at 10px, list items at 0-6px). Adding a new block under a line? It takes
+  `--attach-gap` — see gotchas for WHICH form, since flex and block parents need different maths.
 - **LIMITS splice** — `RenderLimits.kt` values injected into chat.html as `window.LIMITS` at
   the `LIMITS` marker (same idiom as `<!--CSS-->`); the single source for caps/formats shared
   by both render paths.

@@ -48,6 +48,8 @@
 - Voice input
 
 ## Housekeeping (one line each, do opportunistically)
+- `.ask-panel → .ask-b` sits at 4px where every other body→buttons gap (`→ .card-b`,
+  `.ask-b → .ask-foot`) is 10px. Found in the 2026-08-13 spacing survey, offered, not taken.
 - `docs/client-parity.md:1335` still says "**FIXED same day.**" — the register vocabulary is now
   ISSUE / RESOLVED; conform it if that file is touched anyway (offered 2026-08-09, not done).
 - `.claude/skills/` is git-ignored (`.gitignore:22` ignores all of `.claude/*` bar `context/`),

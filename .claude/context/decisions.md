@@ -3,6 +3,26 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-13 — One gap for every block that hangs off the line above it
+`:root` gains `--block-gap: 18px` (independent blocks) and `--attach-gap: 8px` (a line and what
+belongs to it). One rule covers the five tool-line followers —
+`.io, .t-prog, .t-note, .tool-imgs, .todos { margin: calc(var(--attach-gap) - var(--block-gap)) 0 0 22px }`
+— and `.compact-sum`, `.card-h` (+ `.card .blk`) and `.think .body` name `--attach-gap` directly.
+**Why:** the five had drifted to −6/−2/+2/+2/+2px, which against `.turn-body`'s 18px flex gap is
+12/16/20/20/20px — so `.tool-imgs`, `.todos` and `.t-note` sat FARTHER from their own tool line than
+an unrelated block, reading as detached exactly where they should read as attached. Writing
+`calc(target - block)` rather than the nudge is what makes the intent legible and stops the family
+drifting again. 8px was picked by the user from `design/tool-gap-probe.html` (12/8/6/4 side by side,
+each column driven by the real rule) because it is what `.card-h` already put between a card's
+header and its body — so the panel's two "this belongs to that" idioms agree rather than compete.
+**Rejected:** matching `.io`'s old 12px (only 6px tighter than an unrelated block — too weak a
+signal), and 4px/`.compact-sum`'s value (crowds the todo list and image chips). Also rejected:
+putting `.compact-sum` in the shared selector list — its parent `.compact` is an ordinary block, so
+there is no flex gap to cancel and the subtraction would pull it 10px INTO the status line; it takes
+the token directly instead. Left alone deliberately, as a different relationship: action rows
+(`→ .card-b`, `.ask-b → .ask-foot`) at 10px, list rhythm (`.io-row` 0, `.ask-opt` 2, `.todo` 3,
+`.ti` 6) and label→sub-line at 1px.
+
 ## 2026-08-13 — An unnamed thread re-reads its name once per turn, at `message_start`
 `ChatPanel`'s onEvent keeps its per-`result` `pushTitle`, and adds: while `lastTitle` is blank and
 this turn has not probed yet, a line containing `"message_start"` triggers one more read (guarded by
