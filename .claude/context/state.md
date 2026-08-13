@@ -5,13 +5,17 @@
 carrying the in-flight gutter dot and the VFS refresh after CLI writes. Next work is whatever is
 picked from the list below or backlog.md.
 
-## Released: 0.6.0 (2026-08-14)
-Eighth release. `verifyPlugin` run WITHOUT `-PskipVerifierIdes`: **Compatible on all seven PhpStorm
+## Released: 0.6.0 (2026-08-14), Marketplace-Approved
+Eighth release. `fa26d57`, tag `v0.6.0`, carrying the in-flight gutter dot and the VFS refresh after
+CLI writes. `verifyPlugin` run WITHOUT `-PskipVerifierIdes`: **Compatible on all seven PhpStorm
 branches 242→262**, no problems. The GitHub asset returned HTTP 200 and `cmp`-identical to the local
-zip, the feed advertises 0.6.0, and `marketplace-upload.yml` went green in 14s. The Marketplace had
-not yet published it at release time — its own verification queue; previous releases cleared the
-same day. Confirm with
-`curl -s https://plugins.jetbrains.com/api/plugins/33274/updates?size=3`.
+zip, the feed advertises 0.6.0, and `marketplace-upload.yml` went green in 14s. The Marketplace
+accepted it as **version id 1138398 — Approved**, 2.61 MB, 242.0+, four green verification rows (IDE
+run clean; verifier 1.408 Compatible on 2026.2.1 / 2026.1.5 / 2025.3.6.1) — the same shape as 0.5.3.
+Still unsigned; the Marketplace signs its own copy (backlog "Someday").
+**Approval is NOT instant and the API is how you tell:** at release time the listing still showed
+0.5.3 as newest. `curl -s https://plugins.jetbrains.com/api/plugins/33274/updates?size=3` reports
+`approve` per version — do not read "not listed yet" as a failed upload.
 
 What landed: the timeline gutter dot now reports state — **white and pulsing while in flight, green
 on success, red on failure** (`@keyframes bg-pulse` on `.tool-line.run::before` / `.think-live::before`,

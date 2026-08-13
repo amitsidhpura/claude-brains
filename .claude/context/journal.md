@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-14 (second) — 0.6.0 goes out
+- **Released 0.6.0** (`fa26d57`, tag `v0.6.0`): the in-flight gutter dot and the VFS refresh after
+  CLI writes. Full `docs/release.md` run; the approval gate at step 6 was held for the user.
+- `verifyPlugin` WITHOUT `-PskipVerifierIdes`: Compatible on all seven PhpStorm branches 242→262.
+  Asset HTTP 200 and `cmp`-identical to the local zip; feed advertises 0.6.0; upload workflow green
+  in 14s; Marketplace **Approved** as version id 1138398 with four green verification rows.
+- **Marketplace approval lags the upload.** At release time the API still listed 0.5.3 as newest,
+  which reads like a failure and is not one — `api/plugins/33274/updates` carries `approve` per
+  version and is the way to check. Recorded in state.md.
+- **Two stale premises fell out of the release run**, both the "a doc outlives its decision" pattern
+  conventions.md already names: `updatePlugins.xml` still opened with "Path B — no JetBrains
+  Marketplace" two weeks after both channels went live, and `overview.md`'s listing URL used the
+  xmlId form, which 404s — the numeric `/plugin/33274` is the real one.
+- Next: unchanged — 3.1 custom commands + 9.10 together, then the rest of backlog.md.
+
 ## 2026-08-14 — the IDE stops showing yesterday's files
 - **Shipped:** `CliFileSync` + `Vfs.refreshFromDisk`, so an edit lands in an open editor and a new
   file appears in the tree without "Reload from disk". Two mechanisms: pair a write tool's `tool_use`
@@ -235,44 +250,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   that mechanism correction.
 - Next: none of the three fixes has been through `runIde`, and fixture 44 has never run.
 
-## 2026-08-12 (third) — the replay window kept the wrong end
-- User screenshot: a live session resumed showing work from SIX DAYS earlier, "Resumed" drawn under
-  a stale `Edit`. Cause: `readTranscript` capped by `break`ing out of the read, so it kept the
-  OLDEST 4,000 blocks and dropped everything newer. Their session parses to 6,034.
-- Measuring first paid again — a node scan of the real transcript put the cut at record ~7,668
-  (2026-08-06 10:32), which is exactly the `search.php` Edit in the screenshot. Diagnosis confirmed
-  before a line was changed.
-- Rewritten as a newest-N window: evict from the FRONT, cap 4,000 → 20,000. Then THREE follow-on
-  defects, each found by the user in the panel, not by me:
-  1. Top of the window was silent — indistinguishable from the conversation's start. Added the
-     `truncated` head block + `.status` marker (candidate D of four, rendered side by side in
-     `design/history-edge-probe.html` and picked by the user).
-  2. Window opened MID-TURN — an assistant reply with no question above it. My eviction scanned
-     only one chunk ahead for a turn boundary; real turns are ~28 blocks (9 user messages in 253),
-     so it gave up constantly. Now an unbounded forward scan to the first `user` block.
-  3. The marker was unreadable under `#fade-top`. Sticky `.msg-user` (z 6) rides above that fade,
-     which is why no one had ever seen it; ordinary content does not. Fade now switches off at
-     `scrollTop <= 1`.
-- **The test fixture was the real bug in (2).** It used 3-block turns, where a bounded scan cannot
-  miss a boundary. Rebuilt at 14 blocks/turn; the negative control then failed exactly right
-  (`expected: <user> but was: <assistant>`). A fixture that cannot express the failure is not a test.
-- Also fixed, same session: the `.t-prog` line repeated a Bash command the IN box already showed,
-  cut to 140 chars. This was the SECOND LANE of a bug the user reported earlier — the existing guard
-  compared against `.t-desc`, which is blank for Bash by design, so it never fired. Fixture `01b`
-  extended; live harness 137/137 in real JCEF.
-- Lost most of the afternoon to `pluginVerification { ides { recommended() } }`: it resolves the
-  Android Studio releases list from `jb.gg` → `teamcity.jetbrains.com` at CONFIGURATION time, and
-  that host was unreachable, so EVERY Gradle task died with a bare "Connection timed out" naming
-  neither the URL nor the verifier. `--offline` does not skip it. Worked around it by compiling
-  `SessionStore` with the cached `kotlin-compiler-embeddable` and running the assertions as a
-  `main`; re-ran everything under Gradle once the host returned. Then fixed the cause rather than
-  leaving it: `-PskipVerifierIdes`, guarded so `verifyPlugin` refuses to run under it — an empty
-  IDE list passes vacuously, which would be a rubber stamp on the one run that matters.
-- Closed the loop on the harness too: 137/137 re-run AFTER the `#fade-top` change, in the sandbox
-  that was still open. Both backlog items from this session are done.
-- Next: nothing in flight.
-
 ## Digest
+- **2026-08-12 (third)** — the replay window kept the OLDEST blocks instead of the newest; fixed
+  with an aligned cut at a turn boundary, plus the "N earlier blocks not loaded" top marker.
 - **2026-08-12 (second)** — the reported rename bug did not exist (the CLI's own `ai-title` was
   overwriting the user's); the last manual release step died when marketplace-upload.yml went in.
 - **2026-08-11/12** — UI-polish session: five user-reported defects fixed (tool-line path
