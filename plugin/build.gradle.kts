@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.5.3"
+version = "0.6.0"
 
 repositories {
     mavenCentral()
@@ -96,6 +96,21 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.6.0</b>
+            <ul>
+              <li>A tool that is still running now looks different from one that has finished. Its
+                  dot beside the timeline is white and breathing while the work is in flight, and
+                  turns green when it succeeds or red when it fails — so the colour is the outcome
+                  rather than a guess made the moment the line appeared</li>
+              <li>Live thinking shows the same in-flight dot</li>
+              <li>A sub-agent stays marked as running until it actually reports back. Launching one
+                  returns immediately, which used to make several agents look finished seconds after
+                  they started while they were all still working</li>
+              <li>Files the CLI writes now show up in the IDE on their own. An edit appears in an
+                  open editor and a new file appears in the project tree, instead of waiting for
+                  "Reload from disk" or a click away from the window and back</li>
+              <li>The panel honours the system "reduce motion" setting</li>
+            </ul>
             <b>0.5.3</b>
             <ul>
               <li>A new conversation shows its name in the header as soon as it has one. The header

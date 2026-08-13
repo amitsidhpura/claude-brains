@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Custom plugin repository feed (Path B — no JetBrains Marketplace).
+<!-- Custom plugin repository feed. One of TWO live channels: this feed and the JetBrains
+     Marketplace carry the same plugin id, and an IDE offers whichever advertises the higher
+     version.
      Users add this URL under Settings > Plugins > gear > Manage Plugin Repositories:
        https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml
      Release process: docs/release.md -->
 <plugins>
     <plugin id="io.github.amitsidhpura.claude-brains"
-            version="0.5.3"
-            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.5.3/claude-brains-0.5.3.zip">
+            version="0.6.0"
+            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.6.0/claude-brains-0.6.0.zip">
         <idea-version since-build="242"/>
         <name>Claude Brains</name>
         <description>Develop in the IDE. Configure in the Terminal. Claude Code for JetBrains
