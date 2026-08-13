@@ -28,7 +28,7 @@ CLI+extension `2.1.220`.
 ## How these are prioritised
 
 Scored against the project philosophy — *Develop in the IDE. Configure in the Terminal.*
-(CLAUDE.md § Philosophy). Parity with the official clients is NOT the goal by itself; matching
+(`.claude/context/overview.md` § Philosophy). Parity with the official clients is NOT the goal by itself; matching
 them item-for-item would rebuild the terminal inside the IDE, which is the thing we said we
 wouldn't do. The question for each row is the philosophy's own test: **is this reached for many
 times an hour while writing code?**
@@ -927,7 +927,7 @@ Input vs. cache-read vs. cache-creation vs. output, and what's eating the window
 
   **What VS Code does that we deliberately do not:** a settings gate ("when off, your session will
   pause instead") and a `refusal_fallback_prompt` dialog behind an experiment flag. Both are
-  configuration — the terminal's half (CLAUDE.md § Philosophy). It also repairs `replayInsertIndex`
+  configuration — the terminal's half (`.claude/context/overview.md` § Philosophy). It also repairs `replayInsertIndex`
   and `teleportedMessageCount` after eviction; we have no equivalent indices.
 
   **Verification pass (2026-08-05, same day):** grepping the CLI binary itself (2.1.222) found every
@@ -1132,8 +1132,8 @@ Replay keeps `structuredPatch` (edits) and `answers` (ask cards); `stdout` is ke
 The stream, echo and summary of an effort change are suppressed live via `effortMuted`
 (`chat.html:1654`); they reappear on resume because the transcript records them.
 
-- **Take: by design.** Already decided and documented in `CLAUDE.md` — kept as an honest audit
-  trail.
+- **Take: by design.** Already decided and documented in `.claude/context/` — kept as an honest
+  audit trail.
 
 ---
 
@@ -1350,7 +1350,7 @@ error code), not the `{message, formatted}` object our handler destructures. And
 harness fed both spellings through `onClaudeEvent`: the transcript spelling renders the banner,
 the real wire frame renders nothing.
 
-**FIXED same day.** Both paths now accept both subtypes and both `error` shapes (string with
+**RESOLVED (same day).** Both paths now accept both subtypes and both `error` shapes (string with
 `error_status` prefixed, or object via `formatted`/`message`), the same both-spellings idiom as
 items 16 and 21. Pinned twice: a `SessionStoreTest` case replays the byte-for-byte real wire
 frame beside the transcript shape (`529 Overloaded — retrying (3/10)` /
@@ -1529,7 +1529,8 @@ records are all `isMeta` and already skipped; `post-tool-use-hook` / `ide_diagno
   against an existing capability, not a bet that the capability is missing. The remaining
   vocabulary (teleport, remote control/bridge, channels, plugins UI, worktree creation, voice,
   tabs, focus view, feedback/ratings, onboarding, proactive suggestions) maps onto the deferred
-  or by-design lists already recorded in CLAUDE.md.
+  or by-design lists already recorded in `.claude/context/` (backlog.md and conventions.md
+  § Scope vocabulary).
 
 ---
 

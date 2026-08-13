@@ -139,7 +139,7 @@ img { max-width: 100%; height: auto; }
    so no phantom gap above the first turn, and no high-specificity `#log > *` rules to fight
    #welcome's own margins (both were real regressions; see docs/limits.md). */
 #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px;
-  display: flex; flex-direction: column; gap: 18px; }
+  display: flex; flex-direction: column; gap: var(--block-gap); }
 #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
 /* top fade: content vanishes as it scrolls under the header. The first ~18px is solid --bg so

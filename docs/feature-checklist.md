@@ -93,8 +93,11 @@ Work order suggestion in **§ Milestones** at the bottom.
 ## 8. Sessions / history
 - [x] ✅ **New conversation** (＋ New — restarts the CLI fresh, clears the log)
 - [x] ✅ **Resume** past conversations (🕘 History list → `--resume <id>`)
-- [x] ✅ Header shows the **conversation title** ("New conversation" until the CLI names it;
-      re-read after every turn since `ai-title` lands late)
+- [x] ✅ Header shows the **conversation title**, from the moment the transcript can supply one:
+      re-read at the first `message_start` while the thread is unnamed (the file does not exist yet
+      at `system/init`, measured) and again at every `result`, since `ai-title` lands late and a
+      rename can land any time. "New conversation" only until the first record is on disk — it used
+      to hold for the whole of the first turn (0.5.3)
 - [x] ✅ **Refresh** button — re-resumes the current session (replay from disk; also recovers a
       dead CLI). Guarded by `SessionStore.exists`: an id whose file the CLI hasn't written yet
       would make `--resume` exit 1, so that case restarts clean instead.
@@ -192,14 +195,14 @@ Work order suggestion in **§ Milestones** at the bottom.
 From the full-bundle sweep (`docs/client-parity.md` § 32 / `docs/ide-mcp-protocol.md` §9). That
 audit was about DATA the CLI emits; this list is the FEATURE remainder — everything the VS Code
 extension does that we don't, once the by-design nine (client-parity group 2), the DEFERRED list
-(tabs, voice, auto-include selection — CLAUDE.md), and the "Then:" roadmap (editor accept/reject,
+(tabs, voice, auto-include selection — `.claude/context/backlog.md`), and the "Then:" roadmap (editor accept/reject,
 @-symbol mentions, worktrees, extensibility view) are excluded. Each row carries a take so the gap
 is a decision, not an unknown:
 
 - [ ] ⬜ **Rewind / checkpoints + fork conversation** — the one substantial capability gap.
   VS Code: "Rewind code to here", "Fork conversation and rewind", `enableFileCheckpointing:!0`,
   `rewind_code`/`fork_conversation`. We REMOVED per-turn rewind 2026-07-30 (revival notes in
-  CLAUDE.md §Key protocol facts: needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo,
+  `.claude/context/gotchas.md` § Protocol / wire: needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, a git repo,
   client-supplied uuids — which item 21's `stampMessage` now provides — and dry_run first).
   **Status: UNDECIDED — needs an explicit yes/later/no; currently in limbo on no list at all.**
 - [x] ✅ **Session rename / delete** — both DONE. Delete 2026-08-09 (every history row, the live one

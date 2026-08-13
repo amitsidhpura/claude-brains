@@ -1,7 +1,11 @@
-# Release process (Path B — custom plugin repository, no Marketplace)
+# Release process (custom plugin repository + JetBrains Marketplace)
 
-Decided 2026-07-31: distribute via a custom plugin repository hosted on GitHub
-(`amitsidhpura/claude-brains`), not the JetBrains Marketplace. Users add
+Originally "Path B", a custom plugin repository INSTEAD of the Marketplace (decided 2026-07-31) —
+but the plugin was submitted to the Marketplace the same day and has been listed there since, so
+both channels are live and carry the same plugin id; an IDE offers whichever advertises the higher
+version. A release goes to GitHub first and the Marketplace upload follows automatically (step 10).
+
+The custom repository is hosted on GitHub (`amitsidhpura/claude-brains`). Users add
 `https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml`
 under Settings → Plugins → ⚙ → Manage Plugin Repositories and get auto-updates.
 
@@ -160,7 +164,8 @@ only read about behaviour they can see.
 - Display name: **Claude Brains**.
 - Slogan: **"Develop in the IDE. Configure in the Terminal."** — opens the description
   everywhere (plugin.xml, README, updatePlugins.xml, Marketplace) and renders in-product on the
-  welcome screen (`.w-slogan`). It is also the scope rule, see CLAUDE.md § Philosophy.
+  welcome screen (`.w-slogan`). It is also the scope rule — see `.claude/context/overview.md`
+  § Philosophy (the root `CLAUDE.md` it used to live in was migrated there 2026-08-07).
 - Descriptive tagline, one line under it: "Claude Code for JetBrains IDEs (unofficial)".
 - No syncroze references in the plugin (renamed 2026-07-31; packages are
   `io.github.amitsidhpura.claudebrains.*`).

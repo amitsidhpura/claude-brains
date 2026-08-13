@@ -284,8 +284,8 @@ have no measured height, so `contain-intrinsic-size` supplies a placeholder — 
 only as honest as that estimate.
 
 **`contain-intrinsic-size` is ignored while the element is a flex item.** `#log` is
-`display: flex; flex-direction: column; gap: 18px`, so skipped `.turn`s collapse to zero and only
-the 18px gaps survive:
+`display: flex; flex-direction: column; gap: var(--block-gap)` (18px), so skipped `.turn`s collapse
+to zero and only those gaps survive:
 
 | container | intrinsic size | document height | error |
 |---|---|---|---|

@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.5.2"
+version = "0.5.3"
 
 repositories {
     mavenCentral()
@@ -96,6 +96,18 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.5.3</b>
+            <ul>
+              <li>A new conversation shows its name in the header as soon as it has one. The header
+                  read "New conversation" until the first reply finished — on a long first turn that
+                  is minutes, and the conversations list was already showing the name all along</li>
+              <li>Everything that belongs to a tool line — the IN and OUT boxes, images a tool
+                  returned, the todo checklist, sub-agent progress and caveat lines — now sits the
+                  same distance from it. Some of it used to sit farther from its own tool line than
+                  an unrelated block did, which read as though it belonged to nothing</li>
+              <li>The compaction summary, the bodies of permission cards and thinking text share
+                  that same spacing, so the whole panel reads as one system</li>
+            </ul>
             <b>0.5.2</b>
             <ul>
               <li>Resuming a long conversation brings back its most recent turns. Past a certain

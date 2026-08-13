@@ -70,15 +70,18 @@ installed VS Code Claude Code extension.
 
 ## Install
 
-The plugin is distributed through a custom plugin repository rather than the JetBrains
-Marketplace. Add this URL under **Settings → Plugins → ⚙ → Manage Plugin Repositories**:
+The plugin is on the **JetBrains Marketplace** — search for *Claude Brains* under
+**Settings → Plugins → Marketplace** and install.
+
+It is also published through a custom plugin repository, which is where releases land first. To use
+that instead, add this URL under **Settings → Plugins → ⚙ → Manage Plugin Repositories**:
 
 ```
 https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml
 ```
 
-Then find **Claude Brains** in the Marketplace tab and install — it auto-updates from there like
-any marketplace plugin.
+Then find **Claude Brains** in the Marketplace tab and install — it auto-updates from there too.
+Either channel works; the IDE offers whichever advertises the higher version.
 
 Or grab the zip from the [latest release](https://github.com/amitsidhpura/claude-brains/releases)
 and use **Settings → Plugins → ⚙ → Install Plugin from Disk**.
@@ -137,14 +140,17 @@ as you scroll.
 - [`docs/slash-commands.md`](docs/slash-commands.md) — which slash commands work headless, and why
 - [`docs/limits.md`](docs/limits.md) — every size cap and where it is set
 - [`docs/release.md`](docs/release.md) — how a release is cut
-- [`CLAUDE.md`](CLAUDE.md) — architecture notes and hard-won protocol facts
+- [`.claude/context/`](.claude/context/) — the project's own memory: architecture and philosophy
+  (`overview.md`), decisions with their rationale (`decisions.md`), and hard-won traps
+  (`gotchas.md`). Replaced the old root `CLAUDE.md`.
 
 ## Status
 
 Working end to end and used daily.
 
 By design, and not planned: a settings page and an in-IDE login — both are the terminal's half
-of the split above. Deferred but wanted: conversation tabs, usage/token display, auto-include
-selection, and voice input.
+of the split above. Declined on purpose: cost and token/usage display, which pulls the panel away
+from the many-times-an-hour loop it exists for. Deferred but wanted: conversation tabs,
+auto-include selection, and voice input.
 
 Personal project — issues and PRs aren't actively solicited, but you're welcome to fork it.
