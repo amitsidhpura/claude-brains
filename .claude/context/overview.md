@@ -92,7 +92,8 @@ panel is for AFTER you know the data exists.
 ## External references
 - Official extension for reverse-engineering: `~/.vscode/extensions/anthropic.claude-code-<ver>/`
 - Release repo: `github.com/amitsidhpura/claude-brains` (`updatePlugins.xml` at repo root)
-- Marketplace listing: `plugins.jetbrains.com/plugin/io.github.amitsidhpura.claude-brains`, vendor
+- Marketplace listing: `plugins.jetbrains.com/plugin/33274` — the NUMERIC id is the working URL; the
+  xmlId form 404s. Versions via the API: `plugins.jetbrains.com/api/plugins/33274/updates`. Vendor
   `amitsidhpura`. Upload token: created in the **My Tokens** tab of
   `plugins.jetbrains.com/author/me/tokens`, stored ONLY as the GitHub repo secret
   `JETBRAINS_MARKETPLACE_TOKEN` (set 2026-08-12). Never in the repo, never in a file. The

@@ -1,9 +1,17 @@
 # State
 
 ## Current focus
-**Nothing in flight.** Two things shipped and were committed but are NOT yet released — both ride the
-next version bump: the in-flight gutter dot (2026-08-13) and the VFS refresh after CLI writes
-(2026-08-14). Next work is whatever is picked from the list below or backlog.md.
+**Nothing in flight, and nothing unreleased.** 0.6.0 shipped on 2026-08-14 (`fa26d57`, tag `v0.6.0`)
+carrying the in-flight gutter dot and the VFS refresh after CLI writes. Next work is whatever is
+picked from the list below or backlog.md.
+
+## Released: 0.6.0 (2026-08-14)
+Eighth release. `verifyPlugin` run WITHOUT `-PskipVerifierIdes`: **Compatible on all seven PhpStorm
+branches 242→262**, no problems. The GitHub asset returned HTTP 200 and `cmp`-identical to the local
+zip, the feed advertises 0.6.0, and `marketplace-upload.yml` went green in 14s. The Marketplace had
+not yet published it at release time — its own verification queue; previous releases cleared the
+same day. Confirm with
+`curl -s https://plugins.jetbrains.com/api/plugins/33274/updates?size=3`.
 
 What landed: the timeline gutter dot now reports state — **white and pulsing while in flight, green
 on success, red on failure** (`@keyframes bg-pulse` on `.tool-line.run::before` / `.think-live::before`,
