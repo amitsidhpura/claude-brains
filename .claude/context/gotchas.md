@@ -1,6 +1,47 @@
 # Gotchas — hard-won, don't rediscover
 
 ## Protocol / wire
+- **An async sub-agent's `tool_result` is a LAUNCH ACK, not the end of its work.** Measured
+  2026-08-13 (`-home-syncroze-Sites-claude-brains-testing/8a0b1939…`): an `Agent` tool_use at
+  16:55:53.309Z got its tool_result 1.8s later reading *"Async agent launched successfully … The
+  agent is working in the background."* — and the agent then ran for minutes. Anything keyed on "the
+  result arrived" therefore fires almost immediately and is WRONG for agents: it turned three
+  in-flight dots green while all three were still working. The launch ack is exactly what
+  `isInternalResult()` already recognises (that is why it draws no OUT box), so use that same rule.
+  What actually finishes a sub-agent is the task lifecycle — `task_notification` (has
+  `tool_use_id`) or `task_updated` (**no** `tool_use_id`, so the tool must be stashed on the task
+  when an earlier frame supplied it). Both are LIVE-ONLY: zero occurrences in any transcript, so
+  they cannot be re-measured from disk.
+- **"The agent failed" is not "the agent's WORK failed", and only the first is knowable.** The
+  notification field is `<status>completed|failed|killed</status>` (verbatim from the 2.1.228 binary)
+  — match those named states, not "anything != completed", since the binary also carries `running`
+  and `pending` and painting a live line red is worse than leaving an unknown state green.
+  It reports the AGENT: measured 2026-08-13, an agent explicitly asked to fail was still
+  `<status>completed</status>`, because it did its job. The work's outcome lives one level down, and
+  **whether it is recorded at all depends on how the agent ran the command** — session `ae4b9c80…`,
+  the sandbox's sleep-chain guard blocked `sleep 30 && exit 1` in the foreground, the agent re-ran it
+  via `run_in_background`, and nobody captured the exit status: four clean tool results, no error,
+  while its own text said "TASK 3: FAILED". The same task ran in the foreground in an earlier session
+  and DID produce an errored result. Any transcript scan is therefore red or green for identical work
+  depending on a sandbox guard — which is why the sub-task dot was built and removed. If revisited,
+  the only signal surviving both paths is the summary prose.
+- **`is_error` on a tool_result does NOT mean the work failed — check for the `<tool_use_error>`
+  wrapper.** A result wrapped in `<tool_use_error>…</tool_use_error>` is the harness REFUSING the
+  call (a blocked compound command, an invalid input); the tool never ran, and an agent typically
+  adapts and carries on. An unwrapped error is the command running and failing (`Exit code 1`).
+  Measured 2026-08-13 after all three of a user's dummy agents came out red: each had its first call
+  refused with `<tool_use_error>Blocked: sleep 30 followed by: echo …`, and only the one that ALSO
+  had a plain `Exit code 1` had actually failed. Every errored result across the machine's sub-agent
+  transcripts split the same way (3 wrapped, all `Blocked:`; 2 unwrapped, both `Exit code 1`).
+  Read the wrapper through BOTH content shapes — a result is a bare string on one path and an array
+  of text blocks on the other.
+- **An async sub-agent's child events never reach the parent's wire.** Measured 2026-08-13 (session
+  `96ebe694…`): the parent transcript has ZERO records carrying `parent_tool_use_id`, only
+  `isSidechain`. The children live in `subagents/agent-<id>.jsonl`, which the notification's
+  `<output-file>` is a SYMLINK to — so that field, not a path guess, is the handle if the sub-agent's
+  own tool results are ever needed (e.g. to tell whether its WORK failed, which no wire field says).
+  The synchronous-sub-agent probe that recorded `parent_tool_use_id` as existing does not generalise
+  to backgrounded ones.
 **Payload shapes live in `docs/ide-mcp-protocol.md` (§9 wire vocabulary, §10 measured facts) —
 this section keeps only the standing RULES that defeat assumptions.** Re-read the doc before
 trusting memory here.
@@ -82,6 +123,18 @@ trusting memory here.
   the normal state for the first few seconds of a session, not an error.
 
 ## Build / toolchain
+- **A cold configuration cache turns `runIde` into a NETWORK build, and it can fail on TLS.**
+  `build.gradle.kts` resolves the verifier's IDE ladder through
+  `ProductReleasesValueSource`, which hits `teamcity.jetbrains.com`. While a config-cache entry
+  exists this never runs, so `runIde` looks offline — but the moment the entry is evicted (running a
+  different task graph, e.g. `test`, is enough) the next `runIde` recomputes it and can die with
+  `SSLHandshakeException: No subject alternative DNS name matching teamcity.jetbrains.com`.
+  Observed 2026-08-13 with `curl -I https://teamcity.jetbrains.com` returning a clean 401 from the
+  same machine at the same moment — so "the network is fine" does not clear the JVM, whose truststore
+  or SNI path is what is actually failing. `--offline` does NOT help (the value source still runs).
+  **`./gradlew runIde -PskipVerifierIdes` does** — that flag is what skips the ladder resolution.
+  Reach for it the instant a build fails on a jetbrains.com host for a task that has no business
+  downloading anything.
 - **Two machines, and only the repo travels.** Development happens on both a Linux box and a
   Windows one (paths in overview.md), so ANY note naming a home dir, a transcript folder, a CLI
   location or the sibling test repo is machine-scoped — check which box you are on before trusting
@@ -232,6 +285,44 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **`.turn-body`'s paint containment eats anything drawn OUTWARD, and it has now bitten twice.** The
+  card menu opened as a clipped sliver; the in-flight ring rendered as a "cut half-rectangle" squared
+  off against the turn's left and top edges — the exact shape chat.css's focus-ring comment predicted
+  years-of-comments earlier. Measured: at full expansion the ring's left edge is x=8 while
+  `.turn-body` starts at x=14. Focus rings dodged it by going INSET; anything that must grow outward
+  cannot, so lift containment instead — `.turn-body:has(...)`, the idiom already there for the card
+  menu. **But weigh that lift before taking it:** it costs the live turn a real rendering property and
+  lets a leaked state keep an old turn uncontained AND painting. The in-flight signal was rebuilt as
+  an opacity-only fade instead — no geometry, nothing to clip, no lift — and the halo was dropped.
+  Prefer "draw inside your own box" over "un-contain the ancestor"; reach for the lift only when the
+  thing genuinely cannot be expressed inside the box (the card menu is a popup, so it cannot).
+- **A fixture that feeds only wire frames does NOT reproduce the panel's DOM.** Nothing on the wire
+  creates a `.turn-body` — the real panel makes one in `addUserMessage` -> `newTurn()` when the user
+  SENDS. So every live-harness fixture builds its blocks bare in `#log`, outside the containment,
+  stacking and `content-visibility` context real blocks live in. Fixture 45 went 31/31 green while
+  the clipping was plainly visible in the panel, for exactly this reason. The harness now takes a
+  per-step `"setup"` JS hook: use it to build the turn the way the panel does before sending frames.
+  **Ask of any green CSS assertion: is the element in the same ANCESTRY it has in production?**
+- **`onUserEvent` has TWO early returns, and the common tools go out through them.** `LIM.resultSkip`
+  (Edit/Write/TodoWrite/Task*) and `isInternalResult` both `return` partway down the tool_result
+  handler. Anything that must happen for EVERY result — clearing an in-flight state, a bridge call —
+  goes above them or it silently never runs for the most-used tools of all. The `tasks` bridge call
+  already carries this warning in a comment; the in-flight `.run` removal is the second case, and
+  fixture 45 step 4 exists only to pin it.
+- **A live-only state must be set at the LIVE site, never in the shared builder.** `toolLine()` is
+  called by the live path, the replay builder AND `__gallery()` — a replayed or demo tool is already
+  finished, so a class added inside the helper makes a resumed conversation pulse forever. Same shape
+  for anything else live-only: put it where the wire frame is handled.
+- **Any forever-running state needs a sweep at turn end, not just a clear on the happy path.** An
+  interrupt, an API error or `__exit` ends a turn with a `tool_use` that never gets a `tool_result`,
+  so the per-result clear never fires. `setBusy(false)` is the chokepoint (six callers, all real ends
+  of turn; the one intermediate `result` for a pending background task returns before it, correctly).
+  This family has now bitten three times: `.t-prog.run`, the hidden bg chip that pulsed forever
+  (manual-test 7.3), and this. Assume it will bite a fourth.
+- **A class assertion is not a CSS assertion.** `el.classList.contains(...)` passes even when the
+  stylesheet never attached; assert the resolved `getComputedStyle(el, '::before').animationName`
+  too. Prove the pair discriminates by injecting `animation: none !important` and confirming ONLY
+  the animation assertions fail (26 pass / 5 fail for fixture 45, 2026-08-13).
 - **A scrollbar is painted at the bottom of its container's PADDING box.** So the element that
   carries the padding must ALSO be the one that scrolls, or the bar floats mid-box: `.io` had
   border on `.io`, padding on `.io-row` and `overflow-x` on `.io-v`, which inset the bar 42px from

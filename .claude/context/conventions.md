@@ -37,6 +37,16 @@
   screenshots with the exact values they want — apply those verbatim rather than re-deciding.
 - When a visual choice is genuinely open (size, thickness, padding), **render the candidates side
   by side** and let the user pick; do not iterate one guess at a time.
+- **Ship the safest candidate FIRST, then build the probe against it.** A probe is only honest if its
+  columns drive a rule that is genuinely live — otherwise it compares copies of one. Landing the
+  boring option (one already used elsewhere in the panel) means nothing novel ships ahead of the
+  pick, each column varies one token, and the pick is a one-line edit. Used for `--attach-gap`, then
+  `--pulse-name` (2026-08-13).
+- **Sequence a fix so its negative control is free.** Land the half that creates the state without
+  the half that resolves it, run the new fixture, and the failures ARE the bug demonstrated — then
+  land the rest and watch them go green. Costs nothing and proves which assertions discriminate.
+  Do NOT run the control with neither half: every "must be 0" assertion then passes for the wrong
+  reason, which is exactly what a vacuous suite looks like.
 - Every new test suite gets its negative control RUN, not just written: assert a wrong value (or
   run the fixture against `git show HEAD:` of the file) and confirm it fails.
 - **When two defects can mask each other, a fixture that replays them in sequence pins only the

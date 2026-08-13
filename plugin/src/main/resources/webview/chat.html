@@ -1293,6 +1293,10 @@
     // to hang it under, and silently dropping it is the very hole this item exists to close.
     const line = t ? t.el : track(toolLine('web_search'));
     const holder = t || { el: line, io: null };
+    // A server_tool_use was marked in flight at content_block_start and its result arrives HERE,
+    // as a content block — it never reaches onUserEvent, so this is the only place that can settle
+    // it. On the unmatched-result branch above this is a no-op: toolLine() never sets .run.
+    line.classList.remove('run');
     if (res.isError) line.classList.add('fail');
     if (!holder.io) { holder.io = ioBox([]); line.after(holder.io); }
     const cut = cutInfo(res.text, LIM.outMax);
@@ -1378,6 +1382,22 @@
     // Fetched here rather than at element-creation time because the tool line's OWN description is
     // needed while `bits` is built — see the duplicate check below.
     const tool = ev.tool_use_id ? toolsById[ev.tool_use_id] : null;
+    // Remember the tool line this task belongs to. task_notification/task_updated are the frames
+    // that say a sub-agent is DONE, and task_updated carries no tool_use_id at all — so without
+    // this the finishing frame cannot reach the line that has to stop pulsing.
+    if (tool) st.tool = tool;
+    // The sub-agent's own line settles when the task does, not when it was launched — and the task
+    // is also the ONLY place a sub-agent's failure can come from. Its tool_result was the launch ack
+    // and said nothing about the outcome, so without this an agent that died would still settle
+    // green. The status vocabulary is read verbatim out of CLI 2.1.228 (`strings`), which documents
+    // the notification's field as `<status>completed|failed|killed</status>`.
+    // Named states only, NOT "anything that is not completed": the binary also carries `running` and
+    // `pending` for other task kinds, and painting a still-running line red is a worse failure than
+    // leaving an unknown state green.
+    if (done && st.tool && st.tool.el) {
+      st.tool.el.classList.remove('run');
+      if (ev.status === 'failed' || ev.status === 'killed') st.tool.el.classList.add('fail');
+    }
     const u = ev.usage || {};
     const bits = [];
     if (st.type) bits.push(st.type);
@@ -2162,7 +2182,18 @@
     busy = b;
     send.title = b ? 'Stop' : 'Send';
     send.classList.toggle('stop', b);
-    if (b) showWorking(); else { hideWorking(); workStart = 0; awaitingUser = false; }
+    if (b) showWorking();
+    else {
+      hideWorking(); workStart = 0; awaitingUser = false;
+      // Nothing is in flight once the turn is over. An interrupt, an API error or a process exit
+      // ends a turn with a tool_use that never gets a tool_result at all, and that line would go on
+      // pulsing for the rest of the session — the same failure .t-prog.run is guarded against
+      // above, and the one that left a hidden bg chip pulsing forever (manual-test 7.3, see the
+      // .chip-btn[hidden] note in chat.css). Every setBusy(false) caller is a real end of turn: the
+      // one intermediate `result`, where a suspending background task is still pending, returns
+      // before reaching here on purpose.
+      log.querySelectorAll('.tool-line.run').forEach(function (el) { el.classList.remove('run'); });
+    }
   }
 
   let lastUser = null;                 // { text, images } — for Retry
@@ -2763,7 +2794,15 @@
           // finalize a line that already exists but can never create one.
           const p = ev.patch || {};
           const st = taskProg[ev.task_id];
-          if (p.status && p.status !== 'in_progress' && st && st.el) st.el.classList.remove('run');
+          if (p.status && p.status !== 'in_progress' && st) {
+            if (st.el) st.el.classList.remove('run');
+            // and the Agent tool line above it — this frame has no tool_use_id, which is why
+            // taskLine stashes the tool on `st`. Same named-states rule as taskLine's done branch.
+            if (st.tool && st.tool.el) {
+              st.tool.el.classList.remove('run');
+              if (p.status === 'failed' || p.status === 'killed') st.tool.el.classList.add('fail');
+            }
+          }
         } else if (ev.subtype === 'informational') {
           infoLine(ev.content, ev.level, ev.tool_use_id || ev.toolUseId);
           // prevent_continuation means the turn stops HERE. A `result` does still follow (probed),
@@ -3078,6 +3117,10 @@
         // the description at content_block_stop. Item 12: these used to render literally nothing.
         if (cb.type === 'tool_use' || cb.type === 'server_tool_use') {
           const t = track(toolLine(cb.name));
+          // In flight until its result lands (or the turn ends). Set HERE and not inside toolLine(),
+          // because the replay builder (case 'tool') and __gallery both draw FINISHED tools through
+          // that same helper and neither may ever pulse.
+          t.classList.add('run');
           openTool = { el: t, name: cb.name || 'tool', json: '', id: cb.id || null };
           if (cb.id) toolsById[cb.id] = openTool;
           flushMd();
@@ -3207,6 +3250,24 @@
       if (b.type !== 'tool_result') return;
       const t = toolsById[b.tool_use_id];
       if (!t) return;
+      // Read the text FIRST: whether this result settles the line depends on what it says.
+      let resultRaw = '';
+      if (typeof b.content === 'string') resultRaw = b.content;
+      else if (Array.isArray(b.content)) resultRaw = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
+      // The result is USUALLY the settle — but an async sub-agent's is not. Measured 2026-08-13 in a
+      // real session (-home-syncroze-Sites-claude-brains-testing/8a0b1939…): the Agent tool_use at
+      // 16:55:53.309 got its tool_result at 16:55:55.158, 1.8s later, reading "Async agent launched
+      // successfully … The agent is working in the background." The agent then ran for minutes. So
+      // settling here turned the dot green almost immediately while three agents were still working
+      // — reported from a screenshot. That launch ack is exactly what isInternalResult already
+      // recognises (it is why no OUT box is drawn for it), so the same rule decides both.
+      // An ERROR still settles: a launch that failed is not an agent running in the background.
+      // What settles a real one is the task lifecycle — see taskLine's `done` branch — and failing
+      // that, the sweep at the end of the turn.
+      // MUST stay above the early returns further down: LIM.resultSkip covers Edit/Write/TodoWrite/
+      // Task*, the most common tools there are, so a removal placed below would leave exactly those
+      // lines pulsing until the turn ended. Same reason the tasks bridge call below sits where it does.
+      if (b.is_error || !isInternalResult(resultRaw)) t.el.classList.remove('run');
       if (b.is_error) t.el.classList.add('fail');
       // A Task* call changed the list; ask Kotlin for the current one (the CLI keeps it on disk).
       // MUST be above the RESULT_SKIP return below: TaskCreate/TaskUpdate/TaskList are all in that
@@ -3227,9 +3288,6 @@
       // still says ✓ Applied and nothing else on screen says the file moved under us. Mirrors
       // RenderLimits.resultNote; read from the TEXT because `staleRecovered` rides on
       // toolUseResult, which the live stream does not carry.
-      let resultRaw = '';
-      if (typeof b.content === 'string') resultRaw = b.content;
-      else if (Array.isArray(b.content)) resultRaw = b.content.filter(function (x) { return x.type === 'text'; }).map(function (x) { return x.text; }).join('\n');
       { const note = resultNote(resultRaw);
         if (note) { const n = noteLine(note); if (n) (t.io || t.el).after(n); } }
       // Auto-approved edit (4.4): no permission card claimed this tool_use (supersedeEdit
@@ -4005,6 +4063,22 @@
       'reference an issue\n\nOriginal prompt: commit this', 'warning');
     infoLine('Consider running the test suite before committing.', 'suggestion');
     infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
+
+    // in-flight states (2026-08-13): the gutter dot is white and breathing while its work has not
+    // come back, and takes its verdict colour when it does. Every OTHER tool line in this gallery is
+    // finished, so without these the index cannot show the contrast the state exists to draw — a
+    // settled GREEN line sits directly under the running white one for exactly that reason. These
+    // keep pulsing until the next turn ends (setBusy(false) sweeps .run) or the panel is refreshed,
+    // which is right for a demo and is what the gallery's other live-only blocks do too.
+    { const tr = track(toolLine('Bash'));
+      tr.classList.add('run');
+      tr.querySelector('.t-desc').textContent = './gradlew test — still in flight';
+      const tf = track(toolLine('Bash'));
+      tf.querySelector('.t-desc').textContent = './gradlew compileKotlin — came back'; }
+    { const tl = track(el('think-live', ''));
+      tl.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +
+        '<span class="th-el-wrap"> · <span class="th-el">3s</span></span>' +
+        '<span class="tok"> · 132 tokens</span></div>'; }
 
     // stale-edit caveat (item 11) — the file changed on disk between the read and the write. The
     // card still says Applied, because it did apply; the note is the part nothing else says.

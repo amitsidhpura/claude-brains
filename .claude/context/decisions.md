@@ -3,6 +3,87 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-13 — A running tool's dot is white and breathing; the colour IS the verdict
+`.tool-line.run { --dot-c: var(--fg) }` (declared before `.fail`), plus
+`.tool-line.run::before, .think-live::before { animation: var(--pulse-name) var(--pulse-period) ease-in-out infinite }`
+with `--pulse-name: bg-pulse`. `.run` is set at the LIVE tool_use site only — replay and `__gallery`
+draw finished tools through the same `toolLine()` helper — cleared at the result, in
+`serverToolResult`, and swept in `setBusy(false)`.
+**Why:** a two-minute `Bash` and one that had already returned rendered identically, and the dot went
+green from its first frame, asserting success before anything came back. White says "no verdict yet".
+`bg-pulse` was picked by the user from `design/dot-pulse-probe.html` (four motions, each column
+driving the real rule); it is what the background-task chip already wears, so the panel says "still
+going" one way throughout. Opacity only, deliberately — see the superseded entry below for what
+geometry costs.
+**Rejected:** a new `:root` token for the running colour (`--fg` is already the panel's near-white);
+capping the pulse to the newest in-flight line (during a fan-out several tools genuinely ARE running,
+and showing one misreports state — the sweep bounds it instead).
+
+## 2026-08-13 — A sub-agent settles when its TASK ends, not when it was launched
+`onUserEvent` clears `.run` only when `b.is_error || !isInternalResult(resultRaw)`; `taskLine` stashes
+`st.tool` and clears it on any `done` frame, and `task_updated` clears it through that stash.
+**Why:** measured — an `Agent` tool_use got its tool_result 1.8s later reading "Async agent launched
+successfully … working in the background", then ran for minutes. "The result arrived" is not "the work
+finished" for this tool. `isInternalResult` already recognised that ack (it is why no OUT box is
+drawn for it), so both uses now share one rule instead of a second heuristic.
+**Rejected:** keying on the tool NAME — the task lifecycle is explicitly not sub-agent-only, and a
+name list drifts. Also rejected: leaving it to the end-of-turn sweep, which is correct but far too
+coarse (every agent's dot would stay white until the last one finished). The sweep remains as the
+safety net for a `task_notification` that never arrives.
+
+## 2026-08-13 — A sub-agent goes red on a failed/killed TASK, never on failed WORK
+`taskLine`'s done branch and `task_updated` add `.fail` for status `failed` or `killed` only.
+The panel says nothing about whether the agent's work succeeded.
+**Why:** the status vocabulary is `<status>completed|failed|killed</status>`, read verbatim from CLI
+2.1.228 — and a sub-agent's tool_result is only ever the launch ack, so without this an agent that
+genuinely died settled GREEN. Named states only, not "anything ≠ completed": the binary also carries
+`running`/`pending`, and painting a live line red is worse than leaving an unknown state green.
+**Why not the work outcome — this was built, then removed the same day.** An agent asked to run a
+failing command is reported `completed`; the failure is one level down. Reading it needs the
+sub-agent's own transcript, and whether that transcript records the failure AT ALL depends on how the
+agent ran the command (gotchas: foreground → errored tool_result, `run_in_background` → nothing). The
+same task rendered red one run and green the next, which is worse than either consistent answer.
+**Rejected:** colouring from the summary PROSE — the only signal surviving both paths, and the one
+the CLI hands the model, but a text heuristic over an open-ended sentence. Offered; user chose removal.
+
+## 2026-08-13 — The gutter dot's colour is a `--dot-c` property on the element
+The four byte-identical `::before` rules (`.blk`, `.think`, `.think-live`, `.tool-line`) collapse to
+one geometry rule reading `background: var(--dot-c)`, each element declaring its own colour. `:root`
+also gains `--pulse-period: 1.6s`, replacing four hand-written copies.
+**Why:** it is what lets a STATE recolour the dot in a single declaration — `.run`'s white and
+`.fail`'s red are one custom-property line each instead of another copy of the geometry. Same
+argument `--block-gap`/`--attach-gap` already make in that file: values used in more than one place
+drift apart when nothing names them, and these four had no way to stay identical. (It arrived with
+the halo, which needed a colour-agnostic rule; it earned its place independently and stayed.)
+
+## 2026-08-13 — The panel honours prefers-reduced-motion on every animated surface at once
+One `@media (prefers-reduced-motion: reduce)` block covers the in-flight dot, `.bg::before`,
+`.think-live .shimmer` and `.generating .verb`.
+**Why:** the panel had no such block while four surfaces animated infinitely; covering only the newest
+would have been incoherent. `.shimmer`/`.verb` also get `color: var(--muted)` back — they set
+`color: transparent` and rely on a MOVING gradient to be legible, so stopping the animation alone
+leaves invisible text rather than still text. The in-flight dot keeps its WHITE (colour, not
+animation), so a running tool is still distinguishable with motion off.
+**Verified, and its limit:** under `Emulation.setEmulatedMedia` the block fires in real JCEF and
+reverts cleanly. Whether the Linux desktop's own setting reaches an offscreen-rendered CEF is
+untested — in backlog.
+
+## 2026-08-13 — [SUPERSEDED, all removed the same day] Three things built and withdrawn
+Kept as a record of what was tried, because each looks obviously right until measured. Details of the
+deleted code are not worth the reload budget; the lessons live in gotchas.md.
+1. **An outward halo** (`@keyframes dot-ping` on a `::after` ring). Shipped, seen in the panel, pulled:
+   `.turn-body`'s paint containment shaved it into a "cut half-rectangle" — the exact shape the
+   focus-ring comment in chat.css already warned about. Measured: ring left edge x=8 against a turn
+   box starting at x=14.
+2. **Lifting `content-visibility` for a turn with work in flight**, the fix for (1). Reverted with it:
+   it cost the live turn a real rendering property for decoration, and a leaked `.run` would have left
+   an old turn uncontained AND painting. A fade changes no geometry, so nothing needs lifting.
+3. **A status dot on the sub-task (`.t-prog`) line, red when the agent's work failed** — with an
+   `agent_outcome` bridge verb, `SessionStore.agentWorkFailed`, and an `__agent_outcome` frame. Removed
+   with all of it (Kotlin reverted byte-exact) once the work outcome proved unknowable; `.t-prog`'s
+   colour-only `run` class predates this and stays. A `<tool_use_error>` exclusion was added on the way
+   out and is worth remembering on its own — see gotchas.
+
 ## 2026-08-13 — One gap for every block that hangs off the line above it
 `:root` gains `--block-gap: 18px` (independent blocks) and `--attach-gap: 8px` (a line and what
 belongs to it). One rule covers the five tool-line followers —

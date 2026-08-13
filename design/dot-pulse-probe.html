@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>In-flight gutter dot — candidate motions side by side</title>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/chat.css"/>
+<style>
+  /* Every column renders through the REAL rule in chat.css —
+       .tool-line.run::before, .think-live::before { animation: var(--pulse-name) 1.6s ease-in-out infinite }
+     — and sets only --pulse-name. So what is being compared is the shipped contract at four
+     motions, not four copies of it. Same discipline as tool-gap-probe.html.
+     JUDGE THIS IN A REAL BROWSER. Headless Chrome has no compositor: rAF fires ~2.5/s and the
+     animation reads frozen (gotchas.md), so a screenshot here proves nothing about the motion. */
+  body { background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; padding: 20px; margin: 0; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0 0 18px; max-width: 900px; line-height: 1.5; }
+  .cols { display: flex; gap: 18px; align-items: flex-start; }
+  .col { flex: 1 1 0; min-width: 0; max-width: 300px; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .col > .name { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .col > .why { color: var(--muted); font-size: 11px; margin-bottom: 14px; min-height: 68px; line-height: 1.45; }
+  .col.pick .name { color: var(--accent); }
+  .grp { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--dot);
+    margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+  .grp:first-of-type { margin-top: 0; }
+
+  /* PROBE-ONLY overrides — never shipped ------------------------------------------------- */
+  /* The real .turn-body reserves 1000px for an unrendered turn (content-visibility: auto,
+     chat.css). Right for a 200-turn log, absurd for six three-line groups: off-screen columns
+     would collapse and the page would jump while you are trying to compare motion. */
+  .col .turn-body { content-visibility: visible; }
+
+  /* PROBE-ONLY, AFTER THE PICK (2026-08-13) — read this before trusting a column.
+     A WON, so A is the only column driven by the SHIPPED rule: chat.css animates
+     `.tool-line.run::before / .think-live::before` on --pulse-name, and column A sets that token and
+     nothing else.
+     B, C and D lost and their keyframes are not in chat.css, so they are reproduced here to keep the
+     record of what the choice actually was. D is the interesting one: it SHIPPED FIRST and was then
+     pulled. A halo has to grow outside the dot, and .turn-body's paint containment shaved it into a
+     cut half-rectangle at the turn's edge (measured: ring left edge x=8 against a turn box starting
+     at x=14). Making room meant un-containing the live turn — a real cost for decoration — so the
+     panel went to the fade, which changes no geometry and cannot be clipped. Its column below still
+     lifts containment locally, which is the ONLY reason it looks correct here and did not in the
+     panel. @keyframes twinkle is reproduced for the same record-keeping reason: it was deleted from
+     chat.css when it lost. */
+  @keyframes twinkle     { 0%,100% { transform: scale(1);   opacity: 1; }
+                           50%     { transform: scale(.65); opacity: .5; } }
+  @keyframes dot-breathe { 0%,100% { transform: scale(.78); opacity: .5; }
+                           50%     { transform: scale(1);   opacity: 1; } }
+  @keyframes dot-ping    { 0%       { transform: scale(1);   opacity: .45; }
+                           70%,100% { transform: scale(2.6); opacity: 0; } }
+  .col-ping .tool-line.run::before, .col-ping .think-live::before { animation: none; }
+  .col-ping .turn-body { content-visibility: visible; }   /* what the panel refused to pay */
+  .col-ping .tool-line.run::after, .col-ping .think-live::after {
+    content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--dot-c); pointer-events: none;
+    animation: dot-ping var(--pulse-period) ease-out infinite; }
+</style>
+</head>
+<body>
+<h1>How should the gutter dot say “this has not come back yet”?</h1>
+<p class="sub"><b>Decided 2026-08-13: A</b> — after D shipped and was pulled (see the note in &lt;style&gt;). Column A is driven by the rule that actually shipped; B, C and D are probe-only records of what they were compared against. Every column is the same markup; only the motion differs.
+   Two facts frame the choice: the panel already has exactly one live-dot idiom — <code>bg-pulse</code> at
+   1.6s, worn by the background-task chip — and <code>@keyframes twinkle</code> has sat in
+   <code>chat.css</code> with <b>zero references</b> since it was written, so this also decides whether it
+   becomes live or gets deleted. The <b>settled</b> row comes first in every column on purpose: what is
+   being judged is the CONTRAST between a running dot and a finished one, not the motion on its own.</p>
+
+<div class="cols">
+  <div class="col pick" style="--pulse-name: bg-pulse">
+    <div class="name">A — bg-pulse — PICKED 2026-08-13</div>
+    <div class="why">Opacity 1 → .35. <b>Consistency:</b> this is what the background-task chip’s dot already means, so “running” would be said one way across the whole panel. Risk: .35 on 10px of <code>--green</code> may read as a flicker rather than a breath — and unlike the chip, there can be five at once.</div>
+
+    <div class="grp">settled — the baseline</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Read</b><span class="t-desc path">chat.css</span></div>
+      <div class="tool-line"><b>Grep</b><span class="t-desc">tool-line::before</span></div>
+    </div></div>
+
+    <div class="grp">one in flight</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still running</span></div>
+    </div></div>
+
+    <div class="grp">a parallel fan-out</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Read</b><span class="t-desc path">SessionStore.kt</span></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">**/*.kt — came back</span></div>
+      <div class="tool-line run"><b>Grep</b><span class="t-desc">renderBgTasks</span></div>
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew verifyPlugin</span></div>
+    </div></div>
+
+    <div class="grp">live thinking</div>
+    <div class="turn"><div class="turn-body">
+      <div class="think-live"><div class="th"><span class="shimmer">Thinking…</span><span class="th-el-wrap"> · <span class="th-el">3s</span></span><span class="tok"> · 132 tokens</span></div></div>
+      <div class="think no-body"><summary>Thought for 4s</summary></div>
+    </div></div>
+
+    <div class="grp">the three states a tool line has</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">in flight — white, no verdict yet</span></div>
+      <div class="tool-line"><b>Bash</b><span class="t-desc">succeeded — green</span></div>
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">failed — red</span></div>
+    </div></div>
+
+    <div class="grp">against the idiom it has to live beside</div>
+    <button class="chip-btn bg">2 tasks</button>
+  </div>
+
+  <div class="col" style="--pulse-name: twinkle">
+    <div class="name">B — twinkle <i>(deleted from chat.css when it lost)</i></div>
+    <div class="why">Scale 1 → .65 <i>and</i> opacity 1 → .5. It has been sitting in <code>chat.css</code> with no references at all. <b>This column decides its fate:</b> it wins and becomes live, or it is deleted in the same commit. Shrinking reads as receding — check whether that says “working” or says “going away”.</div>
+
+    <div class="grp">settled — the baseline</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Read</b><span class="t-desc path">chat.css</span></div>
+      <div class="tool-line"><b>Grep</b><span class="t-desc">tool-line::before</span></div>
+    </div></div>
+
+    <div class="grp">one in flight</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still running</span></div>
+    </div></div>
+
+    <div class="grp">a parallel fan-out</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Read</b><span class="t-desc path">SessionStore.kt</span></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">**/*.kt — came back</span></div>
+      <div class="tool-line run"><b>Grep</b><span class="t-desc">renderBgTasks</span></div>
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew verifyPlugin</span></div>
+    </div></div>
+
+    <div class="grp">live thinking</div>
+    <div class="turn"><div class="turn-body">
+      <div class="think-live"><div class="th"><span class="shimmer">Thinking…</span><span class="th-el-wrap"> · <span class="th-el">3s</span></span><span class="tok"> · 132 tokens</span></div></div>
+      <div class="think no-body"><summary>Thought for 4s</summary></div>
+    </div></div>
+
+    <div class="grp">the three states a tool line has</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">in flight — white, no verdict yet</span></div>
+      <div class="tool-line"><b>Bash</b><span class="t-desc">succeeded — green</span></div>
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">failed — red</span></div>
+    </div></div>
+
+    <div class="grp">against the idiom it has to live beside</div>
+    <button class="chip-btn bg">2 tasks</button>
+  </div>
+
+  <div class="col" style="--pulse-name: dot-breathe">
+    <div class="name">C — dot-breathe</div>
+    <div class="why">Scale .78 → 1, opacity .5 → 1. <b>Grows instead of shrinking</b>, and its PEAK is exactly a settled dot — so a running dot never gets louder than a finished one, it only ever falls short of it. Returning-to-dim is the part the eye reads as “not there yet”.</div>
+
+    <div class="grp">settled — the baseline</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Read</b><span class="t-desc path">chat.css</span></div>
+      <div class="tool-line"><b>Grep</b><span class="t-desc">tool-line::before</span></div>
+    </div></div>
+
+    <div class="grp">one in flight</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still running</span></div>
+    </div></div>
+
+    <div class="grp">a parallel fan-out</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Read</b><span class="t-desc path">SessionStore.kt</span></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">**/*.kt — came back</span></div>
+      <div class="tool-line run"><b>Grep</b><span class="t-desc">renderBgTasks</span></div>
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew verifyPlugin</span></div>
+    </div></div>
+
+    <div class="grp">live thinking</div>
+    <div class="turn"><div class="turn-body">
+      <div class="think-live"><div class="th"><span class="shimmer">Thinking…</span><span class="th-el-wrap"> · <span class="th-el">3s</span></span><span class="tok"> · 132 tokens</span></div></div>
+      <div class="think no-body"><summary>Thought for 4s</summary></div>
+    </div></div>
+
+    <div class="grp">the three states a tool line has</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">in flight — white, no verdict yet</span></div>
+      <div class="tool-line"><b>Bash</b><span class="t-desc">succeeded — green</span></div>
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">failed — red</span></div>
+    </div></div>
+
+    <div class="grp">against the idiom it has to live beside</div>
+    <button class="chip-btn bg">2 tasks</button>
+  </div>
+
+  <div class="col col-ping" style="--pulse-name: none">
+    <div class="name">D — dot-ping <i>(shipped, then pulled)</i></div>
+    <div class="why">The dot holds still and a ring flies off it. Shipped first, then <b>pulled</b>: a halo must grow outside the dot, and <code>.turn-body</code>’s paint containment cut it into a half-rectangle at the turn’s edge. The fix was to un-contain the live turn — a real cost for decoration. This column only looks right because it lifts containment locally.</div>
+
+    <div class="grp">settled — the baseline</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line"><b>Read</b><span class="t-desc path">chat.css</span></div>
+      <div class="tool-line"><b>Grep</b><span class="t-desc">tool-line::before</span></div>
+    </div></div>
+
+    <div class="grp">one in flight</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still running</span></div>
+    </div></div>
+
+    <div class="grp">a parallel fan-out</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Read</b><span class="t-desc path">SessionStore.kt</span></div>
+      <div class="tool-line"><b>Glob</b><span class="t-desc">**/*.kt — came back</span></div>
+      <div class="tool-line run"><b>Grep</b><span class="t-desc">renderBgTasks</span></div>
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew verifyPlugin</span></div>
+    </div></div>
+
+    <div class="grp">live thinking</div>
+    <div class="turn"><div class="turn-body">
+      <div class="think-live"><div class="th"><span class="shimmer">Thinking…</span><span class="th-el-wrap"> · <span class="th-el">3s</span></span><span class="tok"> · 132 tokens</span></div></div>
+      <div class="think no-body"><summary>Thought for 4s</summary></div>
+    </div></div>
+
+    <div class="grp">the three states a tool line has</div>
+    <div class="turn"><div class="turn-body">
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">in flight — white, no verdict yet</span></div>
+      <div class="tool-line"><b>Bash</b><span class="t-desc">succeeded — green</span></div>
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">failed — red</span></div>
+    </div></div>
+
+    <div class="grp">against the idiom it has to live beside</div>
+    <button class="chip-btn bg">2 tasks</button>
+  </div>
+
+</div>
+</body>
+</html>

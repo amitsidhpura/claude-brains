@@ -48,6 +48,14 @@
 - Voice input
 
 ## Housekeeping (one line each, do opportunistically)
+- **Does the OS's reduce-motion setting reach JCEF?** chat.css got a `@media
+  (prefers-reduced-motion: reduce)` block on 2026-08-13 covering all four animated surfaces
+  (in-flight ring, `.bg::before`, `.shimmer`, `.generating .verb`). Half of this is now SETTLED:
+  under `Emulation.setEmulatedMedia` the block fires correctly in real JCEF — ring goes
+  `display:none` / `animation:none` and reverts cleanly — so it is live CSS, not dead. What is still
+  unverified is the other half: whether the LINUX DESKTOP's setting propagates into an
+  offscreen-rendered CEF at all (it read `matches:false` with the setting untested). Answer it by
+  actually turning on reduce-motion in the OS and re-reading `matchMedia(...).matches` in the panel.
 - `.ask-panel → .ask-b` sits at 4px where every other body→buttons gap (`→ .card-b`,
   `.ask-b → .ask-foot`) is 10px. Found in the 2026-08-13 spacing survey, offered, not taken.
 - `.claude/skills/` is git-ignored (`.gitignore:22` ignores all of `.claude/*` bar `context/`),

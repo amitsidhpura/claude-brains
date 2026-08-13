@@ -3,6 +3,36 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-13 (sixth) — the in-flight dot, and five real-panel bugs a green harness could not see
+- **Shipped:** the timeline gutter dot now says what is happening — white and pulsing in flight,
+  green on success, red on failure — plus a `--dot-c` refactor (four duplicate `::before` rules to
+  one), `--pulse-period`, and the panel's first `prefers-reduced-motion` block. Reasoning in
+  decisions.md; `design/dot-pulse-probe.html` holds the four compared motions with A marked picked.
+- **Method that worked, twice over:** ship the boring option FIRST (`bg-pulse`, already the chip's
+  idiom), then build the probe against a rule that is genuinely live, so the pick is a one-token
+  edit. And sequence the fix so the negative control is free — landing the class-add WITHOUT the
+  settle made fixture 45 fail 15/31 on exactly the assertions that matter.
+- **Five things the user found in screenshots that the harness could not.** In order: the ring was
+  clipped by paint containment; a sub-agent went green 1.8s in (its tool_result is a launch ack); a
+  failing agent stayed green (the CLI reports it `completed`); all three agents went red (each had a
+  `<tool_use_error>` block it worked around); then all three went green (the failing command had run
+  in the background, where nothing records an exit status). Each was measured against real
+  transcripts or the CLI binary before touching code — three of the five ended in NOT shipping
+  something. Traps in gotchas.md.
+- **The root cause of the blind spot, now fixed:** nothing on the WIRE creates a `.turn-body` — the
+  panel makes one in `addUserMessage` — so every fixture was testing blocks sitting bare in `#log`,
+  outside the containment and stacking context real blocks live in. `tools/live_harness.py` gained a
+  per-step `setup` hook; fixture 45 uses it and is now 31 steps / 63 assertions.
+- **Withdrawn the same day:** the halo, the containment lift it forced, and a sub-task status dot
+  with its Kotlin round trip (reverted byte-exact). Recorded rather than deleted — each looks right
+  until measured.
+- Verified: live harness **217/217** in real JCEF, `./gradlew test` **87 green**, ten negative
+  controls RUN (not just written), incl. injecting `animation:none` to prove the CSS assertions
+  discriminate from the class ones.
+- Env trap: a cold Gradle configuration cache turns `runIde` into a network build that can die on
+  `teamcity.jetbrains.com` TLS — `-PskipVerifierIdes` is the way past it (gotchas).
+- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
+
 ## 2026-08-13 (fifth) — 0.5.3 released; the docs stop describing a project that no longer exists
 - **0.5.3 released and Marketplace-Approved** (`f751503`, tag `v0.5.3`): the header-title fix and
   the attached-block spacing. Full release.md run, gate held at step 6 for the user. Asset HTTP 200
@@ -253,34 +283,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   script-level `val` captures the script object); fixed by evaluating into locals in the config
   block. Both directions run — stale notes go red with the explanatory message, correct notes build.
 
-## 2026-08-11/12 — a UI-polish session: five user-reported defects, then rename
-- All five started as a user screenshot, and each was MEASURED before touching the renderer.
-  Queue rows restyled to the attachment chip (border/background/hover-revealed `.rm`, divider
-  below); tool-image sizing (see gotchas: a column flex box stretched a 64x64 icon to 474x320);
-  todo strike → currentColor; tool-line paths project-relative and clamped to one line; context
-  gauge ring; header rename.
-- The duplicate line under a Bash box was `.t-prog`, the SUB-AGENT progress line: the CLI's task
-  lifecycle is not sub-agent-only (`runningSubagents`/`isBackgrounded`/`local_workflow` in the
-  2.1.226 binary), so an ordinary tool use hangs a task frame off its tool line whose
-  `description` the tool line already shows. Suppressed on exact match only.
-- Path shortening needed a NEW wire field: ChatPanel pushes `__project` (project.basePath),
-  refreshed by `system/init`'s `cwd` (`subtype:"init",cwd:e.cwd` — read from the binary). The
-  IDE is primary because init only arrives at the first TURN, so a resumed transcript would
-  render absolute until the user spoke.
-- Rename shipped end to end. `SessionStore.rename` appends the CLI's own record, read verbatim:
-  `{type:"custom-title", customTitle: title.trim(), sessionId}` + "\n", O_APPEND. Header title
-  hover-pencil → the header becomes the editor. `rename_session` exists as a control subtype but
-  answers "onRenameSession callback not registered" — an SDK-embedder callback, unreachable over
-  stream-json, so writing the record ourselves is the route.
-- Tooling grew: fixtures 01b, 40, 41, 42 (live harness 132 assertions, 0 failed) and two Kotlin
-  test classes (SessionStorePathTest, SessionStoreRenameTest). Every new suite got a negative
-  control run — reorder the JSON fields, assert a wrong value — and each failed as it should.
-- Two self-inflicted bugs found by measuring rather than looking: making `.tool-line` a flex row
-  let it grow past the panel (clipping filenames at the edge), and `pushSessions()` after a rename
-  popped the conversations panel open because `renderHistory` treated rendering and showing as one
-  act. Both now pinned by fixtures.
-
 ## Digest
+- **2026-08-11/12** — UI-polish session: five user-reported defects fixed (tool-line path
+  shortening, IN/OUT geometry, fold fade, history edge, permission card), then the plugin
+  rename to `io.github.amitsidhpura.claude-brains`. Lessons promoted to gotchas/conventions.
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
 
 - **2026-08-09 (seventh)** — 0.4.0 release prep, and the zip smoke test earning its keep on its

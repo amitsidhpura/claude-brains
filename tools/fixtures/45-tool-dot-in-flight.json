@@ -1,0 +1,1717 @@
+{
+  "item": "UI — in-flight gutter dot (2026-08-13)",
+  "branch": "in-flight pulse (.tool-line.run::before / .think-live::before) raised at content_block_start, settled by tool_result, web_search_tool_result, or the turn ending",
+  "provenance": "Every frame SHAPE here is reused from fixtures whose provenance is already established — content_block_start/delta/stop for tool_use is fixture 40's sequence, the `user` tool_result is fixture 07's, `result` is fixture 44's real 2026-08-12 capture (CLI 2.1.228), `__transcript` is fixture 08's, and server_tool_use/web_search_tool_result ride the same machinery per docs/client-parity.md item 12. NOTHING new is claimed about what the CLI emits. What is new is only what the RENDERER must do with those shapes, which is what is asserted. Each independent scenario opens with __clear rather than inheriting the previous one's DOM: fixture 44's lesson is that two states which can mask each other must each start from a known baseline, or an assertion reads as satisfied when nothing set it. The animationName assertions are the half that pins the CSS — a class-count assertion alone passes even if the stylesheet never attached. STEPS 15-19 ADDED 2026-08-13 after the first version shipped a real bug while green: every earlier step builds its tool line directly in #log, because nothing on the WIRE creates a .turn-body — the real panel only makes one when the user sends (addUserMessage -> newTurn). So the paint containment that .turn-body carries was never in the picture, and it was clipping the ring into a cut half-rectangle in the actual panel. Those steps use the harness's `setup` hook to build the turn the way the panel does, then send the same wire frames into it. They are KEPT after the halo was dropped for a plain fade: they now pin the opposite property — that the in-flight dot grows outside nothing, so containment stays on and the clipping class of bug cannot come back unnoticed. STEPS 20-26 ADDED 2026-08-13 from a MEASURED session (~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/8a0b1939-ceaa-415e-9e6e-895e2e1b7803.jsonl): an Agent tool_use at 16:55:53.309Z received its tool_result at 16:55:55.158Z reading 'Async agent launched successfully … The agent is working in the background.' — the ack text here is that record verbatim. The task_started/task_progress/task_updated/task_notification shapes are the ones probed on CLI 2.1.222 and documented above taskLine() in chat.html; they are LIVE-ONLY and appear in no transcript, so they cannot be re-measured from disk. STEPS 27-31 ADDED 2026-08-13 from session 06c02917-268d-408d-aec3-9beff7a0ec23: the user asked for three dummy sub-agents with one failing, and the failing one still rendered green. Measured answer — the persisted notification for it reads <status>completed</status> with a <result> ending 'Status: FAILED', and the sub-agent's OWN transcript holds the is_error:true tool_result. So the CLI considers the agent completed and the failure lives one level down; the green dot was right. The real gap those steps close is that `failed`/`killed` would ALSO have rendered green, because a sub-agent's tool_result is only ever the launch ack. The status vocabulary is `<status>completed|failed|killed</status>`, read verbatim out of the 2.1.228 binary with `strings`. A sub-task status DOT was built on 2026-08-13 and REMOVED the same day, with its __agent_outcome round trip and its Kotlin scanner: whether a sub-agent's work failure leaves any structured trace turns out to depend on how the agent ran the command — a foreground failure lands as an errored tool_result, the same command pushed to run_in_background by the sandbox guard leaves none — so the dot rendered red or green for the same task between two runs. The .t-prog assertions that remain are about its `run` CLASS only, which is colour-only and predates all of this.",
+  "steps": [
+    {
+      "note": "a tool_use with no result yet is IN FLIGHT — the class is on, and the pulse is really attached to the pseudo-element",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_f1",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"sleep 30 && echo done\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 1,
+          "why": "the live site marked it in flight"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); return l ? getComputedStyle(l, '::before').animationName : 'NO-LINE'; })()",
+          "equals": "bg-pulse",
+          "why": "THE CSS ASSERTION: the rule reached ::before in the real browser. A class check alone would only prove the JS ran"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 1,
+          "why": "exactly one ::before animation is actually running — the dot's"
+        }
+      ]
+    },
+    {
+      "note": "the result IS the settle — the line stays, only the state goes",
+      "frames": [
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_f1",
+                "content": "done",
+                "is_error": false
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "nothing is in flight once its result has landed"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line').length",
+          "equals": 1,
+          "why": "settling removes the STATE, never the line"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); return l ? getComputedStyle(l, '::before').animationName : 'NO-LINE'; })()",
+          "equals": "none",
+          "why": "and the animation really stopped, not just the class"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 0,
+          "why": "no ::before animation left running anywhere"
+        }
+      ]
+    },
+    {
+      "note": "an ERROR result settles it too — .fail and .run are never worn at once",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_f2",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"exit 1\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_f2",
+                "content": "command failed",
+                "is_error": true
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.fail').length",
+          "equals": 1,
+          "why": "the failure is recorded"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.fail.run').length",
+          "equals": 0,
+          "why": "a failed tool has come back — a red dot must not go on pulsing"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); return l ? getComputedStyle(l, '::before').animationName : 'NO-LINE'; })()",
+          "equals": "none",
+          "why": "settled on the red colour, standing still"
+        }
+      ]
+    },
+    {
+      "note": "THE ORDERING HAZARD — an Edit's result hits the LIM.resultSkip early return, so a settle placed below it would never run",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_f3",
+              "name": "Edit"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"file_path\":\"/home/syncroze/Sites/claude-brains/README.md\",\"old_string\":\"a\",\"new_string\":\"b\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_f3",
+                "content": "The file has been updated.",
+                "is_error": false
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "RESULT_SKIP covers Edit/Write/TodoWrite/Task* — the most common tools of all. Below that return they would pulse until the turn ended"
+        }
+      ]
+    },
+    {
+      "note": "a parallel fan-out: three tools in flight at once, each settling independently",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p1",
+              "name": "Read"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 1,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p2",
+              "name": "Grep"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 1
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 2,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_p3",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 2
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 3,
+          "why": "all three are genuinely running — the panel must not report one"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 3,
+          "why": "three dots really animating, which is also the repaint number"
+        }
+      ]
+    },
+    {
+      "note": "the fan-out drains one at a time — a settled sibling must not settle the others",
+      "frames": [
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_p2",
+                "content": "3 matches",
+                "is_error": false
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 2,
+          "why": "only the tool whose result arrived settled"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line')[1].classList.contains('run')",
+          "equals": false,
+          "why": "and it is the RIGHT one — the second line, matching toolu_p2"
+        }
+      ]
+    },
+    {
+      "note": "the rest of the fan-out comes back",
+      "frames": [
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_p1",
+                "content": "file contents",
+                "is_error": false
+              }
+            ]
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_p3",
+                "content": "done",
+                "is_error": false
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "the whole fan-out has settled"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 0,
+          "why": "nothing left animating"
+        }
+      ]
+    },
+    {
+      "note": "a server_tool_use settles on its web_search_tool_result — the path that NEVER reaches onUserEvent",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "server_tool_use",
+              "id": "toolu_s1",
+              "name": "web_search"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"query\":\"jcef compositor animation\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 1,
+          "why": "a server tool is in flight like any other"
+        }
+      ]
+    },
+    {
+      "note": "...and its result arrives as a content block, not a user tool_result",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 1,
+            "content_block": {
+              "type": "web_search_tool_result",
+              "tool_use_id": "toolu_s1",
+              "content": [
+                {
+                  "type": "web_search_result",
+                  "title": "Compositor threading",
+                  "url": "https://example.invalid/compositor"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "serverToolResult is the ONLY place that can settle this one — onUserEvent never sees it"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); return l ? getComputedStyle(l, '::before').animationName : 'NO-LINE'; })()",
+          "equals": "none",
+          "why": "and the pulse really stopped"
+        }
+      ]
+    },
+    {
+      "note": "THE TRAP — an interrupted turn: a tool_use that never gets a tool_result at all",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_i1",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"sleep 300\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "error_during_execution",
+          "is_error": true,
+          "duration_ms": 1204,
+          "num_turns": 1,
+          "result": "Interrupted by user",
+          "usage": {
+            "output_tokens": 12
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "the sweep at turn end. Without it this line pulses for the REST OF THE SESSION — the same failure that left a hidden bg chip pulsing forever (manual-test 7.3)"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 0,
+          "why": "and the animation is genuinely gone, not just the class"
+        }
+      ]
+    },
+    {
+      "note": "the same trap by another door — the process exits with a tool still in flight",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_x1",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"sleep 300\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "__exit",
+          "code": 1
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "__exit is one of the six setBusy(false) callers, so the sweep covers it too"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — a REPLAYED tool is already finished and must never pulse",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "__transcript",
+          "more": 0,
+          "items": [
+            {
+              "role": "user",
+              "text": "run the suite"
+            },
+            {
+              "role": "tool",
+              "text": "Bash",
+              "desc": "./gradlew test"
+            },
+            {
+              "role": "tool",
+              "text": "Read",
+              "desc": "chat.css",
+              "isPath": true,
+              "fullPath": "/home/syncroze/Sites/claude-brains/plugin/src/main/resources/webview/chat.css"
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line').length",
+          "atLeast": 2,
+          "why": "the transcript really did draw tool lines"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "THE REASON .run is set at the live sites and not inside toolLine() — replay draws through the same helper"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); return l ? getComputedStyle(l, '::before').animationName : 'NO-LINE'; })()",
+          "equals": "none",
+          "why": "a resumed conversation is a still picture"
+        }
+      ]
+    },
+    {
+      "note": ".think-live pulses for the whole of its life, with no JS at all",
+      "frames": [
+        {
+          "type": "__clear"
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "thinking"
+            }
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "(() => { const t = document.querySelector('.think-live'); return t ? getComputedStyle(t, '::before').animationName : 'NO-BLOCK'; })()",
+          "equals": "bg-pulse",
+          "why": "the live thinking dot moves, where the finished .think dot does not"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 1,
+          "why": "one running ::before animation — the thinking dot's"
+        }
+      ]
+    },
+    {
+      "note": "...and it ends by being REPLACED, which is why it needs no cleanup and no class",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_stop"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.think-live').length",
+          "equals": 0,
+          "why": "finishThinking() replaces the element outright"
+        },
+        {
+          "js": "(() => { const t = document.querySelector('.think'); return t ? getComputedStyle(t, '::before').animationName : 'NO-BLOCK'; })()",
+          "equals": "none",
+          "why": "the finished block that took its place is still"
+        },
+        {
+          "js": "document.getAnimations().filter(a => a.effect && a.effect.pseudoElement === '::before').length",
+          "equals": 0,
+          "why": "nothing left pulsing"
+        }
+      ]
+    },
+    {
+      "note": "IN A REAL TURN — a tool line lives inside .turn-body, which carries PAINT CONTAINMENT",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run the tests', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_tb1",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"vendor/bin/phpunit\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "!!document.querySelector('.tool-line').closest('.turn-body')",
+          "equals": true,
+          "why": "the DOM shape the real panel actually has — every assertion above this ran on a tool line sitting bare in #log, which is how the clipping got through 31 green ones"
+        },
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(213, 216, 221)",
+          "why": "a running tool has NO verdict yet, so its dot is white — not the green it used to wear from the first frame"
+        },
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(213, 216, 221)",
+          "why": "and the pulsing dot takes that same colour off --dot-c — one custom property drives both the state and the settled colours"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); const tb = l && l.closest('.turn-body'); return tb ? getComputedStyle(tb).contentVisibility : 'NO-TURN-BODY'; })()",
+          "equals": "auto",
+          "why": "A changes NO geometry — it fades the dot in place — so .turn-body's paint containment has nothing to clip and stays on. This assertion is the guard: the halo that was tried first had to un-contain the live turn to avoid being shaved into a cut half-rectangle"
+        },
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line.run'), '::before').transform",
+          "equals": "none",
+          "why": "the running dot occupies EXACTLY the box a settled one does — no scale, no outward growth, so it cannot be clipped by any ancestor and needs no containment lifted anywhere"
+        }
+      ]
+    },
+    {
+      "note": "the result is the verdict — white becomes green, and containment comes straight back",
+      "frames": [
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_tb1",
+                "content": "ok",
+                "is_error": false
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(78, 194, 107)",
+          "why": "success"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); const tb = l && l.closest('.turn-body'); return tb ? getComputedStyle(tb).contentVisibility : 'NO-TURN-BODY'; })()",
+          "equals": "auto",
+          "why": "the perf property is not sacrificed — containment returns the moment nothing is in flight, so only the live turn ever gives it up"
+        }
+      ]
+    },
+    {
+      "note": "an error result paints the other verdict",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run the tests', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_tb2",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"exit 1\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_tb2",
+                "content": "err",
+                "is_error": true
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(242, 130, 127)",
+          "why": "failure"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.fail.run').length",
+          "equals": 0,
+          "why": "red and running are never worn together"
+        },
+        {
+          "js": "(() => { const l = document.querySelector('.tool-line'); const tb = l && l.closest('.turn-body'); return tb ? getComputedStyle(tb).contentVisibility : 'NO-TURN-BODY'; })()",
+          "equals": "auto",
+          "why": "containment back after the failure too"
+        }
+      ]
+    },
+    {
+      "note": ".think-live lifts containment as well, and gives it back when it is replaced",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run the tests', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "thinking"
+            }
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "(() => { const t = document.querySelector('.think-live'); return getComputedStyle(t.closest('.turn-body')).contentVisibility; })()",
+          "equals": "auto",
+          "why": "A changes NO geometry — it fades the dot in place — so .turn-body's paint containment has nothing to clip and stays on. This assertion is the guard: the halo that was tried first had to un-contain the live turn to avoid being shaved into a cut half-rectangle"
+        }
+      ]
+    },
+    {
+      "note": "...and once thinking is over the turn is containable again",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_stop"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "(() => { const t = document.querySelector('.think'); return getComputedStyle(t.closest('.turn-body')).contentVisibility; })()",
+          "equals": "auto",
+          "why": "finishThinking() replaced the element, so nothing is in flight"
+        }
+      ]
+    },
+    {
+      "note": "AN ASYNC SUB-AGENT — its tool_result is a LAUNCH ACK, and must NOT settle the dot",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('audit the repo', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_ag1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"description\": \"Audit src classes\", \"prompt\": \"Task: Audit src classes\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_ag1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: a47cb5d44ac746e12 (internal ID - do not mention to user. Use SendMessage with to: 'a47cb5d44ac746e12', summary: '<5-10 word recap>' to continue this agent.)\nThe agent is working in the background. You will be notified automatically when it completes."
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 1,
+          "why": "THE BUG FROM THE 2026-08-13 SCREENSHOT: measured in a real session, the ack lands 1.8s after the launch and the agent then runs for MINUTES. Settling here turned three agents green while all three were still working"
+        },
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(213, 216, 221)",
+          "why": "still white — no verdict has arrived"
+        },
+        {
+          "js": "[...document.querySelectorAll('.io-row')].filter(r => (r.querySelector('.io-k')||{}).textContent === 'OUT').length",
+          "equals": 0,
+          "why": "and the same isInternalResult rule still keeps the ack out of an OUT box — which is where that rule was already being used, so both uses now agree. The IN box holding the agent's prompt is untouched"
+        }
+      ]
+    },
+    {
+      "note": "task_progress keeps it running and hangs the sub-agent line under it",
+      "frames": [
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_ag1",
+          "tool_use_id": "toolu_ag1",
+          "description": "Scan for missing type declarations",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 28500,
+            "tool_uses": 10
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 1,
+          "why": "progress is the opposite of finished"
+        },
+        {
+          "js": "document.querySelectorAll('.t-prog.run').length",
+          "equals": 1,
+          "why": "the running commentary the screenshot showed — 'Running … · 10 tool uses · 28.5k tokens'"
+        }
+      ]
+    },
+    {
+      "note": "task_notification is what actually finishes a sub-agent",
+      "frames": [
+        {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "t_ag1",
+          "tool_use_id": "toolu_ag1",
+          "status": "completed",
+          "summary": "12 classes audited, 3 missing return types",
+          "usage": {
+            "total_tokens": 31200,
+            "tool_uses": 11
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "the agent reported back, so now the dot settles"
+        },
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(78, 194, 107)",
+          "why": "green — it succeeded"
+        },
+        {
+          "js": "document.querySelectorAll('.t-prog.run').length",
+          "equals": 0,
+          "why": "and its commentary stops looking live too"
+        }
+      ]
+    },
+    {
+      "note": "task_updated settles it as well — that frame carries NO tool_use_id, hence st.tool",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('audit the repo', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_ag2",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"description\": \"Run and analyze test suite\", \"prompt\": \"Task: Run and analyze test suite\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_ag2",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: a47cb5d44ac746e12 (internal ID - do not mention to user. Use SendMessage with to: 'a47cb5d44ac746e12', summary: '<5-10 word recap>' to continue this agent.)\nThe agent is working in the background. You will be notified automatically when it completes."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_ag2",
+          "tool_use_id": "toolu_ag2",
+          "description": "Show deprecation site and test inventory",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 20400,
+            "tool_uses": 9
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 1,
+          "why": "running"
+        }
+      ]
+    },
+    {
+      "note": "...and the status patch lands",
+      "frames": [
+        {
+          "type": "system",
+          "subtype": "task_updated",
+          "task_id": "t_ag2",
+          "patch": {
+            "status": "completed",
+            "end_time": "2026-08-13T17:02:11Z"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "reached the tool line only because taskLine stashed it on the task — this frame has no tool_use_id of its own"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — an ordinary tool must still settle on its own result, unchanged",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('audit the repo', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_ord",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_ord",
+                "content": "3 files changed"
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "the internal-metadata exemption must not have widened into 'nothing settles' — a plain result still ends a plain tool"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — a launch that FAILED is not an agent running in the background",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('audit the repo', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_ag3",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"description\": \"Review uncommitted changes\", \"prompt\": \"Task: Review uncommitted changes\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_ag3",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: a47cb5d44ac746e12 (internal ID - do not mention to user. Use SendMessage with to: 'a47cb5d44ac746e12', summary: '<5-10 word recap>' to continue this agent.)\nThe agent is working in the background. You will be notified automatically when it completes.",
+                "is_error": true
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "an errored launch settles even though the text is internal metadata"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.fail').length",
+          "equals": 1,
+          "why": "and it is marked failed"
+        }
+      ]
+    },
+    {
+      "note": "a sub-agent that the CLI reports as FAILED goes red — its launch ack said nothing about the outcome",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_f1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_f1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nThe agent is working in the background."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_toolu_f1",
+          "tool_use_id": "toolu_f1",
+          "description": "Dummy task 3 (fails)",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "t_toolu_f1",
+          "tool_use_id": "toolu_f1",
+          "status": "failed",
+          "summary": "agent died",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(242, 130, 127)",
+          "why": "the ONLY place a sub-agent's failure can arrive is its task status — the tool_result was the launch ack, so without this an agent that died settled green"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 0,
+          "why": "and it is settled"
+        }
+      ]
+    },
+    {
+      "note": "`killed` is the other failure state in the CLI's documented enum",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_k1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_k1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nThe agent is working in the background."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_toolu_k1",
+          "tool_use_id": "toolu_k1",
+          "description": "Dummy task",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "t_toolu_k1",
+          "tool_use_id": "toolu_k1",
+          "status": "killed",
+          "summary": "agent killed",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(242, 130, 127)",
+          "why": "<status>completed|failed|killed</status>, read verbatim from CLI 2.1.228"
+        }
+      ]
+    },
+    {
+      "note": "task_updated carries the same statuses, and no tool_use_id",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_u1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_u1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nThe agent is working in the background."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_toolu_u1",
+          "tool_use_id": "toolu_u1",
+          "description": "Dummy task",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_updated",
+          "task_id": "t_toolu_u1",
+          "patch": {
+            "status": "failed",
+            "end_time": "2026-08-13T17:30:00Z"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(242, 130, 127)",
+          "why": "reached the tool line through the stashed st.tool"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — `completed` stays GREEN even when the agent's own work reported a failure",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_c1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_c1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nThe agent is working in the background."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_toolu_c1",
+          "tool_use_id": "toolu_c1",
+          "description": "Dummy task 3 (fails)",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "t_toolu_c1",
+          "tool_use_id": "toolu_c1",
+          "status": "completed",
+          "summary": "The command ran as specified and failed as intended. Exit code: 1. Status: FAILED",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(78, 194, 107)",
+          "why": "MEASURED, and the reason the 2026-08-13 screenshot was RIGHT: the CLI reported <status>completed</status> for an agent whose inner Bash exited 1. The agent did its job; the failure is one level down, in the sub-agent's own transcript. Colouring this red would mean reading the summary PROSE, which is guesswork"
+        }
+      ]
+    },
+    {
+      "note": "NEGATIVE CONTROL — a still-running status must never be mistaken for a failure",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_r1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_r1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nThe agent is working in the background."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_toolu_r1",
+          "tool_use_id": "toolu_r1",
+          "description": "Dummy task",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_updated",
+          "task_id": "t_toolu_r1",
+          "patch": {
+            "status": "in_progress"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 1,
+          "why": "in_progress is not done"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.fail').length",
+          "equals": 0,
+          "why": "and named failure states only — the binary also carries `running`/`pending`, and painting a live line red is worse than leaving an unknown state green"
+        }
+      ]
+    }
+  ]
+}

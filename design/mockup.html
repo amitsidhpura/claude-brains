@@ -451,6 +451,11 @@ total 196K
 
       <div class="blk"><p>I'll run a few harmless dummy tasks so the spinner cycles through its words.</p></div>
       <div class="tool-line"><b>Bash</b><span class="t-desc">Running 1 shell command…</span></div>
+      <!-- .run is the in-flight state: a tool that has not come back yet. Its gutter dot is WHITE
+           (no verdict yet) and breathes on --pulse-name, the same rule .think-live::before above
+           wears — so the two "still going" signals in a turn move on one heartbeat. The dot goes
+           green when the result lands, red if it failed. Every other tool line here is FINISHED. -->
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still in flight</span></div>
       <!-- MCP tool: one shared rule for every tool name — drop the `mcp_` prefix, Pascal-case the
            rest on underscores. `mcp__playwright__browser_click` -> `PlaywrightBrowserClick`, so the
            server stays visible and it sits beside Read/Bash/ExitPlanMode. -->

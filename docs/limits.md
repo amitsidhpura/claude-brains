@@ -277,6 +277,41 @@ rather than the visible part:
 | 2000 | 8 ms | 132 ms |
 | 2000 + `content-visibility: auto` | 9 ms | 4 ms |
 
+## Running animations: how many can be going at once
+
+The in-flight gutter dot (`.tool-line.run::before`, `.think-live::before`) animates forever while its
+work is unfinished, so "how many" is a fair question. Measured 2026-08-13 in real JCEF over
+`tools/cdp.py`, with `window.__gallery()` up — a page far denser than any real turn:
+
+| what | animations |
+|---|---|
+| whole gallery, every state at once | **5** |
+| of those, in-flight dots (`::before`) | 2 (the running tool line, `.think-live`) |
+| the background chip's dot (`::before`) | 1 |
+| the two text sweeps | `shimmer` on `.think-live .shimmer` and `.generating .verb` |
+| a three-way parallel fan-out (fixture 45) | 3 concurrent dots |
+
+(`document.getAnimations()` reports a sixth entry there — a CSS *transition* with no
+`animationName`, not an animation.)
+
+There is no cap on how many dots may pulse, and none is wanted: during a fan-out several tools
+genuinely ARE in flight, and showing one would misreport state. What bounds it instead is the
+sweep — `setBusy(false)` clears `.run` off every tool line at the end of every turn — so at most
+one turn's worth can ever animate, and that turn is the one on screen.
+
+Off-screen turns skip paint entirely via `content-visibility: auto` below, so even a `.run` that
+leaked past the sweep would advance a timeline and paint nothing.
+
+**That property was briefly lost and then bought back.** The in-flight signal first shipped as an
+outward halo, which `.turn-body`'s paint containment clipped into a cut half-rectangle — the fix was
+to un-contain any turn holding work in flight, which meant a leaked `.run` would have left that turn
+uncontained AND painting. A fade changes no geometry, so the containment lift was removed with the
+halo and containment is now never given up. Fixture 45 pins it: `content-visibility` stays `auto`
+while a tool is in flight, and the running dot's `::before` reports `transform: none`.
+
+The shipped pulse animates `opacity` only — the cheapest thing Chrome can composite; a `background`
+or `box-shadow` pulse would repaint the layer every frame, per dot.
+
 ## content-visibility: the flex trap
 
 `content-visibility: auto` skips layout/paint for off-screen subtrees. Off-screen elements then

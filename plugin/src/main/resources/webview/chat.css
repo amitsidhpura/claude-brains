@@ -45,6 +45,17 @@
   --attach-gap: 8px;   /* picked from design/tool-gap-probe.html against 12/8/6/4; 8px is the gap
                           .card-h already puts between a card's header and its body, so the panel's
                           two "this belongs to that" idioms agree */
+  /* The panel's LIVE period — one heartbeat for everything that says "still going": the text
+     sweep (.shimmer, .generating .verb), the background chip's dot, and the in-flight gutter dot.
+     Named for the same reason the two gaps above are: it was written out four times by hand and
+     nothing kept the copies together. */
+  --pulse-period: 1.6s;
+  /* ...and the motion the in-flight dot wears. A token, not a literal, because
+     design/dot-pulse-probe.html drives THIS rule — the picked column sets only this value, so what
+     was compared is the shipped rule and re-picking stays a one-line edit. bg-pulse was picked by
+     the user on 2026-08-13, after the halo (dot-ping) was tried and rejected. It is the motion the
+     background-task chip already wears, so the panel says "still going" one way throughout. */
+  --pulse-name: bg-pulse;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
@@ -326,8 +337,15 @@ blockquote > *:last-child { margin-bottom: 0; }
 .tbl .ta-c { text-align: center; } .tbl .ta-r { text-align: right; }
 
 /* assistant block: plain text with small dot */
-.blk { position: relative; padding-left: 22px; }
-.blk::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--fg); }
+/* THE TIMELINE GUTTER DOT — one geometry, four meanings. What a block IS comes from --dot-c on
+   the element, not from a fourth copy of left/top/width/height: the four were byte-identical and
+   nothing kept them that way. Naming the colour on the ELEMENT rather than as a background on the
+   pseudo is also what lets a STATE recolour the dot in one declaration — .run's white and .fail's
+   red below are each a single custom-property line instead of another copy of this rule. */
+.blk::before, .think::before, .think-live::before, .tool-line::before {
+  content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot-c); }
+
+.blk { position: relative; padding-left: 22px; --dot-c: var(--fg); }
 .blk > *:first-child { margin-top: 0; } .blk > *:last-child { margin-bottom: 0; }
 .blk p { margin: .45em 0; }
 .blk ul, .blk ol { margin: .4em 0; padding-left: 1.5em; }
@@ -338,8 +356,8 @@ blockquote > *:last-child { margin-bottom: 0; }
   font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 
 /* thinking */
-.think { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px; }
-.think::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+.think { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px;
+  --dot-c: var(--dot); }
 .think summary { cursor: pointer; user-select: none; list-style: none; display: inline-flex; align-items: center; gap: 3px; }
 .think.no-body summary { cursor: default; }   /* nothing streamed: a label, not a control */
 .think summary::-webkit-details-marker { display: none; }
@@ -351,17 +369,15 @@ blockquote > *:last-child { margin-bottom: 0; }
 
 /* live progress: thinking-in-progress + generating */
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-@keyframes twinkle { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.65); opacity: .5; } }
-.think-live { position: relative; padding-left: 22px; }
-.think-live::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+.think-live { position: relative; padding-left: 22px; --dot-c: var(--dot); }
 .think-live .th { color: var(--muted); font-size: 13px; }
 .think-live .shimmer { background: linear-gradient(90deg, #797d84 35%, #eceff4 50%, #797d84 65%); background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.6s linear infinite; }
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer var(--pulse-period) linear infinite; }
 .generating { position: relative; display: flex; align-items: baseline; gap: 8px; padding-left: 22px; color: var(--fg); font-size: 13px; }
 .generating .spin { position: absolute; left: 0; top: 0; width: 14px; text-align: center; color: var(--accent);
   font-size: 14px; line-height: 20px; }
 .generating .verb { background: linear-gradient(90deg, #c2603d 35%, #f2b492 50%, #c2603d 65%); background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.6s linear infinite; }
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer var(--pulse-period) linear infinite; }
 .generating .meta { color: var(--muted); }
 .generating .meta svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 1px; }
 
@@ -378,10 +394,48 @@ blockquote > *:last-child { margin-bottom: 0; }
    panel — the clamp still produced one line, but the overflow ran off the right edge and the panel
    clipped the filename. Bounding the row is what points the shrink at .p-head instead. */
 .tool-line { position: relative; display: flex; align-items: baseline; max-width: 100%; min-width: 0;
-  padding-left: 22px; font-size: 13px; color: var(--muted); box-sizing: border-box; }
+  padding-left: 22px; font-size: 13px; color: var(--muted); box-sizing: border-box;
+  --dot-c: var(--green); }
 .tool-line b { flex: 0 0 auto; }
-.tool-line::before { content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
-.tool-line.fail::before { background: var(--red); }
+/* A running tool has no verdict yet, so it must not wear one. White while in flight; the dot turns
+   green the moment its result lands, red if that result is an error — so the colour IS the outcome
+   and never a guess made at the start. Declared before .fail so a red verdict wins the tie if the
+   two are ever briefly worn together (they are not today: onUserEvent removes .run in the statement
+   above the one that adds .fail). */
+.tool-line.run { --dot-c: var(--fg); }
+.tool-line.fail { --dot-c: var(--red); }
+/* IN FLIGHT — the dot itself breathes. Worn by a tool line between content_block_start and its
+   tool_result, and by .think-live for the whole of its life: two states, one rule, because they mean
+   the same thing — this has not come back yet.
+   Picked 2026-08-13 from design/dot-pulse-probe.html. An outward halo (dot-ping) was tried first and
+   REJECTED: .turn-body carries content-visibility, whose paint containment shaved the ring into a
+   cut half-rectangle at the turn's edge, and un-containing the live turn to make room was a real
+   cost for decoration. A fade changes no geometry at all, so there is nothing to clip and no
+   containment to lift — see gotchas, this is the trap the focus rings already dodged by going INSET.
+   It touches OPACITY ONLY — the cheapest thing Chrome can composite, and it names no colour, so it
+   rides --dot-c: white while running, then green or red once the verdict lands. No will-change:
+   Chrome promotes for the duration of a compositor animation on its own, and a standing hint would
+   pin a layer per dot for the life of the log.
+   .run is set at the LIVE sites in chat.html only, never in toolLine(): replay and __gallery draw
+   FINISHED tools through that same helper, and a finished tool must not pulse. */
+.tool-line.run::before, .think-live::before {
+  animation: var(--pulse-name) var(--pulse-period) ease-in-out infinite; }
+/* Reduce motion: every animated surface in the panel at once, not just the newest one — the
+   in-flight dot, the background chip's dot, and the two shimmering texts. Written when the in-flight
+   dot landed (2026-08-13), because that was the point at which "the panel ignores this setting"
+   became worth saying out loud; the other three had animated forever without it.
+   The colour reset is NOT optional: .shimmer and .verb set `color: transparent` and rely on a
+   MOVING gradient to be legible at all, so stopping the animation without restoring a colour would
+   leave them invisible rather than still. Everything here keeps its meaning without motion: the
+   in-flight dot stops breathing but stays WHITE (.run's --dot-c is colour, not animation), so a
+   running tool is still told apart from a finished one.
+   UNVERIFIED on JCEF: Linux JCEF is offscreen-rendered and may not report the OS setting at all
+   (see backlog). This block is correct either way; whether it ever fires is the open question. */
+@media (prefers-reduced-motion: reduce) {
+  .tool-line.run::before, .think-live::before { animation: none; }
+  .bg::before { animation: none; }
+  .think-live .shimmer, .generating .verb { animation: none; color: var(--muted); }
+}
 .tool-line b { color: var(--fg); font-weight: 600; }
 .tool-line .t-desc { color: var(--muted); margin-left: 8px; }
 /* file references open in the editor — only the ones that ARE paths (.path), not free-text
@@ -473,6 +527,12 @@ blockquote > *:last-child { margin-bottom: 0; }
    box at 22px, and reports what the sub-agent is doing WHILE it runs. LIVE ONLY, unavoidably: the
    CLI never persists task_started/task_progress/task_notification (measured — zero in any
    transcript), so a resumed session keeps the tool line and its result and loses this. */
+/* No status dot here, deliberately (tried and removed 2026-08-13). A dot would have to say whether
+   the sub-agent's WORK succeeded, and that is not knowable: the CLI reports the TASK as `completed`
+   either way, and whether the failure leaves any structured trace depends on how the agent happened
+   to run the command — a foreground failure lands as an errored tool_result, the same command pushed
+   to run_in_background by the sandbox guard leaves none at all. A dot that is red or green depending
+   on that is worse than no dot. The outcome is in the line's own TEXT, which is the CLI's summary. */
 .t-prog { font-size: 12px; color: var(--dot); }   /* margin: the attached-block contract */
 .t-prog.run { color: var(--muted); }
 /* Images a tool returned (client-parity item 8): a Playwright screenshot, or Read on a PNG.
@@ -870,7 +930,7 @@ blockquote > *:last-child { margin-bottom: 0; }
    is running now, not a timeline entry. Wears .chip-btn like the rest; the pulsing dot is the only
    thing of its own, and it marks the roster as live rather than historical. */
 .bg::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
-  flex: none; animation: bg-pulse 1.6s ease-in-out infinite; }
+  flex: none; animation: bg-pulse var(--pulse-period) ease-in-out infinite; }
 @keyframes bg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 /* Rows are read-only — there is no "kill task" here, that is the terminal's half (§ Philosophy) —
    so they must not offer the hover affordance the other popup items use to say "clickable".

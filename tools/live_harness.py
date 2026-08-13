@@ -117,6 +117,15 @@ def run(names, shots):
             print(f"    provenance: {fx['provenance']}")
             panel.reset()
             for step in fx["steps"]:
+                # Per-step setup JS. The wire cannot build every DOM shape the real panel has: a
+                # .turn-body only exists once the user has SENT something (addUserMessage -> newTurn),
+                # and nothing on the wire creates one. Fixtures that ran without it were testing tool
+                # lines sitting bare in #log — which is how a clipping bug caused by .turn-body's
+                # paint containment passed 31 green assertions and still showed up in the real panel
+                # (2026-08-13). Setup runs BEFORE the frames, so a step can put the panel in the
+                # shape the frames are supposed to arrive into.
+                if step.get("setup"):
+                    panel.eval(step["setup"])
                 for frame in step.get("frames", []):
                     panel.feed(frame)
                 for exp in step.get("expect", []):

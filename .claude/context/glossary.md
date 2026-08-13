@@ -40,6 +40,17 @@
   a `.think` summary to its text. Neither is the same as a container's own internal rhythm (a
   `.card-b` action row at 10px, list items at 0-6px). Adding a new block under a line? It takes
   `--attach-gap` — see gotchas for WHICH form, since flex and block parents need different maths.
+- **The gutter dot's three states** — the dot (`::before`) says what a block is AND, for a tool line,
+  how it turned out: **white and pulsing** while in flight (no verdict yet), **green** on success,
+  **red** on failure. The motion is `--pulse-name` (`bg-pulse`) at `--pulse-period`, opacity only —
+  deliberately no geometry, because anything that grows outside the dot's box gets clipped by
+  `.turn-body`'s paint containment (an outward halo was tried and pulled for exactly that). One geometry rule serves all four dots
+  (`.blk`/`.think`/`.think-live`/`.tool-line`) and the colour is `--dot-c` declared on the element —
+  which is what lets the ring read its own colour and cover `.fail`'s red without a second rule.
+  `--pulse-period` (1.6s) is the panel's shared live heartbeat (ring, `.bg` chip, both text
+  shimmers); `--pulse-name` is the ring's motion, and `design/dot-pulse-probe.html` drives that
+  token. `.run` is LIVE-only: it is set where the wire frame is handled, never in `toolLine()`,
+  because replay and `__gallery` draw finished tools through the same helper.
 - **LIMITS splice** — `RenderLimits.kt` values injected into chat.html as `window.LIMITS` at
   the `LIMITS` marker (same idiom as `<!--CSS-->`); the single source for caps/formats shared
   by both render paths.
