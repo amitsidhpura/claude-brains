@@ -39,6 +39,13 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         ShellEnv.warm()
     }
 
+    /**
+     * Keeps the IDE's view of the working tree in step with the CLI's writes. Lives on the SESSION
+     * rather than the panel: the CLI keeps writing whether or not the tool window is open, and a
+     * stale editor is not a rendering concern.
+     */
+    private val fileSync = CliFileSync(onTurnEnd = { refreshFromDisk(cwd.path) })
+
     private var server: IdeMcpServer? = null
     private var lock: IdeLockFile? = null
     private var cli: ClaudeCli? = null
@@ -123,7 +130,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             executable = resolveExecutable(),
             permissionMode = selectedMode(),
             resumeSessionId = resumeSessionId,
-            onEvent = { line -> onEventCb?.invoke(line) },
+            onEvent = { line ->
+                // BEFORE the UI callback: the panel's own rendering must not be able to delay, or
+                // fail, the editor catching up with what the CLI just wrote to disk.
+                fileSync.onLine(line)
+                onEventCb?.invoke(line)
+            },
             onPermission = { requestId, toolName, input, suggestions ->
                 pendingPermissions[requestId] = input
                 suggestions?.let { pendingSuggestions[requestId] = it }

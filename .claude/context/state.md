@@ -1,9 +1,9 @@
 # State
 
 ## Current focus
-**Nothing in flight.** The in-flight gutter dot shipped and was committed on 2026-08-13 (seventh
-session). Not yet released — it will ride the next version bump. Next work is whatever is picked
-from the list below or backlog.md.
+**Nothing in flight.** Two things shipped and were committed but are NOT yet released — both ride the
+next version bump: the in-flight gutter dot (2026-08-13) and the VFS refresh after CLI writes
+(2026-08-14). Next work is whatever is picked from the list below or backlog.md.
 
 What landed: the timeline gutter dot now reports state — **white and pulsing while in flight, green
 on success, red on failure** (`@keyframes bg-pulse` on `.tool-line.run::before` / `.think-live::before`,
@@ -25,6 +25,14 @@ motions in `design/dot-pulse-probe.html`.
   (the card menu, then an outward halo that had to be withdrawn). See gotchas before adding any
   effect with geometry.
 
+## Testing the PLUGIN — two probes worth knowing
+**The plugin's own MCP bridge answers questions about the IDE.** Speak to it the way the CLI does
+(lockfile `authToken` in header `x-claude-code-ide-authorization`, subprotocol `mcp`, `tools/call`)
+and `openFile` becomes a free "does the VFS know this file" probe — it calls `findVFile` and
+refreshes nothing. `getDiagnostics` reads the loaded Document, so it answers "did an open editor
+reload". Filter the lockfile by `ideName`: several IDEs may hold the same workspace open. Both
+caveats are in gotchas.
+
 ## Testing the webview — read this before writing a fixture
 `tools/live_harness.py` replays wire frames into the LIVE panel over CDP. **Nothing on the wire
 creates a `.turn-body`** — the panel makes one in `addUserMessage` → `newTurn()` when the user sends
@@ -42,8 +50,9 @@ tool window open), `./gradlew test` **87 green**.
       Constraint: `system/init`'s `commands` payload has NO type field, so the slash allowlist is
       the only lever. The `dummy-cmd.md` fixture EXISTS on the Linux box
       (`~/Sites/claude-brains-testing/.claude/commands/`); recreate it on Windows before starting.
-- [ ] VFS refresh after CLI writes (backlog "Next up") — accepted edits still need "Reload from
-      disk"; fix shape already worked out.
+- [x] ~~VFS refresh after CLI writes~~ — DONE and committed 2026-08-14 (`CliFileSync` +
+      `Vfs.refreshFromDisk`), verified end to end through the plugin's own MCP bridge and by the
+      user in their own IDE.
 - [ ] Release the in-flight dot in the next version bump (`docs/release.md`; `changeNotesHtml` in
       `plugin/build.gradle.kts` must be updated or `buildPlugin` refuses).
 

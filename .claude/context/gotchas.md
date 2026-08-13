@@ -285,6 +285,23 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **The CLI writes files with Bash far more often than you would guess, so a Write/Edit-only hook
+  misses them.** Measured 2026-08-14: asked to create one file and overwrite another, the CLI used a
+  single `Bash` call for both. Anything keyed on the file-writing TOOLS (Write/Edit/MultiEdit/
+  NotebookEdit) therefore catches a fraction of real writes. Bash's input names no path, so there is
+  nothing to derive — pair the per-file hook with a sweep at `result`.
+- **`openFile` on the plugin's own MCP bridge is a free "what does the VFS actually know" probe.**
+  It calls `findVFile` and refreshes nothing, so it answers `error: file not found` for a file that
+  exists on disk but has not been refreshed into the VFS, and `opened:` once it has. Speak to the
+  bridge the way the CLI does (lockfile `authToken` in header `x-claude-code-ide-authorization`,
+  subprotocol `mcp`, `tools/call`). **Pick the right lockfile:** several IDEs may hold the same
+  workspace open — filter on `ideName`, or you will hit VS Code's bridge, whose `openFile` takes a
+  different argument schema and fails validation.
+- **`getDiagnostics` needs the daemon to have run, so an empty result proves nothing on its own.**
+  Checking a file straight after an out-of-band edit returned no diagnostics and then reported them
+  correctly moments later — the document HAD reloaded, the analyzer just had not caught up. Before
+  reading "no diagnostics" as "no change", confirm the probe can see a fault at all by opening a file
+  that is already broken.
 - **`.turn-body`'s paint containment eats anything drawn OUTWARD, and it has now bitten twice.** The
   card menu opened as a clipped sliver; the in-flight ring rendered as a "cut half-rectangle" squared
   off against the turn's left and top edges — the exact shape chat.css's focus-ring comment predicted

@@ -3,6 +3,33 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-14 — The IDE is kept in step with the CLI's writes, per file and per turn
+`CliFileSync` sits on the session's event stream (`ClaudeSessionService.startCli`, before the UI
+callback) and does two things: pairs a write tool's `tool_use` with its `tool_result` and refreshes
+that one path, then sweeps the project root once at every `result`. `refreshFromDisk` (Vfs.kt) does
+an ASYNC refresh; when the path is unknown to the VFS — a newly CREATED file — it walks up to the
+nearest directory the VFS does know, recursively if it had to climb past directories the CLI also
+created, because the VFS only discovers a new child when its parent is refreshed.
+**Why:** the plugin never writes files itself; the CLI does, out of band, and nothing refreshed
+afterwards — an accepted edit needed "Reload from disk" and a created file never appeared in the
+tree.
+**Why two mechanisms, and this is the part that was measured rather than designed:** the per-file
+half covers Write/Edit/MultiEdit/NotebookEdit, which is what the backlog scoped. Driving a real turn
+showed the CLI answering "create one file and overwrite another" with a SINGLE `Bash` call — no
+Write, no Edit — so the scoped fix caught nothing at all. Bash's input names no file, so there is
+nothing to refresh from; the turn-end sweep is what covers it, at roughly the cost IntelliJ already
+pays whenever the window regains focus.
+**Rejected:** deriving paths from the Bash command (guesswork over an open-ended shell string);
+sweeping per Bash call rather than per turn (same cost, many more times); refreshing at `tool_use`
+(the file is not written yet, so it would read the file as it was); and keying off the permission
+card, which a pre-approved tool never produces.
+**Verified end to end in the sandbox, not just by unit test:** the plugin's own MCP bridge answers
+`openFile`, which uses `findVFile` with no refresh, so it reports exactly what the VFS knows. A file
+created behind the IDE's back reads `error: file not found`; after a real CLI turn the same probe
+reads `opened:`. The edit half was proven with `getDiagnostics` on a JSON file open in the editor —
+clean while valid, reporting the syntax errors after the CLI made it invalid out of band, i.e. the
+open document really did reload.
+
 ## 2026-08-13 — A running tool's dot is white and breathing; the colour IS the verdict
 `.tool-line.run { --dot-c: var(--fg) }` (declared before `.fail`), plus
 `.tool-line.run::before, .think-live::before { animation: var(--pulse-name) var(--pulse-period) ease-in-out infinite }`

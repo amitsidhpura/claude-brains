@@ -3,6 +3,30 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-14 — the IDE stops showing yesterday's files
+- **Shipped:** `CliFileSync` + `Vfs.refreshFromDisk`, so an edit lands in an open editor and a new
+  file appears in the tree without "Reload from disk". Two mechanisms: pair a write tool's `tool_use`
+  (which has the path) with its `tool_result` (which says the write finished) and refresh that path;
+  then sweep the project root at every `result`. Reasoning in decisions.md.
+- **The second mechanism exists because the first was measurably not enough.** The backlog scoped
+  this to Write/Edit/MultiEdit. The first real test turn asked the CLI to create one file and
+  overwrite another, and it used a SINGLE Bash call for both — the scoped fix caught nothing. Bash
+  names no path, so the turn-end sweep is what covers it. Gotcha recorded: Bash writes are the
+  common case, not the edge one.
+- **Verified through the plugin's own MCP bridge, which turns out to be an ideal probe.** `openFile`
+  calls `findVFile` and refreshes nothing, so it reports exactly what the VFS knows: `error: file not
+  found` for a file created behind the IDE's back, `opened:` once a turn has refreshed it. The EDIT
+  half was proven with `getDiagnostics` on a JSON file open in the editor — clean while valid, then
+  reporting syntax errors after the CLI made it invalid out of band.
+- **Nearly called a pass a failure.** The first diagnostics read came back empty and looked like the
+  document had not reloaded; it had, and the analyzer simply had not caught up. Only interpretable
+  after proving the probe could see a fault at all, by opening an already-broken file. Both that and
+  "several IDEs may hold the same workspace open — filter the lockfile by ideName or you hit VS
+  Code's bridge" are in gotchas.
+- Verified: 100 Kotlin tests (13 new, negative control RUN — inverting "refresh at tool_use" and
+  "Read refreshes" both fail as they must), live harness 217/217. User confirmed it in their own IDE.
+- Next: unchanged — 3.1 custom commands + 9.10 together.
+
 ## 2026-08-13 (sixth) — the in-flight dot, and five real-panel bugs a green harness could not see
 - **Shipped:** the timeline gutter dot now says what is happening — white and pulsing in flight,
   green on success, red on failure — plus a `--dot-c` refactor (four duplicate `::before` rules to
@@ -248,42 +272,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   that was still open. Both backlog items from this session are done.
 - Next: nothing in flight.
 
-## 2026-08-12 (second) — the rename that wasn't broken, and the last manual release step dies
-- First session on **Windows** (`D:\sites\claude-brains`); every path in the context files was from
-  the old Linux box, and `state.md` still said 0.5.0 was unreleased when git showed it tagged and
-  shipped. Reconciled both here.
-- User reported "rename not working" with a screenshot. Measuring the transcript FIRST (the standing
-  rule) inverted the diagnosis in one command: `grep` found four correct `custom-title` records, so
-  the write half was fine and the READ half was the bug — `computeTitle`'s 400-line head scan versus
-  records at lines 10455-10458. Had the renderer been opened first, this would have been a long hunt
-  in the wrong file.
-- Fix is a full-file scan with a substring pre-filter past the head, which costs what `tokensOf`
-  already pays (521 ms cold / 0 ms cached on the real 35 MB file, measured through a throwaway test
-  pointed at the user's own transcript, then deleted). A tail window was considered and rejected —
-  it would have made the bug intermittent instead of fixing it.
-- Marketplace upload automated as a GitHub Actions workflow (repo's first). Deliberately UPLOAD-only:
-  it re-posts the published GitHub asset rather than building in CI, so the zip users get is still
-  the one smoke-tested locally. User picked "fully automatic" over a local `./gradlew publishPlugin`.
-- Two things fell out of reading the release path: `changeNotes` has been stale since 0.3.3 (so 0.4.0
-  and 0.5.0 both published the wrong notes) — now step 1b of the checklist, because automating the
-  upload removes the human who might have noticed; and `workflow_dispatch` needs the file on main
-  before it exists at all, so the dry run had to wait for the push.
-- Negative controls run, not just written: the rename regression test failed against the pre-fix
-  reader, and the workflow's asset-name assertion was exercised locally across right/wrong tags.
-- `journal.md` itself held a literal NUL byte — inside the 2026-08-09 bullet describing a literal NUL
-  byte — which made ripgrep call the whole memory file binary and silently return nothing for every
-  search. Patched by byte replace to `\0`. Grep failing on a file is not always the pattern's fault.
-- **0.5.1 cut and released the same day**, and the automation carried it: `gh release create` → the
-  workflow uploaded on its own in 8s → Marketplace update id 1135613 on Stable. JetBrains then ran
-  THEIR verifier on the upload, Compatible on every build 2024.2.6 → 2026.2.1, which is the run that
-  was skipped locally (no verifier IDE cache on this machine, and the change touched no platform API).
-- The user pushed back on `changeNotes` being only a checklist line — rightly, since a checklist is
-  what had already failed twice. It is now enforced: `buildPlugin` refuses a zip whose notes carry no
-  entry for its own version. First attempt broke the CONFIGURATION CACHE (a task action that reads a
-  script-level `val` captures the script object); fixed by evaluating into locals in the config
-  block. Both directions run — stale notes go red with the explanatory message, correct notes build.
-
 ## Digest
+- **2026-08-12 (second)** — the reported rename bug did not exist (the CLI's own `ai-title` was
+  overwriting the user's); the last manual release step died when marketplace-upload.yml went in.
 - **2026-08-11/12** — UI-polish session: five user-reported defects fixed (tool-line path
   shortening, IN/OUT geometry, fold fade, history edge, permission card), then the plugin
   rename to `io.github.amitsidhpura.claude-brains`. Lessons promoted to gotchas/conventions.
