@@ -3,6 +3,42 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-13 — An unnamed thread re-reads its name once per turn, at `message_start`
+`ChatPanel`'s onEvent keeps its per-`result` `pushTitle`, and adds: while `lastTitle` is blank and
+this turn has not probed yet, a line containing `"message_start"` triggers one more read (guarded by
+`titleProbed`, reset at `result`).
+**Why:** `pushTitle` had exactly ONE live-turn caller — the `result` line — while the history list
+calls the same `titleOf` off disk every time it opens. So a new conversation showed "New
+conversation" beside a titled `current` row for the length of its first turn. Measured, not
+inferred: a user's transcript (`D--sites-accesshealth/ccafeb52-…`) has its first prompt at
+04:39:10Z and its next at 05:40:30Z, and no ai-title/custom-title/summary at all — an hour of
+disagreement, with the first-user-message fallback as the final answer the whole time. `message_start`
+is the EARLIEST frame that can work: measured against CLI 2.1.229 (`_local/title_timing.py`), the
+transcript is MISSING at `system/init` and 15 KB by `message_start`. Once per turn matters because
+`titleOf` scans the whole file and its `(mtime,size)` cache misses on every append of a live session.
+**Rejected:** an `onSessionId` callback out of `ClaudeCli` — the most precise-sounding trigger, and
+the measurement shows it fires before the file exists, on top of needing new plumbing through two
+classes. Also rejected: deriving a provisional title in JS from the rendered first message — a
+second derivation of a value that conventions.md requires to have one source.
+
+## 2026-08-13 — The webview is seeded on EVERY load, and the title cache is cleared when it is
+`startSession()` split: the `session.start(...)` wiring stays once (`started`), while a new
+`seedUi()` — `__mode`, `__project`, the stored init payload, the title, the file list — runs at every
+main-frame `onLoadEnd`. `lastTitle` is nulled first. `ClaudeSessionService.start` also rebinds its
+callbacks BEFORE the `server != null` guard.
+**Why:** `onLoadEnd` always fired on every load; everything it seeded sat behind `started`, so a
+reloaded page kept a live CLI with a DOM back at its markup defaults. Proved on the pre-fix build:
+after `location.reload()`, `slashCommands` 0 and `projectRoot` "" — an empty slash menu and absolute
+paths, permanently. The title was the one that could never heal, because `pushTitle` only pushes on
+a CHANGE and the name had not changed: a change-detector on the push side records what was last
+SENT, and `pushEvent` is a fire-and-forget `executeJavaScript` that guarantees nothing about
+delivery. The callback rebind is the same failure family — a ChatPanel recreated against a live
+service returned before wiring itself to the CLI.
+**Rejected:** replaying the conversation into a reloaded page. A reload empties the log too, but
+recovering it means pushing the transcript WITHOUT restarting the CLI (unlike `refresh`, which does)
+and reconciling a replay against frames still arriving mid-turn — and no reload has ever been
+observed in the wild. Parked in backlog.md; this change makes the chrome honest, not the log.
+
 ## 2026-08-12 — One contract for every foldable block, stated in chat.css
 Two rules, written above the `.fold` rules so they cannot drift: (1) `8px 10px` padding, and
 whichever element carries it is ALSO the one that scrolls; (2) foldable AND scrollable ⇒ the

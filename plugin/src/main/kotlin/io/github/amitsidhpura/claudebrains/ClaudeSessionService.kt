@@ -92,8 +92,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         onInit: (commandsJson: String) -> Unit,
         onExit: (Int) -> Unit,
     ) {
-        if (server != null) return // already running
+        // Rebind BEFORE the guard: a ChatPanel recreated against a still-running service (the tool
+        // window's content is rebuilt) would otherwise return here without ever being wired to the
+        // CLI, leaving a panel that renders nothing and can never recover — while the composer and
+        // the history list, which call the service directly, keep working and hide it.
         onEventCb = onEvent; onPermissionCb = onPermission; onInitCb = onInit; onExitCb = onExit
+        if (server != null) return // already running
 
         port = PortFinder.findFree()
         val token = UUID.randomUUID().toString()

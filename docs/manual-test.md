@@ -473,6 +473,30 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       deltas rendered while the button read Send. Two done lines, 123 and 20 tokens — separately
       counted, so the request-scoped reset works and the notification turn is not billed the
       previous request's usage.
+- [x] 8.16 Header title during the FIRST turn of a new conversation: send a prompt that keeps the
+      turn open (a backgrounded `sleep`, a wide search) and open the history panel WHILE it runs.
+      The header and the `current` row must read the same name. Also reload the webview mid-session
+      (`location.reload()` over CDP): title, mode chip, model chip, slash menu and project-relative
+      paths must all come back
+
+      **RESOLVED (2026-08-13) — user report, one screenshot: header "New conversation" beside a
+      titled `current` row.** Measured before anything was touched. The transcript
+      (`D--sites-accesshealth/ccafeb52-….jsonl`) put the first prompt at 04:39:10Z and the next at
+      05:40:30Z — the screenshot's "10:14 AM · 430 KB" sits five minutes into a first turn that ran
+      an HOUR — and the file holds no `ai-title`/`custom-title`/`summary` at all, so the name shown
+      was the first-user-message fallback. Both surfaces call the same `titleOf`; only the timing
+      differed. `pushTitle` had exactly one live-turn caller, the `result` line, while the history
+      list re-reads disk on every open.
+      Fix: a once-per-turn probe at `message_start` while the thread is unnamed, plus `seedUi()`
+      re-seeding the page on every load (a reload previously reset the DOM with nothing to correct
+      it, and `lastTitle` suppressed the re-push because the name had not CHANGED).
+      Wire timing, measured against CLI 2.1.229 (`_local/title_timing.py`): at `system/init` the
+      transcript is **MISSING**; by `message_start` it exists (15,047 B) and already derives the
+      title — so `message_start` is the earliest usable hook and `system/init` would have been too
+      early. Negative control RUN on the pre-fix build, same script, same prompt: header
+      "New conversation" / row "Run the bash command: sleep 300" / `match:false` with **0** result
+      frames and no `__title` after `message_start`; after a reload, `slashCommands` 0 and
+      `projectRoot` "". Post-fix: `match:true`, and 39 / the real root. Live harness 154/154.
 
 ## 9. Resilience & notices
 

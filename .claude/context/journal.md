@@ -3,6 +3,53 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-13 (third) — a header that lagged a whole turn, and a control that nearly lied
+- User screenshot, explicitly NOT reproducible for them: header "New conversation" beside a history
+  row marked `current` that HAD a title. Diagnosed from the real transcript before touching code —
+  `D--sites-accesshealth/ccafeb52-….jsonl` put the first prompt at 04:39:10Z and the next at
+  05:40:30Z, so the screenshot's "10:14 AM · 430 KB" was five minutes into a first turn that ran an
+  HOUR, and the file has no ai-title/custom-title/summary at all. Not a race, not a one-off: the
+  header is pushed and only at `result`, the history list re-reads disk on every open, and both go
+  through the same `titleOf`. They disagree for exactly one turn, every time.
+- Fixed in two parts (decisions.md): a once-per-turn probe at `message_start` while the thread is
+  unnamed, and `seedUi()` re-seeding the page on EVERY load instead of once inside `startSession()`.
+- **Measured which frame can carry it**, rather than picking the obvious one: `_local/title_timing.py`
+  spawns the CLI as ClaudeCli does and reports, per frame, whether the transcript exists. At
+  `system/init` it is MISSING; by `message_start` it is 15 KB with the first user record. The
+  precise-looking hook (the session id arriving) would have been too early.
+- **The negative control nearly ran against the fixed build.** TaskStop killed Gradle but NOT the
+  forked sandbox IDE, so `prepareSandbox` failed on a mapped jar — and CDP still found a live panel,
+  which would have "passed" the control on the code it was meant to refute. The build log caught it.
+  Now in gotchas, with the graceful `taskkill` (no `/F`) that keeps the sandbox layout.
+- Controls, once run properly, reproduced the screenshot on demand: pre-fix mid-turn, header
+  "New conversation" / row "Run the bash command: sleep 300" / `match:false`, 0 result frames, no
+  `__title` after `message_start`; after `location.reload()`, `slashCommands` 0 and `projectRoot` "".
+  Post-fix: `match:true`, 39 commands, real root. 87 tests green, live harness 154/154 in real JCEF.
+- Register: 8.16 added and RESOLVED → **2 open ISSUE / 23 RESOLVED**. It landed AFTER 0.5.2 shipped,
+  so it rides the next release.
+- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
+
+## 2026-08-13 (second) — 0.5.2 lands on the Marketplace; a load on the other machine
+- Pulled `89f1714..a1523dc` on the **Windows** box (`D:\sites\claude-brains`): the two 08-13
+  commits plus the 0.5.2 release commit and its tag. Clean fast-forward, tree clean, no build.
+- **0.5.2 is released and Marketplace-Approved.** Confirmed on the listing (user screenshot):
+  uploaded 13 Aug, 2.6 MB, compatibility 242.0+, both verification rows green — IDE run "no issues
+  occurred", verifier 1.408 "Compatible" on IntelliJ IDEA 2026.2.1. The GitHub release carries
+  `claude-brains-0.5.2.zip`, so `release: published` → `marketplace-upload.yml` worked end to end
+  with no human at an upload form. That is the automation from 2026-08-12 proving itself.
+- **The release session was never journaled.** `state.md` still read "no version bump, 0.5.1
+  remains the released version" while `build.gradle.kts`, `updatePlugins.xml`, the tag and the
+  listing all said 0.5.2. Caught on `/context load` by diffing git against the newest journal entry
+  — that verification step earns its place; the files were confidently wrong, not vague.
+- **Machine drift caught again, the other direction.** The files described Linux, this is Windows.
+  Second consecutive load where the recorded machine was wrong, so state.md now leads with "check
+  which machine" rather than declaring one.
+- Consequence worth having found before starting work: the 3.1/9.10 fixture is NOT on this box.
+  `D:\sites\claude-brains-test` exists but holds only `.idea` — no `.claude/commands/dummy-cmd.md`.
+  It lives in the Linux test repo, is not in git, and does not travel. One file to recreate.
+- No code changed this session; context files reconciled instead.
+- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh after CLI writes.
+
 ## 2026-08-13 — the runIde sweep closes; a fixture that was only half a test
 - User verified 8.13 (rename outside-click) and 8.14 (MCP tool lines) in `runIde` and ticked both.
 - **Live harness in real JCEF: 154/154.** That is the run that mattered for the io-box
@@ -216,60 +263,30 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   sample mirrored (it had documented "no delete control" as a design fact).
 - Both changes compile/test green; NOT yet runIde-verified and NOT committed.
 
-## 2026-08-09 (fifth) — editor accept/reject v2 buttons half: balloon → under-diff bar
-- Shipped the v2 buttons half through four user-driven iterations, each measured against
-  242 AND 262 bytecode before coding: (1) toolbar CONTEXT_ACTIONS icons — worked but user
-  rejected on sight, unidentifiable among diff toolbar icons; (2) NOTIFICATION_PROVIDERS
-  top banner with prose + info tint — wrong position, too loud; (3) plain bar UNDER the
-  editor via `FileEditorManager.addBottomComponent` on the editors `openFile` returns —
-  accepted; (4) polish to full card parity: centered, card colours (.ok green / .no
-  neutral via "JButton.*" client properties — LAF ignores setBackground), card's own
-  Lucide SVGs bundled as /icons/*.svg (platform tick lookalikes don't match; Actions.
-  Commit isn't even a tick in the new UI).
-- Third button added: COMBINED suggestion grant (user's spec — no dropdown in the editor).
-  One button grants every allow-suggestion whole ("Always allow" if rules present, else
-  "Accept all edits"), echoing original indices; new "FILE_SAVED_ALL" verdict is a
-  permission-flow-only extension — bridge verdicts stay the reference set.
-- Two sandbox errors triaged: GlobalMenuLinux <clinit> SEVERE is 2024.2 platform noise at
-  every launch (log-proven, gotchas'd); the real one was MINE — a literal `--` (CSS var
-  name) inside an SVG comment is illegal XML, the strict loader killed reject.svg with
-  "String '--' not allowed in comment" → iconless button + IDE error balloon.
-- Text-in-toolbar impossibility recorded: displayTextInToolbar() @Deprecated(forRemoval)
-  on 262, replacement SHOW_TEXT_IN_TOOLBAR key absent on 242 — no warning-free path.
-- Next: 3.1+9.10 pairing (user wants together), VFS refresh, Plugin Verifier re-run
-  (new APIs: addBottomComponent, IconLoader.getIcon(path, Class), JButton client props).
-
-## 2026-08-09 (fourth) — 9.1 + 10.5 + editor accept/reject + 10.1/10.3: register 6 → 2 open
-- Committed and pushed as `f001e0b` (20 files, +864/−90), tests green going in.
-- 9.1 live half: the api_retry `error` is c_r()'s five-code ENUM (read from the binary — network
-  failures are the literal "unknown"), and the stream translator double-emits each retry (raw
-  api_error falls through `else yield` before the api_retry twin). RETRY_REASONS + last-key
-  dedupe in chat.html; fixture 09 (8 pre-fix FAILs). User verified with a real nmcli storm.
-- 9.1 replay half (user's replay screenshot): the CLI WRITES the concluding error record before
-  flushing the buffered retries — file order lies, timestamps/parent chain don't. SessionStore
-  inserts younger-than-the-error retries before it; probe on the real storm session confirmed;
-  Kotlin test fails with the insertion disabled.
-- 10.5 premise CORRECTED by measuring both reference halves: the IDE never writes on accept —
-  both VS Code panes are temp docs and the CLI does the disk write from the returned verdict.
-  DiffReview rewritten to the three-verdict contract (TAB_CLOSED added, final-pane-text accept,
-  dead-caller/close_tab resolution, balloon dies with the future). All three verdicts
-  wire-verified + user-clicked. Contract documented in docs/ide-mcp-protocol.md § 4.
-- Built the roadmap-head feature on top: dual-surface edit permissions (card + editor diff,
-  first answer wins, balloon v1 — user picked both via AskUserQuestion). EditProposals rebuilds
-  the post-edit content from tool input (8 JUnit tests); __perm_answered retires the card
-  (fixture 11); pendingPermissions map arbitrates.
-- Stale-diff-tab bug (user screenshot): `FileEditorManager.openFiles` does NOT report diff
-  editors — every find-then-close ever written here closed nothing. Now the diff opens as our
-  own ChainDiffVirtualFile and the held handle closes exactly that tab on resolution.
-- 10.1/10.3 re-scoped after measuring: the model-facing allowlist (getDiagnostics+executeCode
-  only) is byte-identical across 2.1.222–226 — upstream policy, not a regression. Server-rename
-  dodge rejected: the CLI finds its IDE client by the literal name "ide".
-- New backlog: VFS refresh after CLI writes (user needed "Reload from disk"); stale ide
-  lockfiles surviving hot-reload. Left open: 3.1+9.10 pairing (user wants together), 5.14
-  scroll feel, 8.2/8.7 tail-error replay eyeball.
-
 ## Digest
 One line per digested session; lessons were promoted to gotchas/decisions/conventions first.
+
+- **2026-08-09 (fifth)** — the editor accept/reject v2 BUTTONS half, through four user-driven
+  iterations each measured against 242 AND 262 bytecode before coding: toolbar icons (rejected on
+  sight — unidentifiable), a top notification banner (wrong position, too loud), then the accepted
+  shape, a plain bar UNDER the diff via `FileEditorManager.addBottomComponent`, polished to card
+  parity (JButton client properties, because the LAF ignores setBackground; our own Lucide SVGs,
+  because no platform icon is actually a tick). Added the COMBINED suggestion grant as a third
+  button (`FILE_SAVED_ALL` — a permission-flow extension; the bridge verdict set stays the
+  reference). Lessons all promoted: the GlobalMenuLinux launch noise, the `--`-in-an-SVG-comment
+  XML failure that silently killed an icon, and `displayTextInToolbar()` having no warning-free
+  path across 242→262.
+
+- **2026-08-09 (fourth)** — 9.1 + 10.5 + editor accept/reject + 10.1/10.3, register 6 → 2 open,
+  pushed as `f001e0b`. 9.1 needed both halves: live, the api_retry `error` is a five-code ENUM read
+  out of the binary and the stream translator double-emits every retry (dedupe in chat.html); in
+  replay, the CLI writes the concluding error record BEFORE flushing the buffered retries, so
+  SessionStore reorders by timestamp. 10.5's premise was corrected by measuring the reference
+  client — the IDE never writes on accept, the CALLER does — which produced the three-verdict
+  DiffReview contract now in docs/ide-mcp-protocol.md § 4 and decisions.md, and the dual-surface
+  edit permission (card + editor diff, first answer wins). 10.1/10.3 re-scoped to upstream policy,
+  not a regression. Trap promoted to gotchas: `FileEditorManager.openFiles` does not report diff
+  editors, so every find-then-close of a diff tab was a silent no-op.
 
 - **2026-08-09 (third)** — 7.4 and 8.2+8.7 fixed, register 9 → 6 open. Both 7.4 payloads exist
   only live, so they were read VERBATIM out of the CLI binary — which also showed the harness

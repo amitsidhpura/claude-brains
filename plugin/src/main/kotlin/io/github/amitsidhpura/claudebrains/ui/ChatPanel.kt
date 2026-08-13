@@ -70,12 +70,18 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         }
 
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
+            // Main frame only: this fires per frame, and seedUi() must not run several times for
+            // one load. Nothing in chat.html is framed today, so `started` had been hiding that.
             override fun onLoadEnd(b: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
+                if (frame?.isMain == false) return
                 browser.cefBrowser.executeJavaScript(
                     "window.__bridge = function(p){ ${jsToKotlin.inject("p")} };",
                     browser.cefBrowser.url, 0,
                 )
+                // The session starts once; the page is seeded on every load, since a reload leaves
+                // the DOM back at its defaults with a live CLI still attached. See seedUi().
                 startSession()
+                seedUi()
             }
         }, browser.cefBrowser)
 
@@ -295,6 +301,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
 
     /** Last title shipped, so the per-turn re-check only pushes when the CLI renames the thread. */
     private var lastTitle: String? = null
+
+    /** Whether this turn already looked for a name, so the scan below runs at most once per turn. */
+    private var titleProbed = false
 
     /**
      * Header title. [id] null = fresh conversation; the page shows its own "New conversation"
@@ -564,7 +573,23 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 pushEvent(line)
                 // The CLI names a thread with an `ai-title` record written around the end of a
                 // turn, so re-read at every result; pushTitle no-ops unless the name changed.
-                if (line.contains("\"type\":\"result\"")) pushTitle(session.currentSessionId())
+                if (line.contains("\"type\":\"result\"")) {
+                    titleProbed = false
+                    pushTitle(session.currentSessionId())
+                } else if (lastTitle.isNullOrEmpty() && !titleProbed && line.contains("\"message_start\"")) {
+                    // Waiting for `result` leaves an UNNAMED header for the length of a whole turn,
+                    // while the history list — which reads the same titleOf() straight off disk on
+                    // every open — already shows the name. Measured on a real session: first prompt
+                    // 10:09, next 11:10, so the header read "New conversation" beside a titled
+                    // "current" row for an hour (the CLI wrote no ai-title for it at all, so the
+                    // first-user-message fallback was the final answer the whole time).
+                    // message_start is the first point where the record that fallback derives from
+                    // is certainly on disk. It fires once per assistant message, and titleOf scans
+                    // the whole file with a (mtime,size) cache that a growing transcript misses
+                    // every time — hence once per turn, and only while there is no name to lose.
+                    titleProbed = true
+                    pushTitle(session.currentSessionId())
+                }
             },
             onPermission = { requestId, toolName, inputJson, suggestionsJson ->
                 val frame = buildJsonObject {
@@ -579,20 +604,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 openEditorPermissionDiff(requestId, toolName, inputJson, suggestionsJson)
             },
             onInit = { metaJson ->
-                val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull()
-                if (meta != null) {
-                    meta["commands"]?.let { pushEvent(frameOf("__commands", it)) }
-                    // custom models first, so a restored custom selection can resolve its display name
-                    runCatching { json.parseToJsonElement(session.customModels()) }.getOrNull()
-                        ?.let { pushFrame(buildJsonObject { put("type", "__customModels"); put("items", it) }) }
-                    meta["models"]?.let { models ->
-                        val frame = buildJsonObject {
-                            put("type", "__models"); put("items", models)
-                            session.selectedModel()?.let { put("selected", it) }
-                        }
-                        pushFrame(frame)
-                    }
-                }
+                lastInitMeta = metaJson   // kept so a reloaded page can be seeded without a CLI restart
+                pushInitMeta(metaJson)
             },
             // Carry the stderr tail on a NON-ZERO exit: "claude process exited (1)" with the reason
             // buried in idea.log is a dead end, and there is no terminal to check — the CLI that
@@ -606,7 +619,40 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 })
             },
         )
+    }
 
+    /** The CLI's `initialize` payload, replayed into a reloaded page — it arrives only at CLI start. */
+    private var lastInitMeta: String? = null
+
+    /** Slash commands + the model roster, from the CLI's initialize payload. */
+    private fun pushInitMeta(metaJson: String) {
+        val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull() ?: return
+        meta["commands"]?.let { pushEvent(frameOf("__commands", it)) }
+        // custom models first, so a restored custom selection can resolve its display name
+        runCatching { json.parseToJsonElement(session.customModels()) }.getOrNull()
+            ?.let { pushFrame(buildJsonObject { put("type", "__customModels"); put("items", it) }) }
+        meta["models"]?.let { models ->
+            val frame = buildJsonObject {
+                put("type", "__models"); put("items", models)
+                session.selectedModel()?.let { put("selected", it) }
+            }
+            pushFrame(frame)
+        }
+    }
+
+    /**
+     * Push everything the page cannot know on its own. Runs on EVERY load, not just the first.
+     *
+     * The webview is a view; Kotlin owns this state. A reload — a renderer restart, a reload from
+     * DevTools — puts the DOM back to its markup defaults, and every one of these was previously
+     * sent once inside [startSession] behind the `started` guard: the header fell back to "New
+     * conversation", the mode chip to "default", tool lines to absolute paths, and the model and
+     * slash-command menus to empty, with nothing left to correct any of it. The title is the one
+     * that could never heal on its own, because [pushTitle] only pushes on a CHANGE and the name
+     * had not changed — hence clearing [lastTitle] first, so the page is told what it is showing
+     * rather than what it was last sent.
+     */
+    private fun seedUi() {
         // Seed the mode chip with the persisted mode the CLI was just launched with —
         // it isn't in the initialize payload, and the chip's built-in default is "default".
         pushFrame(buildJsonObject { put("type", "__mode"); put("mode", session.selectedMode()) })
@@ -617,6 +663,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         // that, and would show absolute paths until the user spoke. The webview refreshes from
         // init's cwd anyway, since that is what the model's paths are actually relative to.
         project.basePath?.let { pushFrame(buildJsonObject { put("type", "__project"); put("root", it) }) }
+
+        lastInitMeta?.let { pushInitMeta(it) }
+
+        lastTitle = null; titleProbed = false
+        pushTitle(session.currentSessionId())
 
         // Feed the file list for @-mention autocomplete.
         runCatching {

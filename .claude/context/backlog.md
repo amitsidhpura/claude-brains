@@ -2,8 +2,10 @@
 
 ## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
 - 2 open issues from the 2026-08-08 pass, both in one pairing: 3.1 custom commands in the
-  / menu + 9.10 re-test (user wants both together). The fixture died with the old machine —
-  recreate `D:\sites\claude-brains-test\.claude\commands\dummy-cmd.md` first.
+  / menu + 9.10 re-test (user wants both together). The fixture is a `dummy-cmd.md` under the
+  sibling test repo's `.claude/commands/`; it is not in git and exists on the Linux box only
+  (`~/Sites/claude-brains-testing/`), NOT on Windows (`D:\sites\claude-brains-test\` holds only
+  `.idea`). Recreate it for whichever machine you are on before starting.
 - A filename longer than the whole tool line is hard-clipped with no ellipsis (the tail never
   shrinks by design). Rare — needs ~45+ chars at a narrow panel. Offered 2026-08-12, not taken.
 - Permission cards (`.card-h code`) still wrap long paths: deliberately NOT clamped, since that
@@ -13,6 +15,11 @@
   lockfile cleanup on unload if touched anyway.
 
 ## Next up
+- Replay the conversation into a RELOADED webview. `seedUi()` (2026-08-13) restores the chrome on
+  every page load, but the log itself is still lost — the transcript would have to be pushed WITHOUT
+  restarting the CLI (unlike `refresh`, which restarts it) and reconciled against frames still
+  arriving mid-turn. Deliberately deferred: no reload has ever been observed in the wild, and the
+  chrome was the part that could never heal.
 - Kill a background process from the panel: the roster rows (`renderBgTasks`) are display-only and
   `interrupt()` only stops the in-flight response — the CLI kills shells via the `TaskStop` tool,
   which only the model can call. Needs a bridge verb + an action on the roster row (conversations-

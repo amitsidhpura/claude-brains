@@ -74,8 +74,32 @@ trusting memory here.
   substring pre-filter is the only correct shape — the cost is what `tokensOf` already pays. Ask of
   any new transcript reader: is this record written at a FIXED position (session head, last turn) or
   at an arbitrary one?
+- **The transcript does not exist yet at `system/init`.** Measured against CLI 2.1.229
+  (`_local/title_timing.py`, 2026-08-13): the file is MISSING when `system/init` arrives and is on
+  disk by `message_start` — 15 KB already, first user record included. So `message_start` is the
+  earliest frame anything derived FROM THE FILE (a title, a token count) can be read at, and the
+  session id arriving is NOT evidence the file is there. `SessionStore.titleOf` returning null is
+  the normal state for the first few seconds of a session, not an error.
 
 ## Build / toolchain
+- **Two machines, and only the repo travels.** Development happens on both a Linux box and a
+  Windows one (paths in overview.md), so ANY note naming a home dir, a transcript folder, a CLI
+  location or the sibling test repo is machine-scoped — check which box you are on before trusting
+  it. Two consecutive `/context load`s opened with the recorded machine being the wrong one. The
+  sharp edge is test fixtures that live OUTSIDE the repo: the 3.1 `dummy-cmd.md` sits in the
+  sibling test repo, is not in git, and is therefore absent on whichever machine did not create it
+  — while the context files cheerfully say it exists. Verify the file, don't read about it.
+- **Killing `./gradlew runIde` does NOT kill the sandbox IDE, and the survivor will fake a test
+  result.** The IDE is a forked JVM: kill the Gradle process and it keeps running, holding
+  `build/idea-sandbox/PS-*/plugins/claude-brains/lib/*.jar` mapped, so the next `runIde` dies in
+  `prepareSandbox` with "cannot be performed on a file with a user-mapped section open" — while
+  `tools/cdp.py` cheerfully attaches to the OLD panel. On 2026-08-13 that nearly passed a negative
+  control against the very build it was meant to refute; the build LOG is what caught it. Close it
+  with `taskkill /PID <pid>` **without** `/F` (graceful, so the sandbox saves its window layout — a
+  forced kill loses it and the tool window comes back CLOSED, which means no CEF and no CDP target
+  at all). Find it with `Get-CimInstance Win32_Process` filtered on `*idea-sandbox*`. Before
+  trusting any live measurement after a restart, confirm the build you think you are testing is the
+  one that is running.
 - **`pluginVerification { ides { recommended() } }` can take the WHOLE project offline.** It
   resolves the Android Studio releases list from `jb.gg/android-studio-releases-list.xml` →
   `teamcity.jetbrains.com` at CONFIGURATION time, so if that one host is unreachable, EVERY task
@@ -348,3 +372,18 @@ trusting memory here.
   duplicated-checklist bug looked like live over-rendering and was actually live UNDER-rendering
   (missing per-tool placement and status titles). Replay is usually the reference.
 - Windowed replay means DOM search (browser find) only sees loaded blocks.
+- **Push-driven surfaces lag disk-driven ones by a whole turn.** The header title is pushed by
+  Kotlin; the history list re-reads disk every time it opens. Both go through the same `titleOf`,
+  so they can only ever disagree about WHEN — and `pushTitle` had one live-turn caller, the
+  `result` line, so a new conversation showed "New conversation" beside a titled `current` row for
+  the length of its first turn (a real one ran an hour: 2026-08-13, docs/manual-test.md 8.16). Ask
+  of any panel value: what refreshes it, and what is the longest gap between two of those events?
+- **The webview is a VIEW — anything pushed once at startup is gone after a page reload.** Every
+  `__mode`/`__project`/`__models`/`__commands`/`__title` frame used to be sent inside
+  `startSession()` behind its `started` guard, while `onLoadEnd` fires on EVERY load: a reload left
+  the DOM at its markup defaults with a live CLI attached and nothing to correct it (proved on the
+  pre-fix build — after `location.reload()`, `slashCommands` 0 and `projectRoot` ""). Now `seedUi()`
+  runs per load. The trap that makes it permanent rather than transient is a change-detector on the
+  push side: `lastTitle` records what was last SENT, so after a reload the name has not "changed"
+  and is never re-sent. Any such cache must be cleared when the view resets — it tracks intent, and
+  `pushEvent` is a fire-and-forget `executeJavaScript` that guarantees nothing about delivery.
