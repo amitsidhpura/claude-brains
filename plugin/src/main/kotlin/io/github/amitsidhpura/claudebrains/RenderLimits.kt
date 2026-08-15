@@ -71,12 +71,20 @@ object RenderLimits {
      * used a 21-character one-liner.
      */
     val DESC_KEYS = listOf(
-        "description", "file_path", "path", "pattern", "query", "url", "element", "filename", "target",
-        "skill", "status", "taskId", "task_id", "uri",
+        "description", "file_path", "path", "notebook_path", "pattern", "query", "url", "element",
+        "filename", "target", "skill", "status", "taskId", "task_id", "uri",
     )
 
-    /** Of [DESC_KEYS], the ones whose value is a file path — rendered clickable (`.t-desc.path`). */
-    val PATH_KEYS = setOf("file_path", "path")
+    /**
+     * Of [DESC_KEYS], the ones whose value is a file path — rendered clickable (`.t-desc.path`),
+     * project-relative and middle-ellipsised.
+     *
+     * `notebook_path` was missing from BOTH lists until 2026-08-15, so a NotebookEdit drew a bare
+     * label with no path anywhere — not on the tool line, and not on its permission card either,
+     * since renderPermission reads `file_path || path`. CliFileSync had already had to add it back
+     * by hand to know which file to refresh; that workaround is now redundant.
+     */
+    val PATH_KEYS = setOf("file_path", "path", "notebook_path")
 
     /**
      * Keys tried IN ORDER for the IN box: what the tool was ASKED, as distinct from the one-line

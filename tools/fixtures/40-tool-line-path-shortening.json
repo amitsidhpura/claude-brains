@@ -1,7 +1,7 @@
 {
-  "item": "UI \u2014 tool-line paths (2026-08-11)",
+  "item": "UI — tool-line paths (2026-08-11)",
   "branch": "__project + content_block_stop with a pathKeys description",
-  "provenance": "The __project frame is OURS \u2014 ChatPanel pushes the IDE's project.basePath, so its shape is a fact about our own code, not a claim about the CLI. The CLI half is the tool_use input carrying file_path, which is measured: file_path is LIM.pathKeys[0] and the frames here are the same content_block_start/delta/stop sequence every other fixture uses. The CLI also sends the same root as `cwd` on system/init (verified verbatim in the 2.1.226 binary: subtype:\"init\",cwd:e.cwd,session_id:...), which the webview accepts as a refresh \u2014 step 4 pins that path too. What is asserted is the contract that must hold whatever the root's provenance: display may be shortened, the CLICK TARGET may not.",
+  "provenance": "The __project frame is OURS — ChatPanel pushes the IDE's project.basePath, so its shape is a fact about our own code, not a claim about the CLI. The CLI half is the tool_use input carrying file_path, which is measured: file_path is LIM.pathKeys[0] and the frames here are the same content_block_start/delta/stop sequence every other fixture uses. The CLI also sends the same root as `cwd` on system/init (verified verbatim in the 2.1.226 binary: subtype:\"init\",cwd:e.cwd,session_id:...), which the webview accepts as a refresh — step 4 pins that path too. What is asserted is the contract that must hold whatever the root's provenance: display may be shortened, the CLICK TARGET may not. STEPS 6-7 ADDED 2026-08-15 (user request): the permission/decision card showed the FULL absolute path while the tool line beside it showed the relative, middle-ellipsised one — the same file named two different ways in one turn. Both card surfaces now route through the same fillPath() the tool line uses, so the shortening cannot drift between them. This SUPERSEDES the backlog note that card paths were deliberately left unclamped ('that surface asks you to approve a write to a specific file') — the absolute path is still carried on dataset.path and title, so the click target and the hover tooltip are unchanged; only the rendering is shortened. NEGATIVE CONTROL RUN against the pre-fix build: all 6 assertions failed. Note dataset.path/title were NOT guards — the pre-fix card carried neither, and the click handler fell back to textContent, which is precisely why the displayed text could not be shortened until the absolute path had somewhere else to live. STEP 8 ADDED 2026-08-15 from the same audit: the @-mention menu already receives PROJECT-RELATIVE paths (ClaudeSessionService.listProjectFiles strips project.basePath), but `.mi` ellipsised at the END — so a long path lost its FILENAME, the exact failure the head/tail split exists to prevent. The cut is now computed by the shared pathParts() helper rather than a second copy. NEGATIVE CONTROL RUN: the tail assertion failed pre-fix (no .p-tail existed at all).",
   "steps": [
     {
       "note": "a path inside the project renders relative to it",
@@ -64,7 +64,7 @@
         {
           "js": "document.querySelector('.t-desc.path .p-tail').textContent",
           "equals": "/session/SessionStoreTest.kt",
-          "why": "the never-shrinking span keeps the PARENT too \u2014 /session says what the filename alone does not"
+          "why": "the never-shrinking span keeps the PARENT too — /session says what the filename alone does not"
         },
         {
           "js": "(() => { const l = document.querySelector('.tool-line'); const lh = parseFloat(getComputedStyle(l).lineHeight) || 18; return Math.round(l.offsetHeight / lh); })()",
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "note": "NEGATIVE CONTROL \u2014 a path OUTSIDE the project is left absolute",
+      "note": "NEGATIVE CONTROL — a path OUTSIDE the project is left absolute",
       "frames": [
         {
           "type": "stream_event",
@@ -116,17 +116,17 @@
         {
           "js": "document.querySelectorAll('.t-desc.path')[1].textContent",
           "equals": "/etc/nginx/sites-available/very-long-config-name-for-testing.conf",
-          "why": "nothing to strip \u2014 shortening must not invent a relative path"
+          "why": "nothing to strip — shortening must not invent a relative path"
         },
         {
           "js": "(() => { const l = document.querySelectorAll('.tool-line')[1]; const lh = parseFloat(getComputedStyle(l).lineHeight) || 18; return Math.round(l.offsetHeight / lh); })()",
           "equals": 1,
-          "why": "still one line \u2014 the clamp does not depend on shortening"
+          "why": "still one line — the clamp does not depend on shortening"
         }
       ]
     },
     {
-      "note": "NEGATIVE CONTROL \u2014 a sibling directory that merely SHARES the root's prefix is not inside it",
+      "note": "NEGATIVE CONTROL — a sibling directory that merely SHARES the root's prefix is not inside it",
       "frames": [
         {
           "type": "stream_event",
@@ -168,7 +168,7 @@
       ]
     },
     {
-      "note": "NEGATIVE CONTROL \u2014 parent + filename past LIM.pathTailMax drops the parent, so the filename is never the part the panel clips",
+      "note": "NEGATIVE CONTROL — parent + filename past LIM.pathTailMax drops the parent, so the filename is never the part the panel clips",
       "frames": [
         {
           "type": "stream_event",
@@ -210,12 +210,12 @@
         {
           "js": "document.querySelectorAll('.t-desc.path')[3].textContent",
           "equals": "/etc/nginx/sites-available/staging.internal.example.com.conf",
-          "why": "dropping the parent from the TAIL never drops it from the path \u2014 it is still all there, just shrinkable"
+          "why": "dropping the parent from the TAIL never drops it from the path — it is still all there, just shrinkable"
         }
       ]
     },
     {
-      "note": "system/init's cwd refreshes the root \u2014 the CLI is the authority on what paths are relative to",
+      "note": "system/init's cwd refreshes the root — the CLI is the authority on what paths are relative to",
       "frames": [
         {
           "type": "system",
@@ -258,6 +258,94 @@
           "js": "document.querySelectorAll('.t-desc.path')[4].textContent",
           "equals": "src/main/resources/webview/chat.css",
           "why": "relative to init's cwd, which replaced the IDE-pushed root"
+        }
+      ]
+    },
+    {
+      "note": "the live permission card names the file the same way the tool line does — relative, middle-ellipsised",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit it', []);",
+      "frames": [
+        {
+          "type": "__project",
+          "root": "/home/syncroze/Sites/claude-brains"
+        },
+        {
+          "type": "permission_request",
+          "id": "cp1",
+          "tool": "Edit",
+          "input": "{\"file_path\":\"/home/syncroze/Sites/claude-brains/plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt\",\"old_string\":\"a\",\"new_string\":\"b\"}"
+        }
+      ],
+      "expect": [
+        {
+          "js": "(document.querySelector('.card.warn .card-h code')||{textContent:''}).textContent",
+          "equals": "plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt",
+          "why": "DISCRIMINATING: project-relative, exactly as the tool line renders it (the full absolute path pre-fix)"
+        },
+        {
+          "js": "document.querySelectorAll('.card.warn .card-h code .p-head, .card.warn .card-h code .p-tail').length",
+          "equals": 2,
+          "why": "DISCRIMINATING: split into the shrinkable head + the never-shrinking tail, so the ellipsis lands mid-path"
+        },
+        {
+          "js": "(document.querySelector('.card.warn .card-h code')||{dataset:{}}).dataset.path",
+          "equals": "/home/syncroze/Sites/claude-brains/plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt",
+          "why": "DISCRIMINATING: the ABSOLUTE path moves onto dataset.path — pre-fix the card had none and the click handler fell back to the text, which is exactly why the text could not be shortened before"
+        },
+        {
+          "js": "(document.querySelector('.card.warn .card-h code')||{}).title",
+          "equals": "/home/syncroze/Sites/claude-brains/plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt",
+          "why": "DISCRIMINATING: and onto title, so hovering still reveals the full path"
+        }
+      ]
+    },
+    {
+      "note": "the same is true on replay — an applied edit card must not disagree with its own tool line",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [
+        {
+          "type": "__project",
+          "root": "/home/syncroze/Sites/claude-brains"
+        },
+        {
+          "type": "__transcript",
+          "items": [
+            {
+              "role": "tool",
+              "text": "Edit",
+              "file": "/home/syncroze/Sites/claude-brains/plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt",
+              "oldStr": "a",
+              "newStr": "b"
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "js": "(document.querySelector('.card .card-h code')||{textContent:''}).textContent",
+          "equals": "plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt",
+          "why": "DISCRIMINATING: replay shortens identically — both card surfaces share fillPath with the tool line"
+        },
+        {
+          "js": "(document.querySelector('.card .card-h code')||{dataset:{}}).dataset.path",
+          "equals": "/home/syncroze/Sites/claude-brains/plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStore.kt",
+          "why": "DISCRIMINATING: absolute path preserved for the click on the replay surface too"
+        }
+      ]
+    },
+    {
+      "note": "the @-mention menu keeps the filename — the ellipsis belongs in the middle, not at the end",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "expect": [
+        {
+          "js": "(function(){ openMenu(0, [{ins:'src/components/layout/DesktopSidebar.tsx', disp:'src/components/layout/DesktopSidebar.tsx'}]); var t=document.querySelector('#mention .mi .p-tail'); var r=t?t.textContent:''; hideMenu(); return r; })()",
+          "equals": "/layout/DesktopSidebar.tsx",
+          "why": "DISCRIMINATING: the filename and its parent ride in the never-shrinking tail (no .p-tail at all pre-fix — the row was one string ellipsised from its end, cutting the filename off)"
+        },
+        {
+          "js": "(function(){ openMenu(0, [{ins:'src/components/layout/DesktopSidebar.tsx', disp:'src/components/layout/DesktopSidebar.tsx'}]); var h=document.querySelector('#mention .mi .p-head'), t=document.querySelector('#mention .mi .p-tail'); var r=(h?h.textContent:'')+(t?t.textContent:''); hideMenu(); return r; })()",
+          "equals": "src/components/layout/DesktopSidebar.tsx",
+          "why": "GUARD: head + tail still spell the whole path — the split is presentational, nothing is lost"
         }
       ]
     }

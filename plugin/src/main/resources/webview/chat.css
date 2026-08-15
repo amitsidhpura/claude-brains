@@ -462,9 +462,14 @@ blockquote > *:last-child { margin-bottom: 0; }
    puts the shown text on `title`. The .path variant overrides display/overflow below and carries
    its own middle-ellipsis rule — nowrap here is what its .p-head/.p-tail already assume. */
 .tool-line .t-desc { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tool-line .t-desc.path { display: inline-flex; align-items: baseline; overflow: hidden; }
-.tool-line .t-desc.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tool-line .t-desc.path .p-tail { flex: 0 0 auto; white-space: nowrap; }
+.tool-line .t-desc.path, .card-h code.path { display: inline-flex; align-items: baseline; overflow: hidden; }
+.tool-line .t-desc.path .p-head, .card-h code.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-line .t-desc.path .p-tail, .card-h code.path .p-tail { flex: 0 0 auto; white-space: nowrap; }
+/* The card header is prose ("Claude wants to run Edit on <path>"), so the path sits INLINE and must
+   be allowed to shrink within it — max-width bounds the flex box, vertical-align keeps it sitting on
+   the sentence's baseline rather than lifting the line. Same head/tail split as the tool line: the
+   decision surface and the timeline must never spell one file two different ways. */
+.card-h code.path { max-width: 100%; vertical-align: bottom; }
 .path { font-family: ui-monospace, Consolas, monospace; }
 /* THE ATTACHED-BLOCK CONTRACT. Everything that hangs off the line above it — the tool line, or the
    .io that already follows it — shares this one column and this one gap. Nothing else may set a top
@@ -935,8 +940,13 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* Rows are read-only — there is no "kill task" here, that is the terminal's half (§ Philosophy) —
    so they must not offer the hover affordance the other popup items use to say "clickable".
    Qualified with .popup-item deliberately: a bare .bg-row ties on specificity and LOSES, because
-   .popup-item is declared further down this file. Measured headless, not assumed. */
-.popup-item.bg-row, .popup-item.bg-row:hover { background: transparent; cursor: default; }
+   .popup-item is declared further down this file. Measured headless, not assumed.
+   `.sel` is listed for the same reason and it is the half that was MISSED: .popup-item.bg-row only
+   TIES with .popup-item.sel (0,2,0 each) and loses on order, so a JS-applied cursor repainted these
+   rows even though :hover was correctly suppressed — a stuck highlight the user saw as "dark on
+   hover, lighter after". `nosel` on #bgMenu stops the class being applied at all; this is the belt
+   to that braces. */
+.popup-item.bg-row, .popup-item.bg-row:hover, .popup-item.bg-row.sel { background: transparent; cursor: default; }
 #inputbar .icon-btn { color: var(--user-muted); }
 #inputbar .icon-btn:hover { color: var(--fg); }
 #send { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
@@ -975,8 +985,12 @@ blockquote > *:last-child { margin-bottom: 0; }
 #mention { display: none; position: fixed; z-index: 25; max-height: 240px; overflow-y: auto;
   box-sizing: border-box; background: var(--user-bg); border: 1px solid var(--user-border);
   border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); }
+/* Same middle-ellipsis contract as the tool line and the card header: a plain end-ellipsis ate the
+   FILENAME, which is the one segment a file row must keep. .p-head shrinks, .p-tail never does. */
 .mi { padding: 6px 14px; font-size: 12px; color: var(--fg); cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  display: flex; align-items: baseline; overflow: hidden; }
+.mi .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi .p-tail { flex: 0 0 auto; white-space: nowrap; }
 .mi:hover, .mi.sel { background: var(--user-raised-hover); }
 #attachMenu { left: 0; min-width: 220px; }
 #attachMenu .popup-item { align-items: center; }

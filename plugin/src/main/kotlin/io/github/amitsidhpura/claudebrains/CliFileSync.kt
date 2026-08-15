@@ -50,8 +50,8 @@ class CliFileSync(
      */
     private val writeTools = setOf("Write", "Edit", "MultiEdit", "NotebookEdit")
 
-    /** `notebook_path` rides alongside [RenderLimits.PATH_KEYS] for NotebookEdit. */
-    private val pathKeys = RenderLimits.PATH_KEYS + "notebook_path"
+    /** `notebook_path` is part of [RenderLimits.PATH_KEYS] itself since 2026-08-15. */
+    private val pathKeys = RenderLimits.PATH_KEYS
 
     /**
      * tool_use_id -> path, awaiting its result. Bounded: a turn that is interrupted between the

@@ -75,7 +75,7 @@
           <button id="ctxChip" class="chip-btn ctx" hidden></button>
           <span class="menu-anchor">
             <button id="bgChip" class="chip-btn bg" hidden title="Background tasks"></button>
-            <div id="bgMenu" class="popup">
+            <div id="bgMenu" class="popup nosel">
               <div class="popup-h"><span>Background tasks</span></div>
               <div id="bgList"></div>
             </div>
@@ -681,6 +681,9 @@
     } else {
       const items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
       items.forEach(function (x) { x.classList.remove('sel'); });
+      // A `nosel` popup is a status readout, not a picker (the background roster): seeding a cursor
+      // on open advertises a selection that can never be acted on.
+      if (p.classList.contains('nosel')) return;
       const cur = p.querySelector('.popup-item.on') || items[0];
       if (cur) cur.classList.add('sel');
     }
@@ -710,6 +713,7 @@
       return;
     }
     const p = activeMenu(); if (!p) return;
+    if (p.classList.contains('nosel')) return;   // nothing to select, and Enter would "click" a dead row
     const items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));
     if (!items.length) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -728,6 +732,11 @@
     if (!item) return;
     const p = item.closest('.popup');
     if (!p || !p.classList.contains('show') || item.classList.contains('sel')) return;
+    // `sel` is a keyboard CURSOR, and this painter has no mouseout counterpart — it only ever moves
+    // the class, never clears it. Correct for a picker (hover moves the cursor so Enter acts on what
+    // you point at); wrong for a status readout, where the highlight stuck to the last row the
+    // pointer crossed. Reported 2026-08-15 on the background roster.
+    if (p.classList.contains('nosel')) return;
     p.querySelectorAll('.popup-item').forEach(function (x) { x.classList.remove('sel'); });
     item.classList.add('sel');
   });
@@ -1096,6 +1105,14 @@
     // failing only in the full-suite order, exactly the cross-state leak fixture 44 documents).
     msgStreamed = false;
     turnTokens = 0; msgTokens = 0; reqSeed = null; retrySeen = null;
+    // The background roster dies with the CLI PROCESS, and __clear is exactly that boundary
+    // (ChatPanel pushes it for new conversation, resume, restart and delete-current). The CLI's own
+    // schema for the level signal requires this: "The level is per-process: nothing is emitted at
+    // startup, so consumers must reset to the empty set whenever the session's CLI process
+    // (re)starts and let the next membership change repopulate it." Without it a dead task sat on
+    // the chip with no frame ever coming to correct it — and the reset used to live in sendTurn,
+    // where it wiped shells that were still running.
+    bgTasks = []; pendingBgTasks = 0; renderBgTasks();
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // The MCP notice was cleared off screen with everything else, so the next init must be free to
     // state the same failures again — otherwise a new conversation silently inherits the old one's
@@ -1562,6 +1579,22 @@
     if (r) projectRoot = r;
   }
   /**
+   * Where the middle-ellipsis goes: everything before the cut may shrink, everything after never
+   * does. Two cuts are considered — before the filename, and before the segment above it — and the
+   * parent joins the tail only when the pair fits LIM.pathTailMax, because a tail that outgrows the
+   * line is one the panel clips, and it clips the filename. Each cut lands BEFORE its separator so
+   * the slash leads the span it belongs to ("…/controls/x.ts" rather than "…control…/x.ts").
+   * Shared by fillPath and the @-mention menu so the two cannot disagree about where to cut.
+   */
+  function pathParts(disp) {
+    disp = String(disp || '');
+    const nameAt = Math.max(0, Math.max(disp.lastIndexOf('/'), disp.lastIndexOf('\\')));
+    const upTo = disp.slice(0, nameAt);
+    const parentAt = Math.max(0, Math.max(upTo.lastIndexOf('/'), upTo.lastIndexOf('\\')));
+    const cut = (disp.length - parentAt) <= LIM.pathTailMax ? parentAt : nameAt;
+    return { head: disp.slice(0, cut), tail: disp.slice(cut) };
+  }
+  /**
    * Draw a file path into a `.t-desc`, project-relative and on ONE line.
    *
    * Three things have to stay true at once, and each was a bug waiting to happen:
@@ -1592,11 +1625,7 @@
     // Each cut lands BEFORE its separator, so the slash leads the span it belongs to. That matters
     // once a span is ellipsised: cutting after the slash turned "controls/" into "control…" and the
     // line read as loose fragments — leading slashes keep it reading as a path, "…/control…/x.ts".
-    const nameAt = Math.max(0, Math.max(disp.lastIndexOf('/'), disp.lastIndexOf('\\')));
-    const upTo = disp.slice(0, nameAt);
-    const parentAt = Math.max(0, Math.max(upTo.lastIndexOf('/'), upTo.lastIndexOf('\\')));
-    // Parent + filename when they fit the budget, otherwise the filename alone.
-    const cut = (disp.length - parentAt) <= LIM.pathTailMax ? parentAt : nameAt;
+    const parts = pathParts(disp);
     dEl.textContent = '';
     dEl.classList.add('path');
     dEl.dataset.path = full;
@@ -1607,8 +1636,8 @@
       dEl.appendChild(s);
       return s;
     };
-    part('p-head', disp.slice(0, cut));
-    part('p-tail', disp.slice(cut));
+    part('p-head', parts.head);
+    part('p-tail', parts.tail);
     return dEl;
   }
   // timeline tool line: bold label + (empty) description span, appended to the current turn
@@ -1703,10 +1732,13 @@
     const body = replayDiff(it);
     if (!body) return false;
     card.innerHTML = '<div class="card-h"><b>' + esc(toolLabel(it.text)) + '</b>' +
-      (it.file ? ' on <code>' + esc(it.file) + '</code>' : '') + '</div>' + body +
+      (it.file ? ' on <code></code>' : '') + '</div>' + body +
       '<div class="card-b">' + (it.denied
         ? '<span class="no-t">✗ Rejected</span>'
         : '<span class="ok-t">✓ Applied</span>') + '</div>';
+    // fillPath, exactly as the live card and the tool line do — replay must not spell a path
+    // differently from the surface it is replaying.
+    if (it.file) { const c = card.querySelector('.card-h code'); if (c) fillPath(c, it.file); }
     return true;
   }
   function replayCard(it) {
@@ -2211,9 +2243,11 @@
     histIdx = history.length; histDraft = '';
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null; retrySeen = null;
     msgStreamed = false;   // this turn's answer must prove its own streaming (or render whole)
-    // The roster describes a LIVE process: a new conversation inherits none of it, and leaving the
-    // chip up would advertise tasks belonging to a session that is no longer on screen.
-    bgTasks = []; renderBgTasks();
+    // The roster is deliberately NOT reset here. A background shell outlives the turn that started
+    // it — that is what run_in_background means — so wiping it on every message hid work that was
+    // still running, and nothing re-advertised it: the CLI emits this level signal only when
+    // membership CHANGES, so the roster stayed wrong until the next start/exit. The reset belongs
+    // to the CLI process lifetime instead (clearLogUI); see the schema quote there.
     bridge({ kind: 'user', text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
     stopping = false;
     setBusy(true);
@@ -2485,7 +2519,11 @@
     closeMenus(); closeCardMenus();   // the @-menu replaces any open popup, same as tg() in reverse
     menuStart = start; menuItems = entries; menuSel = 0;
     menu.innerHTML = entries.map(function (e, i) {
-      return '<div class="mi' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' + esc(e.disp) + '</div>';
+      // Split like every other path surface: these rows are already project-relative (Kotlin strips
+      // basePath), but a plain ellipsis ate the FILENAME, which is the one part that must survive.
+      const pp = pathParts(e.disp);
+      return '<div class="mi' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '" title="' + esc(e.disp) + '">' +
+        '<span class="p-head">' + esc(pp.head) + '</span><span class="p-tail">' + esc(pp.tail) + '</span></div>';
     }).join('');
     const r = input.getBoundingClientRect();
     menu.style.display = 'block';
@@ -3977,7 +4015,7 @@
     let inp = {}; try { inp = JSON.parse(ev.input); } catch (_) {}
     if (ev.tool === 'AskUserQuestion' && inp.questions) return renderAsk(ev, inp);
     const isPlan = ev.tool === 'ExitPlanMode' || inp.plan !== undefined;
-    const file = inp.file_path || inp.path || '';
+    const file = inp.file_path || inp.path || inp.notebook_path || '';   // NotebookEdit names its file differently
     // This card owns the edit's diff now — the optimistic tool-line record (4.4) must not
     // ALSO render one at tool_result time, or manual mode double-renders every edit.
     if (ev.tool === 'Edit' || ev.tool === 'Write' || ev.tool === 'MultiEdit') supersedeEdit(ev.tool, file);
@@ -4018,10 +4056,14 @@
       card.className = 'card warn';
       card.innerHTML =
         '<div class="card-h">Claude wants to run <b>' + esc(toolLabel(ev.tool)) + '</b>' +
-          (file ? ' on <code>' + esc(file) + '</code>' : '') + '</div>' +
+          (file ? ' on <code></code>' : '') + '</div>' +
         previewHtml(ev.tool, inp, ev.lineStart) +
         cardBtns('Accept', SVG_CHECK, 'Reject', SVG_X, suggBtns);
     }
+    // Same renderer as the tool line, so one file is never named two ways in one turn: relative,
+    // middle-ellipsised, with the ABSOLUTE path on dataset.path + title (which is what keeps the
+    // click and the tooltip whole once the text is no longer openable).
+    if (file) { const c = card.querySelector('.card-h code'); if (c) fillPath(c, file); }
     (curTurn || log).appendChild(card); maybeScroll();
     foldBlock(card.querySelector('.cmd'));   // whole scripts land here
     foldBlock(card.querySelector('.diff'));  // long edits fold too (was a 240px scroll box)
@@ -4195,7 +4237,7 @@
           dimensions: { displayWidth: 2, displayHeight: 2 } }]);
       if (box) ti.after(box);
       const ti2 = track(toolLine('Read'));
-      ti2.querySelector('.t-desc').textContent = '/home/you/project/huge-capture.png';
+      fillPath(ti2.querySelector('.t-desc'), '/home/you/project/huge-capture.png');
       const box2 = toolImages([{ kind: 'image', name: 'huge-capture.png' }]);
       if (box2) ti2.after(box2); }
 

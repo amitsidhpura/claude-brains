@@ -278,8 +278,13 @@ Which background tasks are running while the turn is suspended.
 
   **REPLACE semantics is load-bearing** and is why the handler assigns rather than merges — a
   merging roster would keep finished tasks forever. Pinned by a test that shrinks the set and
-  asserts rows disappear. `clearLogUI` clears it too: the roster describes a live process, and a new
-  conversation must not advertise the previous session's tasks.
+  asserts rows disappear. **The level is PER-PROCESS**, in the CLI's own words: *"nothing is emitted
+  at startup, so consumers must reset to the empty set whenever the session's CLI process (re)starts
+  and let the next membership change repopulate it."* So `clearLogUI` clears it — that is the
+  `__clear` ChatPanel pushes for new conversation, resume, restart and delete-current — and an
+  ordinary turn does NOT. This paragraph described the intent before the code matched it: until
+  2026-08-15 the reset lived in `sendTurn`, so every message hid shells that were still running,
+  while a genuine restart left dead ones on the chip. Both directions are pinned by fixture 04.
 
   Rows are deliberately **read-only** — no kill, no restart. Process control is the terminal's half
   (`/bashes`, § Philosophy); this answers "what is running?", which is the during-work question.

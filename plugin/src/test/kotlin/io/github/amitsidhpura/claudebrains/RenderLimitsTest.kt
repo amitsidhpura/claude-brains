@@ -83,10 +83,10 @@ class RenderLimitsTest {
     fun `js literal round-trips the values`() {
         assertEquals(
             "{descMax:140,cmdMax:4000,outMax:2000,pathTailMax:40," +
-                "descKeys:[\"description\",\"file_path\",\"path\",\"pattern\",\"query\",\"url\"," +
-                "\"element\",\"filename\",\"target\",\"skill\",\"status\",\"taskId\",\"task_id\"," +
-                "\"uri\"]," +
-                "pathKeys:[\"file_path\",\"path\"]," +
+                "descKeys:[\"description\",\"file_path\",\"path\",\"notebook_path\",\"pattern\"," +
+                "\"query\",\"url\",\"element\",\"filename\",\"target\",\"skill\",\"status\"," +
+                "\"taskId\",\"task_id\",\"uri\"]," +
+                "pathKeys:[\"file_path\",\"path\",\"notebook_path\"]," +
                 "resultSkip:[\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\",\"ExitPlanMode\"," +
                 "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\",\"TaskList\"]," +
                 "inKeys:[\"command\",\"prompt\",\"function\"]," +

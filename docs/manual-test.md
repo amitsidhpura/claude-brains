@@ -422,6 +422,27 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       submit sends the answers; cancel → ✗ Cancelled
 - [x] 6.8 Plan card: Approve / Keep planning; ✗ Kept planning renders on refusal
 
+- [x] 6.6b Every structured path reads the same way — relative, middle-ellipsised, click intact
+
+      **RESOLVED (2026-08-15) — fixed (user request):** the decision card printed the FULL absolute
+      path while the tool line three lines above showed the project-relative one — the same file
+      named two ways in one turn. Both card surfaces (live `renderPermission`, replay/auto-approved
+      `fillAppliedCard`) now fill their `<code>` through the SAME `fillPath()` the tool line uses.
+      The absolute path moves to `dataset.path` + `title`, which is load-bearing: the click handler
+      reads `dataset.path` FIRST and only falls back to the text, and that fallback is exactly why
+      the text could not be shortened before. An audit of every path surface then found three more:
+      the **@-mention menu** ellipsised at the END, eating the filename (`…/DesktopSid…`) — the very
+      failure the head/tail split exists to prevent; **`notebook_path` was in neither `DESC_KEYS`
+      nor `PATH_KEYS`**, so a NotebookEdit drew no path at all, on the tool line or its card (the
+      workaround CliFileSync carried for it is now redundant); and a `__gallery` fixture bypassed
+      `fillPath` for no reason. The cut itself is now one shared `pathParts()` helper rather than a
+      second copy in the mention menu. Supersedes the backlog note that card paths were deliberately
+      unclamped — see decisions.md. Fixture 40 grew to 8 steps (negative controls RUN: 6 red for the
+      cards, 2 for the mention menu); mockup mirrored (6 card fixtures + 4 mention rows).
+      **Left alone deliberately:** paths embedded in free prose (todos, task/progress lines, info and
+      error lines, compaction summaries, IN/OUT boxes, `.cmd` blocks) and the Bash command text —
+      rewriting paths inside sentences is a different and riskier job than the structured cases.
+
 ## 7. Context gauge & background tasks
 
 - [x] 7.1 Gauge appears after the first turn with a plausible %; orange at ≥50%
@@ -486,6 +507,46 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       (`task_type "local_bash"`) does not suspend — the CLI goes idle and its `result` IS the true
       end, so there the summary SHOULD appear while the chip still shows the shell. Validated
       originally against sub-agents; the shell case is 8.15 and fixture 44.)
+- [x] 7.6 The background-task chip reflects what is actually running — across turns AND restarts
+
+      **RESOLVED (2026-08-15) — fixed:** reported as "the chip said 2 tasks but there were none".
+      **The chip was right:** the process tree showed two shells genuinely alive under the panel's
+      `claude` pid (orphaned `until … sleep 30 … done` waiter loops from the command sweep, 2h34m
+      and 1h31m old). The investigation found the real defect underneath, which is the inverse of
+      the report: the roster reset sat in `sendTurn`, so every ordinary message hid shells that
+      were still running, while `clearLogUI` — the `__clear` ChatPanel pushes for new conversation
+      / resume / restart / delete-current — did not clear it at all, leaving dead tasks with no
+      frame ever coming to correct them (the CLI emits this level signal only when membership
+      CHANGES). The CLI's own schema settles where it belongs: *"The level is per-process: nothing
+      is emitted at startup, so consumers must reset to the empty set whenever the session's CLI
+      process (re)starts."* Reset moved out of `sendTurn` into `clearLogUI`. Fixture 04 gained both
+      directions (negative control RUN: 5 red pre-fix; the restart step had to repopulate the
+      roster inside itself, because on the first attempt the previous step's `sendTurn` had already
+      emptied it and the assertion passed for the wrong reason). Verified with the real CLI: a
+      `sleep 120` shell kept the chip at "1 task" across a second message and its completion, then
+      a new conversation cleared it. `docs/client-parity.md` had *claimed* clearLogUI did this
+      since before the code ever did — corrected.
+
+- [x] 7.7 Roster rows show no lingering highlight — hovering one leaves nothing behind
+
+      **RESOLVED (2026-08-15) — fixed:** reported as "on hover it made dark bg and on going out of
+      popup it became lighter, the one which I hovered" — and that description was exact: the two
+      states really are different colours. Two defects compose. (a) `sel` is a keyboard CURSOR
+      painted by a document-level `mouseover` that has **no `mouseout` counterpart** — it only ever
+      moves the class, never clears it — plus `tg()`'s generic branch seeded one on row 0 the moment
+      the roster opened. (b) The `.bg-row` opt-out in chat.css beat `.popup-item:hover` (0,3,0 vs
+      0,2,0), which is the DARK while hovering, but only TIED with `.popup-item.sel` (0,2,0 each)
+      and lost on declaration order — the LIGHTER that stuck after the pointer left. The original
+      comment there had reasoned about the `:hover` tie and never considered a JS-applied class.
+      Fix: `nosel` on `#bgMenu`, honoured at all three `sel` sites (open-seed, arrow/Enter nav,
+      hover painter), so a status readout takes no cursor at all; `.popup-item.bg-row.sel` added to
+      the opt-out as defence in depth. The roster is deliberately non-interactive — process control
+      is the terminal's half (client-parity item 4). Fixture 04 (negative control RUN: 3 roster
+      assertions red incl. the exact stuck colour `rgb(44, 57, 76)`, slash-menu GUARD green in both
+      phases). Verified with **real CEF mouse events**, not synthetic DOM ones: row stays
+      `rgba(0,0,0,0)` while hovered and after leaving, `sel` count 0 throughout; the slash menu still
+      opens on `/compact` and moves its cursor to the hovered row. Same stuck `sel` exists in the
+      other popups but is intentional there (it IS the keyboard cursor) or masked by a rebuild.
 
 ## 8. Sessions & replay
 
