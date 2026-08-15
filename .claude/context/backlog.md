@@ -17,6 +17,13 @@
   lockfile cleanup on unload if touched anyway.
 
 ## Next up
+- Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
+  keep planning with text, Shift+Tab = approve with text — both slot into the existing `done()`
+  paths in chat.html.
+- Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
+  switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
+  tool_result) instead of the `updatedInput.plan` append — two-line change.
+
 - Replay the conversation into a RELOADED webview. `seedUi()` (2026-08-13) restores the chrome on
   every page load, but the log itself is still lost — the transcript would have to be pushed WITHOUT
   restarting the CLI (unlike `refresh`, which restarts it) and reconciled against frames still

@@ -1,6 +1,32 @@
 # Gotchas — hard-won, don't rediscover
 
 ## Protocol / wire
+- **The control-response parser WHITELISTS fields; everything else dies silently.** The allow
+  response admits `behavior`/`updatedInput`/`updatedPermissions` (deny adds `message`) — a
+  `feedback` field probed on 2.1.233 reached the model in ZERO frames, no warning anywhere. The
+  TUI's own dialogs carry `acceptFeedback` internally (pushed as an extra text block on the
+  ExitPlanMode tool_result), but no wire field maps to it. If a capability exists in the TUI,
+  check the response SCHEMA before assuming the protocol exposes it. Watch-item: if a `feedback`
+  field ever lands in the schema, ClaudeCli can switch to the TUI's exact shape in two lines.
+- **A user message written to stdin mid-turn is read at the NEXT model call, not "immediately".**
+  One probe showed it folded into the model's very first Write; the user's real run showed it
+  arriving AFTER implementation started. Both are true — it races the model call cycle. A race
+  that measured green once is still a race; anything that must precede the model's next action
+  has to ride the SAME message it will read (for ExitPlanMode: `updatedInput.plan`, echoed in
+  the tool_result).
+- **`set_permission_mode` sent right after a plan approval ALWAYS loses.** The CLI restores
+  `prePlanMode` when the approved ExitPlanMode executes — after your request was already
+  processed — so the restore overwrites it, deterministically (chip ended Auto after picking
+  auto-edit). Park the wish and send it on the post-approval `permissionMode` broadcast, which
+  always fires (plan→X is always a change).
+- **The plan-exit restore broadcasts the LITERAL `default`, not `manual`.** `default` is the
+  CLI's internal name for the mode `manual` merely advertises. A mode UI keyed on advertised
+  names drops the broadcast and lies (chip stuck on Plan — user report 2026-08-16). Alias them.
+- **A message the CLI consumed mid-turn persists ONLY as an `attachment` record**
+  ({type:"queued_command", commandMode:"prompt"}) — no user record ever follows, so replay that
+  ignores attachments silently loses text the model acted on. One QUEUED to the next turn writes
+  BOTH records (measured 3 vs 2 locally) — map attachments to bubbles only when no user record
+  matches the text, or queued messages render twice. mode=task-notification is machinery.
 - **A custom command's wire marker is a DESCRIPTION SUFFIX, and the wrapper it persists has two
   shapes.** The roster entry schema (`{name, description, argumentHint, aliases?}`) has no type
   field, but every custom entry's description ends " (project)"/" (user)" (measured 2.1.228,
@@ -575,3 +601,17 @@ trusting memory here.
   push side: `lastTitle` records what was last SENT, so after a reload the name has not "changed"
   and is never re-sent. Any such cache must be cleared when the view resets — it tracks intent, and
   `pushEvent` is a fire-and-forget `executeJavaScript` that guarantees nothing about delivery.
+
+## Session tooling (probes, sandboxes, background shells)
+- **`pkill -f <pattern>` from a harness background shell kills ITSELF when the pattern appears
+  in the shell's own eval'd command line** (exit 144, and whatever came after the pkill never
+  runs — a runIde relaunch silently didn't happen twice on 2026-08-16). Run the kill and the
+  relaunch as SEPARATE tool calls, or pattern on something not quoted in your own command.
+- **A wire-probe script with a bare blocking `readline()` outlives its deadline forever** — the
+  CLI child keeps stdout open after `result`, so the loop never re-checks the clock. Two probes
+  sat 40+ minutes as exactly the orphaned-waiter family the background chip caught on
+  2026-08-15. Wrap every probe in `timeout N`; the chip is telling the truth.
+- **The sandbox's hand-set Registry value beats `-PjcefDebugPort`** (Registry user property >
+  system property), so the sandbox came up on 9222 anyway — meanwhile the REAL IDE can also be
+  serving 9222 with its own "Claude Brains — chat panel" target. Before driving any panel over
+  CDP, verify identity BY CONTENT (turn count, distinctive conversation text), never by port.

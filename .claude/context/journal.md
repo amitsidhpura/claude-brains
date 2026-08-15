@@ -3,6 +3,37 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-16 — plan feedback ships; the user's sweep beats the harness twice
+- **Shipped the plan-card feedback feature** (the user's ask after learning the terminal's
+  "keep planning" is an input): a "Tell Claude what to change" field riding every decision, and
+  the Yes variants folded behind a split Approve caret. Wire mechanisms all probed on 2.1.233
+  BEFORE coding: deny message = verbatim tool_result; allow `feedback` field = silently
+  schema-stripped; the winner for approve is appending the note to `updatedInput.plan` (the
+  terminal's own ctrl+g field) so it arrives in the SAME message as the approval.
+- **The first approve mechanism was wrong and only the user's manual test caught it.** stdin
+  steering measured as "delivered before the first Write" in the probe — but it races the model
+  call cycle, and in the user's run the note arrived after implementation started ("if I want
+  two→three it might write two then update"). The probe's one green run was timing luck.
+  Lesson: a race you measured passing once is still a race.
+- **Guided six manual tests, one at a time; two more finds:** the mode chip stuck on Plan after
+  approval (the CLI restores prePlanMode but broadcasts its INTERNAL name `default`, which the
+  chip's unknown-mode guard dropped — one-line alias), and earlier the "2 background processes"
+  chip that was truthfully reporting my own orphaned probe scripts (blocking readline(), the
+  same waiter-loop family as 2026-08-15 — now always `timeout N` wrapped).
+- Also fixed en route: an immediate post-approval set_permission_mode ALWAYS loses to the CLI's
+  prePlanMode restore (mode rows now park in `pendingPlanMode` until the broadcast); mid-turn
+  steered messages persist ONLY as `queued_command` attachment records, so replay silently lost
+  them (SessionStore now maps mode=prompt ones to user bubbles, deduped against delivered
+  copies).
+- Sandbox vs real IDE on one debug port: the real IDE held 9222, so runIde gained
+  `-PjcefDebugPort` and cdp.py `CLAUDE_BRAINS_CDP_PORT` — then the sandbox's own hand-set
+  Registry value beat the property anyway. Panel identity is now verified BY CONTENT before any
+  harness run.
+- Verified: live harness **303** (fixture 48, 10 steps, negative control run), `./gradlew test`
+  **107** (3 new SessionStore tests, stash-run controls failed 2 and 3 pre-fix), six-test manual
+  sweep by the user, replay re-checked against the real e2e transcripts.
+- Next: version bump (changeNotesHtml gate) — now carrying 2026-08-15's three tranches AND this.
+
 ## 2026-08-15 (third) — three user reports, three fixes, and one premise I had backwards
 - **"The chip said 2 tasks but there were none."** It was RIGHT: the process tree showed two shells
   genuinely alive under the panel's `claude` pid — my own orphaned `until … sleep 30 … done` waiter
@@ -197,55 +228,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   4px where every other body→buttons gap is 10px (backlog).
 - Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
 
-## 2026-08-13 (third) — a header that lagged a whole turn, and a control that nearly lied
-- User screenshot, explicitly NOT reproducible for them: header "New conversation" beside a history
-  row marked `current` that HAD a title. Diagnosed from the real transcript before touching code —
-  `D--sites-accesshealth/ccafeb52-….jsonl` put the first prompt at 04:39:10Z and the next at
-  05:40:30Z, so the screenshot's "10:14 AM · 430 KB" was five minutes into a first turn that ran an
-  HOUR, and the file has no ai-title/custom-title/summary at all. Not a race, not a one-off: the
-  header is pushed and only at `result`, the history list re-reads disk on every open, and both go
-  through the same `titleOf`. They disagree for exactly one turn, every time.
-- Fixed in two parts (decisions.md): a once-per-turn probe at `message_start` while the thread is
-  unnamed, and `seedUi()` re-seeding the page on EVERY load instead of once inside `startSession()`.
-- **Measured which frame can carry it**, rather than picking the obvious one: `_local/title_timing.py`
-  spawns the CLI as ClaudeCli does and reports, per frame, whether the transcript exists. At
-  `system/init` it is MISSING; by `message_start` it is 15 KB with the first user record. The
-  precise-looking hook (the session id arriving) would have been too early.
-- **The negative control nearly ran against the fixed build.** TaskStop killed Gradle but NOT the
-  forked sandbox IDE, so `prepareSandbox` failed on a mapped jar — and CDP still found a live panel,
-  which would have "passed" the control on the code it was meant to refute. The build log caught it.
-  Now in gotchas, with the graceful `taskkill` (no `/F`) that keeps the sandbox layout.
-- Controls, once run properly, reproduced the screenshot on demand: pre-fix mid-turn, header
-  "New conversation" / row "Run the bash command: sleep 300" / `match:false`, 0 result frames, no
-  `__title` after `message_start`; after `location.reload()`, `slashCommands` 0 and `projectRoot` "".
-  Post-fix: `match:true`, 39 commands, real root. 87 tests green, live harness 154/154 in real JCEF.
-- Register: 8.16 added and RESOLVED → **2 open ISSUE / 23 RESOLVED**. It landed AFTER 0.5.2 shipped,
-  so it rides the next release.
-- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
-
-## 2026-08-13 (second) — 0.5.2 lands on the Marketplace; a load on the other machine
-- Pulled `89f1714..a1523dc` on the **Windows** box (`D:\sites\claude-brains`): the two 08-13
-  commits plus the 0.5.2 release commit and its tag. Clean fast-forward, tree clean, no build.
-- **0.5.2 is released and Marketplace-Approved.** Confirmed on the listing (user screenshot):
-  uploaded 13 Aug, 2.6 MB, compatibility 242.0+, both verification rows green — IDE run "no issues
-  occurred", verifier 1.408 "Compatible" on IntelliJ IDEA 2026.2.1. The GitHub release carries
-  `claude-brains-0.5.2.zip`, so `release: published` → `marketplace-upload.yml` worked end to end
-  with no human at an upload form. That is the automation from 2026-08-12 proving itself.
-- **The release session was never journaled.** `state.md` still read "no version bump, 0.5.1
-  remains the released version" while `build.gradle.kts`, `updatePlugins.xml`, the tag and the
-  listing all said 0.5.2. Caught on `/context load` by diffing git against the newest journal entry
-  — that verification step earns its place; the files were confidently wrong, not vague.
-- **Machine drift caught again, the other direction.** The files described Linux, this is Windows.
-  Second consecutive load where the recorded machine was wrong, so state.md now leads with "check
-  which machine" rather than declaring one.
-- Consequence worth having found before starting work: the 3.1/9.10 fixture is NOT on this box.
-  `D:\sites\claude-brains-test` exists but holds only `.idea` — no `.claude/commands/dummy-cmd.md`.
-  It lives in the Linux test repo, is not in git, and does not travel. One file to recreate.
-- No code changed this session; context files reconciled instead.
-- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh after CLI writes.
-
 ## Digest
 - **2026-08-13** — the runIde manual sweep closed; the lesson that outlived it is that a fixture
+- 2026-08-13 (third): title header lagged a whole turn — once-per-turn probe at message_start + seedUi() on every load; measured WHICH frame can carry the title (init too early); the negative control nearly ran against the fixed build (TaskStop left the sandbox alive) — lesson in gotchas.
+- 2026-08-13 (second): 0.5.2 released + Marketplace-Approved via the automated workflow; the release session was never journaled and /context load's git-vs-journal diff caught it; machine drift caught again → state.md now leads with "check which machine".
   which never runs its own assertion is indistinguishable from a passing one (now in conventions).
 - **2026-08-12 (fifth)** — the IN/OUT box took the diff's geometry: padding and overflow must sit on
   ONE element or the scrollbar insets; fixing that exposed three things the markers had papered

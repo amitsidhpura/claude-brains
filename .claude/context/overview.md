@@ -70,6 +70,8 @@ type-check; `buildPlugin` → installable zip in `build/distributions/`; `./grad
 JUnit 5 over SessionStore/RenderLimits); `./gradlew probe --args="<projectPath> <sessionId>"`
 dumps replay blocks without the IDE. Resource-only changes (chat.html) need only a `runIde`
 restart. `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
+Sandbox JCEF debug port: `-PjcefDebugPort=<n>` on runIde + `CLAUDE_BRAINS_CDP_PORT` for
+tools/cdp.py — but a hand-set sandbox Registry value still wins (gotchas).
 Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bearing — gotchas.md.
 
 ### Which debug route — pick by symptom, not by habit

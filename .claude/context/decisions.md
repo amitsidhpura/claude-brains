@@ -3,6 +3,48 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-16 — Approve-with-notes rides `updatedInput.plan`, not a steered message
+The plan card's typed note, on ANY approve path, is appended to the approved plan under
+`RenderLimits.PLAN_NOTES_MARKER` and sent via `updatedInput`; SessionStore parses it back out of
+`toolUseResult.plan` for the replay footer.
+**Why:** the ExitPlanMode tool_result echoes the approved plan, so the model reads the note in
+the SAME message as the approval — before its first implementation call, deterministically. This
+is timing-equivalent to the terminal's shift+tab (which pushes acceptFeedback as an extra text
+block on that same tool_result — an internal path the control-response schema does not expose).
+Bonus: the note is recorded durably in the plan file, which the terminal's version is not.
+**Rejected:** a `feedback` field on the allow response (probed: schema-whitelisted away,
+silently); stdin steering (probed working ONCE, then observed racing the model call cycle in the
+user's manual test — the note arrived after implementation started); a queued user turn
+(delivered only after the whole implementation turn — the original design error).
+
+## 2026-08-16 — Plan-card mode rows park their switch until the CLI's restore broadcast
+Picking "Approve, auto-edit"/"Approve, auto mode" does not bridge `set_permission_mode`
+immediately; the wish parks in `pendingPlanMode` and is sent when the post-approval
+`permissionMode` broadcast arrives (cleared on sendTurn/clearLogUI).
+**Why:** the CLI restores `prePlanMode` when the approved ExitPlanMode EXECUTES — always after
+our immediate request is processed, so the restore overwrote the user's pick every time
+(measured live: chip ended Auto after choosing auto-edit). Plan→X is always a change, so the
+broadcast always fires and the parked switch always releases — after the restore, before the
+first implementation edit.
+**Rejected:** immediate bridge (deterministic loss, not a race); sending at turn end (too late —
+the implementation itself is what the user wanted covered).
+
+## 2026-08-16 — The chip reads the broadcast `default` as Manual
+`applyCliMode` aliases `default` → `manual` before the unknown-mode guard.
+**Why:** measured — restoring a `manual` pre-plan mode broadcasts the LITERAL `default` (the
+CLI's internal name; `manual` merely replaced it as the advertised one). The guard dropped it
+and the chip stayed on Plan while the real mode was manual — the user's report, and the exact
+lie the guard exists to prevent.
+
+## 2026-08-16 — Mid-turn steered messages replay as user bubbles, deduped by text
+SessionStore maps `attachment` records ({type:"queued_command", commandMode:"prompt"}) to user
+blocks unless a plain user record in the same file carries the same text.
+**Why:** measured across local transcripts — a message the CLI consumed MID-TURN persists ONLY
+as the attachment record (3 cases), while one queued to the next turn persists as attachment AND
+user record (2 cases). Without the mapping, replay silently lost text the model demonstrably
+acted on; without the dedupe, queued messages would render twice. task-notification-mode
+attachments are machinery and never render.
+
 ## 2026-08-15 — One path renderer for every surface, cards included
 Both permission-card headers (live `renderPermission`, replay `fillAppliedCard`) now fill their
 `<code>` through `fillPath()`, the same helper the tool line uses: project-relative, split into an
