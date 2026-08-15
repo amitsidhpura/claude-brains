@@ -15,6 +15,27 @@
   this wrong the first time: a probe that sends `/reload-skills` right after dropping the file
   lands inside the watcher's debounce window and conflates the two pushes — sequence wire probes
   with a QUIET WAIT (45s, no turns) before concluding an event "never fires on its own".
+- **`sel` is a keyboard CURSOR, not a hover style, and the painter has no exit counterpart.** A
+  document-level `mouseover` moves `sel` onto whatever `.popup-item` you hover in any shown popup
+  and never clears it — correct for a picker (hover moves the cursor so Enter acts on what you
+  point at), wrong for a status readout, where it sticks to the last row the pointer crossed. A
+  popup whose rows are not actionable must opt out (`nosel` on the popup, honoured at the open-seed,
+  arrow/Enter and hover sites). **And a CSS opt-out that only neutralises `:hover` will not save
+  you:** `.popup-item.bg-row` ties with `.popup-item.sel` on specificity and loses on declaration
+  order, so the JS-applied class repaints the row anyway. The symptom reads as two different
+  colours — dark while hovering (the opt-out winning against `:hover`), lighter after (the cursor
+  winning on mouseout).
+- **`background_tasks_changed` is a PER-PROCESS level signal, so the roster must be reset by the
+  CLI's lifetime and by nothing else.** The CLI's own schema: *"nothing is emitted at startup, so
+  consumers must reset to the empty set whenever the session's CLI process (re)starts and let the
+  next membership change repopulate it."* It fires only when membership CHANGES — so any reset the
+  panel does on its own initiative (e.g. per turn) leaves the roster wrong until the next start or
+  exit, with nothing coming to correct it. A background shell outlives its turn by definition.
+- **A background chip that looks stale may simply be right.** A user report of "2 tasks but nothing
+  is running" turned out to be two genuinely-live orphaned shells — `until <cond>; do sleep 30;
+  done` waiters whose condition never became true survive the entire session, invisible except
+  through that chip. **Check the process tree** (`ps --ppid <the claude pid>`) before touching the
+  roster code; the answer changes which bug you are looking at.
 - **An `assistant` frame is emitted PER CONTENT BLOCK, not per message** (taped live 2026-08-15:
   `message_start → content_block_start → assistant → content_block_stop`, repeating, with the
   frames straddling `message_stop` in BOTH directions). So a message that thinks first sends two

@@ -20,6 +20,12 @@
   problem before choosing what to fix.
 - Enable slash commands one at a time, each verified in `runIde`, then ticked in
   `docs/slash-commands.md`. The menu is an allowlist — unconfirmed commands stay hidden.
+- **Take a user's exact wording as data, and check the world before the code.** "On hover it made
+  dark bg and on going out it became lighter" was not loose description — the two states had two
+  different causes, and reading it literally is what decomposed the bug. Likewise "the chip says 2
+  tasks but there are none" turned out to be the chip telling the truth: **check the process tree /
+  the actual state first**, because the answer decides which bug you are even looking at. Twice on
+  2026-08-15 the reported premise was wrong in a way that mattered, in opposite directions.
 - **"The CLI accepted it" is not "the panel rendered it."** A headless smoke run proves only the
   former, and on 2026-08-15 it marked 16 commands verified while `/context` rendered nothing at
   all. Anything user-facing gets driven through the LIVE panel before it is called verified, and

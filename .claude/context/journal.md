@@ -3,6 +3,28 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-15 (third) — three user reports, three fixes, and one premise I had backwards
+- **"The chip said 2 tasks but there were none."** It was RIGHT: the process tree showed two shells
+  genuinely alive under the panel's `claude` pid — my own orphaned `until … sleep 30 … done` waiter
+  loops from the sweep, 2h34m and 1h31m old (killing them fired exactly two task notifications).
+  Checking the process tree BEFORE the code is what turned this from a phantom into a fact.
+- The real defect underneath was the inverse of the report: the roster reset lived in `sendTurn`
+  (wiping shells that were still running) while `clearLogUI` — the actual CLI-restart boundary —
+  never cleared it. The CLI's own schema settles it: the level is per-process. `docs/client-parity.md`
+  had CLAIMED clearLogUI did this since before the code ever did.
+- **Stuck popup highlight.** The user's wording ("dark on hover, lighter after") was exact and both
+  halves had separate causes: a `.bg-row` CSS opt-out that beats `:hover` but only TIES with `.sel`,
+  plus a document-level `mouseover` painter with no exit counterpart. Fixed with a `nosel` marker;
+  the roster takes no cursor at all. Verified with REAL CEF mouse events, not synthetic ones.
+- **One path renderer everywhere.** The decision card printed the absolute path while the tool line
+  above it printed the relative one. Both card surfaces now use `fillPath`; an audit then found the
+  @-mention menu ellipsising at the WRONG END (eating filenames) and `notebook_path` missing from
+  DESC_KEYS/PATH_KEYS entirely, so NotebookEdit showed no path at all. Cut extracted to `pathParts()`.
+- **A test caught my own over-correction twice this session:** fixture 47's step-2 guard rejected a
+  `message_stop` reset within the hour, and fixture 04's restart step passed VACUOUSLY at first
+  because the previous step's `sendTurn` had already emptied the roster.
+- Verified: live harness **273**, Kotlin **103**, register 0 open. Next: version bump.
+
 ## 2026-08-15 (second) — 16 commands enabled, then swept; two rendering bugs and a self-inflicted third
 - **Enabled an IDE-development set of 16 built-ins** (user-picked: core dev + session workflow +
   orchestration), regrouped docs/slash-commands.md by relevance, and re-captured the roster against
@@ -222,57 +244,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - No code changed this session; context files reconciled instead.
 - Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh after CLI writes.
 
-## 2026-08-13 — the runIde sweep closes; a fixture that was only half a test
-- User verified 8.13 (rename outside-click) and 8.14 (MCP tool lines) in `runIde` and ticked both.
-- **Live harness in real JCEF: 154/154.** That is the run that mattered for the io-box
-  restructure — moving the cut/note markers out of `.io-row` and changing which element `foldBlock`
-  receives regressed nothing, with fixture 04's background chip, 01b and 40's tool-line paths all
-  still green.
-- Fixture 44 passed 17/17 first time, which is also what a vacuous fixture looks like — so it was
-  replayed against 89f1714 (pre-fix). It failed on the stuck-busy defect and **passed** on the
-  CLI-initiated-turn one: the first bug leaves `busy` already true, so "a turn we did not start
-  sets busy" read as satisfied when nothing had set it. The two defects mask each other inside the
-  fixture exactly as they do in the panel. A forced `setBusy(false)` step now separates the halves,
-  and the fixture fails on BOTH against 89f1714 (5 assertions). Lesson in conventions.md.
-- **8.15 closed against a real CLI**, driven entirely over CDP: compose + `submit()` to send a real
-  turn, with `window.onClaudeEvent` wrapped to timestamp every frame against `busy` and the button.
-  The lifecycle came out exactly as the wire capture predicted — 3.5s roster gains `local_bash`,
-  4.8s `result` finalizes while the chip still shows the task, 33.6s shell exits and the CLI opens
-  a NEW request on its own, 35.8s `message_start` flips busy back to true. No `user` frame anywhere
-  between, which independently confirms `message_start` is the only available hook. Decisive
-  number: **0 content deltas rendered while the button read Send**.
-- That technique is now in gotchas: cdp.py can ACT as well as observe, which turns a "watch the
-  panel and hope you catch it" item into a replayable timeline with a number to assert on.
-- Register: 2 open ISSUE / 22 RESOLVED, and **zero unticked checklist items** — the sweep that had
-  been accumulating since 2026-08-12 is done.
-- Next: 3.1 custom commands + 9.10, worked together, now top of the queue.
-
-## 2026-08-12 (fifth) — the IN/OUT box learns the diff's geometry; a contract falls out
-- One user request — "make IN/OUT same as the write permission panel, scrollbar to the border and
-  spacing inside" — that took four rounds because each fix exposed the next thing the old layout
-  had been hiding. Every round was caught by MEASURING, never by looking.
-- The difference was structural: `.diff` puts padding AND `overflow-x` on one element, so the
-  scrollbar lands at the bottom of its padding box (flush, full width). `.io` split them across
-  three, insetting the bar 42px. Moving the scroll to `.io-row` fixed that and broke three things
-  the markers had been papering over — see gotchas, all four are recorded there.
-- Round 2 (user's DevTools screenshots): `OUT` jammed against the value. Sticky clamps to its
-  containing block, so `padding on the row + negative margin on the label` shoved the label 10px
-  right and ate the column gap. Fixed by moving the row's left padding onto the label itself.
-- Round 3 (user): folded rows kept their scrollbar, where the Accept/Reject diff shows one only
-  when expanded. Cause: `overflow: hidden` crops only the element it lands on, and I had folded
-  `.io-v` while scrolling `.io-row`. Now `foldBlock(row)` — same element for both, like `.diff`.
-- Round 4 (user generalised it): every foldable block obeys one contract now, written into
-  chat.css above the fold rules. Audited all five surfaces; only `.io-row` deviated (6px→8px).
-- **The audit lied the first time and I nearly shipped it.** It reported "no failures" while
-  having skipped rule 2 entirely: I read `overflow-x` after restoring the fold class, so folded
-  elements reported `hidden` → "not scrollable" → the assertion never ran. Re-measured in the
-  expanded state, then force-folded the two surfaces the gallery never folds.
-- **User confirmed in runIde: "showing perfect".** That clears the real-JCEF question for this
-  work specifically — the scrollbar geometry was exactly the class of thing headless gets wrong.
-- Next: the register items 8.13/8.14/8.15 are still formally unticked, and fixture 44 has still
-  never been executed.
-
 ## Digest
+- **2026-08-13** — the runIde manual sweep closed; the lesson that outlived it is that a fixture
+  which never runs its own assertion is indistinguishable from a passing one (now in conventions).
+- **2026-08-12 (fifth)** — the IN/OUT box took the diff's geometry: padding and overflow must sit on
+  ONE element or the scrollbar insets; fixing that exposed three things the markers had papered
+  over. All four traps are in gotchas.
 - **2026-08-12 (fourth)** — three user reports; the third taught the method now in
   conventions ("do not fix what you cannot reproduce"): both busy-state defects reproduced by
   replaying REAL captured wire frames (kept at `_local/wire.jsonl` / `wire-short.jsonl`), which

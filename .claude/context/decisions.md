@@ -3,6 +3,21 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-15 — One path renderer for every surface, cards included
+Both permission-card headers (live `renderPermission`, replay `fillAppliedCard`) now fill their
+`<code>` through `fillPath()`, the same helper the tool line uses: project-relative, split into an
+ellipsised `.p-head` and a fixed `.p-tail`, with the ABSOLUTE path on `dataset.path` + `title`.
+**Why:** the decision surface and the timeline sat one above the other naming the same file two
+different ways — the card spelled out `/home/syncroze/Sites/claude-brains/plugin/src/…` while the
+tool line showed `plugin/src/…`. A second renderer is also a second thing to drift.
+**Supersedes** the backlog note that card paths were deliberately unclamped "since that surface asks
+you to approve a write to a specific file". That concern is met without the full string: the click
+handler already reads `dataset.path` first, and `title` still reveals the whole path on hover —
+so what you approve is unchanged, only what you read is shorter.
+**Rejected:** a card-only shortener (the drift this is meant to remove), and clamping via CSS alone
+(measured on the tool line already — flex shrinks proportionally, so any factor that saves the
+filename on a long path nibbles the parent folder on a short one).
+
 ## 2026-08-15 — `msgStreamed` is a TURN-level fact, never cleared mid-turn
 Set at `message_start`, cleared only at `result` / `sendTurn` / `clearLogUI`. The whole-message
 `assistant` handler reads it and never writes it.

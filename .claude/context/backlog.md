@@ -6,8 +6,12 @@
   (Linux only, not in git; recreate on Windows before any re-test there).
 - A filename longer than the whole tool line is hard-clipped with no ellipsis (the tail never
   shrinks by design). Rare — needs ~45+ chars at a narrow panel. Offered 2026-08-12, not taken.
-- Permission cards (`.card-h code`) still wrap long paths: deliberately NOT clamped, since that
-  surface asks you to approve a write to a specific file. Revisit only if it becomes annoying.
+- ~~Permission cards wrap long paths, deliberately NOT clamped~~ — **SUPERSEDED 2026-08-15 by the
+  user:** paths are project-relative and middle-ellipsised everywhere, cards included, because the
+  card and the tool line beside it were naming one file two different ways. The concern that made
+  the original call (you are approving a write to a SPECIFIC file) is answered instead by keeping
+  the absolute path on `dataset.path` and `title` — the click target and the hover tooltip are
+  unchanged, only the rendering is shortened.
 - Stale `~/.claude/ide/*.lock` files survive a plugin hot-reload (dispose skipped) — observed
   2026-08-09 with two dead locks; could misdirect a terminal TUI's IDE discovery. Check
   lockfile cleanup on unload if touched anyway.
