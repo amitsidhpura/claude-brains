@@ -1,11 +1,9 @@
 # Backlog
 
 ## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
-- 2 open issues from the 2026-08-08 pass, both in one pairing: 3.1 custom commands in the
-  / menu + 9.10 re-test (user wants both together). The fixture is a `dummy-cmd.md` under the
-  sibling test repo's `.claude/commands/`; it is not in git and exists on the Linux box only
-  (`~/Sites/claude-brains-testing/`), NOT on Windows (`D:\sites\claude-brains-test\` holds only
-  `.idea`). Recreate it for whichever machine you are on before starting.
+- **Register is at 0 open / 25 resolved (2026-08-15)** — 3.1 + 9.10 shipped. Re-test fixtures
+  `dummy-cmd.md` + `sub/nested-cmd.md` kept under `~/Sites/claude-brains-testing/.claude/commands/`
+  (Linux only, not in git; recreate on Windows before any re-test there).
 - A filename longer than the whole tool line is hard-clipped with no ellipsis (the tail never
   shrinks by design). Rare — needs ~45+ chars at a narrow panel. Offered 2026-08-12, not taken.
 - Permission cards (`.card-h code`) still wrap long paths: deliberately NOT clamped, since that
@@ -42,6 +40,10 @@
 - Voice input
 
 ## Housekeeping (one line each, do opportunistically)
+- A webview reload replays the INITIALIZE-time roster (`lastInitMeta`), so commands discovered
+  mid-session via `commands_changed` vanish from the menu until the next `commands_changed` (a
+  `/reload-skills` re-syncs). Pre-existing gap, flagged 2026-08-15 during 3.1/9.10; fix would be
+  ChatPanel caching the last commands_changed payload (CliFileSync-style stream watching).
 - **Does the OS's reduce-motion setting reach JCEF?** chat.css got a `@media
   (prefers-reduced-motion: reduce)` block on 2026-08-13 covering all four animated surfaces
   (in-flight ring, `.bg::before`, `.shimmer`, `.generating .verb`). Half of this is now SETTLED:

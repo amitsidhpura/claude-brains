@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-15 — the / menu learns custom commands; the register hits zero
+- **Shipped 3.1 + 9.10 together** (the last 2 open register items → **0 open / 25 resolved**):
+  custom commands, skills and MCP prompts auto-enable in the `/` menu with muted source badges
+  (`.pi-src`), `/reload-skills` enabled, and `cleanInjected` fixed for the second command-wrapper
+  shape (arg-less custom = message→name, NO args tag) that was leaking raw XML into a session
+  title. All user-verified in a 9-test manual pass, incl. required-arg insert-and-wait and
+  $ARGUMENTS expansion.
+- **The approved plan died in Phase 0, correctly.** The plan was a Kotlin disk scan; the wire
+  probes found the CLI marks every custom entry with a " (project)"/" (user)" description suffix
+  (zero false positives across 107 built-ins), and the user approved the pivot to a webview-only
+  suffix parse — no Kotlin, no rescan round-trip, plugin-sourced commands covered for free.
+- **Measured twice, still wrong once:** a headless probe concluded "nothing fires on a bare file
+  drop; /reload-skills is the lever" — the user's manual pass showed the menu updating WITHOUT
+  it. Re-probe with a 45s quiet wait: the CLI watches the PROJECT commands dir (drop ≈2.5s,
+  delete ≈1s pushes commands_changed); the first probe had sent /reload-skills inside the
+  watcher's debounce window and conflated the two pushes. `~/.claude/commands` is NOT watched.
+- Negative controls both RUN: fixture 46's storage-only build failed exactly its 8 discriminating
+  assertions; the SessionStore wrapper test was written first and failed pre-fix.
+- docs/slash-commands.md rewritten around the mechanism + roster re-captured from 2.1.228
+  (50 built-ins, new `aliases` field, 13 commands new since the old capture, /review now an
+  alias of /code-review).
+- Verified: live harness **242/242**, `./gradlew test` **101 green**, runIde end-to-end on the
+  testing repo driven over CDP + the user's own manual pass.
+- Next: release the next version (changeNotesHtml gate), then backlog order.
+
 ## 2026-08-14 (second) — 0.6.0 goes out
 - **Released 0.6.0** (`fa26d57`, tag `v0.6.0`): the in-flight gutter dot and the VFS refresh after
   CLI writes. Full `docs/release.md` run; the approval gate at step 6 was held for the user.
@@ -221,36 +246,13 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Next: the register items 8.13/8.14/8.15 are still formally unticked, and fixture 44 has still
   never been executed.
 
-## 2026-08-12 (fourth) — three user reports; the third one taught the method
-- **Machine drift caught on load**: the context files said Windows `D:\sites\…`, the session was on
-  Linux `/home/syncroze/Sites/…`. Both machines are real — state.md now says to check first. The
-  3.1 fixture the files called "dead with the old machine" exists here as
-  `~/Sites/claude-brains-testing/.claude/commands/dummy-cmd.md` (note `-testing`, not `-test`).
-- **Rename outside-click.** Built it in the existing bubbling dismiss handler, tested, and it FAILED
-  on `#histBtn` / model chip / mode chip / effort dots — every control beside the title
-  `stopPropagation`s, so their clicks never reach that listener. Moved to capture phase. The plan
-  was approved with the wrong hook; only running the matrix found it.
-- **MCP tool lines.** `"function"` had been in `DESC_KEYS` since 2026-08-05 to fix 15 blank
-  `browser_evaluate` lines — on the assumption a JS body reads like prose. It runs 230-2965 chars
-  over 9-59 lines. Moved to `IN_KEYS` (the Bash shape: blank line, body in the box). The test that
-  let it through used `() => document.title`, 21 chars, one line.
-- **The third report, and the correction that mattered.** "Submit button not disabled while a
-  background process runs." I diagnosed it from the CLI binary and a 7-week-old transcript and
-  proposed a fix. The user rejected the plan twice and said: *don't fix what you can't reproduce.*
-  They were right — six `setBusy(false)` sites produce that symptom and I had ruled out none.
-- Reproduced it properly: spawned `claude` exactly as `ClaudeCli.kt` does, captured the wire for a
-  real background-bash turn, then replayed those REAL frames through the REAL `chat.html`
-  headlessly. Both defects appeared, and they are ordering-dependent — a short-lived process gives
-  the reported Send-mode bug, a long-lived one gives the opposite (stuck on Stop). The captures are
-  kept at `_local/wire.jsonl` / `_local/wire-short.jsonl`.
-- The capture also KILLED my stated mechanism: I had said the notification arrives as a `user`
-  frame that `onUserEvent` ignores. The transcript persists one; **the live stream sends none**. So
-  `message_start` is not one option for the hook, it is the only one.
-- A model switch to Fable mid-session re-checked the finding from the raw captures; it held, with
-  that mechanism correction.
-- Next: none of the three fixes has been through `runIde`, and fixture 44 has never run.
-
 ## Digest
+- **2026-08-12 (fourth)** — three user reports; the third taught the method now in
+  conventions ("do not fix what you cannot reproduce"): both busy-state defects reproduced by
+  replaying REAL captured wire frames (kept at `_local/wire.jsonl` / `wire-short.jsonl`), which
+  also killed the stated mechanism — the live stream sends NO user frame for a shell completion,
+  so `message_start` is the only busy hook. Also: rename outside-click needed capture phase
+  (every header control stopPropagations), and `"function"` moved DESC_KEYS→IN_KEYS.
 - **2026-08-12 (third)** — the replay window kept the OLDEST blocks instead of the newest; fixed
   with an aligned cut at a turn boundary, plus the "N earlier blocks not loaded" top marker.
 - **2026-08-12 (second)** — the reported rename bug did not exist (the CLI's own `ai-title` was

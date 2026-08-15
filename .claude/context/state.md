@@ -1,91 +1,68 @@
 # State
 
 ## Current focus
-**Nothing in flight, and nothing unreleased.** 0.6.0 shipped on 2026-08-14 (`fa26d57`, tag `v0.6.0`)
-carrying the in-flight gutter dot and the VFS refresh after CLI writes. Next work is whatever is
-picked from the list below or backlog.md.
+**Unreleased work in the tree: 3.1 + 9.10 shipped and user-verified, awaiting the next version
+bump.** The defect register is at **0 open / 25 resolved** for the first time. What landed
+2026-08-15: custom slash commands (project/user command files, skills, MCP prompts) auto-enable
+in the `/` menu with muted source badges; `/reload-skills` enabled; and a command-wrapper title
+leak fixed in `SessionStore.cleanInjected`. All committed on main (see journal 2026-08-15).
 
-## Released: 0.6.0 (2026-08-14), Marketplace-Approved
-Eighth release. `fa26d57`, tag `v0.6.0`, carrying the in-flight gutter dot and the VFS refresh after
-CLI writes. `verifyPlugin` run WITHOUT `-PskipVerifierIdes`: **Compatible on all seven PhpStorm
-branches 242→262**, no problems. The GitHub asset returned HTTP 200 and `cmp`-identical to the local
-zip, the feed advertises 0.6.0, and `marketplace-upload.yml` went green in 14s. The Marketplace
-accepted it as **version id 1138398 — Approved**, 2.61 MB, 242.0+, four green verification rows (IDE
-run clean; verifier 1.408 Compatible on 2026.2.1 / 2026.1.5 / 2025.3.6.1) — the same shape as 0.5.3.
-Still unsigned; the Marketplace signs its own copy (backlog "Someday").
-**Approval is NOT instant and the API is how you tell:** at release time the listing still showed
-0.5.3 as newest. `curl -s https://plugins.jetbrains.com/api/plugins/33274/updates?size=3` reports
-`approve` per version — do not read "not listed yet" as a failed upload.
-
-What landed: the timeline gutter dot now reports state — **white and pulsing while in flight, green
-on success, red on failure** (`@keyframes bg-pulse` on `.tool-line.run::before` / `.think-live::before`,
-opacity only). A sub-agent settles when its TASK ends rather than when it was launched, and goes red
-only on a `failed`/`killed` task status. Reasoning in decisions.md, traps in gotchas.md, the compared
-motions in `design/dot-pulse-probe.html`.
+## How custom commands work now (the mechanism, for whoever touches cmdKind next)
+- The wire marks custom entries with a description SUFFIX — " (project)" / " (user)" — on both
+  the initialize roster and `commands_changed`. `markCustom()` (chat.html, near `slashCommands`)
+  strips it into `c.src` + the `customCmds` map; `cmdKind` returns 'text' for map hits and
+  `mcp__`-prefixed names, native/allowlist checked FIRST (a custom `clear.md` cannot shadow the
+  IDE's /clear). Badges render via `.pi-src` (chat.css). No Kotlin in the detection path.
+- The CLI watches the PROJECT commands dir (drop ≈2.5s, delete ≈1s → `commands_changed`, no turn
+  needed); `~/.claude/commands` is NOT watched — `/reload-skills` is the manual lever. Full
+  mechanism + re-captured 50-command roster (2.1.228, aliases column) in docs/slash-commands.md.
+- Fixture 46 (25 assertions) pins it; its provenance records the negative-control run.
 
 ## Three contracts to know before touching `webview/chat.css`
 - **Spacing:** `--block-gap` (18px, independent blocks) and `--attach-gap` (8px, a line and what
-  hangs off it). A new block under a line takes the attach gap — glossary.md for the vocabulary,
-  gotchas.md for which FORM (a flex parent needs `calc(attach - block)`, a block parent takes the
-  value directly). `design/tool-gap-probe.html` holds the compared candidates.
-- **The gutter dot:** ONE geometry rule serves `.blk`/`.think`/`.think-live`/`.tool-line`; what
-  differs is `--dot-c` on each element. Add a dot state by setting `--dot-c`, never by copying the
-  geometry. `--pulse-period` (1.6s) is the panel's shared live heartbeat, `--pulse-name` the
-  in-flight motion, and `design/dot-pulse-probe.html` drives that token.
-- **Nothing may grow OUTSIDE the dot's 10px box.** `.turn-body` carries `content-visibility: auto`,
-  whose paint containment clips outward drawing into a "cut half-rectangle" — this has bitten twice
-  (the card menu, then an outward halo that had to be withdrawn). See gotchas before adding any
-  effect with geometry.
+  hangs off it) — glossary.md for vocabulary, gotchas.md for which FORM per parent type.
+- **The gutter dot:** ONE geometry rule serves `.blk`/`.think`/`.think-live`/`.tool-line`; add a
+  state by setting `--dot-c`, never by copying geometry. `--pulse-period` (1.6s) is the shared
+  live heartbeat.
+- **Nothing may grow OUTSIDE the dot's 10px box** — `.turn-body`'s paint containment clips
+  outward drawing (bitten twice). See gotchas before adding any effect with geometry.
 
-## Testing the PLUGIN — two probes worth knowing
-**The plugin's own MCP bridge answers questions about the IDE.** Speak to it the way the CLI does
-(lockfile `authToken` in header `x-claude-code-ide-authorization`, subprotocol `mcp`, `tools/call`)
-and `openFile` becomes a free "does the VFS know this file" probe — it calls `findVFile` and
-refreshes nothing. `getDiagnostics` reads the loaded Document, so it answers "did an open editor
-reload". Filter the lockfile by `ideName`: several IDEs may hold the same workspace open. Both
-caveats are in gotchas.
-
-## Testing the webview — read this before writing a fixture
-`tools/live_harness.py` replays wire frames into the LIVE panel over CDP. **Nothing on the wire
-creates a `.turn-body`** — the panel makes one in `addUserMessage` → `newTurn()` when the user sends
-— so a fixture that only feeds frames builds its blocks bare in `#log`, outside the containment and
-stacking context real blocks live in. That blind spot hid a real clipping bug behind 31 green
-assertions. Use the per-step `"setup"` hook to build the turn first. `tools/fixtures/45-tool-dot-in-flight.json`
-(31 steps / 63 assertions) is the worked example, including the turn-body cases.
-
-Standing verification for panel work: live harness **217/217** in real JCEF (`./gradlew runIde` up,
-tool window open), `./gradlew test` **87 green**.
+## Testing — the standing setup
+- Live harness: `python tools/live_harness.py` needs `./gradlew runIde` up + tool window open.
+  Baseline **242/242** (fixture 46 added 25). `./gradlew test` **101 green**.
+  Wire fixtures need a `.turn-body` built via the per-step `"setup"` hook (see fixture 45).
+  **Harness side effects persist in the live panel** (fixture 46's empty-roster step wipes the
+  real roster) — reload the webview (seedUi replays) before eyeballing the panel afterwards.
+- The plugin's own MCP bridge is a free probe (`openFile` = "does the VFS know this file",
+  `getDiagnostics` = "did the open editor reload") — details in gotchas.
+- Manual re-test fixtures for the slash menu live in `~/Sites/claude-brains-testing/.claude/commands/`:
+  `dummy-cmd.md` + `sub/nested-cmd.md` (deliberately kept; everything else cleaned up).
 
 ## Next steps
-- [ ] **3.1 custom commands + 9.10 together** (user's explicit pairing). `cmdKind` in chat.html has
-      no custom-command detection, so everything outside {clear, compact} greys as 'tui'.
-      Constraint: `system/init`'s `commands` payload has NO type field, so the slash allowlist is
-      the only lever. The `dummy-cmd.md` fixture EXISTS on the Linux box
-      (`~/Sites/claude-brains-testing/.claude/commands/`); recreate it on Windows before starting.
-- [x] ~~VFS refresh after CLI writes~~ — DONE and committed 2026-08-14 (`CliFileSync` +
-      `Vfs.refreshFromDisk`), verified end to end through the plugin's own MCP bridge and by the
-      user in their own IDE.
-- [ ] Release the in-flight dot in the next version bump (`docs/release.md`; `changeNotesHtml` in
-      `plugin/build.gradle.kts` must be updated or `buildPlugin` refuses).
+- [ ] **Release the next version** (`docs/release.md`): the in-flight dot fixes are already on
+      main from 0.6.0; NEW since then: custom-command menu (3.1), 9.10, the title-leak fix.
+      `changeNotesHtml` in `plugin/build.gradle.kts` must be updated or `buildPlugin` refuses.
+- [ ] Then: backlog.md order — reloaded-webview log replay, kill-background-process from the
+      panel, editor accept/reject v2 tweak-travel.
 
 ## Defect register (docs/manual-test.md)
-**2 open ISSUE / 23 RESOLVED, zero unticked checklist items.** The 2 open are 3.1 + 9.10, which the
-user wants worked TOGETHER.
+**0 open / 25 RESOLVED, zero unticked checklist items.** First time at zero.
 
 ## Which machine — check this FIRST, both are real
-The 2026-08-13 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Full paths for both
-boxes are in overview.md § External references. What actually differs: the sibling test repo is
-`~/Sites/claude-brains-testing` on Linux vs `D:\sites\claude-brains-test` on Windows — different
-name, neither in git — and the 3.1/9.10 `dummy-cmd.md` fixture exists only on Linux.
+2026-08-15 ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in
+overview.md § External references. The slash-menu fixtures (`dummy-cmd.md`, `sub/nested-cmd.md`)
+exist on Linux only (`~/Sites/claude-brains-testing/`); recreate on Windows before re-testing.
 
 ## Known gaps (deliberately left)
-- A sub-agent's WORK outcome is not surfaced, and cannot reliably be (gotchas). Its own text says so.
+- A webview reload replays the INITIALIZE-time roster, so mid-session-discovered commands vanish
+  until the next `commands_changed` (backlog, flagged 2026-08-15).
+- The **mcp** source badge is fixture-pinned only — no MCP server with prompts on this machine.
+- `aliases` (new roster field) is display-only: the menu filter doesn't match them (documented
+  as a non-feature in docs/slash-commands.md).
+- A sub-agent's WORK outcome is not surfaced, and cannot reliably be (gotchas).
 - A reloaded webview recovers its chrome but NOT its log (backlog).
-- **No way to kill a background process from the panel** — `interrupt()` only stops the in-flight
-  response, and the roster rows are display-only. In backlog.
-- `prefers-reduced-motion` is honoured in CSS but unverified against the real OS setting on
-  offscreen-rendered JCEF (backlog).
-- Sidechain/subagent replay ordering untested — still no `isSidechain` records in a PARENT transcript.
-- Windowed replay: DOM search only sees loaded blocks.
+- No way to kill a background process from the panel (backlog).
+- `prefers-reduced-motion` unverified against the real OS setting on offscreen JCEF (backlog).
+- Sidechain/subagent replay ordering untested; windowed replay DOM search only sees loaded blocks.
 - Editor permission diff: tweak-travel is the remaining v2 half (backlog).
-- A filename longer than the whole tool line is hard-clipped with no ellipsis (offered, declined).
+- A filename longer than the whole tool line is hard-clipped, no ellipsis (offered, declined).

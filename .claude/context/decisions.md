@@ -3,6 +3,30 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-15 — Custom commands are detected by the description SUFFIX, not a disk scan
+`markCustom()` in chat.html parses `^([\s\S]*) \((project|user)\)$` off every roster entry's
+description (initialize AND commands_changed), strips it for display, and records the source on
+the entry + in the `customCmds` map; `cmdKind` returns 'text' for map hits and `mcp__`-prefixed
+names, after the native/allowlist checks so a custom `clear.md` cannot shadow the IDE's /clear.
+**Why:** the entry schema has no type field, but the suffix is a measured wire marker — present
+for every `.claude/commands/**.md` and `.claude/skills/*/SKILL.md` entry in either base, absent
+from all 107 built-ins across two captures (CLI 2.1.228). It makes the whole feature webview-only
+and covers plugin-sourced commands for free.
+**Rejected:** the PLAN-APPROVED Kotlin disk scan (`CustomCommands.scan` + a `rescanCommands`
+bridge verb) — more moving parts, a rescan round-trip on every `commands_changed`, blind to
+sources not on the two scanned paths, and it duplicates knowledge the CLI already sends. The
+user approved the pivot mid-plan after the Phase-0 probes. Accepted risk: a future CLI respelling
+of the suffix hides custom commands (fail-closed, one-line fix).
+
+## 2026-08-15 — cleanInjected matches command name and args INDEPENDENTLY
+`CMD_NAME_RE` + `CMD_ARGS_RE` replace the single name-then-args `CMD_RE` in SessionStore.
+**Why:** two wrapper shapes exist on disk (both measured, 2.1.228): built-ins write
+name→message→args, but an arg-less CUSTOM command writes message→name with NO `<command-args>`
+tag — the one-pattern regex missed it and a session titled by such a turn showed raw XML. Found
+by the verification screenshot the same day custom commands became sendable.
+**Rejected:** ordering variants in one regex (there are already two orders; independent matching
+is immune to a third).
+
 ## 2026-08-14 — The IDE is kept in step with the CLI's writes, per file and per turn
 `CliFileSync` sits on the session's event stream (`ClaudeSessionService.startCli`, before the UI
 callback) and does two things: pairs a write tool's `tool_use` with its `tool_result` and refreshes

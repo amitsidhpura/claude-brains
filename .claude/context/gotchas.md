@@ -1,6 +1,20 @@
 # Gotchas — hard-won, don't rediscover
 
 ## Protocol / wire
+- **A custom command's wire marker is a DESCRIPTION SUFFIX, and the wrapper it persists has two
+  shapes.** The roster entry schema (`{name, description, argumentHint, aliases?}`) has no type
+  field, but every custom entry's description ends " (project)"/" (user)" (measured 2.1.228,
+  zero false positives across 107 built-ins). On disk, a built-in command turn persists
+  name→message→args while an ARG-LESS custom one persists message→name with NO
+  `<command-args>` tag — any single ordered regex over the wrapper misses one shape (it leaked
+  raw XML into a session title the day custom commands became sendable). Match name and args
+  independently.
+- **The CLI watches the PROJECT commands dir; it does NOT watch `~/.claude/commands`.** A file
+  drop pushes `commands_changed` ≈2.5s later, a deletion ≈1s, with NO turn in between — but only
+  for `<cwd>/.claude/commands`; user-level changes need `/reload-skills`. And the trap that got
+  this wrong the first time: a probe that sends `/reload-skills` right after dropping the file
+  lands inside the watcher's debounce window and conflates the two pushes — sequence wire probes
+  with a QUIET WAIT (45s, no turns) before concluding an event "never fires on its own".
 - **An async sub-agent's `tool_result` is a LAUNCH ACK, not the end of its work.** Measured
   2026-08-13 (`-home-syncroze-Sites-claude-brains-testing/8a0b1939…`): an `Agent` tool_use at
   16:55:53.309Z got its tool_result 1.8s later reading *"Async agent launched successfully … The
@@ -285,6 +299,11 @@ trusting memory here.
   the IDE stealing focus on a real keypress. Don't let a clean CDP result close a focus question.
 
 ## Webview / debugging
+- **Harness fixtures leave their state in the LIVE panel.** Fixture 46 ends on an empty
+  `commands_changed`, so after a harness run the real panel's slash menu is empty and stays so —
+  it looks like a regression and is fixture residue. A webview reload (seedUi replays
+  `lastInitMeta`) or the header ↻ restores it. Reload before eyeballing the panel after any
+  harness run.
 - **The CLI writes files with Bash far more often than you would guess, so a Write/Edit-only hook
   misses them.** Measured 2026-08-14: asked to create one file and overwrite another, the CLI used a
   single `Bash` call for both. Anything keyed on the file-writing TOOLS (Write/Edit/MultiEdit/

@@ -21,6 +21,7 @@ plugin/.intellijPlatform/
 # project memory in .claude/context/ IS committed so it travels with the repo.
 .claude/*
 !.claude/context/
+!.claude/skills/
 
 # Personal scratch space — notes, throwaway files. Never part of the plugin.
 /_local/
