@@ -3,6 +3,32 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-15 (second) — 16 commands enabled, then swept; two rendering bugs and a self-inflicted third
+- **Enabled an IDE-development set of 16 built-ins** (user-picked: core dev + session workflow +
+  orchestration), regrouped docs/slash-commands.md by relevance, and re-captured the roster against
+  CLI 2.1.233 (identical 50 names to 2.1.228 — nothing to add).
+- **The user ran `/context` and saw "Puttered for 1s" and nothing else.** A local built-in answers
+  as a bare whole-message `assistant` frame with ZERO stream events, and rendering was entirely
+  delta-driven. Fixed with `msgStreamed`; replay needed its own fix (`system/local_command`).
+- **Then swept all 16 through the live panel** rather than trusting the headless smoke that had
+  missed it. 15 rendered; `/security-review` produced a completed turn with NOTHING in it. The
+  wire tape proved the CLI HAD sent the reason — a `user` frame whose content is a STRING carrying
+  `<local-command-stderr>`, dropped at `!Array.isArray(content)`. Fixed live + replay.
+- **The tape is the lesson.** DOM evidence alone cannot separate "the CLI sent nothing" from "the
+  panel dropped it", and a throw inside `onClaudeEvent` is swallowed by JCEF with no trace. 3016
+  frames taped, zero handler errors — worth measuring rather than assuming.
+- **Closing the last caveat found a regression I had just introduced.** Verifying
+  `/security-review`'s success path (gave the sandbox a real `origin/HEAD` + a deliberately
+  vulnerable file) showed every message after the first rendered TWICE. Cause: the CLI emits an
+  `assistant` frame PER CONTENT BLOCK, so a message that thinks first sends two and the first was
+  consuming the flag. `msgStreamed` is now turn-level. **A `message_stop` reset was tried and
+  rejected within the hour — fixture 47's own step-2 guard caught it double-rendering the other
+  way.** The guard written hours earlier caught the over-correction.
+- Also closed: `/batch`'s real fan-out (plan gate APPROVED this time) — two parallel worktree
+  agents, branches pushed, "2 tasks" chip, `PR: none — no GitHub remote` as the graceful failure.
+- Verified: live harness **256/256**, Kotlin **103**, register **0 open / 27 resolved**.
+- Next: version bump (changeNotesHtml gate), then backlog order.
+
 ## 2026-08-15 — the / menu learns custom commands; the register hits zero
 - **Shipped 3.1 + 9.10 together** (the last 2 open register items → **0 open / 25 resolved**):
   custom commands, skills and MCP prompts auto-enable in the `/` menu with muted source badges

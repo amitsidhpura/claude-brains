@@ -15,6 +15,18 @@
   this wrong the first time: a probe that sends `/reload-skills` right after dropping the file
   lands inside the watcher's debounce window and conflates the two pushes — sequence wire probes
   with a QUIET WAIT (45s, no turns) before concluding an event "never fires on its own".
+- **An `assistant` frame is emitted PER CONTENT BLOCK, not per message** (taped live 2026-08-15:
+  `message_start → content_block_start → assistant → content_block_stop`, repeating, with the
+  frames straddling `message_stop` in BOTH directions). So a message that thinks first sends two
+  assistant frames with different uuids. Any per-message state consumed by "the assistant frame"
+  is therefore consumed too early — that is what double-rendered every message after the first.
+  Whole-message state belongs at TURN boundaries, not message ones.
+- **A local built-in's output has THREE different spellings and none of them stream.** Live
+  success = a bare whole-message `assistant` frame with ZERO stream events. Live failure = a
+  `user` frame whose `message.content` is a **STRING** carrying
+  `<local-command-stderr>…</local-command-stderr>` (an `!Array.isArray(content)` guard drops it
+  before any rendering runs). On disk = `system/local_command`, or the same wrappers on a plain
+  `user` record. Handle all of them or a command reports success while showing nothing.
 - **An async sub-agent's `tool_result` is a LAUNCH ACK, not the end of its work.** Measured
   2026-08-13 (`-home-syncroze-Sites-claude-brains-testing/8a0b1939…`): an `Agent` tool_use at
   16:55:53.309Z got its tool_result 1.8s later reading *"Async agent launched successfully … The
@@ -88,7 +100,11 @@ trusting memory here.
 - Live wire and transcript disagree in SPELLING and in ORDER for the same events: field names
   differ (even field TYPES — worked example in the doc §10), and the file order of late-flushed
   records lies while timestamps + the `parentUuid` chain stay chronological. Accept both
-  spellings on both paths; trust timestamps over file positions.
+  spellings on both paths; trust timestamps over file positions. Extreme worked example
+  (2026-08-15): a local built-in's output (`/context`) is a bare whole-message `assistant`
+  frame with ZERO stream_events on the wire, but persists as `system/local_command` with a
+  `<local-command-stdout>` wrapper — NEITHER path shares a spelling with the other, so both
+  renderers were blind through two different mechanisms.
 - The `assistant` event's `uuid` (and timestamp) is the SAME one the CLI writes into the
   transcript record — the only handle tying a live render to its replayed twin. Don't assume
   live-only state can't be persisted without checking for a shared uuid.

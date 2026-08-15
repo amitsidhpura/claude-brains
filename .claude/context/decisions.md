@@ -3,6 +3,32 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-15 — `msgStreamed` is a TURN-level fact, never cleared mid-turn
+Set at `message_start`, cleared only at `result` / `sendTurn` / `clearLogUI`. The whole-message
+`assistant` handler reads it and never writes it.
+**Why:** the CLI emits an `assistant` frame per CONTENT BLOCK, not per message (taped live). A
+message that thinks first therefore sends two, and clearing the flag on the first let the second
+re-draw text the deltas had already rendered — every message after the first appeared twice in a
+`/security-review` run, both copies carrying one uuid because `stampMessage` stamps all pending
+blocks. A local command's turn never streams at all, which is exactly what leaves the flag false
+and lets its whole message draw itself.
+**Rejected:** clearing at `message_stop` (tried and reverted the same hour — assistant frames
+straddle the stop in BOTH directions, so fixture 47's step-2 guard immediately caught it
+double-rendering the other way); and a rendered-uuid set, which cannot help because the duplicate
+carries the uuid of the frame that drew it.
+
+## 2026-08-15 — A failed local command is surfaced, not swallowed
+`onUserEvent` handles a STRING `content`: `<local-command-stderr>` → error block,
+`<local-command-stdout>` → answer block, every other wrapper still invisible. Replay routes the
+same two shapes on a `user` record through the same mapping.
+**Why:** measured — `/security-review` in a repo with no `origin/HEAD` reports only through a
+`user` frame whose content is a string, which the `!Array.isArray(content)` guard dropped before
+any rendering logic ran. The panel showed a completed turn with nothing in it, and the CLI's own
+reason ("fatal: ambiguous argument 'origin/HEAD...'") was lost.
+**Rejected:** extending `cleanInjected`'s drop list, which was already wrong in both directions —
+it swallowed the stdout spelling outright and let stderr through as raw XML in a blue user box.
+Dropping an error blob violates the project's own no-silent-drops rule.
+
 ## 2026-08-15 — Custom commands are detected by the description SUFFIX, not a disk scan
 `markCustom()` in chat.html parses `^([\s\S]*) \((project|user)\)$` off every roster entry's
 description (initialize AND commands_changed), strips it for display, and records the source on

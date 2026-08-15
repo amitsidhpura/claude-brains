@@ -20,6 +20,14 @@
   problem before choosing what to fix.
 - Enable slash commands one at a time, each verified in `runIde`, then ticked in
   `docs/slash-commands.md`. The menu is an allowlist — unconfirmed commands stay hidden.
+- **"The CLI accepted it" is not "the panel rendered it."** A headless smoke run proves only the
+  former, and on 2026-08-15 it marked 16 commands verified while `/context` rendered nothing at
+  all. Anything user-facing gets driven through the LIVE panel before it is called verified, and
+  the doc says which of the two claims a checkmark stands for.
+- **When output is missing, tape the wire before blaming either side.** DOM evidence alone cannot
+  separate "the CLI sent nothing" from "the panel dropped it", and a throw inside `onClaudeEvent`
+  is swallowed by JCEF with no trace at all. Wrapping the handler is a few lines and turns a shrug
+  into a diagnosis (it is what found the `/security-review` drop).
 - Test fixtures must state their `provenance`: a shape copied from our own handler proves
   self-consistency, NOT that the CLI emits it. New suites need a negative control (feed a wrong
   expectation, check it FAILS) — an all-green first run is what a vacuous suite also looks like.
