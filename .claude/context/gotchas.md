@@ -611,6 +611,11 @@ trusting memory here.
   CLI child keeps stdout open after `result`, so the loop never re-checks the clock. Two probes
   sat 40+ minutes as exactly the orphaned-waiter family the background chip caught on
   2026-08-15. Wrap every probe in `timeout N`; the chip is telling the truth.
+- **A grep-based watcher on a probe TAPE can never fire if it greps for unescaped JSON**: the
+  tape wraps each frame as a JSON string, so the file contains `\"type\": \"result\"` (escaped,
+  and without the spaces you typed) — `until grep '"type": "result"'` loops forever. Third
+  orphaned waiter of 2026-08-16, all reported by the chip. Grep the tape for a marker YOU wrote
+  into it, or match the escaped form — and give watchers their own `timeout` too.
 - **The sandbox's hand-set Registry value beats `-PjcefDebugPort`** (Registry user property >
   system property), so the sandbox came up on 9222 anyway — meanwhile the REAL IDE can also be
   serving 9222 with its own "Claude Brains — chat panel" target. Before driving any panel over
