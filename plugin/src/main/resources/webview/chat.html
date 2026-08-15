@@ -1091,6 +1091,10 @@
     // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
     permCards = Object.create(null);   // a cleared session's cards can no longer be answered
+    // A stream interrupted by the clear must not mark the NEXT session's first message as already
+    // drawn — a /context opening the new conversation would render nothing (found by fixture 47
+    // failing only in the full-suite order, exactly the cross-state leak fixture 44 documents).
+    msgStreamed = false;
     turnTokens = 0; msgTokens = 0; reqSeed = null; retrySeen = null;
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // The MCP notice was cleared off screen with everything else, so the next init must be free to
@@ -2206,6 +2210,7 @@
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null; retrySeen = null;
+    msgStreamed = false;   // this turn's answer must prove its own streaming (or render whole)
     // The roster describes a LIVE process: a new conversation inherits none of it, and leaving the
     // chip up would advertise tasks belonging to a session that is no longer on screen.
     bgTasks = []; renderBgTasks();
@@ -2396,7 +2401,14 @@
   // Both classes are prompt expansions the CLI performs on an ordinary turn (verified live with
   // /dummy-cmd, 2026-08-15), which is exactly what "text" means here.
   const CMD_NATIVE  = new Set(['clear']);     // handled in the IDE, never forwarded
-  const CMD_ALLOWED = new Set(['compact', 'reload-skills']);   // forwarded to the CLI as a turn
+  // The IDE-development set (user-picked 2026-08-15, each smoke-verified headless: the CLI
+  // accepts and expands every one as a turn — docs/slash-commands.md for the grouping logic).
+  const CMD_ALLOWED = new Set([
+    'compact', 'reload-skills',
+    'context', 'code-review', 'simplify', 'verify', 'run', 'security-review',   // core dev
+    'init', 'recap', 'goal',                                                    // session workflow
+    'loop', 'batch', 'deep-research', 'list-agents',                            // orchestration
+  ]);   // forwarded to the CLI as a turn
   function cmdKind(name) {
     const n = (name || '').toLowerCase();
     // native/allowlist first: a project file named clear.md must not shadow the IDE's /clear
@@ -2680,6 +2692,10 @@
   // (SessionStore.flushSummary reads the same field). First one wins — later blocks of the same
   // message, and later turns of the request, must not move it.
   let reqSeed = null;
+  // Whether the current message rendered via stream deltas. Set at message_start, consumed by the
+  // whole-message `assistant` frame; also cleared at `result` so an interrupted stream can't make
+  // the NEXT turn's un-streamed frame (a local command's answer) look already-drawn.
+  let msgStreamed = false;
   let toolsById = {};         // tool_use id -> {el, name, io} for OUT boxes; reset by clearLogUI
   // Marks the newest un-superseded pending edit matching (tool, file) as card-owned (4.4).
   // permission_request frames carry no tool_use_id, so tool+file is the only correlation;
@@ -2731,6 +2747,27 @@
           return void statusLine(AUTH_BLOCKED[ev.error], SVG_ALERT, 'status err');
         }
         if (reqSeed == null && ev.uuid) reqSeed = ev.uuid;
+        // A LOCAL built-in (/context, /recap, /list-agents, …) answers as a bare whole-message
+        // assistant frame with ZERO stream_events (measured 2026-08-15, CLI 2.1.233) — the one
+        // live shape that must render from the whole message, because there are no deltas to
+        // drive it. msgStreamed says whether deltas already drew this message; without this
+        // branch /context "Puttered for 1s" and showed nothing. Text blocks only: tool_use and
+        // thinking have their own streamed machinery and never arrive un-streamed.
+        // The flag is NEVER cleared here, and deliberately not at message_stop either. The CLI
+        // emits an `assistant` frame per CONTENT BLOCK, not per message (taped live 2026-08-15),
+        // and those frames straddle message_stop in both directions — so any mid-turn reset
+        // re-draws text the deltas already rendered. That is what made every message after the
+        // first appear twice in a /security-review run, both copies carrying one uuid because
+        // stampMessage stamps all pending blocks. It is a TURN-level fact: set at message_start,
+        // cleared only at result / sendTurn / clearLogUI. A local command's turn never streams at
+        // all, which is exactly what leaves it false and lets its whole message draw itself.
+        if (!msgStreamed) {
+          ((ev.message || {}).content || []).forEach(function (b) {
+            if (b && b.type === 'text' && b.text) {
+              const k = track(el('blk', '')); k.innerHTML = renderMd(b.text); foldCode(k);
+            }
+          });
+        }
         // The uuid the transcript will carry — stamp it on the blocks this message just drew, so a
         // later retraction can find them.
         stampMessage(ev.uuid);
@@ -3134,6 +3171,7 @@
         flushMd();
         curBubble = null; curRaw = '';
         curMsgUuid = null; curMsgEls = [];
+        msgStreamed = true;   // deltas will draw this message — its assistant frame is only a stamp
         msgTokens = 0; msgChars = 0;
         const u = (e.message || {}).usage || {};   // prompt side only arrives here
         setContext((u.input_tokens || 0) + (u.cache_read_input_tokens || 0) +
@@ -3274,8 +3312,30 @@
   }
 
   // tool_result frames: OUT boxes for Bash + red fail dots
+  // A LOCAL command that FAILED reports through a `user` frame whose content is a STRING, not the
+  // usual block array: `<local-command-stderr>…</local-command-stderr>` (measured 2026-08-15 —
+  // /security-review in a repo with no origin/HEAD; the CLI sent the reason and the panel dropped
+  // it at the Array.isArray guard below, leaving a completed turn with nothing in it). The stdout
+  // spelling reaches this path too. Everything else wrapped in that family — caveats, task
+  // notifications, IDE context — stays plumbing the CLI talks to itself with, and draws nothing.
+  const LOCAL_OUT_RE = /^\s*<local-command-stdout>([\s\S]*?)<\/local-command-stdout>\s*$/;
+  const LOCAL_ERR_RE = /^\s*<local-command-stderr>([\s\S]*?)<\/local-command-stderr>\s*$/;
+  function localCommandText(raw) {
+    const err = LOCAL_ERR_RE.exec(raw); if (err) return { text: err[1].trim(), isErr: true };
+    const out = LOCAL_OUT_RE.exec(raw); if (out) return { text: out[1].trim(), isErr: false };
+    return null;
+  }
+
   function onUserEvent(ev) {
     const content = (ev.message && ev.message.content) || [];
+    if (typeof content === 'string') {
+      const lc = localCommandText(content);
+      if (lc && lc.text) {
+        if (lc.isErr) errorBlock(lc.text);
+        else { const k = track(el('blk', '')); k.innerHTML = renderMd(lc.text); foldCode(k); }
+      }
+      return;
+    }
     if (!Array.isArray(content)) return;
     content.forEach(function (b) {
       if (b.type !== 'tool_result') return;
@@ -3649,6 +3709,7 @@
   }
 
   function onResult(ev) {
+    msgStreamed = false;   // an interrupted stream must not mark the next message as drawn
     const usage = ev.usage || {};
     if (typeof usage.output_tokens === 'number') reqTokens += usage.output_tokens;
     // Item 17a. Deliberately ABOVE the background-task early return below: an intermediate result

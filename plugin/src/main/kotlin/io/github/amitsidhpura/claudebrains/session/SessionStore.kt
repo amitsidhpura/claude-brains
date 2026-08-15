@@ -782,6 +782,24 @@ object SessionStore {
                                 openCompact = null; openCompactUuid = null
                                 continue
                             }
+                            // A local command's own output also lands as a plain `user` record whose
+                            // content is a STRING (a failing /security-review writes exactly one).
+                            // Route it through the same mapping the system/local_command branch
+                            // uses rather than the drop list, which swallowed stdout outright and
+                            // let stderr through as raw XML in a blue user box.
+                            val rawUser = userTextFull(obj)
+                            if (rawUser != null) {
+                                var routed = false
+                                LOCAL_OUT_RE.find(rawUser)?.groupValues?.get(1)?.trim()
+                                    ?.takeIf { it.isNotEmpty() }?.let {
+                                        flushSummary(); out.add(Item("assistant").apply { text = it }); routed = true
+                                    }
+                                LOCAL_ERR_RE.find(rawUser)?.groupValues?.get(1)?.trim()
+                                    ?.takeIf { it.isNotEmpty() }?.let {
+                                        flushSummary(); out.add(Item("error").apply { text = it }); routed = true
+                                    }
+                                if (routed) continue
+                            }
                             val text = userTextFull(obj)?.let { cleanInjected(it) }?.takeIf { it.isNotBlank() }
                             val atts = attachmentsOf(content)
                             if (text == null && atts.isEmpty()) continue
@@ -1037,6 +1055,29 @@ object SessionStore {
                             // against a real transcript — and the one that matters is a hook
                             // denying a non-tool event, which produces this record and no turn at
                             // all. Note the spelling split, again: the wire says
+                            // A LOCAL built-in's output (`/context`, `/recap`, `/list-agents`, …):
+                            // the transcript spells it system/local_command with the text wrapped
+                            // in <local-command-stdout>/<local-command-stderr>, while the live wire
+                            // spells the SAME content as a bare whole-message assistant frame with
+                            // zero stream_events (measured 2026-08-15, CLI 2.1.233 — neither path
+                            // shares a spelling with the other). Replay through the same roles the
+                            // live panel draws: stdout -> assistant block, stderr -> error block.
+                            if (obj["subtype"]?.jsonPrimitive?.content == "local_command") {
+                                val body = obj["content"]?.jsonPrimitive?.contentOrNull
+                                if (body != null) {
+                                    LOCAL_OUT_RE.find(body)?.groupValues?.get(1)?.trim()
+                                        ?.takeIf { it.isNotEmpty() }?.let {
+                                            flushSummary()
+                                            out.add(Item("assistant").apply { text = it })
+                                        }
+                                    LOCAL_ERR_RE.find(body)?.groupValues?.get(1)?.trim()
+                                        ?.takeIf { it.isNotEmpty() }?.let {
+                                            flushSummary()
+                                            out.add(Item("error").apply { text = it })
+                                        }
+                                }
+                                continue
+                            }
                             // `prevent_continuation`, the transcript `preventContinuation`.
                             // `level` rides along so replay maps prominence through the SAME
                             // INFO_LEVELS table the live path uses.
@@ -1353,6 +1394,9 @@ object SessionStore {
     // became sendable from the panel (3.1) the raw XML leaked into a session title.
     private val CMD_NAME_RE = Regex("<command-name>\\s*(.*?)\\s*</command-name>", RegexOption.DOT_MATCHES_ALL)
     private val CMD_ARGS_RE = Regex("<command-args>\\s*(.*?)\\s*</command-args>", RegexOption.DOT_MATCHES_ALL)
+    // system/local_command bodies — a record can carry either wrapper (or, defensively, both)
+    private val LOCAL_OUT_RE = Regex("<local-command-stdout>([\\s\\S]*?)</local-command-stdout>")
+    private val LOCAL_ERR_RE = Regex("<local-command-stderr>([\\s\\S]*?)</local-command-stderr>")
     private fun cleanInjected(text: String): String? {
         val t = text.trim()
         if (t.startsWith("<local-command-caveat>") || t.startsWith("<local-command-stdout>") ||

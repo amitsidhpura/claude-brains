@@ -186,6 +186,81 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
       mode chip suffix updates, e.g. "Manual (High)"
 - [x] 3.6 Menu pick runs a no-arg command immediately; a command with a required `<arg>`
       inserts `/cmd ` and waits
+- [x] 3.7 A local built-in's output (`/context`, `/recap`, `/list-agents`) renders — live and
+      on resume
+
+      **RESOLVED (2026-08-15) — fixed (found by the user the day these commands were enabled:**
+      `/context` showed "Puttered for 1s" and nothing else**):** a local command answers as a
+      bare whole-message assistant frame with ZERO stream_events, and live rendering was driven
+      entirely by deltas — the frame was consumed as a uuid stamp. The transcript spells the
+      SAME content differently again: `system/local_command` with `<local-command-stdout>`,
+      which replay skipped as an unknown subtype — so both paths were blind through different
+      mechanisms. Live: `msgStreamed` flag — set at message_start, consumed by the assistant
+      frame, reset at result/sendTurn/clear — renders un-streamed text blocks through the same
+      `.blk` builder (fixture 47; negative control run: 3 discriminating red pre-fix, and the
+      full-suite order caught a real cross-conversation leak of the flag that a standalone run
+      could not). Replay: `local_command` branch in SessionStore — stdout → assistant block,
+      stderr → error block (test written first, failed pre-fix; probe on the real session
+      41a89e81… now yields the assistant block). Verified live end-to-end: `/context` through
+      the panel renders the full usage table.
+
+- [x] 3.8 Every ENABLED command renders its output in the panel — swept 2026-08-15, all 16
+
+      **RESOLVED (2026-08-15) — fixed:** the 16 enabled commands were driven through the live
+      panel over CDP (harness in the session scratchpad: a wire tape wrapping `onClaudeEvent`,
+      a fresh conversation per command, `busy`-based terminal classification). **15 rendered
+      correctly on the first pass; one was a real defect.** Totals: 3016 frames taped, **zero
+      handler errors** — no frame threw inside `onClaudeEvent` (a throw there is swallowed by
+      JCEF, so this was worth measuring rather than assuming).
+      Highlights: `/verify` 213s / 25 blocks / 23 tool lines; `/simplify` 18 blocks / 12 tools
+      (it really edited files); `/init` 10 tools (its `CLAUDE.md` deleted immediately after, so
+      later commands would not read it as project instructions); `/batch` sensibly declined to
+      fan out for a one-line task and created no worktrees or branches; `/loop` scheduled and
+      printed a job id; `/compact` drew its marker and reset the gauge to 0; Stop rendered
+      "Stopped"; `/clear` emptied the log and restored the welcome pane.
+      **The defect: `/security-review`** — it fails deterministically in a repo with no
+      `origin/HEAD`, and the panel showed a completion line with NOTHING in it. The tape proved
+      the CLI *had* sent the reason: a `user` frame whose `content` is a **string** carrying
+      `<local-command-stderr>`, which `onUserEvent` dropped at its `!Array.isArray(content)`
+      guard before any rendering logic. Fixed on both paths — live (`localCommandText`, stderr →
+      error block, stdout → answer block, other wrappers still invisible) and replay
+      (`SessionStore` routes the same wrappers on a `user` record through the stdout→assistant /
+      stderr→error mapping instead of the drop list, which had been swallowing stdout outright
+      and leaking stderr as raw XML into a blue user box). Fixture 47 grew to 7 steps
+      (negative control RUN against the pre-fix build still live in the sandbox: 4 discriminating
+      assertions red, all 5 guards green); `SessionStoreTest` covers the replay half; the real
+      session `eb8a3598…` now probes to an error block. Verified after the fix by re-running the
+      real command: the CLI's own "fatal: ambiguous argument 'origin/HEAD...'" now appears.
+      **One row needed re-checking, not fixing:** `/deep-research` first scored SILENT-END, which
+      was a harness artifact — it exceeded its budget and the stop ladder's `kind:'new'` wiped the
+      log before the probe read it. Re-run with a snapshot taken BEFORE any stop: 2 blocks, a tool
+      line and a "1 task" background chip at 150s. It renders; it is simply long-running.
+
+      **The sweep's own two caveats were then closed (2026-08-15), and closing the first found a
+      REGRESSION the sweep had introduced:**
+      · **`/security-review` success path** — the sandbox repo was given a real `origin/HEAD` (a
+      local bare remote) plus a deliberately vulnerable committed file. The command ran its full
+      workflow — exploration, a vulnerability sub-task, six parallel false-positive filters — and
+      rendered a real report (SQL injection / command injection / path traversal, with confidence
+      scores and three candidates dropped below threshold). 380s, 0 errors.
+      · **The regression it exposed:** every message after the first rendered TWICE, both copies
+      carrying one uuid. Cause: the CLI emits an `assistant` frame **per content block, not per
+      message** (taped live), so a message that thinks first sends two — and the first one was
+      consuming the `msgStreamed` flag, letting the second re-draw what the deltas had already
+      rendered. Only visible on commands that think between messages, which is why the 16-command
+      sweep missed it. `msgStreamed` is now a TURN-level fact: set at `message_start`, cleared only
+      at result/sendTurn/clearLogUI, never mid-turn. A `message_stop` reset was tried and rejected
+      within the hour — assistant frames straddle `message_stop` in both directions, and fixture
+      47's own step-2 guard caught it double-rendering the other way. Re-verified on the real
+      command afterwards: 3 blocks, distinct uuids, zero duplicates.
+      · **`/batch` fan-out** — run for real with the plan gate APPROVED (previously only rejected).
+      It entered plan mode, raised an Ask card, wrote a plan, then launched **two parallel worktree
+      agents**: two `.claude/worktrees/agent-*` trees, two branches, a commit each, both pushed to
+      the local remote, the background chip reading "2 tasks" while they ran, per-unit status tables
+      updating running→done, and `PR: none — no GitHub remote` as the documented graceful failure.
+      9 blocks / 16 tool lines, no duplicates. Unit count was 2 rather than 5–30 because `src/` held
+      two class files; the fan-out machinery (parallel Agent launches, worktrees, bg roster) is the
+      part that was previously untested and is now exercised.
 
 ## 4. Mode & model
 

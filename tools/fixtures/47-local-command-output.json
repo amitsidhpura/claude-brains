@@ -1,0 +1,377 @@
+{
+  "item": "3.7",
+  "branch": "local built-in output: bare whole-message assistant frame renders; streamed messages never double-render",
+  "provenance": "Measured 2026-08-15 (CLI 2.1.233, the panel's exact spawn flags, testing repo): '/context' produces system/init -> ONE whole-message assistant frame -> result, with ZERO stream_events — the only live shape that must render from a whole message rather than deltas. The transcript spells the SAME content differently again: system/local_command with <local-command-stdout>…</local-command-stdout> (session 41a89e81…), covered by SessionStoreTest, not this fixture. Found by the user running /context the day info-style built-ins were enabled: 'Puttered for 1s' and nothing rendered. NEGATIVE CONTROL RUN 2026-08-15 against the pre-fix build: the 3 assertions marked DISCRIMINATING failed, both guards green. STEPS 4-7 ADDED 2026-08-15 after the command sweep: /security-review failed deterministically in ~/Sites/claude-brains-testing (no origin/HEAD) and the panel rendered a completion line with ZERO blocks. The tape showed the CLI did send the error — a `user` frame whose message.content is a STRING carrying <local-command-stderr>…</local-command-stderr> (captured verbatim from session eb8a3598…, frame text reproduced below) — which onUserEvent dropped at its `if (!Array.isArray(content)) return;` guard before any rendering logic. NEGATIVE CONTROL RUN 2026-08-15 against the pre-fix build (the live sandbox still carried it): 4 assertions failed — both stderr DISCRIMINATING and both stdout ones — and all 5 GUARDs passed, incl. the caveat-still-invisible and array-path-untouched pair. STEP 8 ADDED 2026-08-15: the CLI emits an `assistant` frame PER CONTENT BLOCK, not per message (taped live: message_start -> content_block_start -> assistant -> content_block_stop, repeating). A message with a thinking block therefore sends TWO assistant frames, and the first one consumed the msgStreamed flag, so the second re-rendered text the deltas had already drawn — every message after the first appeared twice in a /security-review run (both copies stamped with the same uuid, because stampMessage stamps all pending blocks). The flag is therefore a TURN-level fact: set at message_start, cleared only at result/sendTurn/clearLogUI — never mid-turn. A message_stop reset was tried and rejected the same hour: assistant frames straddle message_stop in both directions, so step 2 (frame after the stop) started double-rendering instead.",
+  "steps": [
+    {
+      "note": "a local command's answer arrives as a bare assistant frame with no stream — it must render as a normal markdown block, stamped with its uuid",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('/context', []);",
+      "frames": [
+        {
+          "type": "assistant",
+          "uuid": "la-1",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "## Context Usage\n\n**Tokens:** 24.3k / 1m (2%)"
+              }
+            ]
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "duration_ms": 1000
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .blk').length",
+          "equals": 1,
+          "why": "DISCRIMINATING: the un-streamed assistant frame draws a block (0 pre-fix)"
+        },
+        {
+          "js": "(document.querySelector('#log .blk')||{textContent:''}).textContent.indexOf('Context Usage') >= 0",
+          "equals": true,
+          "why": "DISCRIMINATING: the block carries the command's output"
+        },
+        {
+          "js": "(document.querySelector('#log .blk')||{dataset:{}}).dataset.uuid",
+          "equals": "la-1",
+          "why": "DISCRIMINATING: stamped like any message, so a retraction could still find it"
+        }
+      ]
+    },
+    {
+      "note": "a STREAMED message followed by its whole-message assistant frame renders exactly once — the frame is a stamp, not a second copy",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "text_delta",
+              "text": "Hello from stream"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_stop"
+          }
+        },
+        {
+          "type": "assistant",
+          "uuid": "la-2",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello from stream"
+              }
+            ]
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "duration_ms": 1000
+        }
+      ],
+      "expect": [
+        {
+          "js": "Array.from(document.querySelectorAll('#log .blk')).filter(function(b){return b.textContent.indexOf('Hello from stream')>=0;}).length",
+          "equals": 1,
+          "why": "GUARD (both phases): streamed content renders once — a fix without the streamed-flag would make this 2"
+        }
+      ]
+    },
+    {
+      "note": "an un-streamed assistant frame with no text blocks draws nothing",
+      "frames": [
+        {
+          "type": "assistant",
+          "uuid": "la-3",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_la3",
+                "name": "Bash",
+                "input": {}
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "Array.from(document.querySelectorAll('#log .blk')).filter(function(b){return (b.dataset||{}).uuid==='la-3';}).length",
+          "equals": 0,
+          "why": "GUARD (both phases): only text blocks render from a whole message — tool_use has its own streamed machinery"
+        }
+      ]
+    },
+    {
+      "note": "a local command that FAILED: stderr arrives as a user frame with STRING content — it must surface as an error block, not vanish",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('/security-review', []);",
+      "frames": [
+        {
+          "type": "user",
+          "uuid": "lc-e1",
+          "message": {
+            "role": "user",
+            "content": "<local-command-stderr>Error: Shell command failed for pattern \"!`git log --no-decorate origin/HEAD...`\": [stderr]\nfatal: ambiguous argument 'origin/HEAD...': unknown revision or path not in the working tree.</local-command-stderr>"
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "duration_ms": 1000
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .error').length",
+          "equals": 1,
+          "why": "DISCRIMINATING: the failure is shown at all (0 pre-fix — a silent completed turn)"
+        },
+        {
+          "js": "(document.querySelector('#log .error')||{textContent:''}).textContent.indexOf('unknown revision') >= 0",
+          "equals": true,
+          "why": "DISCRIMINATING: it carries the CLI's own reason, with the wrapper stripped"
+        },
+        {
+          "js": "(document.querySelector('#log .error')||{textContent:''}).textContent.indexOf('local-command-stderr') >= 0",
+          "equals": false,
+          "why": "GUARD: the XML wrapper itself must not reach the reader"
+        }
+      ]
+    },
+    {
+      "note": "the stdout spelling of the same shape renders as an ordinary answer block",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('/context', []);",
+      "frames": [
+        {
+          "type": "user",
+          "uuid": "lc-o1",
+          "message": {
+            "role": "user",
+            "content": "<local-command-stdout>## Context Usage\n\n**Tokens:** 24.3k</local-command-stdout>"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .blk').length",
+          "equals": 1,
+          "why": "DISCRIMINATING: stdout-as-user-string renders (the other half of the same drop)"
+        },
+        {
+          "js": "(document.querySelector('#log .blk')||{textContent:''}).textContent.indexOf('Context Usage') >= 0",
+          "equals": true,
+          "why": "content preserved, wrapper stripped"
+        },
+        {
+          "js": "document.querySelectorAll('#log .error').length",
+          "equals": 0,
+          "why": "GUARD: stdout is not an error"
+        }
+      ]
+    },
+    {
+      "note": "other injected string wrappers stay invisible — this is plumbing the CLI talks to itself with",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+      "frames": [
+        {
+          "type": "user",
+          "uuid": "lc-c1",
+          "message": {
+            "role": "user",
+            "content": "<local-command-caveat>Caveat: The messages below were generated by the user while running local commands.</local-command-caveat>"
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .blk').length + document.querySelectorAll('#log .error').length",
+          "equals": 0,
+          "why": "GUARD (both phases): a caveat wrapper renders nothing — the fix must not turn every string user frame into content"
+        }
+      ]
+    },
+    {
+      "note": "the ordinary array-content path still settles a tool line",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run it', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_lc9",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_lc9",
+                "content": "ok"
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .tool-line.run').length",
+          "equals": 0,
+          "why": "GUARD (both phases): the array branch is untouched — a real tool_result still settles its line"
+        }
+      ]
+    },
+    {
+      "note": "the CLI sends an assistant frame PER CONTENT BLOCK — a second one in the same message must not re-draw what the deltas already rendered",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('review it', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "text_delta",
+              "text": "Seven candidate findings identified."
+            }
+          }
+        },
+        {
+          "type": "assistant",
+          "uuid": "th-1",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Seven candidate findings identified."
+              }
+            ]
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "assistant",
+          "uuid": "th-2",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Seven candidate findings identified."
+              }
+            ]
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_stop"
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "duration_ms": 1000
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .blk').length",
+          "equals": 1,
+          "why": "DISCRIMINATING: one block for one message — 2 when the flag was consumed by the first assistant frame, which is how every message after the first came out doubled in a real /security-review run"
+        }
+      ]
+    }
+  ]
+}

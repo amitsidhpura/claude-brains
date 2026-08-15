@@ -142,6 +142,80 @@ class SessionStoreTest {
     }
 
     /**
+     * A LOCAL built-in's output (`/context`, `/recap`, …) persists as `system/local_command` with
+     * the text inside `<local-command-stdout>…</local-command-stdout>` — while the live wire spells
+     * the SAME content as a bare whole-message assistant frame (measured 2026-08-15, CLI 2.1.233,
+     * session 41a89e81…; neither path shares a spelling with the other). Replay must render it as
+     * the assistant block live draws, and a `<local-command-stderr>` body as an error block.
+     */
+    @Test
+    fun `a local_command record replays as an assistant block, stderr as an error`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-08-15T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"<command-name>/context</command-name>\n<command-message>context</command-message>\n<command-args></command-args>"}]}}""",
+            """{"type":"system","subtype":"local_command","content":"<local-command-stdout>## Context Usage\n\n**Tokens:** 24.3k</local-command-stdout>","level":"info","timestamp":"2026-08-15T10:00:01.000Z","uuid":"lc-1"}""",
+            """{"type":"system","subtype":"local_command","content":"<local-command-stderr>command failed</local-command-stderr>","level":"info","timestamp":"2026-08-15T10:00:02.000Z","uuid":"lc-2"}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-lc", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "lc.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "lc")
+            val blk = out.first { it["role"]?.jsonPrimitive?.content == "assistant" }
+            assertTrue(blk["text"]!!.jsonPrimitive.content.startsWith("## Context Usage"),
+                "stdout body should replay as the assistant block live draws, wrapper stripped")
+            val err = out.first { it["role"]?.jsonPrimitive?.content == "error" }
+            assertEquals("command failed", err["text"]!!.jsonPrimitive.content,
+                "stderr body should replay as an error block, wrapper stripped")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * The same local-command output also reaches disk as a plain `user` record whose content is a
+     * STRING (measured 2026-08-15: `/security-review` failing on a repo with no `origin/HEAD` wrote
+     * exactly one such record). `cleanInjected`'s drop list handled that family wrongly in BOTH
+     * directions — `<local-command-stdout>` was silently swallowed, and `<local-command-stderr>`
+     * was not listed at all, so it replayed as raw XML inside a blue user box. Both must route
+     * through the same mapping the `system/local_command` branch uses: stdout -> assistant block,
+     * stderr -> error block. A caveat wrapper still drops.
+     */
+    @Test
+    fun `local-command wrappers on a user record replay as assistant and error, not raw XML`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-08-15T10:00:00.000Z","message":{"role":"user","content":"<local-command-stdout>## Context Usage\n\n**Tokens:** 24.3k</local-command-stdout>"}}""",
+            """{"type":"user","timestamp":"2026-08-15T10:00:01.000Z","message":{"role":"user","content":"<local-command-stderr>fatal: ambiguous argument 'origin/HEAD...'</local-command-stderr>"}}""",
+            """{"type":"user","timestamp":"2026-08-15T10:00:02.000Z","message":{"role":"user","content":"<local-command-caveat>Caveat: generated while running local commands.</local-command-caveat>"}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-lcu", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "lcu.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "lcu")
+            val blk = out.first { it["role"]?.jsonPrimitive?.content == "assistant" }
+            assertTrue(blk["text"]!!.jsonPrimitive.content.startsWith("## Context Usage"),
+                "stdout on a user record should replay as an assistant block, not be swallowed")
+            val err = out.first { it["role"]?.jsonPrimitive?.content == "error" }
+            assertEquals("fatal: ambiguous argument 'origin/HEAD...'", err["text"]!!.jsonPrimitive.content,
+                "stderr should replay as an error block with the wrapper stripped")
+            assertTrue(out.none { it["role"]?.jsonPrimitive?.content == "user" },
+                "no raw-XML user box: every wrapper here is plumbing, not something the human typed")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * The CLI writes its post-compaction summary as a `user` record carrying `isCompactSummary`
      * rather than `isMeta`, so the meta filter missed it and a resumed session showed a 25k-41k
      * character blue message box the human never typed (measured in two real local sessions). It

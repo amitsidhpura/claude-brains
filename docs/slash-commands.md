@@ -62,62 +62,105 @@ we start minimal and reveal one command at a time as each is verified in `runIde
 allowlist and starts appearing in the menu. Custom commands, skills and MCP prompts need none
 of this.
 
-Roster captured from the CLI `initialize` response 2026-08-15 (CLI 2.1.228, 50 built-in/bundled
-commands; suffix-marked custom entries are excluded - they are auto-enabled, not listed).
-Descriptions over 140 chars are truncated with `…`. Only the 3 marked Enabled are visible in
-the menu today; the rest are hidden pending verification. Note: a project skill can SHADOW a
+**Scope of this table:** it is the complete set the CLI advertises to a HEADLESS stream-json
+client - which is everything the panel can ever see or send - NOT the CLI's full command
+surface. TUI-only commands (`/login`, `/resume`, `/help`, `/add-dir`, `/rewind`, `/diff`,
+`/update`, ...) are registered as interactive/local commands in the binary and never appear in
+the initialize response at all; they are absent by construction, not Hidden rows. By the
+project philosophy they are the terminal's half. The list is also machine-specific: bundled and
+user-installed skills ride the same roster, so it drifts with CLI updates and skill changes.
+
+Roster captured from the CLI `initialize` response 2026-08-15 (CLI 2.1.228; re-verified against
+2.1.233 the same day: identical names, same entry schema, suffix marker intact). Suffix-marked
+custom entries are excluded - they are auto-enabled, not listed. 51 rows: 50 from the main-repo
+capture plus the built-in `/context`, restored from the testing-repo capture because this repo's
+own /context project skill shadows it (see the shadowing note above).
+Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
+relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
+are visible in the menu; every other built-in is hidden.
+
+**What `Verified [x]` means, and what it used to mean.** It now means **the command was driven
+through the LIVE panel and its output rendered** — all 16 swept 2026-08-15 (harness in the
+session scratchpad; matrix in the 3.8 register entry). It previously meant only "the CLI accepted
+it headlessly", which is a strictly weaker claim and one that hid a real defect for hours:
+`/context` passed the headless check and rendered nothing in the panel. Two commands were found
+broken by the stronger test and fixed the same day; the rest passed. Do not re-mark a command
+`[x]` on headless evidence alone. Note: a project skill can SHADOW a
 built-in name - this repo's `/context` skill replaces the built-in "Show current context
 usage" entry in its own roster, marked "(project)" like any custom entry.
+
+### Enabled — the IDE development set
+
+| Command | Status | Verified | Aliases | Description |
+|---|---|---|---|---|
+| `/clear` | Enabled - native (IDE) | [x] | `/reset`, `/new` | Start a new session with empty context; previous session stays on disk (resumable with /resume) |
+| `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
+| `/context` | Enabled - sent to CLI | [x] |  | Show current context usage |
+| `/code-review` | Enabled - sent to CLI | [x] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs and reuse/simplification/efficiency cleanups at the give… |
+| `/simplify` | Enabled - sent to CLI | [x] |  | Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hu… |
+| `/verify` | Enabled - sent to CLI | [x] |  | Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior — drive the affected flo… |
+| `/run` | Enabled - sent to CLI | [x] |  | Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change… |
+| `/security-review` | Enabled - sent to CLI | [x] |  | Complete a security review of the pending changes on the current branch |
+| `/init` | Enabled - sent to CLI | [x] |  | Initialize a new CLAUDE.md file with codebase documentation. **Note:** in THIS repo the /context workflow replaces CLAUDE.md — don't run /init here. |
+| `/recap` | Enabled - sent to CLI | [x] |  | Generate a one-line session recap now |
+| `/goal` | Enabled - sent to CLI | [x] |  | Set a goal — keep working until the condition is met |
+| `/loop` | Enabled - sent to CLI | [x] | `/proactive` | Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace. |
+| `/batch` | Enabled - sent to CLI | [x] |  | Research and plan a large-scale change, then execute it in parallel across 5–30 isolated worktree agents that each open a PR. |
+| `/deep-research` | Enabled - sent to CLI | [x] |  | Deep research harness — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. (dynamic workflow) |
+| `/list-agents` | Enabled - sent to CLI | [x] | `/peers` | List subagents and other Claude sessions you can message |
+| `/reload-skills` | Enabled - sent to CLI | [x] |  | Pick up skills added or changed on disk during this session |
+
+### Hidden — redundant with panel UI, or declined
+
+| Command | Status | Verified | Aliases | Description |
+|---|---|---|---|---|
+| `/model` | Hidden | [ ] |  | Set the AI model for Claude Code Composer has the model chip + dropdown. |
+| `/effort` | Hidden | [ ] |  | Set effort level for model usage Composer has the effort slider. |
+| `/rename` | Hidden | [ ] | `/name` | Rename the current conversation The panel header has inline rename (same custom-title record). |
+| `/usage` | Hidden | [ ] | `/cost`, `/stats` | Show session cost, plan usage, and what's contributing to your limits **Declined 2026-08-06** as a panel surface — stays Hidden by decision, not omission. |
+
+### Hidden — configuration & diagnostics (the terminal's half)
+
+| Command | Status | Verified | Aliases | Description |
+|---|---|---|---|---|
+| `/agents` | Hidden | [ ] |  | (removed) Ask Claude to create/manage subagents, or edit .claude/agents/ Description says "(removed)". |
+| `/auto-mode-setup` | Hidden | [ ] |  | Set up and customise auto mode — environment context, plus optional rule tweaks |
+| `/autocompact` | Hidden | [ ] |  | Configure the auto-compact window size |
+| `/color` | Hidden | [ ] |  | Set the prompt bar color for this session |
+| `/config` | Hidden | [ ] | `/settings` | Set a setting by key |
+| `/debug` | Hidden | [ ] |  | Enable debug logging for this session and help diagnose issues |
+| `/doctor` | Hidden | [ ] | `/checkup` | Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics co… |
+| `/extra-usage` | Hidden | [ ] |  | Renamed to /usage-credits |
+| `/fast` | Hidden | [ ] |  | Toggle fast mode (Opus 5) |
+| `/fewer-permission-prompts` | Hidden | [ ] |  | Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to… |
+| `/heapdump` | Hidden | [ ] |  | Dump the JS heap to ~/Desktop |
+| `/import` | Hidden | [ ] |  | Import config from another AI coding agent |
+| `/insights` | Hidden | [ ] |  | Generate a report analyzing your Claude Code sessions |
+| `/mcp` | Hidden | [ ] |  | Manage MCP servers |
+| `/run-skill-generator` | Hidden | [ ] |  | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use wh… |
+| `/schedule` | Hidden | [ ] | `/routines` | Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule. |
+| `/team-onboarding` | Hidden | [ ] |  | Help teammates ramp on Claude Code with a guide from your usage |
+| `/ultrareview` | Hidden | [ ] |  | Start a cloud agent that finds and verifies bugs in your branch (~5-10 min, $5-$25 USD) · Runs in Claude Code on the web. See https://cod… |
+| `/update-config` | Hidden | [ ] |  | Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "wheneve… |
+| `/usage-credits` | Hidden | [ ] |  | Configure usage credits or request them from your admin when you hit a limit |
+
+### Hidden — bundled task skills (work as turns; enable on request)
+
+| Command | Status | Verified | Aliases | Description |
+|---|---|---|---|---|
+| `/artifact-capabilities` | Hidden | [ ] |  | Runtime capabilities a published Artifact page can be granted — behavior static HTML cannot provide on its own, such as the page reading… |
+| `/artifact-design` | Hidden | [ ] |  | Design guidance and fundamentals for Artifacts. |
+| `/artifact-diagramming` | Hidden | [ ] |  | Diagramming know-how for Artifacts — when a picture earns its place, how to draw one that shows the real mechanism, and the inline-SVG me… |
+| `/claude-api` | Hidden | [ ] |  | Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, mod… |
+| `/dataviz` | Hidden | [ ] |  | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML… |
+| `/design-sync` | Hidden | [ ] |  | Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or a bare pack… |
+
+### Hidden — internal / special session types
 
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
 | `/__remote-workflow` | Hidden | [ ] |  | Run the workflow script delivered in this session environment (server-launched sessions only) |
-| `/agents` | Hidden | [ ] |  | (removed) Ask Claude to create/manage subagents, or edit .claude/agents/ |
-| `/artifact-capabilities` | Hidden | [ ] |  | Runtime capabilities a published Artifact page can be granted — behavior static HTML cannot provide on its own, such as the page reading… |
-| `/artifact-design` | Hidden | [ ] |  | Design guidance and fundamentals for Artifacts. |
-| `/artifact-diagramming` | Hidden | [ ] |  | Diagramming know-how for Artifacts — when a picture earns its place, how to draw one that shows the real mechanism, and the inline-SVG me… |
-| `/auto-mode-setup` | Hidden | [ ] |  | Set up and customise auto mode — environment context, plus optional rule tweaks |
-| `/autocompact` | Hidden | [ ] |  | Configure the auto-compact window size |
-| `/batch` | Hidden | [ ] |  | Research and plan a large-scale change, then execute it in parallel across 5–30 isolated worktree agents that each open a PR. |
-| `/claude-api` | Hidden | [ ] |  | Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, mod… |
-| `/clear` | Enabled - native (IDE) | [x] | `/reset`, `/new` | Start a new session with empty context; previous session stays on disk (resumable with /resume) |
-| `/code-review` | Hidden | [ ] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs and reuse/simplification/efficiency cleanups at the give… |
-| `/color` | Hidden | [ ] |  | Set the prompt bar color for this session |
-| `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
-| `/config` | Hidden | [ ] | `/settings` | Set a setting by key |
-| `/dataviz` | Hidden | [ ] |  | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML… |
-| `/debug` | Hidden | [ ] |  | Enable debug logging for this session and help diagnose issues |
-| `/deep-research` | Hidden | [ ] |  | Deep research harness — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. (dynamic workflow) |
+| `/workflow-launch-exec` | Hidden | [ ] |  | Execute a server-launched workflow handoff (workflow_launch event sessions only) |
 | `/design` | Hidden | [ ] |  | Grant or revoke Claude agent access to your Design projects |
 | `/design-consent` | Hidden | [ ] |  | Grant Claude agent access to your Design projects |
 | `/design-revoke` | Hidden | [ ] |  | Revoke Claude agent access to your Design projects |
-| `/design-sync` | Hidden | [ ] |  | Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or a bare pack… |
-| `/doctor` | Hidden | [ ] | `/checkup` | Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics co… |
-| `/effort` | Hidden | [ ] |  | Set effort level for model usage |
-| `/extra-usage` | Hidden | [ ] |  | Renamed to /usage-credits |
-| `/fast` | Hidden | [ ] |  | Toggle fast mode (Opus 5) |
-| `/fewer-permission-prompts` | Hidden | [ ] |  | Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to… |
-| `/goal` | Hidden | [ ] |  | Set a goal — keep working until the condition is met |
-| `/heapdump` | Hidden | [ ] |  | Dump the JS heap to ~/Desktop |
-| `/import` | Hidden | [ ] |  | Import config from another AI coding agent |
-| `/init` | Hidden | [ ] |  | Initialize a new CLAUDE.md file with codebase documentation |
-| `/insights` | Hidden | [ ] |  | Generate a report analyzing your Claude Code sessions |
-| `/list-agents` | Hidden | [ ] | `/peers` | List subagents and other Claude sessions you can message |
-| `/loop` | Hidden | [ ] | `/proactive` | Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace. |
-| `/mcp` | Hidden | [ ] |  | Manage MCP servers |
-| `/model` | Hidden | [ ] |  | Set the AI model for Claude Code |
-| `/recap` | Hidden | [ ] |  | Generate a one-line session recap now |
-| `/reload-skills` | Enabled - sent to CLI | [x] |  | Pick up skills added or changed on disk during this session |
-| `/rename` | Hidden | [ ] | `/name` | Rename the current conversation |
-| `/run` | Hidden | [ ] |  | Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change… |
-| `/run-skill-generator` | Hidden | [ ] |  | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use wh… |
-| `/schedule` | Hidden | [ ] | `/routines` | Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule. |
-| `/security-review` | Hidden | [ ] |  | Complete a security review of the pending changes on the current branch |
-| `/simplify` | Hidden | [ ] |  | Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hu… |
-| `/team-onboarding` | Hidden | [ ] |  | Help teammates ramp on Claude Code with a guide from your usage |
-| `/ultrareview` | Hidden | [ ] |  | Start a cloud agent that finds and verifies bugs in your branch (~5-10 min, $5-$25 USD) · Runs in Claude Code on the web. See https://cod… |
-| `/update-config` | Hidden | [ ] |  | Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "wheneve… |
-| `/usage` | Hidden | [ ] | `/cost`, `/stats` | Show session cost, plan usage, and what's contributing to your limits |
-| `/usage-credits` | Hidden | [ ] |  | Configure usage credits or request them from your admin when you hit a limit |
-| `/verify` | Hidden | [ ] |  | Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior — drive the affected flo… |
-| `/workflow-launch-exec` | Hidden | [ ] |  | Execute a server-launched workflow handoff (workflow_launch event sessions only) |
