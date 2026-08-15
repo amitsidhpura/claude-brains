@@ -1346,10 +1346,13 @@ object SessionStore {
     // wrappers (plumbing the main agent consumes — its own replies carry the user-facing content;
     // and they must never become a session title), and collapse a
     // <command-name>/x</command-name>…<command-args>y</command-args> block into a compact "/x y".
-    private val CMD_RE = Regex(
-        "<command-name>\\s*(.*?)\\s*</command-name>.*?<command-args>\\s*(.*?)\\s*</command-args>",
-        RegexOption.DOT_MATCHES_ALL,
-    )
+    // Two wrapper shapes exist on disk (both measured 2026-08-15, CLI 2.1.228): a built-in writes
+    // name → message → args, but an arg-less CUSTOM command writes message → name with NO
+    // <command-args> tag at all. Name and args are therefore matched independently — the previous
+    // single name-then-args pattern silently missed the custom shape, and the day custom commands
+    // became sendable from the panel (3.1) the raw XML leaked into a session title.
+    private val CMD_NAME_RE = Regex("<command-name>\\s*(.*?)\\s*</command-name>", RegexOption.DOT_MATCHES_ALL)
+    private val CMD_ARGS_RE = Regex("<command-args>\\s*(.*?)\\s*</command-args>", RegexOption.DOT_MATCHES_ALL)
     private fun cleanInjected(text: String): String? {
         val t = text.trim()
         if (t.startsWith("<local-command-caveat>") || t.startsWith("<local-command-stdout>") ||
@@ -1358,9 +1361,9 @@ object SessionStore {
             // injected tag a full census of local user records found unstripped; 4 real records
             // replayed as raw XML in a blue user box
             t.startsWith("<ide_selection>")) return null
-        CMD_RE.find(t)?.let { m ->
+        CMD_NAME_RE.find(t)?.let { m ->
             val name = m.groupValues[1].trim()
-            val args = m.groupValues[2].trim()
+            val args = CMD_ARGS_RE.find(t)?.groupValues?.get(1)?.trim().orEmpty()
             return if (args.isEmpty()) name else "$name $args"
         }
         return text

@@ -2360,6 +2360,24 @@
   /* ---------- slash commands (popup) + @-mentions (legacy popup) ---------- */
   let files = [];
   let slashCommands = [];
+  let customCmds = {};   // name (lowercased) -> "project" | "user"; rebuilt at every roster store
+
+  // The CLI's only wire marker for a custom command or skill is a description SUFFIX — the entry
+  // schema ({name, description, argumentHint, aliases?}) has no type field, but every entry
+  // sourced from .claude/commands/**.md or .claude/skills/*/SKILL.md (either base, even
+  // description-less files) arrives with " (project)" or " (user)" appended. Measured 2026-08-15
+  // on CLI 2.1.228 across initialize AND commands_changed payloads: zero false positives over
+  // 107 built-in entries. Strip the suffix (renderSlash shows a badge instead) and record the
+  // source on the entry + in customCmds. Wholesale rebuild, so a command whose file was deleted
+  // loses its enablement with the same roster replace that dropped it.
+  function markCustom(items) {
+    customCmds = {};
+    items.forEach(function (c) {
+      const m = /^([\s\S]*) \((project|user)\)$/.exec(c.description || '');
+      if (m) { c.description = m[1]; c.src = m[2]; customCmds[(c.name || '').toLowerCase()] = m[2]; }
+    });
+    return items;
+  }
 
   // We drive the CLI over --input-format stream-json (headless SDK) — there is no interactive
   // terminal, so a picked command is only ever sent as a user-message text block. Three buckets:
@@ -2368,16 +2386,25 @@
   //              have no headless effect; shown greyed + disabled and refused if typed
   //  · text    — everything else (custom/project/user/plugin/MCP-prompt commands + prompt-style
   //              built-ins like /compact, /effort, /init) — the CLI expands these as a turn
-  // Enabled by ALLOWLIST, not denylist: the CLI's command list has no type field, so rather than
-  // guess which built-ins work headlessly we start with only the verified ones and add one at a
-  // time (see docs/slash-commands.md). Everything else is greyed until confirmed.
+  // BUILT-INS are enabled by ALLOWLIST, not denylist: the schema has no type field, so rather
+  // than guess which built-ins work headlessly we start with only the verified ones and add one
+  // at a time (see docs/slash-commands.md). Everything else stays hidden until confirmed.
+  // CUSTOM entries are auto-enabled by two wire signals instead (both measured, CLI 2.1.228):
+  //  · customCmds — the " (project)"/" (user)" description suffix parsed off by markCustom();
+  //    covers .claude/commands/**.md files and .claude/skills/*/SKILL.md, either base
+  //  · the mcp__ name prefix — MCP-server prompts (roster-named mcp__<server>__<prompt>)
+  // Both classes are prompt expansions the CLI performs on an ordinary turn (verified live with
+  // /dummy-cmd, 2026-08-15), which is exactly what "text" means here.
   const CMD_NATIVE  = new Set(['clear']);     // handled in the IDE, never forwarded
-  const CMD_ALLOWED = new Set(['compact']);   // forwarded to the CLI as a turn
+  const CMD_ALLOWED = new Set(['compact', 'reload-skills']);   // forwarded to the CLI as a turn
   function cmdKind(name) {
     const n = (name || '').toLowerCase();
+    // native/allowlist first: a project file named clear.md must not shadow the IDE's /clear
     if (CMD_NATIVE.has(n)) return 'native';
     if (CMD_ALLOWED.has(n)) return 'text';
-    return 'tui';   // greyed until verified — see docs/slash-commands.md
+    if (customCmds[n]) return 'text';              // project/user command file or skill
+    if (n.indexOf('mcp__') === 0) return 'text';   // MCP prompt
+    return 'tui';   // hidden until verified — see docs/slash-commands.md
   }
   // Does the command REQUIRE an argument? CLI argumentHint convention: "<x>" required, "[x]"
   // optional, "" none — but some hints read "<optional …>", so an "optional" mention (or "[…]")
@@ -2406,9 +2433,13 @@
       .map(function (x) { return x.c; }).slice(0, 40);
     if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return 0; }
     slashList.innerHTML = hits.map(function (c, i) {
+      // Source badge: markCustom() recorded src for suffix-marked entries; MCP prompts are
+      // recognisable by name alone. Built-ins get none — quiet is the default.
+      const src = c.src || ((c.name || '').indexOf('mcp__') === 0 ? 'mcp' : null);
       return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '"' +
         (cmdNeedsArg(c) ? ' data-needsarg="1"' : '') + '>' +
-        '<div class="pi-body"><div class="pi-title">/' + esc(c.name) + '</div>' +
+        '<div class="pi-body"><div class="pi-title">/' + esc(c.name) +
+        (src ? '<span class="pi-src">' + esc(src) + '</span>' : '') + '</div>' +
         (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
     }).join('');
     return hits.length;
@@ -2723,7 +2754,7 @@
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
       case 'files':              files = ev.items || []; return;
-      case '__commands':         slashCommands = ev.items || []; return;
+      case '__commands':         slashCommands = markCustom(ev.items || []); return;
       case '__customModels':
         customModels = ev.items || [];   // pushed before __models so a restored custom selection resolves
         renderModels();
@@ -2866,9 +2897,9 @@
           // unconditionally — unlike the init seed, which only fills an empty list. The menu's
           // allowlist (cmdKind) filters at render time, so an updated roster passes the same gate.
           if (Array.isArray(ev.commands)) {
-            slashCommands = ev.commands.map(function (c) {
+            slashCommands = markCustom(ev.commands.map(function (c) {
               return (typeof c === 'string') ? { name: c } : c;
-            });
+            }));
           }
         }
         return;

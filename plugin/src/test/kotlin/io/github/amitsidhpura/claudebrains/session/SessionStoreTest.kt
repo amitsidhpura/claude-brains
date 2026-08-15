@@ -1114,6 +1114,33 @@ class SessionStoreTest {
         }
     }
 
+    /**
+     * A CUSTOM slash command sent with no arguments writes a DIFFERENT wrapper shape than a
+     * built-in (measured 2026-08-15, CLI 2.1.228): `<command-message>x</command-message>\n
+     * <command-name>/x</command-name>` — message BEFORE name, and NO `<command-args>` tag at all.
+     * The one-pattern regex that required name-then-args silently missed it and the session title
+     * became raw XML (seen live the day custom commands were enabled in the menu, 3.1).
+     */
+    @Test
+    fun `title collapses the arg-less custom-command wrapper shape`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-08-15T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"<command-message>dummy-cmd</command-message>\n<command-name>/dummy-cmd</command-name>"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-cmd", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "cmd.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+            val info = SessionStore.list(CWD).first { it.id == "cmd" }
+            assertEquals("/dummy-cmd", info.title, "arg-less custom wrapper should collapse to the command name")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     @Test
     fun `list reports size on disk and total output tokens`() {
         val info = SessionStore.list(CWD).first { it.id == ID }

@@ -1006,6 +1006,9 @@ blockquote > *:last-child { margin-bottom: 0; }
 .pi-body { flex: 1; min-width: 0; }
 .pi-title { color: var(--fg); font-size: 13px; }
 .pi-desc { color: var(--user-muted); font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Source badge on custom slash commands ("project" / "user" / "mcp") — the TUI's "(project)"
+   marker, worn as muted metadata after the name instead of inside the description. */
+.pi-src { color: var(--user-muted); font-size: 10px; margin-left: 8px; }
 .pi-check { color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
 .pi-check svg { width: 16px; height: 16px; }
 .popup-item.on .pi-check { visibility: visible; }

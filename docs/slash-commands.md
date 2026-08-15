@@ -8,8 +8,12 @@ turn. Consequences:
   custom/project commands, and prompt-style built-ins like `/compact`).
 - **Enabled - native (IDE)**: handled by the plugin itself (`/clear` -> new conversation),
   never forwarded.
-- **Hidden**: not shown in the slash menu at all, and refused if typed. Either a
-  local/display/settings/harness command with no headless effect, or simply **not yet verified**.
+- **Enabled - custom (automatic)**: project/user command files, project/user skills, and
+  MCP-server prompts — detected from the wire (below), shown with a muted source badge
+  ("project" / "user" / "mcp"), and sent as a turn. Never hand-listed.
+- **Hidden**: not shown in the slash menu at all, and refused if typed. A built-in that is
+  either local/display/settings/harness-only with no headless effect, or simply **not yet
+  verified**.
 
 Picking a command from the menu **runs it immediately** (a command menu should act, not just
 type); to pass an argument, type the command by hand and the menu autocompletes as you go.
@@ -27,56 +31,93 @@ sends `/effort <level>` directly) - so slash entries would be redundant. The sli
 `/effort` turn was verified in `runIde` 2026-07-30; a resumed session shows the `/effort` turn
 (the transcript records it and replay doesn't filter) - accepted as an honest audit trail.
 
-The command list carries only `{name, description, argumentHint}` - **no type field** - so the
-enabled set is a hand-maintained allowlist in `chat.html` (`CMD_NATIVE` + `CMD_ALLOWED`). We
-start minimal and reveal one command at a time as each is verified in `runIde`; only enabled
-commands appear in the menu.
+## How custom commands are detected (measured 2026-08-15, CLI 2.1.228)
 
-**To enable a command:** verify it works, then tell Claude the name - it is added to the
-allowlist (`CMD_ALLOWED` for turn commands, `CMD_NATIVE` for ones needing IDE handling) and
-starts appearing in the menu.
+The command entry schema is `{name, description, argumentHint, aliases?}` - still **no type
+field**. But every entry sourced from `.claude/commands/**.md` or `.claude/skills/*/SKILL.md`
+(project or user base, even a description-less file) arrives with its description suffixed
+**" (project)"** or **" (user)"** - in the initialize response AND in `commands_changed`
+payloads, with zero false positives across 107 built-in entries in two captures. `markCustom()`
+in chat.html strips that suffix into a source badge and auto-enables the command; MCP prompts
+are recognised by their `mcp__<server>__<prompt>` name instead. Nested command files name as
+`sub:nested-cmd` (read off the wire). A custom file named like a built-in cannot shadow
+`/clear` or the allowlist - `cmdKind` checks native/allowlist first.
 
-Roster captured from the CLI `initialize` response (39 commands). Only the 2
-marked Enabled are visible in the menu today; the rest are hidden pending verification.
+Two consequences worth knowing:
+- **The CLI watches the commands dir itself.** A bare file drop pushes `commands_changed`
+  ~2.5s later and a deletion ~1s later, with NO turn in between (both measured headless
+  2026-08-15 with a 45s quiet wait) - the menu follows automatically. An earlier same-day
+  probe concluded "nothing fires on a file drop"; that was a measurement error (the
+  `/reload-skills` turn was sent inside the watcher's debounce window, so its push and the
+  watcher's were conflated). **The watch covers the PROJECT dir only**: a file added under
+  `~/.claude/commands/` produced no push (user manual pass, 2026-08-15) — user-level changes
+  need `/reload-skills` (headless-safe, verified, Enabled), which also remains the manual
+  re-sync lever if a project watcher event is ever missed.
+- **`aliases` is display-only today.** The menu filter matches `name` and `description` only;
+  typing `/review` will not surface `/code-review`. Known non-feature, not a bug.
 
-| Command | Status | Verified | Description |
-|---|---|---|---|
-| `/__remote-workflow` | Hidden | [ ] | Run the workflow script delivered in this session environment (server-launched sessions only) |
-| `/agents` | Hidden | [ ] | (removed) Ask Claude to create/manage subagents, or edit .claude/agents/ |
-| `/batch` | Hidden | [ ] | Research and plan a large-scale change, then execute it in parallel across 5–30 isolated worktree agents that each open a PR. |
-| `/claude-api` | Hidden | [ ] | Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, model migration. TRIGGER — read BEFORE opening the target file; don't skip because it "looks like a one-liner" — whenever: the prompt names Claude/Anthropic in any form (Claude, Anthropic, Fable, Opus, Sonnet, Haiku, `anthropic`, `@anthropic-ai`, `claude-*`, `us.anthropic.*`, `[1m]`); the user asks about an LLM (pricing/model choice/limits/caching) — never answer from memory; OR the task is LLM-shaped with provider unstated (agent/MCP/tool-definition/multi-agent/RAG/LLM-judge/computer-use; generate/summarize/extract/classify/rewrite/converse over NL; debugging refusals/cutoffs/streaming/tool-calls/tokens). SKIP only when another provider is being worked on (overrides all triggers): OpenAI/GPT/Gemini/Llama/Mistral/Cohere/Ollama named in the query; OR `grep -rE 'openai\|langchain_openai\|google.generativeai\|genai\|mistralai\|cohere\|ollama'` over the project hits (run this grep FIRST if no provider named — don't Read the file). |
-| `/clear` | Enabled - native (IDE) | [x] | Start a new session with empty context; previous session stays on disk (resumable with /resume) |
-| `/code-review` | Hidden | [ ] | Review the current diff for correctness bugs and reuse/simplification/efficiency cleanups at the given effort level (low/medium: fewer, high-confidence findings; high→max: broader coverage, may include uncertain findings). Pass --comment to post findings as inline PR comments, or --fix to apply the findings to the working tree after the review. |
-| `/color` | Hidden | [ ] | Set the prompt bar color for this session |
-| `/compact` | Enabled - sent to CLI | [x] | Free up context by summarizing the conversation so far |
-| `/config` | Hidden | [ ] | Set a setting by key |
-| `/context` | Hidden | [ ] | Show current context usage |
-| `/dataviz` | Hidden | [ ] | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML or React artifact, inline SVG, plotting code in any library (matplotlib, plotly, d3, Recharts, …), an image/PNG you will render and upload, or a chart shared into Slack. Read it BEFORE writing the first line of chart code, choosing chart colors, building a stat tile / meter / KPI row, or laying out a dashboard. Produces visualizations that read as one system — elegant, accessible, consistent in light and dark — using a brand-neutral placeholder palette you swap for your own. Teaches a design-system-agnostic method: a form heuristic, a color formula with a runnable validator, mark specs, and interaction rules. A validated default palette is documented in `references/palette.md` — swap that file's values for your brand's. Triggers on: "chart", "graph", "plot", "data viz", "visualization", "dashboard", "analytics", "visualize data", "categorical colors", "sequential / diverging palette", "stat tile", "sparkline", "heatmap", "legend", "axis", "tooltip", "chart colors", "color by series". |
-| `/debug` | Hidden | [ ] | Enable debug logging for this session and help diagnose issues |
-| `/deep-research` | Hidden | [ ] | Deep research harness — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. (dynamic workflow) |
-| `/doctor` | Hidden | [ ] | Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics cover — from local data (duplicate or leftover installs, PATH, unparseable settings files, broken or colliding agent definitions); find unused skills, MCP servers, and plugins versus their context cost and disable dead weight; deduplicate local CLAUDE.md files against checked-in ones; trim checked-in CLAUDE.md files by cutting content a session could derive from the codebase (directory layouts, tech-stack lists, architecture overviews) while keeping gotchas, rationale, and non-standard conventions; migrate always-loaded CLAUDE.md guidance into lazy skills and nested CLAUDE.md files; flag slow hooks and context-heavy extensions; check the installed version is current; make auto mode the default permission mode; and pre-approve frequently denied read-only commands. Use when the user asks for a doctor run, checkup, audit, tune-up, or cleanup of their Claude Code setup or configuration. |
-| `/effort` | Hidden | [ ] | Set effort level for model usage |
-| `/extra-usage` | Hidden | [ ] | Renamed to /usage-credits |
-| `/fast` | Hidden | [ ] | Toggle fast mode (Opus 5) |
-| `/fewer-permission-prompts` | Hidden | [ ] | Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to reduce permission prompts. |
-| `/goal` | Hidden | [ ] | Set a goal — keep working until the condition is met |
-| `/heapdump` | Hidden | [ ] | Dump the JS heap to ~/Desktop |
-| `/init` | Hidden | [ ] | Initialize a new CLAUDE.md file with codebase documentation |
-| `/insights` | Hidden | [ ] | Generate a report analyzing your Claude Code sessions |
-| `/loop` | Hidden | [ ] | Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo, defaults to 10m) |
-| `/mcp` | Hidden | [ ] | Manage MCP servers |
-| `/model` | Hidden | [ ] | Set the AI model for Claude Code |
-| `/recap` | Hidden | [ ] | Generate a one-line session recap now |
-| `/reload-skills` | Hidden | [ ] | Pick up skills added or changed on disk during this session |
-| `/rename` | Hidden | [ ] | Rename the current conversation |
-| `/review` | Hidden | [ ] | Review a GitHub pull request; for your working diff use /code-review |
-| `/run` | Hidden | [ ] | Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change works in the real app (not just tests). First looks for a project skill that already covers launching the app; otherwise falls back to built-in patterns per project type (CLI, server, TUI, Electron, browser-driven, library). |
-| `/run-skill-generator` | Hidden | [ ] | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use when the user asks to set up the project, get it running, write run instructions, or verify build/run steps work from a clean environment. |
-| `/security-review` | Hidden | [ ] | Complete a security review of the pending changes on the current branch |
-| `/simplify` | Hidden | [ ] | Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hunt for bugs; use /code-review for that. |
-| `/team-onboarding` | Hidden | [ ] | Help teammates ramp on Claude Code with a guide from your usage |
-| `/update-config` | Hidden | [ ] | Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "whenever X", "before/after X") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions ("allow X", "add permission", "move permission to"), env vars ("set X=Y"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: "allow npm commands", "add bq permission to global settings", "move permission to user settings", "set DEBUG=true", "when claude stops show X". For simple settings like theme/model, suggest the /config command. |
-| `/usage` | Hidden | [ ] | Show session cost, plan usage, and what's contributing to your limits |
-| `/usage-credits` | Hidden | [ ] | Configure usage credits or request them from your admin when you hit a limit |
-| `/verify` | Hidden | [ ] | Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior — drive the affected flow, not just tests or typecheck. Run before committing nontrivial changes; bootstraps this repo's project verify skill if none exists yet. Don't invoke it on a diff that only touches tests, docs, or other code with no runtime surface to drive (a change to product source always has one) — there's nothing to observe. |
-| `/workflow-launch-exec` | Hidden | [ ] | Execute a server-launched workflow handoff (workflow_launch event sessions only) |
+BUILT-INS remain a hand-maintained allowlist in `chat.html` (`CMD_NATIVE` + `CMD_ALLOWED`):
+we start minimal and reveal one command at a time as each is verified in `runIde`.
+**To enable a built-in:** verify it works, then tell Claude the name - it is added to the
+allowlist and starts appearing in the menu. Custom commands, skills and MCP prompts need none
+of this.
+
+Roster captured from the CLI `initialize` response 2026-08-15 (CLI 2.1.228, 50 built-in/bundled
+commands; suffix-marked custom entries are excluded - they are auto-enabled, not listed).
+Descriptions over 140 chars are truncated with `…`. Only the 3 marked Enabled are visible in
+the menu today; the rest are hidden pending verification. Note: a project skill can SHADOW a
+built-in name - this repo's `/context` skill replaces the built-in "Show current context
+usage" entry in its own roster, marked "(project)" like any custom entry.
+
+| Command | Status | Verified | Aliases | Description |
+|---|---|---|---|---|
+| `/__remote-workflow` | Hidden | [ ] |  | Run the workflow script delivered in this session environment (server-launched sessions only) |
+| `/agents` | Hidden | [ ] |  | (removed) Ask Claude to create/manage subagents, or edit .claude/agents/ |
+| `/artifact-capabilities` | Hidden | [ ] |  | Runtime capabilities a published Artifact page can be granted — behavior static HTML cannot provide on its own, such as the page reading… |
+| `/artifact-design` | Hidden | [ ] |  | Design guidance and fundamentals for Artifacts. |
+| `/artifact-diagramming` | Hidden | [ ] |  | Diagramming know-how for Artifacts — when a picture earns its place, how to draw one that shows the real mechanism, and the inline-SVG me… |
+| `/auto-mode-setup` | Hidden | [ ] |  | Set up and customise auto mode — environment context, plus optional rule tweaks |
+| `/autocompact` | Hidden | [ ] |  | Configure the auto-compact window size |
+| `/batch` | Hidden | [ ] |  | Research and plan a large-scale change, then execute it in parallel across 5–30 isolated worktree agents that each open a PR. |
+| `/claude-api` | Hidden | [ ] |  | Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, mod… |
+| `/clear` | Enabled - native (IDE) | [x] | `/reset`, `/new` | Start a new session with empty context; previous session stays on disk (resumable with /resume) |
+| `/code-review` | Hidden | [ ] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs and reuse/simplification/efficiency cleanups at the give… |
+| `/color` | Hidden | [ ] |  | Set the prompt bar color for this session |
+| `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
+| `/config` | Hidden | [ ] | `/settings` | Set a setting by key |
+| `/dataviz` | Hidden | [ ] |  | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML… |
+| `/debug` | Hidden | [ ] |  | Enable debug logging for this session and help diagnose issues |
+| `/deep-research` | Hidden | [ ] |  | Deep research harness — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. (dynamic workflow) |
+| `/design` | Hidden | [ ] |  | Grant or revoke Claude agent access to your Design projects |
+| `/design-consent` | Hidden | [ ] |  | Grant Claude agent access to your Design projects |
+| `/design-revoke` | Hidden | [ ] |  | Revoke Claude agent access to your Design projects |
+| `/design-sync` | Hidden | [ ] |  | Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or a bare pack… |
+| `/doctor` | Hidden | [ ] | `/checkup` | Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics co… |
+| `/effort` | Hidden | [ ] |  | Set effort level for model usage |
+| `/extra-usage` | Hidden | [ ] |  | Renamed to /usage-credits |
+| `/fast` | Hidden | [ ] |  | Toggle fast mode (Opus 5) |
+| `/fewer-permission-prompts` | Hidden | [ ] |  | Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to… |
+| `/goal` | Hidden | [ ] |  | Set a goal — keep working until the condition is met |
+| `/heapdump` | Hidden | [ ] |  | Dump the JS heap to ~/Desktop |
+| `/import` | Hidden | [ ] |  | Import config from another AI coding agent |
+| `/init` | Hidden | [ ] |  | Initialize a new CLAUDE.md file with codebase documentation |
+| `/insights` | Hidden | [ ] |  | Generate a report analyzing your Claude Code sessions |
+| `/list-agents` | Hidden | [ ] | `/peers` | List subagents and other Claude sessions you can message |
+| `/loop` | Hidden | [ ] | `/proactive` | Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace. |
+| `/mcp` | Hidden | [ ] |  | Manage MCP servers |
+| `/model` | Hidden | [ ] |  | Set the AI model for Claude Code |
+| `/recap` | Hidden | [ ] |  | Generate a one-line session recap now |
+| `/reload-skills` | Enabled - sent to CLI | [x] |  | Pick up skills added or changed on disk during this session |
+| `/rename` | Hidden | [ ] | `/name` | Rename the current conversation |
+| `/run` | Hidden | [ ] |  | Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change… |
+| `/run-skill-generator` | Hidden | [ ] |  | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use wh… |
+| `/schedule` | Hidden | [ ] | `/routines` | Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule. |
+| `/security-review` | Hidden | [ ] |  | Complete a security review of the pending changes on the current branch |
+| `/simplify` | Hidden | [ ] |  | Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hu… |
+| `/team-onboarding` | Hidden | [ ] |  | Help teammates ramp on Claude Code with a guide from your usage |
+| `/ultrareview` | Hidden | [ ] |  | Start a cloud agent that finds and verifies bugs in your branch (~5-10 min, $5-$25 USD) · Runs in Claude Code on the web. See https://cod… |
+| `/update-config` | Hidden | [ ] |  | Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "wheneve… |
+| `/usage` | Hidden | [ ] | `/cost`, `/stats` | Show session cost, plan usage, and what's contributing to your limits |
+| `/usage-credits` | Hidden | [ ] |  | Configure usage credits or request them from your admin when you hit a limit |
+| `/verify` | Hidden | [ ] |  | Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior — drive the affected flo… |
+| `/workflow-launch-exec` | Hidden | [ ] |  | Execute a server-launched workflow handoff (workflow_launch event sessions only) |

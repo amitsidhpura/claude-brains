@@ -1,0 +1,71 @@
+{
+  "item": "3.1 + 9.10",
+  "branch": "custom-command detection (description-suffix parse) / source badges / commands_changed enablement",
+  "provenance": "Entry shapes captured 2026-08-15 from CLI 2.1.228 initialize responses in this repo and ~/Sites/claude-brains-testing: schema {name, description, argumentHint, aliases?} with NO type field; every entry sourced from .claude/commands/**.md or .claude/skills/*/SKILL.md (either base, even description-less files) carries a description suffix ' (project)' or ' (user)' — zero false positives across 107 built-in entries in two captures. Nested command files name as 'sub:nested-cmd' (measured off the wire). commands_changed was measured live (probe 0c): /reload-skills emits the FULL roster with the same suffixes, carrying a command file dropped mid-session. __commands is a PLUGIN-INTERNAL frame (ChatPanel's initialize relay); assertions are kept to what the renderer must do with it. NEGATIVE CONTROL RUN 2026-08-15 against the storage-only build (markCustom landed, cmdKind/renderSlash untouched): exactly the 8 assertions marked DISCRIMINATING failed, everything else green.",
+  "steps": [
+    {
+      "note": "initialize roster arrives: custom + mcp + allowlisted render, unverified built-ins stay hidden, suffixes stripped into src",
+      "frames": [
+        {"type": "__commands", "items": [
+          {"name": "compact", "description": "Free up context by summarizing the conversation so far", "argumentHint": "<optional custom summarization instructions>"},
+          {"name": "clear", "description": "Start a new session with empty context", "argumentHint": "[name]", "aliases": ["reset", "new"]},
+          {"name": "login", "description": "Sign in to your Anthropic account", "argumentHint": ""},
+          {"name": "dummy-cmd", "description": "Dummy command for manual-test 9.10 (commands_changed roster refresh) (project)", "argumentHint": ""},
+          {"name": "user-probe", "description": "User-level probe command (user)", "argumentHint": ""},
+          {"name": "mcp__srv__prompt", "description": "A prompt exposed by an MCP server", "argumentHint": ""}
+        ]}
+      ],
+      "expect": [
+        {"js": "slashCommands.length", "equals": 6, "why": "roster stored wholesale"},
+        {"js": "customCmds['dummy-cmd']", "equals": "project", "why": "suffix parsed into the enablement map"},
+        {"js": "customCmds['user-probe']", "equals": "user", "why": "user suffix parsed too"},
+        {"js": "Object.keys(customCmds).length", "equals": 2, "why": "built-ins and mcp entries take no mark"},
+        {"js": "slashCommands.filter(c => c.name === 'dummy-cmd')[0].description", "equals": "Dummy command for manual-test 9.10 (commands_changed roster refresh)", "why": "suffix STRIPPED from display text (only the trailing marker; inner parens survive)"},
+        {"js": "slashCommands.filter(c => c.name === 'dummy-cmd')[0].src", "equals": "project", "why": "source recorded on the entry for the badge"},
+        {"js": "cmdKind('login')", "equals": "tui", "why": "GUARD: unverified built-in still hidden — green in both phases"},
+        {"js": "cmdKind('dummy-cmd')", "equals": "text", "why": "DISCRIMINATING: custom command is sendable"},
+        {"js": "cmdKind('mcp__srv__prompt')", "equals": "text", "why": "DISCRIMINATING: mcp__ prefix is sendable without any suffix"},
+        {"js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length", "equals": 5, "why": "DISCRIMINATING: compact+clear+dummy-cmd+user-probe+mcp prompt; login hidden (is 2 pre-fix)"},
+        {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/dummy-cmd\"] .pi-src') || {}).textContent", "equals": "project", "why": "DISCRIMINATING: project badge"},
+        {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/user-probe\"] .pi-src') || {}).textContent", "equals": "user", "why": "DISCRIMINATING: user badge"},
+        {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/mcp__srv__prompt\"] .pi-src') || {}).textContent", "equals": "mcp", "why": "DISCRIMINATING: mcp badge derived from the name, no scan entry"},
+        {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/compact\"] .pi-src') || {textContent: null}).textContent", "equals": null, "why": "GUARD: built-ins wear no badge — green in both phases"}
+      ]
+    },
+    {
+      "note": "9.10: commands_changed REPLACES the roster and the enablement map in one move — a mid-session command becomes usable, a deleted one stops being usable",
+      "frames": [
+        {"type": "system", "subtype": "commands_changed",
+         "commands": [
+           {"name": "compact", "description": "Free up context by summarizing the conversation so far", "argumentHint": "<optional custom summarization instructions>"},
+           {"name": "late-cmd", "description": "Late-discovered probe (project)", "argumentHint": ""}
+         ]}
+      ],
+      "expect": [
+        {"js": "slashCommands.length", "equals": 2, "why": "REPLACE, item-36 contract"},
+        {"js": "customCmds['late-cmd']", "equals": "project", "why": "suffix parsed from the commands_changed payload itself — no side channel"},
+        {"js": "customCmds['dummy-cmd']", "equals": null, "why": "wholesale rebuild: the dropped command lost its enablement with the roster that dropped it"},
+        {"js": "cmdKind('dummy-cmd')", "equals": "tui", "why": "GUARD: deleted command refused again if typed — pins the replace contract, green in both phases"},
+        {"js": "cmdKind('late-cmd')", "equals": "text", "why": "DISCRIMINATING: 9.10's 'become usable' half"},
+        {"js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length", "equals": 2, "why": "DISCRIMINATING: compact + late-cmd (is 1 pre-fix)"}
+      ]
+    },
+    {
+      "note": "bare-string entries (normalised to {name}) and an empty roster clear the map without throwing",
+      "frames": [{"type": "system", "subtype": "commands_changed", "commands": ["compact", "clear"]}],
+      "expect": [
+        {"js": "slashCommands.length", "equals": 2, "why": "string form still normalises (item-36 behaviour intact)"},
+        {"js": "Object.keys(customCmds).length", "equals": 0, "why": "no descriptions, no marks — map rebuilt empty"},
+        {"js": "cmdKind('late-cmd')", "equals": "tui", "why": "enablement gone with the map"}
+      ]
+    },
+    {
+      "note": "an empty roster is honoured end to end",
+      "frames": [{"type": "system", "subtype": "commands_changed", "commands": []}],
+      "expect": [
+        {"js": "slashCommands.length", "equals": 0, "why": "empty roster honoured"},
+        {"js": "Object.keys(customCmds).length", "equals": 0, "why": "map empty too"}
+      ]
+    }
+  ]
+}

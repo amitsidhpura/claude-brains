@@ -86,6 +86,9 @@ Work order suggestion in **§ Milestones** at the bottom.
 - [x] ✅ **Slash-command autocomplete menu** (type `/`, keyboard nav, click/Enter to insert)
 - [x] ✅ Commands fetched at startup via the `initialize` control request (before any message)
 - [x] ✅ Command **descriptions** shown in the menu (`/name — description`)
+- [x] ✅ **Custom commands, skills and MCP prompts auto-enabled** with a muted source badge
+      ("project"/"user"/"mcp") — detected via the CLI's description suffix, and refreshed
+      mid-session by `/reload-skills` → `commands_changed` (2026-08-15; docs/slash-commands.md)
 - [x] ✅ Commands execute in stream-json mode (verified `/context`); output renders as markdown
 - [x] ✅ `/clear` handled natively (→ new conversation, verified in `runIde` 2026-07-30);
       `/login` deferred with the settings/non-terminal-login batch

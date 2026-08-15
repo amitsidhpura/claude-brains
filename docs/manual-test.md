@@ -154,12 +154,30 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 
 - [x] 3.1 `/` menu shows only the allowlist (/compact, /clear + custom commands), with descriptions
 
-      **ISSUE (2026-08-08):** the "+ custom commands" half fails — a project command
-      (`.claude/commands/dummy-cmd.md`) shows in the terminal TUI as "/dummy-cmd (project)"
-      but never in the panel menu: `cmdKind` (chat.html:2034) has no custom-command
-      detection, so everything outside {clear, compact} is greyed as 'tui'. Ticked
-      originally with no custom command present to expose this. Possible lever: the
-      "(project)"/"(user)" marker the TUI shows for custom commands.
+      **RESOLVED (2026-08-15) — fixed:** the lever guessed at below turned out to be real wire
+      data: the CLI suffixes every custom entry's description with " (project)"/" (user)"
+      (measured on 2.1.228, zero false positives across 107 built-ins in two captures).
+      `markCustom()` in chat.html strips the suffix into a source badge and `cmdKind` returns
+      'text' for marked entries and `mcp__`-named prompts; built-ins stay on the allowlist,
+      checked first so a custom `clear.md` cannot shadow the IDE's /clear. Verified in runIde
+      on ~/Sites/claude-brains-testing: /dummy-cmd [project], /sub:nested-cmd [project] (nested
+      = ":" join, matches the TUI), /user-probe [user], /skill-probe [user] all render with
+      badges; picking /dummy-cmd runs it and the CLI expands it ("dummy command executed");
+      /login still refused; the roster survives a webview reload (seedUi replay). A custom
+      command with `argument-hint: <name>` behaves like a built-in's required arg (user pass,
+      2026-08-15): menu pick inserts `/greet ` and waits, and the CLI substitutes $ARGUMENTS
+      ("/greet Amit" → "greetings, Amit"). Fixture 46
+      (25 assertions, negative control RUN: exactly the 8 discriminating assertions red on the
+      storage-only build). Original ISSUE (2026-08-08) kept for the record: `cmdKind` had no
+      custom-command detection, so everything outside {clear, compact} was hidden as 'tui';
+      ticked originally with no custom command present to expose this.
+
+      **Adjacent defect found by the fix's own screenshot and fixed same day:** a custom
+      command as a session's FIRST message leaked raw wrapper XML into the session title —
+      arg-less custom commands write `<command-message>…</command-message>\n<command-name>…`
+      (no `<command-args>` tag, message first), a second wrapper shape the one-pattern
+      `CMD_RE` never matched. `cleanInjected` now matches name and args independently;
+      SessionStoreTest covers the shape (test written first, failed pre-fix).
 - [x] 3.2 A TUI-only command typed by hand (e.g. /login) is refused with a status line, not sent
 - [x] 3.3 /clear wipes the view and starts fresh; the old session is still in history and resumable
 - [x] 3.4 /compact runs: "Compacting…" working verb, then a compaction marker with folded summary,
@@ -556,13 +574,22 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 - [x] 9.9 Editing a file yourself while Claude also edits it → the tool line notes the file
       changed underneath, not a bare ✓ Applied **(hard to trigger)**
 - [x] 9.10 Commands discovered mid-session (commands_changed) refresh the / menu roster
-      **(hard to trigger)**
 
-      **ISSUE (2026-08-08):** attempted via dropping `.claude/commands/dummy-cmd.md` into a
-      live session — no roster change observed, and the check is currently unobservable
-      anyway because custom commands never render in the menu at all (see the 3.1 issue:
-      `cmdKind` has no custom-command detection). Re-test after fixing 3.1; the fixture file
-      is left in place for that.
+      **RESOLVED (2026-08-15) — fixed:** the CLI (2.1.228) WATCHES the commands dir and pushes
+      `commands_changed` on its own — a bare file drop lands ~2.5s later and a deletion ~1s
+      later with no turn in between (measured headless, 45s quiet wait), so the item is no
+      longer "hard to trigger" and needs no manual lever at all. `/reload-skills` (headless-
+      safe, now Enabled) stays as the manual re-sync fallback. Verified in the user's own
+      manual pass: a dropped `fresh-cmd.md` appeared in the menu badged "project" WITHOUT
+      running `/reload-skills`, and its deletion removed it the same way — but the watch is
+      PROJECT-dir only: a `~/.claude/commands/` addition produced no push and needed
+      `/reload-skills` (same pass, "user" badge correct once seen). The payload carries the
+      same description suffixes as
+      initialize, so the roster REPLACE alone re-syncs enablement — no side channel.
+      Two prior observations corrected: the 2026-08-08 "file drop produced no roster change"
+      (also unobservable then behind 3.1), and a same-day 2026-08-15 probe that concluded
+      "nothing fires on a file drop" because it sent `/reload-skills` inside the watcher's
+      debounce window and conflated the two pushes.
 
 ## 10. IDE bridge
 
