@@ -254,18 +254,43 @@ class ClaudeCli(
      * Answer a can_use_tool request. allow=true applies the tool; false rejects it.
      * [updatedPermissions] optionally carries the accepted permission suggestion(s), which the CLI
      * persists (session or settings file, per each entry's `destination`) so it stops asking.
+     *
+     * [feedback] is the user's typed reason (the plan card's input). On deny it IS the message —
+     * probed 2.1.233: the deny message is delivered to the model verbatim as the tool_result, so
+     * the CLI's own "the user said" branch fires and it revises instead of asking. On allow it is
+     * APPENDED TO THE APPROVED PLAN via `updatedInput` (the terminal's ctrl+g edit path): the
+     * ExitPlanMode tool_result echoes the approved plan, so the model reads the note in the same
+     * message as the approval, before its first implementation call — the terminal's own
+     * shift+tab does the equivalent, pushing acceptFeedback as an extra text block on that
+     * tool_result. Two dead ends, both probed on 2.1.233: a `feedback` field on the allow
+     * response is silently dropped, and a user message steered in via stdin is only read at the
+     * NEXT model call — when the model starts implementing immediately, the first tool call wins
+     * and the note arrives after it (observed live 2026-08-16).
      */
-    fun respondPermission(requestId: String, allow: Boolean, input: JsonObject, updatedPermissions: JsonArray? = null) {
+    fun respondPermission(
+        requestId: String, allow: Boolean, input: JsonObject,
+        updatedPermissions: JsonArray? = null, feedback: String? = null,
+    ) {
         val response = if (allow) {
+            // Approve-with-notes: the note becomes part of the approved plan (and of the plan
+            // file the CLI writes), under the shared marker heading SessionStore parses back out.
+            val finalInput = if (!feedback.isNullOrBlank() && input["plan"] != null) {
+                JsonObject(input.toMutableMap().apply {
+                    put("plan", kotlinx.serialization.json.JsonPrimitive(
+                        (input["plan"]?.jsonPrimitive?.content ?: "") +
+                            io.github.amitsidhpura.claudebrains.RenderLimits.PLAN_NOTES_MARKER + feedback))
+                })
+            } else input
             buildJsonObject {
                 put("behavior", "allow")
-                put("updatedInput", input)
+                put("updatedInput", finalInput)
                 if (updatedPermissions != null) put("updatedPermissions", updatedPermissions)
             }
         } else {
             buildJsonObject {
                 put("behavior", "deny")
-                put("message", "User rejected the change in the IDE")
+                put("message", feedback?.takeIf { it.isNotBlank() }
+                    ?: io.github.amitsidhpura.claudebrains.RenderLimits.REJECT_MESSAGE)
             }
         }
         writeControlResponse(requestId, response)

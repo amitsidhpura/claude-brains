@@ -289,7 +289,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * control_response; the loser gets `false` and must not answer again. This also stops a
      * response for an id the CLI never asked about (or already got) from reaching stdin.
      */
-    fun respondPermission(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList()): Boolean {
+    fun respondPermission(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList(), feedback: String? = null): Boolean {
         val input = pendingPermissions.remove(requestId) ?: return false
         val suggestions = pendingSuggestions.remove(requestId)
         val picked = mutableListOf<JsonElement>()
@@ -317,7 +317,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         }
         val chosen = if (picked.isEmpty()) null
         else kotlinx.serialization.json.buildJsonArray { picked.forEach { add(it) } }
-        cli?.respondPermission(requestId, allow, input, chosen)
+        cli?.respondPermission(requestId, allow, input, chosen, feedback)
         return true
     }
 

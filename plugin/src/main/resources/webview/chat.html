@@ -646,9 +646,12 @@
 
   /* ---------- JS -> Kotlin bridge ---------- */
   function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
-  window.respondPermission = function (id, allow, suggIdxs) {
+  window.respondPermission = function (id, allow, suggIdxs, text) {
+    // text: the plan card's typed feedback — rides EVERY decision (deny → the message field,
+    // allow → steered in right after the response). Empty string keeps today's behavior.
     bridge({ kind: 'perm', id: id, allow: allow ? 'true' : 'false',
-             sugg: (suggIdxs && suggIdxs.length) ? suggIdxs.join(',') : '-1' });
+             sugg: (suggIdxs && suggIdxs.length) ? suggIdxs.join(',') : '-1',
+             text: text || '' });
   };
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */
@@ -803,11 +806,30 @@
   syncModeUI();
   // The CLI is the authority on the mode: __mode seeds the persisted choice at startup, and
   // system/init + system/status broadcast every change — including ones the CLI makes itself
-  // (approving a plan drops it back to default). Without this the chip lies.
+  // (approving a plan RESTORES prePlanMode, the mode from before plan mode was entered, falling
+  // back to default when none was recorded or the restored mode is gated — 2.1.233; older CLIs
+  // always dropped to default). Without this the chip lies.
+  // A plan-card mode row cannot switch modes immediately: the CLI restores prePlanMode when the
+  // approved ExitPlanMode executes, which is always AFTER our set_permission_mode arrives — the
+  // restore clobbered an immediate switch every time (measured live 2026-08-16). So the row
+  // parks the wish here, and the CLI's own post-approval broadcast (plan → X is always a change,
+  // so it always fires) is what sends it — after the restore, so it sticks, and before the first
+  // implementation edit, so it covers the turn it was chosen for.
+  let pendingPlanMode = null;
   function applyCliMode(m) {
-    if (!m || m === currentMode) return;
-    if (!modeItemsEl.querySelector('.popup-item[data-v="' + m + '"]')) return; // unknown mode: keep chip
-    currentMode = m; syncModeUI();
+    // 'default' is the CLI's internal name for Manual ('manual' merely replaced it as the
+    // ADVERTISED name) — and it is what the plan-exit restore broadcasts (measured 2026-08-16:
+    // manual → plan → approve broadcast permissionMode='default'). Without the alias the
+    // unknown-mode guard below dropped it and the chip stayed on Plan while the real mode was
+    // manual — the exact lie the guard exists to prevent.
+    if (m === 'default') m = 'manual';
+    if (m && m !== currentMode && modeItemsEl.querySelector('.popup-item[data-v="' + m + '"]')) {
+      currentMode = m; syncModeUI();   // unknown modes keep the chip
+    }
+    if (pendingPlanMode) {
+      const want = pendingPlanMode; pendingPlanMode = null;
+      if (want !== currentMode) { currentMode = want; syncModeUI(); bridge({ kind: 'mode', mode: want }); }
+    }
   }
 
   /* ---------- effort slider (sends /effort <level>) ---------- */
@@ -1083,6 +1105,7 @@
   }
 
   function clearLogUI() {
+    pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';
     earlierRemaining = 0; earlierInFlight = false;  // never pull a previous session's chunks
@@ -1747,8 +1770,8 @@
       const plan = el('card warn', '');
       plan.innerHTML = planCardHtml(it.plan) +
         '<div class="card-b">' + (it.denied
-          ? '<span class="no-t">✗ Kept planning</span>'
-          : '<span class="ok-t">✓ Approved</span>') + '</div>';
+          ? '<span class="no-t">✗ Kept planning' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + '</span>'
+          : '<span class="ok-t">✓ Approved' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + '</span>') + '</div>';
       return;
     }
     const card = el('card warn', '');
@@ -2237,6 +2260,7 @@
   let history = [], histIdx = 0, histDraft = ''; // sent-message history for ↑/↓ recall
 
   function sendTurn(t, imgs) {
+    pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
     addUserMessage(t, imgs);
     lastUser = { text: t, images: imgs };
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
@@ -3792,6 +3816,12 @@
   }
 
   /* ---------- permission / plan cards ---------- */
+  // The plan-card feedback quote, one way for both surfaces (live footer + replay): a single
+  // line, middle-agnostic head cut at 72 — the reason is a sentence, its head carries the point.
+  function fbQuote(t) {
+    const shown = t.length > 72 ? t.slice(0, 71) + '…' : t;
+    return ' — “' + esc(shown) + '”';
+  }
   function cardBtns(okLabel, okSvg, noLabel, noSvg, suggBtns) {
     return '<div class="card-b"><button class="ok">' + okSvg + okLabel + '</button>' +
       (suggBtns || '') +
@@ -3811,7 +3841,8 @@
     arr.forEach(function (s, idx) {
       if (s.behavior && s.behavior !== 'allow') return;             // never offer deny/ask shortcuts
       if (s.type === 'setMode' && s.mode === 'acceptEdits') {
-        out.push({ idxs: [idx], label: isPlan ? 'Approve, auto-edit' : 'Accept all edits',
+        out.push({ idxs: [idx], mode: 'acceptEdits',   // marker: the plan card's auto-edit row rides this
+          label: isPlan ? 'Approve, auto-edit' : 'Accept all edits',
           title: 'Auto-approve every edit for the rest of this session',
           doneText: 'auto-approving edits' });
       } else if (s.type === 'addRules' && s.rules && s.rules.length) {
@@ -4050,8 +4081,23 @@
     const card = document.createElement('div');
     if (isPlan) {
       card.className = 'card warn'; // same feedback surface as permission / ask cards
+      // The terminal's plan dialog, translated: a feedback line that rides WHICHEVER button
+      // answers, and the Yes variants folded behind the Approve caret (the flat suggestion
+      // button used to sit between the primaries). bypassPermissions is not offered — the CLI
+      // refuses to be raised into it at runtime. No keyboard shortcuts (user, 2026-08-16).
       card.innerHTML = planCardHtml(inp.plan || '') +
-        cardBtns('Approve &amp; implement', SVG_CHECK, 'Keep planning', SVG_STEP, suggBtns);
+        '<input class="plan-fb" placeholder="Tell Claude what to change">' +
+        '<div class="card-b"><span class="split">' +
+          '<button class="ok">' + SVG_CHECK + 'Approve &amp; implement</button>' +
+          '<button class="ok more" aria-haspopup="true" title="More ways to approve">' + SVG_CHEVRON + '</button>' +
+          '<div class="popup card-menu">' +
+            '<div class="popup-item" data-act="acceptEdits" title="Approve, and auto-approve every edit for the rest of this session">' +
+              '<div class="pi-ic">' + SVG_CHECKS + '</div><div class="pi-body"><div class="pi-title">Approve, auto-edit</div></div></div>' +
+            '<div class="popup-item" data-act="auto" title="Approve, and let Auto mode pass safe actions, pausing for anything risky">' +
+              '<div class="pi-ic">' + SVG_CHECKS + '</div><div class="pi-body"><div class="pi-title">Approve, auto mode</div></div></div>' +
+          '</div>' +
+        '</span>' +
+        '<button class="no">' + SVG_STEP + 'Keep planning</button></div>';
     } else {
       card.className = 'card warn';
       card.innerHTML =
@@ -4069,15 +4115,25 @@
     foldBlock(card.querySelector('.diff'));  // long edits fold too (was a 240px scroll box)
     const done = function (allow, sugg, viaEditor) {
       delete permCards[ev.id];
+      // The typed reason rides every decision (terminal parity: its allow branches all carry
+      // acceptFeedback too). Read before the input leaves with the buttons.
+      const fbEl = card.querySelector('.plan-fb');
+      const fb = fbEl ? fbEl.value.trim() : '';
+      if (fbEl) fbEl.remove();
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + (viaEditor ? ' in the editor' : '') +
+            (fb ? fbQuote(fb) : '') +
             (sugg ? ' · ' + esc(sugg.doneText) : '') +
             (sugg && sugg.rules ? ' ' + sugg.rules.map(ruleChip).join('') : '') + '</span>'
-        : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + (viaEditor ? ' in the editor' : '') + '</span>';
+        : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + (viaEditor ? ' in the editor' : '') +
+            (fb ? fbQuote(fb) : '') + '</span>';
       awaitingUser = false;
       // The editor path already answered the CLI through Kotlin's arbiter — sending again from
       // here would be a duplicate (and would be dropped, but why knock).
-      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null);
+      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, fb);
+      // Approve-with-notes rides the approved plan itself (Kotlin appends it to updatedInput.plan
+      // — no user message exists), so the quoted footer is the note's whole visible record here,
+      // exactly as it is on replay.
       if (busy) showWorking(); // Claude resumes processing
     };
     permCards[ev.id] = function (allow) { done(allow, null, true); };
@@ -4086,7 +4142,7 @@
     Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt:not(.more)'), function (b) {
       b.onclick = function () { done(true, suggs[+b.dataset.s]); };
     });
-    Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt.more'), function (b) {
+    Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt.more, .card-b .ok.more'), function (b) {
       b.onclick = function (e) {
         e.stopPropagation();                       // the document handler would close it again
         const pop = b.parentNode.querySelector('.card-menu');
@@ -4104,7 +4160,7 @@
         }
       };
     });
-    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item'), function (it) {
+    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item:not([data-act])'), function (it) {
       it.onclick = function () {
         const s = suggs[+it.dataset.s], part = s.parts[+it.dataset.p];
         // only THIS row's picks go back — "sugIdx.ruleIdx" tokens; Kotlin narrows each
@@ -4113,6 +4169,27 @@
         done(true, { idxs: part.picks, rules: part.rules, doneText: s.doneText });
       };
     });
+    // Plan-card rows are the plugin's own (data-act), not renders of suggestions. Auto-edit
+    // rides the CLI's setMode suggestion when one arrived — the CLI OMITS it when prePlanMode
+    // was already elevated (auto/acceptEdits/dontAsk, 2.1.233) — else it answers plainly and
+    // asks Kotlin for the mode. Auto is never suggested, so it always takes the bridge
+    // round-trip. Perm answer FIRST, mode second: the response must not race the mode change,
+    // and the chip follows the CLI's own permissionMode broadcast either way.
+    const planModeSugg = isPlan ? suggs.filter(function (s) { return s.mode === 'acceptEdits'; })[0] : null;
+    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item[data-act]'), function (it) {
+      it.onclick = function () {
+        const act = it.dataset.act;
+        const s = act === 'acceptEdits' ? planModeSugg : null;
+        done(true, s || null);
+        // No suggestion to ride → park the switch for the post-approval broadcast (see
+        // pendingPlanMode) — an immediate bridge always lost to the CLI's prePlanMode restore.
+        if (!s) pendingPlanMode = act;
+      };
+    });
+    // No shortcuts on the input (user, 2026-08-16) — but typing must not reach the document
+    // handlers (Escape would close popups, arrows would move popup cursors).
+    const fbIn = card.querySelector('.plan-fb');
+    if (fbIn) fbIn.addEventListener('keydown', function (e) { e.stopPropagation(); });
   }
 
   /* ---------- dev gallery: renders every transient UI state in the live webview ----------
@@ -4353,9 +4430,11 @@
       command: 'rsync -av --delete ' + '/srv/data/chunk-000/ /mnt/backup/chunk-000/ && '.repeat(120) + 'echo done',
       description: 'Sync every chunk to the backup volume' }) });
 
-    // plan card
+    // plan card — with the CLI's setMode suggestion, so the auto-edit row rides it (the split
+    // caret, the feedback input and both menu rows all render from this one call)
     renderPermission({ tool: 'ExitPlanMode', id: 'gallery-plan', input: JSON.stringify({
-      plan: '1. Add a `sqrt()` method to `Calculator`.\n2. Throw on negative input.\n3. Add unit tests.' }) });
+      plan: '1. Add a `sqrt()` method to `Calculator`.\n2. Throw on negative input.\n3. Add unit tests.' }),
+      suggestions: JSON.stringify([{ type: 'setMode', mode: 'acceptEdits', behavior: 'allow', destination: 'session' }]) });
 
     // AskUserQuestion — single-select + multiSelect
     renderPermission({ tool: 'AskUserQuestion', id: 'gallery-ask', input: JSON.stringify({ questions: [

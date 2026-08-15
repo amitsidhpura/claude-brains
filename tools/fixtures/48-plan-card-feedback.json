@@ -1,0 +1,297 @@
+{
+ "item": "plan card: feedback input + split Approve button",
+ "branch": "typed text rides every decision on the perm bridge message; split menu holds the mode rows",
+ "provenance": "permission_request is ChatPanel's synthetic shape (input/suggestions as raw JSON strings), copied from fixtures 11/40. The setMode acceptEdits suggestion shape is the CLI's, measured in docs/ide-mcp-protocol.md 207-211. The NEW footer contract (input .plan-fb, .split .ok/.ok.more, .card-menu rows, text field on the perm payload) is this feature's own — self-consistency evidence only; the Kotlin delivery of `text` is verified on the live wire, not here. __bridge is taped (sandbox-only run; port-isolated from any real IDE panel). The system broadcast frames in the mode-row steps carry only the field the handler keys on (permissionMode on a system event, docs/ide-mcp-protocol.md 204) — the deferred mode switch exists because an immediate set_permission_mode always lost to the CLI's prePlanMode restore (measured live 2026-08-16).",
+ "steps": [
+  {
+   "note": "render: input + split caret + two menu rows; the flat suggestion button is gone",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); if (!window.__realBridge48) { window.__realBridge48 = window.__bridge; } window.__tape48 = []; window.__bridge = function(j){ window.__tape48.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl1",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}",
+     "suggestions": "[{\"type\": \"setMode\", \"mode\": \"acceptEdits\", \"behavior\": \"allow\", \"destination\": \"session\"}]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.card.warn .plan-fb').length",
+     "equals": 1,
+     "why": "DISCRIMINATING pre-fix: the feedback input exists on the live plan card"
+    },
+    {
+     "js": "(document.querySelector('.plan-fb')||{placeholder:''}).placeholder",
+     "equals": "Tell Claude what to change",
+     "why": "the terminal's own wording, so the affordance reads the same in both UIs"
+    },
+    {
+     "js": "document.querySelectorAll('.card-b .split .ok.more').length",
+     "equals": 1,
+     "why": "DISCRIMINATING pre-fix: the Approve button is a split button with a caret"
+    },
+    {
+     "js": "document.querySelectorAll('.card-b .card-menu .popup-item').length",
+     "equals": 2,
+     "why": "DISCRIMINATING pre-fix: auto-edit + auto mode live in the dropdown"
+    },
+    {
+     "js": "[...document.querySelectorAll('.card-b .card-menu .popup-item')].map(function(i){return i.textContent.trim()}).join('|')",
+     "contains": "Approve, auto-edit",
+     "why": "the CLI-suggested row is present"
+    },
+    {
+     "js": "[...document.querySelectorAll('.card-b .card-menu .popup-item')].map(function(i){return i.textContent.trim()}).join('|')",
+     "contains": "Approve, auto mode",
+     "why": "the plugin mode row is present"
+    },
+    {
+     "js": "[...document.querySelectorAll('.card-b')].filter(function(b){return b.querySelector(':scope > .alt')}).length",
+     "equals": 0,
+     "why": "DISCRIMINATING pre-fix: the flat 'Approve, auto-edit' .alt moved into the menu"
+    }
+   ]
+  },
+  {
+   "note": "deny with text: the typed reason rides the perm payload and the footer quotes it",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); window.__tape48 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl2",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}",
+     "suggestions": "[{\"type\": \"setMode\", \"mode\": \"acceptEdits\", \"behavior\": \"allow\", \"destination\": \"session\"}]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ document.querySelector('.plan-fb').value='use fillPath on the card too'; document.querySelector('.card-b .no').click(); return JSON.stringify(window.__tape48[window.__tape48.length-1]); })()",
+     "contains": "\"text\":\"use fillPath on the card too\"",
+     "why": "DISCRIMINATING pre-fix: the deny payload carries the typed text (pre-fix has no text field at all)"
+    },
+    {
+     "js": "JSON.stringify(window.__tape48[window.__tape48.length-1])",
+     "contains": "\"allow\":\"false\"",
+     "why": "still a deny — the text does not flip the decision"
+    },
+    {
+     "js": "document.querySelector('#log').textContent",
+     "contains": "Kept planning — “use fillPath on the card too”",
+     "why": "the resolved footer quotes what was sent, so replay and memory agree"
+    },
+    {
+     "js": "document.querySelectorAll('.plan-fb').length",
+     "equals": 0,
+     "why": "the input leaves with the buttons — the card can no longer answer"
+    }
+   ]
+  },
+  {
+   "note": "deny empty: today's behavior exactly",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); window.__tape48 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl3",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}",
+     "suggestions": "[{\"type\": \"setMode\", \"mode\": \"acceptEdits\", \"behavior\": \"allow\", \"destination\": \"session\"}]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ document.querySelector('.card-b .no').click(); return JSON.stringify(window.__tape48[window.__tape48.length-1]); })()",
+     "contains": "\"text\":\"\"",
+     "why": "empty input sends an empty text; Kotlin falls back to the stock message"
+    },
+    {
+     "js": "document.querySelector('#log').textContent",
+     "contains": "Kept planning",
+     "why": "plain footer, no quote for an empty reason"
+    }
+   ]
+  },
+  {
+   "note": "approve (primary) with text: never-discard rule on the allow path",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); window.__tape48 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl4",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}",
+     "suggestions": "[{\"type\": \"setMode\", \"mode\": \"acceptEdits\", \"behavior\": \"allow\", \"destination\": \"session\"}]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ document.querySelector('.plan-fb').value='prefer the existing helper'; document.querySelector('.card-b .split .ok:not(.more)').click(); return JSON.stringify(window.__tape48[window.__tape48.length-1]); })()",
+     "contains": "\"allow\":\"true\"",
+     "why": "primary approves"
+    },
+    {
+     "js": "JSON.stringify(window.__tape48[window.__tape48.length-1])",
+     "contains": "\"text\":\"prefer the existing helper\"",
+     "why": "DISCRIMINATING pre-fix: typed text rides the allow too"
+    },
+    {
+     "js": "document.querySelector('#log').textContent",
+     "contains": "Approved — “prefer the existing helper”",
+     "why": "the footer quotes the note — its whole visible record, since the note rides the approved plan, not a message"
+    }
+   ]
+  },
+  {
+   "note": "approve via the auto-edit menu row: rides the CLI suggestion (sugg 0), no mode bridge needed",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); window.__tape48 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl5",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}",
+     "suggestions": "[{\"type\": \"setMode\", \"mode\": \"acceptEdits\", \"behavior\": \"allow\", \"destination\": \"session\"}]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ document.querySelector('.plan-fb').value='notes for auto-edit'; document.querySelector('.card-b .ok.more').click(); document.querySelectorAll('.card-b .card-menu .popup-item')[0].click(); return JSON.stringify(window.__tape48); })()",
+     "contains": "\"sugg\":\"0\"",
+     "why": "DISCRIMINATING: with a setMode suggestion present the row answers through updatedPermissions"
+    },
+    {
+     "js": "JSON.stringify(window.__tape48[window.__tape48.length-1])",
+     "contains": "\"text\":\"notes for auto-edit\"",
+     "why": "the menu path never discards the text either"
+    },
+    {
+     "js": "JSON.stringify(window.__tape48)",
+     "contains": "\"allow\":\"true\"",
+     "why": "an approval, not a deny"
+    },
+    {
+     "js": "window.__tape48.filter(function(m){return m.kind==='mode'}).length",
+     "equals": 0,
+     "why": "no mode round-trip when the suggestion covers it — the CLI applies the setMode itself"
+    }
+   ]
+  },
+  {
+   "note": "approve via the auto mode row PARKS the switch — nothing bridges until the CLI's post-approval broadcast",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); window.__tape48 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl6",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}",
+     "suggestions": "[{\"type\": \"setMode\", \"mode\": \"acceptEdits\", \"behavior\": \"allow\", \"destination\": \"session\"}]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ document.querySelector('.card-b .ok.more').click(); document.querySelector('.card-b .card-menu .popup-item[data-act=auto]').click(); return JSON.stringify(window.__tape48.map(function(m){return m.kind+':'+(m.allow||m.mode||'')})); })()",
+     "contains": "perm:true",
+     "why": "the row approves"
+    },
+    {
+     "js": "window.__tape48.filter(function(m){return m.kind==='mode'}).length",
+     "equals": 0,
+     "why": "DISCRIMINATING: no immediate mode bridge — it always lost to the CLI's prePlanMode restore"
+    }
+   ]
+  },
+  {
+   "note": "the CLI's post-approval broadcast releases the parked switch: restore first, our mode after, so it sticks",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "probe",
+     "permissionMode": "manual"
+    }
+   ],
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape48.filter(function(m){return m.kind==='mode'}))",
+     "contains": "\"mode\":\"auto\"",
+     "why": "DISCRIMINATING: the broadcast (the restore landing) is what sends the parked switch"
+    },
+    {
+     "js": "modeChip.textContent",
+     "contains": "Auto",
+     "why": "the chip paints the wish optimistically, same as the composer's own mode click"
+    }
+   ]
+  },
+  {
+   "note": "the plan-exit restore broadcasts the literal 'default' — the chip must read it as Manual, not drop it",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "probe",
+     "permissionMode": "plan"
+    },
+    {
+     "type": "system",
+     "subtype": "probe",
+     "permissionMode": "default"
+    }
+   ],
+   "expect": [
+    {
+     "js": "modeChip.textContent",
+     "contains": "Manual",
+     "why": "DISCRIMINATING pre-fix: 'default' hit the unknown-mode guard and the chip stayed on Plan (user report 2026-08-16)"
+    }
+   ]
+  },
+  {
+   "note": "no suggestion sent (pre-plan mode was elevated): rows still render; auto-edit parks, broadcast releases acceptEdits",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); window.__tape48 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pl7",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Add the input\\n2. Wire the split button\"}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.card-b .card-menu .popup-item').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: the rows are the plugin's own, not a render of suggestions — the CLI omits the suggestion when prePlanMode was elevated"
+    },
+    {
+     "js": "(function(){ document.querySelector('.card-b .ok.more').click(); document.querySelectorAll('.card-b .card-menu .popup-item')[0].click(); window.onClaudeEvent(JSON.stringify({type:'system', subtype:'probe', permissionMode:'auto'})); return JSON.stringify(window.__tape48.map(function(m){return m.kind+':'+(m.allow||m.mode||'')})); })()",
+     "contains": "mode:acceptEdits",
+     "why": "without a suggestion to ride, the parked switch bridges acceptEdits once the broadcast lands"
+    },
+    {
+     "js": "JSON.stringify(window.__tape48[window.__tape48.findIndex(function(m){return m.kind==='perm'})])",
+     "contains": "\"sugg\":\"-1\"",
+     "why": "no suggestion index was fabricated"
+    },
+    {
+     "js": "window.__tape48.findIndex(function(m){return m.kind==='mode'}) > window.__tape48.findIndex(function(m){return m.kind==='perm'})",
+     "equals": true,
+     "why": "perm first, mode after the broadcast — never before"
+    }
+   ]
+  },
+  {
+   "note": "restore the real bridge (sandbox hygiene; assertions prove the restore ran)",
+   "setup": "if (window.__realBridge48) { window.__bridge = window.__realBridge48; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [],
+   "expect": [
+    {
+     "js": "window.__bridge === window.__realBridge48",
+     "equals": true,
+     "why": "the panel's real channel is back — later fixtures in the same run are unaffected"
+    }
+   ]
+  }
+ ]
+}

@@ -158,6 +158,11 @@ being cut with no indication.
     preview, identical path. The first run disagreed by ONE byte on the size — 402.7 × 1024 =
     412364.8, JS rounded and Kotlin truncated — so Kotlin rounds now and the value is pinned.
 
+### Plan-card feedback quote — 72 chars (chat.html `fbQuote`)
+The typed reason on a resolved plan card ("✗ Kept planning — “…”" / the replay twin) renders
+through one helper, head-cut at 72 with an ellipsis. The full text is what went to the model —
+the footer is a reminder, not the record; the transcript carries it whole.
+
 ## Volume (how much is loaded at all)
 
 | what | limit | note |

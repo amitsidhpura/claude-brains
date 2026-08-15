@@ -611,24 +611,24 @@ blockquote > *:last-child { margin-bottom: 0; }
 .card-b .split { position: relative; display: inline-flex; align-items: stretch; }
 /* :not(.more) — the caret is an .alt too, so an unscoped rule here squared ITS right corners as
    well and the pair lost its rounded outer edge entirely. */
-.card-b .split .alt:not(.more) { border-top-right-radius: 0; border-bottom-right-radius: 0;
-  padding-right: 8px; }
+.card-b .split .alt:not(.more), .card-b .split .ok:not(.more) { border-top-right-radius: 0;
+  border-bottom-right-radius: 0; padding-right: 8px; }
 /* One pill with a hinge, not two buttons welded together. The seam is INSET — it clears the top
    and bottom edges — because a full-height rule reads as structure and made the caret look like a
    separate control. The label's right padding also drops from the button default of 12px, which
    is what actually made the caret look far from the text; a seam only ever masked that gap. */
-.card-b .alt.more { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 4px 8px;
-  position: relative; }
-.card-b .alt.more::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
-  width: 1px; background: rgba(255, 255, 255, .22); }
+.card-b .alt.more, .card-b .ok.more { border-top-left-radius: 0; border-bottom-left-radius: 0;
+  padding: 4px 8px; position: relative; }
+.card-b .alt.more::before, .card-b .ok.more::before { content: ''; position: absolute; left: 0;
+  top: 6px; bottom: 6px; width: 1px; background: color-mix(in srgb, #fff 22%, transparent); }
 /* chevron-right rotated to show OPEN/CLOSED, not direction: down at rest, up while the menu is
    open — the same convention as the thinking block's disclosure, and it stays truthful whichever
    way the menu had to flip */
-.card-b .alt.more .chev { width: 14px; height: 14px; transform: rotate(90deg); transition: transform .15s ease; }
-.card-b .split.open .alt.more .chev { transform: rotate(-90deg); }
+.card-b .alt.more .chev, .card-b .ok.more .chev { width: 14px; height: 14px; transform: rotate(90deg); transition: transform .15s ease; }
+.card-b .split.open .alt.more .chev, .card-b .split.open .ok.more .chev { transform: rotate(-90deg); }
 /* while its menu is open the caret stays lit, so the control reads as active even once the
    pointer moves down into the list */
-.card-b .split.open .alt.more { background: var(--ok-hover); }
+.card-b .split.open .alt.more, .card-b .split.open .ok.more { background: var(--ok-hover); }
 /* Green like the button it hangs off, not the composer popups' blue --user-bg: it belongs to the
    Always-allow control, and every item in it is a grant. Items lift to --ok-hover, the same hover
    the button itself uses.
@@ -653,6 +653,15 @@ blockquote > *:last-child { margin-bottom: 0; }
 .card-menu .popup-item:hover { padding-right: 32px; }
 .card-menu .pi-ic svg { width: 15px; height: 15px; display: block; }
 .popup.card-menu.up { top: auto; bottom: calc(100% + 6px); }
+/* Plan-card feedback line: one row of "why", riding whichever button answers the card (deny →
+   the message; approve → steered in right after the allow). Sits between the plan body and the
+   buttons and leaves with them once the card is decided. Panel-toned, not user-blue: it belongs
+   to the card's decision surface, and the composer keeps its own colours. */
+.plan-fb { display: block; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 4px 10px;
+  background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+  border-radius: var(--radius); font: inherit; outline: none; }
+.plan-fb::placeholder { color: var(--muted); }
+.plan-fb:focus { border-color: var(--border-strong); }
 .card-menu .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }

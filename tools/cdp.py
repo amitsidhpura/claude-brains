@@ -42,7 +42,11 @@ from websockets.sync.client import connect
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-PORT = 9222
+import os
+
+# CLAUDE_BRAINS_CDP_PORT pairs with runIde -PjcefDebugPort — lets the harness target a
+# sandbox while a real IDE (with a hand-set Registry value) holds the default 9222.
+PORT = int(os.environ.get("CLAUDE_BRAINS_CDP_PORT", "9222"))
 # JBCefBrowser.loadHTML serves the panel from a synthetic file URL — the panel has no real
 # address, so this prefix, not the title, is what identifies it among DevTools' own windows.
 PANEL_URL_PREFIX = "file:///jbcefbrowser/"

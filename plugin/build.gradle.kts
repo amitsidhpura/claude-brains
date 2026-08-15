@@ -62,7 +62,11 @@ tasks.test { useJUnitPlatform() }
  * Sandbox only: `runIde` is a dev task, so no installed IDE ever opens this port.
  */
 tasks.named<JavaExec>("runIde") {
-    systemProperty("ide.browser.jcef.debug.port", "9222")
+    // Overridable so a sandbox can coexist with a real IDE that already owns 9222
+    // (a hand-set Registry value in an installed IDE wins the port; seen 2026-08-16):
+    // ./gradlew runIde -PjcefDebugPort=9223
+    systemProperty("ide.browser.jcef.debug.port",
+        providers.gradleProperty("jcefDebugPort").getOrElse("9222"))
 }
 
 /**

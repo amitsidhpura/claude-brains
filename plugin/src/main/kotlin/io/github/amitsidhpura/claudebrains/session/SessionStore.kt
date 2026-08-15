@@ -504,6 +504,7 @@ object SessionStore {
         var questions: JsonElement? = null // AskUserQuestion input
         var answers: JsonElement? = null   // chosen answers (from toolUseResult)
         var plan: String? = null           // ExitPlanMode plan markdown
+        var planFeedback: String? = null   // the typed reason a plan was refused (deny message)
         var denied: Boolean = false        // permission was refused — card reads ✗, not ✓
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
@@ -519,6 +520,7 @@ object SessionStore {
             put("role", role)
             put("text", text)
             plan?.let { put("plan", it) }
+            planFeedback?.let { put("planFeedback", it) }
             if (denied) put("denied", true)
             icon?.let { put("icon", it) }
             durMs?.let { put("durMs", it) }
@@ -571,6 +573,25 @@ object SessionStore {
         if (!f.isFile) return emptyList()
         val out = ArrayList<Item>()
         val byToolId = HashMap<String, Item>()
+
+        // A message steered into a turn MID-FLIGHT (the plan card's approve-with-notes, or any
+        // input the CLI consumed without queueing to the next turn) persists ONLY as an
+        // `attachment` record ({type:"queued_command", commandMode:"prompt"}) — no user record
+        // ever follows, so replay silently lost text the model demonstrably acted on. A message
+        // queued to the NEXT turn writes BOTH records (measured 2026-08-16 across local
+        // transcripts: 3 attachment-only, 2 attachment+user for the same text). So the attachment
+        // renders as the user bubble only when no user record in the file carries the same text —
+        // the delivered copy is the better one (right position, normal pipeline). The pre-pass
+        // runs only when the file mentions queued_command at all, which almost none do.
+        val deliveredTexts: Set<String> = if (f.readText().contains("\"queued_command\"")) {
+            f.bufferedReader().useLines { pre ->
+                pre.mapNotNull { l ->
+                    runCatching { json.parseToJsonElement(l).jsonObject }.getOrNull()
+                        ?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "user" }
+                        ?.let { userTextFull(it) }
+                }.toSet()
+            }
+        } else emptySet()
 
         // Per-request accounting for the trailing "✻ … for Ns · ↓ N tokens" summary. A request runs
         // from a user turn to the next one; `prevTs` also gives thinking blocks an approximate
@@ -950,6 +971,27 @@ object SessionStore {
                         // a compaction left no trace at all — while its summary leaked through as a
                         // user message (see the isCompactSummary branch above). The marker is emitted
                         // here and the summary folded into it when the next record claims this uuid.
+                        "attachment" -> {
+                            // See deliveredTexts above: a queued_command/prompt attachment is the
+                            // ONLY trace of a mid-turn steered message; render it as the user
+                            // bubble it was — unless a real user record carries the same text
+                            // (the queued-to-next-turn case), which renders itself. Non-prompt
+                            // modes (task-notification etc.) are system machinery, never a bubble.
+                            val att = obj["attachment"] as? JsonObject
+                            if (att?.get("type")?.jsonPrimitive?.contentOrNull == "queued_command" &&
+                                att["commandMode"]?.jsonPrimitive?.contentOrNull == "prompt"
+                            ) {
+                                val text = (att["prompt"] as? JsonArray)
+                                    ?.mapNotNull { (it as? JsonObject)
+                                        ?.takeIf { b -> b["type"]?.jsonPrimitive?.contentOrNull == "text" }
+                                        ?.get("text")?.jsonPrimitive?.contentOrNull }
+                                    ?.joinToString("\n")?.trim()
+                                if (!text.isNullOrBlank() && text !in deliveredTexts) {
+                                    flushSummary()
+                                    out.add(Item("user").apply { this.text = text })
+                                }
+                            }
+                        }
                         "system" -> {
                             // A transient API failure the CLI is retrying. 24 of these across local
                             // transcripts, every one invisible: the panel simply stalled while the
@@ -1223,6 +1265,23 @@ object SessionStore {
         if (block["is_error"]?.jsonPrimitive?.content == "true") item.isError = true
         // a refused permission isn't a tool failure: the card must read ✗ Rejected, not ✓ Applied
         if (denied) { item.denied = true; item.isError = false }
+        // A denied plan's tool_result IS the deny message (probed 2.1.233: delivered verbatim) —
+        // the user's typed reason when one was given. The stock no-reason message stays off the
+        // card, so old transcripts keep their plain "✗ Kept planning".
+        if (denied && item.plan != null) {
+            resultText(block["content"])
+                ?.takeIf { it.isNotBlank() && it != RenderLimits.REJECT_MESSAGE }
+                ?.let { item.planFeedback = it }
+        }
+        // An APPROVED plan's notes ride the approved plan itself (updatedInput append, see
+        // ClaudeCli): toolUseResult.plan carries the marker section; the original tool_use input
+        // (what item.plan holds, and what the card body shows) does not.
+        if (!denied && item.plan != null) {
+            (toolUseResult as? JsonObject)?.get("plan")?.jsonPrimitive?.contentOrNull
+                ?.substringAfter(RenderLimits.PLAN_NOTES_MARKER, "")
+                ?.trim()?.takeIf { it.isNotBlank() }
+                ?.let { item.planFeedback = it }
+        }
 
         val res = toolUseResult as? JsonObject
         if (item.role == "ask") { res?.get("answers")?.let { item.answers = it }; return }

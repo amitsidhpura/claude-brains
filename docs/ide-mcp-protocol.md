@@ -202,8 +202,24 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
   unusable for a mode *switcher*. The plugin used to relaunch with `--resume` to enter Auto; now
   that Auto means `auto`, that relaunch is gone and every mode switch is a plain control request.
 - **The CLI broadcasts the mode**: `system/init` and `system/status` events carry `permissionMode`,
-  including changes the CLI makes itself — approving `ExitPlanMode` drops it to `default`. Drive any
+  including changes the CLI makes itself — approving `ExitPlanMode` RESTORES `prePlanMode` (the
+  mode from before plan mode was entered; 2.1.233, read from the binary), falling back to
+  `default` only when none was recorded or the restored mode is gated (auto gate off,
+  bypassPermissions unlaunched). Older CLIs always dropped to `default`. NOTE the restore of a
+  `manual` pre-plan mode broadcasts the LITERAL `default` (measured 2026-08-16: manual → plan →
+  approve) — treat the two as the same mode or a mode UI silently drops the broadcast. Drive any
   mode UI from these, not from what the host last requested.
+- **Feedback on a permission answer** (probed 2026-08-16, 2.1.233): the deny `message` is
+  delivered to the model VERBATIM as the tool_result — user-typed text there fires the CLI's own
+  "the user said" branch and it revises rather than asking. On allow, a `feedback` field is
+  silently dropped, and a stdin user message is steered in only at the NEXT model call — when
+  the model implements immediately, the first tool call wins and the note arrives late (observed
+  live). The working equivalent is appending the note to `updatedInput.plan` (the terminal's
+  ctrl+g edit path): the ExitPlanMode tool_result echoes the approved plan, so the model reads
+  the note in the same message as the approval — the terminal's own shift+tab pushes its
+  acceptFeedback as an extra text block on that same tool_result (read from the 2.1.233 binary). The CLI also omits
+  the `setMode acceptEdits` suggestion on a plan card when `prePlanMode` was already elevated
+  (auto/acceptEdits/dontAsk).
 - **`permission_suggestions`** on `can_use_tool` are ready-made "don't ask again" options
   (`setMode` / `addRules {toolName, ruleContent?}` / `addDirectories`, each with `behavior` and
   `destination`: `userSettings|projectSettings|localSettings|session|cliArg`). Echo the accepted one

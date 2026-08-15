@@ -13,6 +13,16 @@ package io.github.amitsidhpura.claudebrains
 object RenderLimits {
 
     /** Tool description shown on a tool line, in characters. */
+    /** The stock deny message when the user gave no reason — produced by ClaudeCli on every
+     *  feedback-less rejection and filtered by SessionStore so replay never quotes it as if the
+     *  user typed it. One copy, or the filter drifts from the producer. */
+    const val REJECT_MESSAGE = "User rejected the change in the IDE"
+
+    /** Heading under which approve-with-notes feedback is appended to `updatedInput.plan` —
+     *  written by ClaudeCli, parsed back out of `toolUseResult.plan` by SessionStore for the
+     *  replay footer. One copy, or the parser drifts from the producer. */
+    const val PLAN_NOTES_MARKER = "\n\n## User notes on approval\n"
+
     const val DESC_MAX = 140
 
     /**

@@ -87,8 +87,60 @@ class SessionStoreTest {
             role("user").none { it["text"]?.jsonPrimitive?.content?.contains("interrupted") == true },
             "the interrupt leaked through as a user message",
         )
-        // a request cut short by an interrupt gets the Stopped line and NO completion summary
-        assertTrue(role("done").isEmpty(), "an interrupted request should not be summarised")
+        // a request cut short by an interrupt gets the Stopped line and NO completion summary.
+        // Scoped to the interrupted request (nothing between the Stopped line and the next turn
+        // may be a summary) — the fixture later grew legitimately completed requests, which DO
+        // summarise, so the old fixture-global "no done blocks at all" over-asserted.
+        val stopIdx = blocks.indexOf(status[0])
+        val after = blocks.drop(stopIdx + 1)
+        val nextTurn = after.indexOfFirst { it["role"]?.jsonPrimitive?.content == "user" }
+        val window = if (nextTurn >= 0) after.take(nextTurn) else after
+        assertTrue(window.none { it["role"]?.jsonPrimitive?.content == "done" },
+            "an interrupted request should not be summarised")
+    }
+
+    @Test
+    fun `denied plan captures the typed reason, the stock message stays off the card`() {
+        // Fixture records mirror the live wire (probed 2.1.233): a denied ExitPlanMode's
+        // tool_result content IS the deny message, verbatim. A typed reason must reach replay as
+        // planFeedback; the stock no-reason constant must NOT be quoted as if the user wrote it.
+        val deniedPlans = role("tool").filter {
+            it["plan"] != null && it["denied"]?.jsonPrimitive?.boolean == true
+        }
+        assertEquals(2, deniedPlans.size, "fixture carries one typed-reason and one stock denial")
+        val typed = deniedPlans.first { it["planFeedback"] != null }
+        assertEquals("Use fillPath on the card too", typed["planFeedback"]?.jsonPrimitive?.content)
+        assertTrue(deniedPlans.any { it["planFeedback"] == null },
+            "the stock '${RenderLimits.REJECT_MESSAGE}' denial must stay unquoted")
+    }
+
+    @Test
+    fun `mid-turn steered message replays as the user bubble it was, without doubling queued ones`() {
+        // Record shapes copied from a real 2.1.233 transcript: a message consumed mid-turn
+        // persists ONLY as an attachment (queued_command/prompt); one queued to the next turn
+        // persists as attachment AND user record. Replay must show the first and not double the
+        // second; task-notification attachments are machinery and never render.
+        val userTexts = role("user").map { it["text"]?.jsonPrimitive?.content }
+        assertTrue(userTexts.contains("steered-note: also add logging"),
+            "an attachment-only steered message must become a user bubble")
+        assertEquals(1, userTexts.count { it == "queued-question: what next?" },
+            "attachment + delivered user record must render exactly once")
+        assertFalse(userTexts.any { it?.contains("machinery, not a person") == true },
+            "task-notification attachments never become bubbles")
+    }
+
+    @Test
+    fun `approved plan notes are parsed out of the approved plan, body stays the original`() {
+        // Approve-with-notes appends the note to updatedInput.plan (ClaudeCli); the transcript's
+        // tool_use input keeps the ORIGINAL plan while toolUseResult.plan carries the marker
+        // section. The footer quotes the note; the card body must not grow the appended section.
+        val ok = role("tool").first {
+            it["plan"]?.jsonPrimitive?.contentOrNull == "# Plan v4\n1. Ship it." &&
+                it["denied"] == null
+        }
+        assertEquals("also add logging", ok["planFeedback"]?.jsonPrimitive?.content)
+        assertFalse(ok["plan"]!!.jsonPrimitive.content.contains("User notes on approval"),
+            "the body renders the original plan — the note lives in the footer quote")
     }
 
     @Test

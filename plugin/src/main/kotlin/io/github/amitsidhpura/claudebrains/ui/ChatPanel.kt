@@ -170,7 +170,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 // 2026-08-09, CLI 2.1.226). "-1" is the no-suggestion sentinel.
                 val suggs = (msg["sugg"]?.jsonPrimitive?.content ?: "")
                     .split(',').map { it.trim() }.filter { it.isNotEmpty() && it != "-1" }
-                session.respondPermission(id, allow, suggs)
+                // "text" is the plan card's typed feedback; empty means none was given
+                val feedback = msg["text"]?.jsonPrimitive?.content?.trim()?.takeIf { it.isNotEmpty() }
+                session.respondPermission(id, allow, suggs, feedback)
                 // The card answered (or lost the race — either way the question is settled):
                 // the editor half must not keep advertising a live decision.
                 permDiffs.remove(id)?.let { permDiffReview.dismiss(it) }

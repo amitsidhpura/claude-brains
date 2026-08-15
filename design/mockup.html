@@ -389,7 +389,11 @@ total 196K
             <li>Backfill unit tests around the new seams</li>
           </ul>
         </div>
-        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Approve &amp; implement</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.029 4.285A2 2 0 0 0 7 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/><path d="M3 4v16"/></svg>Keep planning</button></div>
+        <!-- feedback rides whichever button answers: deny → the message field, approve → steered
+             in right after the allow. The Yes variants fold behind the Approve caret (click it):
+             auto-edit rides the CLI's setMode suggestion, auto mode takes the bridge round-trip. -->
+        <input class="plan-fb" placeholder="Tell Claude what to change">
+        <div class="card-b"><span class="split"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Approve &amp; implement</button><button class="ok more" aria-haspopup="true" title="More ways to approve"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button><div class="popup card-menu"><div class="popup-item" data-act="acceptEdits" title="Approve, and auto-approve every edit for the rest of this session"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">Approve, auto-edit</div></div></div><div class="popup-item" data-act="auto" title="Approve, and let Auto mode pass safe actions, pausing for anything risky"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">Approve, auto mode</div></div></div></div></span><button class="no"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.029 4.285A2 2 0 0 0 7 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/><path d="M3 4v16"/></svg>Keep planning</button></div>
       </div>
       </div>
     </div>
@@ -578,6 +582,12 @@ total 196K
         <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
         <div class="blk"><p>Rewrite the whole bootstrap sequence and swap the autoloader.</p></div>
         <div class="card-b"><span class="no-t">✗ Kept planning</span></div>
+      </div>
+      <!-- replayed plan card: refused WITH feedback (typed into the card's input) -->
+      <div class="card warn">
+        <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
+        <div class="blk"><p>Rewrite the whole bootstrap sequence and swap the autoloader.</p></div>
+        <div class="card-b"><span class="no-t">✗ Kept planning — “reuse fillPath instead of a second renderer”</span></div>
       </div>
 
       <!-- replayed edit: applied. "Applied", not "Accepted" — the transcript can't tell a
