@@ -1044,8 +1044,14 @@ blockquote > *:last-child { margin-bottom: 0; }
 .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--user-divider);
   color: var(--user-muted); font-size: 12px; }
 /* The footer label rides the SAME left rail as a mode title: 14px padding + a 20px icon slot +
-   a 10px gap. The svg keeps its 15px glyph and takes the 20px slot via flex-basis, so it centres
-   on the mode icons' axis exactly as .pi-ic does. */
+   a 10px gap = 44. `flex: 0 0 20px` is what does the work, and deliberately so: this popup lives
+   inside #inputbar, where `#inputbar svg { width:18px; height:18px }` is an ID rule that BEATS
+   both the width/height below and `.pi-ic svg`'s 17px — every icon in the composer renders 18px
+   whatever those say. flex-basis is the one property that rule does NOT set, so it is the only
+   way to widen the SLOT without a specificity fight. The width/height below therefore never
+   apply here; they are kept as the fallback for any context outside #inputbar (design/mockup.html
+   renders the same markup). Measured in the real panel 2026-08-17: pre-fix 14 + 18 + 8 = 40,
+   4px adrift; now 0, with the icon axis matching .pi-ic's. Pinned by fixture 51. */
 .ef-label { display: flex; align-items: center; gap: 10px; }
 .ef-label svg { width: 15px; height: 15px; flex: 0 0 20px; }
 .ef-label b { color: var(--fg); font-weight: 600; }
