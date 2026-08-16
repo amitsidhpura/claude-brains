@@ -2483,14 +2483,14 @@
     if (n.indexOf('mcp__') === 0) return 'text';   // MCP prompt
     return 'tui';   // hidden until verified — see docs/slash-commands.md
   }
-  // Does the command REQUIRE an argument? CLI argumentHint convention: "<x>" required, "[x]"
-  // optional, "" none — but some hints read "<optional …>", so an "optional" mention (or "[…]")
-  // counts as not-required. Required-arg commands insert-and-wait; the rest run on menu click.
-  function cmdNeedsArg(c) {
-    const h = ((c && c.argumentHint) || '').trim();
-    if (!h || h.charAt(0) === '[' || /optional/i.test(h)) return false;
-    return h.charAt(0) === '<';
-  }
+  // Does the command take an argument AT ALL? Any non-empty argumentHint counts — required
+  // ("<x>") and optional ("[x]") alike. The earlier rule split those two and ran optional-arg
+  // commands on click, which is the wrong question to ask at a menu: a hint like
+  // "[init | load | save]" is a MENU OF SUB-MODES, so clicking the row fired the bare form
+  // (user, 2026-08-16, on /context) when the point of the click was to pick one. Only a
+  // hint-less command acts on click now — same as the terminal, where picking a command
+  // completes it into the prompt and you decide when to send.
+  function cmdTakesArg(c) { return !!((c && c.argumentHint) || '').trim(); }
 
   function renderSlash(q) {
     const ql = (q || '').toLowerCase();
@@ -2514,7 +2514,7 @@
       // recognisable by name alone. Built-ins get none — quiet is the default.
       const src = c.src || ((c.name || '').indexOf('mcp__') === 0 ? 'mcp' : null);
       return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '"' +
-        (cmdNeedsArg(c) ? ' data-needsarg="1"' : '') + '>' +
+        (cmdTakesArg(c) ? ' data-takesarg="1"' : '') + '>' +
         '<div class="pi-body"><div class="pi-title">/' + esc(c.name) +
         (src ? '<span class="pi-src">' + esc(src) + '</span>' : '') + '</div>' +
         (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
@@ -2524,10 +2524,10 @@
   slashList.addEventListener('click', function (e) {
     const item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
     menuEl('slashMenu').classList.remove('show');
-    if (item.dataset.needsarg) {              // needs an argument → insert and let the user type it
+    if (item.dataset.takesarg) {              // takes an argument → insert and let the user type it
       input.value = item.dataset.cmd + ' ';
       input.focus(); autoGrow();
-    } else {                                   // no required argument → a command menu should act, run now
+    } else {                                   // takes no argument at all → a command menu should act, run now
       input.value = item.dataset.cmd;
       submit();
     }
