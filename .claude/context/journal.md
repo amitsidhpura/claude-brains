@@ -3,6 +3,23 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-16 (third) — 0.7.0 goes out, quietly
+- **Released 0.7.0** (`59d94fc`, tag `v0.7.0`): plan-card feedback + split Approve, custom
+  commands in the / menu, 16 built-ins, and the 2026-08-15 fix tranche. Full `docs/release.md`
+  run with the approval gate held at step 6; version chosen as a MINOR bump (features, not fixes,
+  per the 0.5.x→0.6.0 pattern).
+- `verifyPlugin` WITHOUT `-PskipVerifierIdes`: Compatible on all seven PhpStorm branches
+  242→262, zero warnings, 40s wall-clock on the cached ladder. Asset 200 + `cmp`-identical, feed
+  advertising 0.7.0, upload workflow green in 17s, **Approved** the same day (IDE-run row + verifier
+  1.408 on 2026.2.1 / 2026.1.5). The user uploaded the five new listing screenshots by hand.
+- Two small tool traps, neither costly: `tail -30` on the backgrounded verifier truncated the
+  per-IDE verdict list — read `build/reports/pluginVerifier/PS-*/plugins/<id>/<ver>/
+  verification-verdict.txt` instead of the log; and zsh globs an unquoted `?` in a curl URL
+  ("no matches found") — quote Marketplace API URLs.
+- Release-time API check again showed 0.6.0 as newest-approved for a few minutes; the plugin
+  page had 0.7.0 Approved by the time the user looked. Known lag, recorded 2026-08-14.
+- Next: backlog order — plan-card shortcuts, reloaded-webview log replay, kill-bg-process.
+
 ## 2026-08-16 (second) — the plan field joins the ask family; the storefront reshot from the real renderer
 - **Plan-feedback field restyled, mockup-first per convention:** three user iterations (#1b1b1b →
   "match the ask Other input" → #201c19 → #201c1a) landed as one `--warn-field` token shared by
@@ -171,93 +188,25 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   "Read refreshes" both fail as they must), live harness 217/217. User confirmed it in their own IDE.
 - Next: unchanged — 3.1 custom commands + 9.10 together.
 
-## 2026-08-13 (sixth) — the in-flight dot, and five real-panel bugs a green harness could not see
-- **Shipped:** the timeline gutter dot now says what is happening — white and pulsing in flight,
-  green on success, red on failure — plus a `--dot-c` refactor (four duplicate `::before` rules to
-  one), `--pulse-period`, and the panel's first `prefers-reduced-motion` block. Reasoning in
-  decisions.md; `design/dot-pulse-probe.html` holds the four compared motions with A marked picked.
-- **Method that worked, twice over:** ship the boring option FIRST (`bg-pulse`, already the chip's
-  idiom), then build the probe against a rule that is genuinely live, so the pick is a one-token
-  edit. And sequence the fix so the negative control is free — landing the class-add WITHOUT the
-  settle made fixture 45 fail 15/31 on exactly the assertions that matter.
-- **Five things the user found in screenshots that the harness could not.** In order: the ring was
-  clipped by paint containment; a sub-agent went green 1.8s in (its tool_result is a launch ack); a
-  failing agent stayed green (the CLI reports it `completed`); all three agents went red (each had a
-  `<tool_use_error>` block it worked around); then all three went green (the failing command had run
-  in the background, where nothing records an exit status). Each was measured against real
-  transcripts or the CLI binary before touching code — three of the five ended in NOT shipping
-  something. Traps in gotchas.md.
-- **The root cause of the blind spot, now fixed:** nothing on the WIRE creates a `.turn-body` — the
-  panel makes one in `addUserMessage` — so every fixture was testing blocks sitting bare in `#log`,
-  outside the containment and stacking context real blocks live in. `tools/live_harness.py` gained a
-  per-step `setup` hook; fixture 45 uses it and is now 31 steps / 63 assertions.
-- **Withdrawn the same day:** the halo, the containment lift it forced, and a sub-task status dot
-  with its Kotlin round trip (reverted byte-exact). Recorded rather than deleted — each looks right
-  until measured.
-- Verified: live harness **217/217** in real JCEF, `./gradlew test` **87 green**, ten negative
-  controls RUN (not just written), incl. injecting `animation:none` to prove the CSS assertions
-  discriminate from the class ones.
-- Env trap: a cold Gradle configuration cache turns `runIde` into a network build that can die on
-  `teamcity.jetbrains.com` TLS — `-PskipVerifierIdes` is the way past it (gotchas).
-- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
-
-## 2026-08-13 (fifth) — 0.5.3 released; the docs stop describing a project that no longer exists
-- **0.5.3 released and Marketplace-Approved** (`f751503`, tag `v0.5.3`): the header-title fix and
-  the attached-block spacing. Full release.md run, gate held at step 6 for the user. Asset HTTP 200
-  and `cmp`-identical to the local zip; feed advertises 0.5.3; the upload workflow went green in 8s
-  and the Marketplace accepted it as version id 1137360. Approved with four green verification rows
-  (IDE run + verifier 1.408 on 2026.2.1 / 2026.1.5 / 2025.3.6.1).
-- `verifyPlugin` run WITHOUT `-PskipVerifierIdes`: **Compatible on all seven PhpStorm branches
-  242→262, zero warnings, zero compatibility problems**. First run downloads the ladder (~25 min);
-  cached after.
-- **Nearly shipped a stale artifact.** A `chat.css` edit landed AFTER `buildPlugin`, so the zip on
-  disk was behind. Rather than assume either way, extracted the CSS from the zip (it had the new
-  rule) and then read exact mtimes: css 17:30:31 → zip 17:30:50 → verdicts 17:47:40. `verifyPlugin`
-  had rebuilt it, so the verified bytes were the shipped bytes. Gotcha recorded.
-- **Docs truth pass**, prompted by finding the README's Install section false: the plugin has been
-  on the Marketplace since 2026-07-31 while README and `docs/release.md`'s title both still said
-  "not the Marketplace". Also six dead `CLAUDE.md` references (migrated 2026-08-07, one of them a
-  broken link in the README's own Docs list), README listing usage/token display as "deferred" when
-  it was DECLINED on 2026-08-06, one "FIXED same day" left in the retired register vocabulary, and
-  `feature-checklist.md` describing the header behaviour this very release changed.
-- `#log` was the last place hardcoding the 18px block gap — on `--block-gap` now, `limits.md` updated.
-- **One doc I called stale was not:** `verifier-matrix.md` says `verifyPlugin` checks PhpStorm only,
-  and that is still true — `recommended()` resolves to the DECLARED platform's branches, so it is
-  PhpStorm's ladder, not a cross-product matrix. Read the doc before "correcting" it.
-- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
-
-## 2026-08-13 (fourth) — one gap for everything that hangs off a line
-- User asked why `.io` sits at `-6px` while `.tool-imgs` and `.todos` sit at `+2px`. The margins were
-  never the answer: `.turn-body` is a flex column with `gap: 18px`, so the gap you SEE is 18 + the
-  margin. Measured: **12 / 16 / 20 / 20 / 20px** — and three of the five sat FARTHER from their own
-  tool line than an unrelated block at 18px, i.e. attached content read as detached.
-- Two tokens now, `--block-gap` (independent blocks) and `--attach-gap` (a line and what hangs off
-  it), with one rule for the five tool-line followers written as
-  `calc(var(--attach-gap) - var(--block-gap))` so what is stated is the TARGET gap, not a nudge.
-- **8px, picked by the user from `design/tool-gap-probe.html`** — 12/8/6/4 rendered side by side,
-  every column driven by the real rule rather than a copy. 8px is what `.card-h` already put between
-  a card's header and its body, so the panel's two "this belongs to that" idioms now agree.
-- Extended on the user's ask to `.compact-sum` (was 4px), `.card-h → .diff/.cmd/.blk` (was 8px
-  hardcoded) and `.think summary → .body` (was 4px).
-- **Two container traps, both now written at the site.** `.compact-sum` cannot join the shared
-  selector list — its parent is an ordinary block with no flex gap to cancel, so the subtraction
-  would pull it 10px INTO the status line. And `.card-h`'s `margin-bottom` COLLAPSES with
-  `.card .blk`'s `margin-top` rather than adding, so both ends had to name the token or the larger
-  would silently win the next time the value changes.
-- Verified in real JCEF through `window.__gallery()`: every attached pair exactly 8px, every
-  unattached pair exactly 18px, 29 pairs, zero deviations. **Negative control RUN** by injecting
-  `git show HEAD:`'s stylesheet into the same live page — the old 12/20/20 spread came straight
-  back. Harness 154/154, `./gradlew test` 87 green.
-- Surveyed every gap tighter than 18px so the rest is on record: action rows at 10px, list rhythm
-  (0/2/3/6), label→sub-line at 1px. Left alone. One odd value outstanding — `.ask-panel → .ask-b` at
-  4px where every other body→buttons gap is 10px (backlog).
-- Next: unchanged — 3.1 custom commands + 9.10 together, then VFS refresh.
-
 ## Digest
+- **2026-08-13 (sixth)** — the in-flight gutter dot shipped (white/pulsing → green/red, `--dot-c`,
+  `--pulse-period`, first `prefers-reduced-motion` block). Five real-panel bugs the green harness
+  could not see, root cause: fixtures fed bare blocks in `#log` with no `.turn-body` — the harness
+  gained a per-step `setup` hook. Halo, containment lift and the sub-task work-outcome dot all
+  built and withdrawn the same day. Traps (launch ack, `<tool_use_error>`, containment) in gotchas.
+- **2026-08-13 (fifth)** — 0.5.3 released + Approved; verifier Compatible on all seven branches
+  242→262. Nearly shipped a stale zip (edit after `buildPlugin`) — settled by extracting the bytes
+  and reading exact mtimes. Docs truth pass: README/release.md still said "not the Marketplace"
+  two weeks after listing; six dead `CLAUDE.md` links. `verifier-matrix.md` was NOT stale — read
+  a doc before "correcting" it.
+- **2026-08-13 (fourth)** — `--block-gap` (18px) / `--attach-gap` (8px, user-picked from a
+  side-by-side probe) replaced five drifted margins; the flex-gap-plus-margin vs collapsing-margin
+  arithmetic is in gotchas. 29 pairs measured in real JCEF, negative control via `git show HEAD:`
+  stylesheet injected into the live page.
 - **2026-08-13** — the runIde manual sweep closed; the lesson that outlived it is that a fixture
+  which never runs its own assertion is indistinguishable from a passing one (now in conventions).
 - 2026-08-13 (third): title header lagged a whole turn — once-per-turn probe at message_start + seedUi() on every load; measured WHICH frame can carry the title (init too early); the negative control nearly ran against the fixed build (TaskStop left the sandbox alive) — lesson in gotchas.
 - 2026-08-13 (second): 0.5.2 released + Marketplace-Approved via the automated workflow; the release session was never journaled and /context load's git-vs-journal diff caught it; machine drift caught again → state.md now leads with "check which machine".
-  which never runs its own assertion is indistinguishable from a passing one (now in conventions).
 - **2026-08-12 (fifth)** — the IN/OUT box took the diff's geometry: padding and overflow must sit on
   ONE element or the scrollbar insets; fixing that exposed three things the markers had papered
   over. All four traps are in gotchas.

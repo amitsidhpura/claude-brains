@@ -1,14 +1,19 @@
 # State
 
 ## Current focus
-**2026-08-16 (second session): plan-card UI polish shipped + marketplace screenshots refreshed.**
-The plan feedback input now wears the ask card's "Other" dress (shared `--warn-field` #201c1a
-token, warn-border frame) with a `.plan-sep` hairline between plan and decision surface —
-mockup-first, then ported to chat.html (`done()` removes the separator with the input for
-replay parity). Fixture 48 grew 5 assertions; live harness **308**. Five fresh 2400×1520
-listing frames replaced the 2026-07-31 trio in `design/marketplace/` (user uploads them to the
-Marketplace web form manually). Earlier same day: the feedback feature itself (see below).
-Register still **0 open**. Next real step is the version bump.
+**2026-08-16 (third session): 0.7.0 RELEASED and Marketplace-Approved.** Commit `59d94fc`,
+tag `v0.7.0`. Full `docs/release.md` run: verifier Compatible on all seven PhpStorm branches
+242→262 (zero warnings), asset HTTP 200 + `cmp`-identical, feed advertising 0.7.0, upload
+workflow green in 17s (run 31932129931), Approved the same day with green IDE-run + verifier
+1.408 rows. The user uploaded the five new `design/marketplace/` screenshots via the web form.
+Nothing is in flight; the next work is the backlog order below. Register still **0 open**.
+
+Shipped in 0.7.0 (everything since 0.6.0): plan-card feedback field + split Approve + mode
+parking + `default`→manual chip alias; custom commands / skills / MCP prompts auto-enabled in
+the / menu with source badges; 16 built-ins enabled; the 2026-08-15 fixes (local-command
+output, `<local-command-stderr>`, mid-turn steered messages in replay, bg-chip roster reset
+at the CLI boundary, `fillPath` on cards, @-menu ellipsis end, NotebookEdit path, stuck popup
+highlight); the feedback-field restyle + `.plan-sep`.
 
 ## How plan feedback travels (all probed on CLI 2.1.233 — see gotchas for the traps)
 - **Deny** → the typed text IS the control-response `message`, delivered to the model VERBATIM
@@ -42,14 +47,11 @@ Register still **0 open**. Next real step is the version bump.
   always run them under `timeout N` — a bare blocking readline() orphans them (see gotchas).
 
 ## Next steps
-- [ ] **Release the next version** (`docs/release.md`). New since 0.6.0: custom-command menu,
-      the 16-command set, three rendering fixes, three UI fixes (2026-08-15), the plan-card
-      feedback feature + chip alias, and the feedback-field restyle + separator (2026-08-16).
-      `changeNotesHtml` in `plugin/build.gradle.kts` must be rewritten or `buildPlugin` refuses.
-- [ ] User uploads the five new `design/marketplace/` screenshots via the Marketplace web form
-      (listing screenshots are manual — the workflow only re-posts the zip).
-- [ ] Then backlog order: reloaded-webview log replay, kill-background-process from the panel,
-      editor accept/reject v2 tweak-travel.
+- [x] Release 0.7.0 — done 2026-08-16, Approved on the Marketplace.
+- [x] Five new `design/marketplace/` screenshots uploaded by the user (2026-08-16).
+- [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
+      reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
+      v2 tweak-travel.
 
 ## Known gaps (deliberately left)
 - Plan-card keyboard shortcuts (Enter = keep planning, Shift+Tab = approve with feedback)
@@ -62,5 +64,7 @@ Register still **0 open**. Next real step is the version bump.
   `prefers-reduced-motion` unverified against the real OS setting.
 
 ## Which machine — check FIRST, both are real
-2026-08-16 ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in
-overview.md § External references. Slash-menu fixtures + plan-probe scratchpad exist on Linux only.
+All three 2026-08-16 sessions (incl. the 0.7.0 release) ran on **Linux**
+(`/home/syncroze/Sites/claude-brains`). Paths for both boxes in overview.md § External
+references. Slash-menu fixtures + plan-probe scratchpad + the verifier's cached IDE ladder exist
+on Linux only.

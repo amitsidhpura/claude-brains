@@ -268,6 +268,12 @@ trusting memory here.
   and the build dies with "cannot serialize Gradle script object references". Evaluate what the
   action needs into LOCALS inside the configuration block and let the lambda close over those.
   The failure names the task, not the capture, so it reads like a plugin bug.
+- **The verifier's per-IDE verdicts are FILES, not the tail of the log.** A `tail -N` on the
+  backgrounded `verifyPlugin` output shows only the last IDE or two; the authoritative list is
+  `plugin/build/reports/pluginVerifier/PS-*/plugins/<pluginId>/<version>/verification-verdict.txt`
+  (one line each — "Compatible" / warnings / problems). Read those before declaring the ladder
+  green. Also: an unquoted `?` in a curl URL is a zsh glob ("no matches found") — quote the
+  Marketplace API URLs.
 - The Marketplace runs the Plugin Verifier on every upload itself (0.5.1: Compatible on 2024.2.6 →
   2026.2.1, verifier 1.408, visible on the plugin's Versions page). So a local `./gradlew
   verifyPlugin` earns its keep only when a change touches platform API and you want the answer
