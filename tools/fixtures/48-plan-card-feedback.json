@@ -50,6 +50,26 @@
      "js": "[...document.querySelectorAll('.card-b')].filter(function(b){return b.querySelector(':scope > .alt')}).length",
      "equals": 0,
      "why": "DISCRIMINATING pre-fix: the flat 'Approve, auto-edit' .alt moved into the menu"
+    },
+    {
+     "js": "document.querySelectorAll('.card.warn .plan-sep').length",
+     "equals": 1,
+     "why": "DISCRIMINATING pre-2026-08-16-ui: the separator marks where the plan ends and the decision surface begins"
+    },
+    {
+     "js": "(function(){ var s=document.querySelector('.plan-sep'); return !!s && s.nextElementSibling===document.querySelector('.plan-fb'); })()",
+     "equals": true,
+     "why": "the separator sits directly above the input, between plan body and field"
+    },
+    {
+     "js": "getComputedStyle(document.querySelector('.plan-sep')).borderTopWidth",
+     "equals": "1px",
+     "why": "a class assertion is not a CSS assertion — the hairline is actually drawn"
+    },
+    {
+     "js": "getComputedStyle(document.querySelector('.plan-fb')).backgroundColor",
+     "equals": "rgb(32, 28, 26)",
+     "why": "the --warn-field well (#201c1a), the dress shared with the ask card's Other input"
     }
    ]
   },
@@ -85,6 +105,11 @@
      "js": "document.querySelectorAll('.plan-fb').length",
      "equals": 0,
      "why": "the input leaves with the buttons — the card can no longer answer"
+    },
+    {
+     "js": "document.querySelectorAll('.plan-sep').length",
+     "equals": 0,
+     "why": "the separator leaves with the input — a decided card matches replay (plan + footer only)"
     }
    ]
   },

@@ -4086,6 +4086,7 @@
       // button used to sit between the primaries). bypassPermissions is not offered — the CLI
       // refuses to be raised into it at runtime. No keyboard shortcuts (user, 2026-08-16).
       card.innerHTML = planCardHtml(inp.plan || '') +
+        '<div class="plan-sep"></div>' +
         '<input class="plan-fb" placeholder="Tell Claude what to change">' +
         '<div class="card-b"><span class="split">' +
           '<button class="ok">' + SVG_CHECK + 'Approve &amp; implement</button>' +
@@ -4120,6 +4121,10 @@
       const fbEl = card.querySelector('.plan-fb');
       const fb = fbEl ? fbEl.value.trim() : '';
       if (fbEl) fbEl.remove();
+      // The separator marks the live decision surface — a decided card has none (replayCard
+      // draws plan + footer only, and the two paths must not disagree).
+      const sepEl = card.querySelector('.plan-sep');
+      if (sepEl) sepEl.remove();
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + (viaEditor ? ' in the editor' : '') +
             (fb ? fbQuote(fb) : '') +

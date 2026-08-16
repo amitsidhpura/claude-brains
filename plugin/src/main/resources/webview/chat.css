@@ -25,6 +25,8 @@
   --hover: #2f3237;       /* list rows / icon buttons on hover */
   --warn-border: #6b4a3c; /* shared "needs user feedback" frame: permission / plan / question cards */
   --warn-bg: #282320;
+  --warn-field: #201c1a; /* text fields on warn cards (ask "Other", plan feedback) — a sunken
+                            step below --warn-bg so the field reads as a well */
   --user-bg: #1b2129;     /* user input surfaces: message box + composer */
   --user-border: #374a63;
   --user-raised: #242e3c; /* capsules on user surfaces (attachment chips) */
@@ -656,12 +658,16 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* Plan-card feedback line: one row of "why", riding whichever button answers the card (deny →
    the message; approve → steered in right after the allow). Sits between the plan body and the
    buttons and leaves with them once the card is decided. Panel-toned, not user-blue: it belongs
-   to the card's decision surface, and the composer keeps its own colours. */
-.plan-fb { display: block; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 4px 10px;
-  background: var(--panel); color: var(--fg); border: 1px solid var(--border);
-  border-radius: var(--radius); font: inherit; outline: none; }
-.plan-fb::placeholder { color: var(--muted); }
-.plan-fb:focus { border-color: var(--border-strong); }
+   to the card's decision surface, and the composer keeps its own colours. .plan-sep marks where
+   the plan ends and the decision surface begins — full-bleed to the card's padding edges, the
+   composer's #inputbar idiom (an input cannot carry a pseudo-element, so it is its own div).
+   The field itself wears the ask card's "Other" input dress (--warn-field well, warn-toned
+   frame) — the panel's two type-your-answer-on-a-card surfaces must read as one control. */
+.plan-sep { margin: 10px -12px 0; border-top: 1px solid var(--border); }
+.plan-fb { display: block; width: 100%; margin-top: 10px; padding: 7px 10px;
+  background: var(--warn-field); color: var(--fg); border: 1px solid var(--warn-border);
+  border-radius: var(--radius); font: inherit; font-size: 13px; outline: none; }
+.plan-fb::placeholder { color: var(--dot); }
 .card-menu .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
@@ -703,7 +709,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 .ask-ind svg { width: 16px; height: 16px; display: block; }
 /* 31px left: input text (31 + 1px border + 10px padding) lands on the option-label edge (42px) */
 .ask-other { padding: 2px 8px 6px 31px; }
-.ask-other input { width: 100%; background: transparent; border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 7px 10px;
+.ask-other input { width: 100%; background: var(--warn-field); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 7px 10px;
   color: var(--fg); font: inherit; font-size: 13px; outline: none; }
 .ask-other input::placeholder { color: var(--dot); }
 /* replayed (historical) card: answers are a record, not a control.
