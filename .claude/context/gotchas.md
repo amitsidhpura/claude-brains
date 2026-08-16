@@ -542,6 +542,23 @@ trusting memory here.
   back a value only the real sheet sets. (2) no compositor → rAF fires ~2.5/s, so rAF-driven animation
   reads frozen — stub `requestAnimationFrame` onto `setTimeout`. (3) `ResizeObserver` exists but
   never reliably fires — give RO-synced code a second trigger and test that. (Also docs/limits.md.)
+- **A negative control must run against the build that actually LACKS the fix — not "current
+  minus my commits".** Fixture 49's control was run against HEAD-minus-this-session, which still
+  contained the fade fix (it shipped in 0.7.1 the session before), so every DISCRIMINATING
+  assertion passed and the fixture read as vacuous. Find the commit that introduced the behaviour
+  and check out its parent (`git checkout <fix>~1 -- <file>`), then prove BY CONTENT which build
+  the panel is serving before believing a single result (2026-08-16).
+- **An assertion that calls a function by name aborts the whole harness run on a build that has
+  not got it.** `cmdTakesArg(...)` in a fixture threw ReferenceError on the pre-fix build, and
+  `Panel.eval` turns that into an AssertionError that kills the process — the control reported
+  nothing at all for the remaining 18 assertions. Assert through a path BOTH builds have (the
+  rendered attribute, the DOM) and the control can actually complete.
+- **A computed-style assertion on a TRANSITIONED property is a coin flip unless it outwaits the
+  transition.** `#fade-top` transitions opacity over .12s, so an immediate `getComputedStyle`
+  after the class toggle returns the PRE-transition value: the same fixture failed in step 1 on
+  one run and in step 3 on the next, with no code change between. The harness evals with
+  `awaitPromise`, so return `new Promise(r => setTimeout(() => r(<read>), 250))` and the reading
+  is deterministic (2026-08-16).
 - **The spliced-chat harness** (the standing lane for webview JS fixes): splice `chat.css` at
   `<!--CSS-->` and `window.LIMITS` + a `window.__bridge` stub at `<!--LIMITS-->` (capture LIMITS
   live: `cdp.py "JSON.stringify(window.LIMITS)"`), feed events through `window.onClaudeEvent`,

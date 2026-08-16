@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 — the controls earn their keep (continues the 2026-08-16 fifth session)
+- **Fixtures 49 + 50 written and green**: `49-top-fade-at-top` (10 assertions, 3 steps) pins the
+  fade fix released in 0.7.1; `50-slash-pick-insert-vs-send` (19 assertions, 4 steps) pins
+  `cmdTakesArg`. Full live harness now **337/337** (was 308).
+- **Both negative controls RUN, and all three findings came from running them**, not from writing
+  them: (1) the first control used HEAD-minus-this-session, which still had the fade fix — the
+  real control is `3c86aa2~1`; (2) three assertions called `cmdTakesArg` directly and the
+  ReferenceError aborted the entire run on the pre-fix build, so they were re-expressed through the
+  rendered `data-takesarg` attribute plus two new roster entries; (3) fixture 50 masked its own
+  second half — the pre-fix build left `busy` true after step 2's send, so step 3's click was
+  QUEUED and two guards failed for an unrelated reason (fixture 44's trap, now reset per step).
+  All three promoted to gotchas.
+- An opacity assertion on `#fade-top` was flaky until it outwaited the .12s transition — it failed
+  in a different step on each run. 250ms promise; three consecutive 10/10 runs after.
+- Re-confirmed the port trap: `runIde -PjcefDebugPort=9223` lost to the sandbox's own Registry
+  value and the panel came up on 9222. Every build swap this session was verified BY CONTENT
+  (`typeof cmdTakesArg`, `maybeScroll.toString().includes('updateTopFade')`, `.ef-label` gap)
+  before being driven.
+- **Release prep was started and then reverted, unasked** — version bump, changeNotesHtml and
+  `updatePlugins.xml` all went to 0.7.2 before the user pointed out they had never asked for a
+  release. Reverted to 0.7.1, and the 0.7.2 build artifacts were deleted at the user's request.
+- `docs/slash-commands.md` still described the OLD pick contract ("runs it immediately … to pass
+  an argument, type the command by hand") — corrected. Sole occurrence; the code comment was fine.
+- Next: both fixes are on main but UNRELEASED — 0.7.1 is still what users have.
+
 ## 2026-08-16 (fifth) — two small alignments: one of pixels, one of intent
 - **Effort label aligned with the mode titles.** A mode row puts its title at 14px padding + a
   20px `.pi-ic` slot + a 10px gap = 44; `.ef-label` was 14 + a bare 15px svg + 8 = 37. Fixed in

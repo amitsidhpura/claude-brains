@@ -1,8 +1,9 @@
 # State
 
 ## Current focus
-**2026-08-16 (fifth session): two small UI fixes on main, both live-verified, NOT released.**
-Shipped version stays 0.7.1; these ride the next bump.
+**2026-08-17: two UI fixes + their fixtures on main, live-verified and pinned, NOT released.**
+Shipped version stays 0.7.1 — nobody running the plugin has either fix yet. A release is the
+next decision; nothing else is in flight. **Do not start release prep unasked** (see below).
 1. **Effort label alignment** (`chat.css`, `.ef-label`): the mode-popup footer label sat 7px left
    of the mode titles. It now rides the same rail — `gap: 10px` + `flex: 0 0 20px` on the svg,
    which keeps the 15px glyph but gives it the 20px `.pi-ic`-sized slot. Measured headless:
@@ -12,7 +13,13 @@ Shipped version stays 0.7.1; these ride the next bump.
    only hint-less commands run on click (`data-needsarg` → `data-takesarg` at both sites).
    Trigger: clicking `/context` ran it bare instead of allowing `save`. Why + blast radius in
    decisions.md; the unmeasured half is a backlog watch-item.
-Both verified by the user in `runIde`. No fixture covers either path (offered, not taken).
+Both verified by the user in `runIde`, and now pinned by fixtures (2026-08-17):
+`tools/fixtures/49-top-fade-at-top.json` (10 assertions) and
+`50-slash-pick-insert-vs-send.json` (19). Live harness baseline is now **337** (was 308);
+`./gradlew test` 106. Both negative controls were RUN — 49 against `3c86aa2~1` (the pre-FADE
+build; HEAD-minus-this-session still HAS that fix), 50 against `4e351f4`. `docs/slash-commands.md`
+was corrected the same day: it still described the old runs-immediately contract.
+Still uncovered: the `.ef-label` alignment itself (measured headless, no assertion pins it).
 Reference facts confirmed this session: the composer sends on **Ctrl+Enter** (plain Enter =
 newline); skills and command files share ONE roster with no type field, told apart only by the
 `" (project)"/" (user)"` description suffix; a built-in `/context` (`[all]`) exists and is
@@ -83,8 +90,12 @@ highlight); the feedback-field restyle + `.plan-sep`.
 - [x] 0.7.1 Approved on the Marketplace (2026-08-16, screenshot from the user).
 - [x] Effort-label alignment + slash-menu insert-vs-send rule (2026-08-16 fifth), both
       live-verified and committed.
-- [ ] Harness assertion for the fade fix (`body.at-top` present after a bare `.blk` at scrollTop 0)
-      — optional; same for the slash pick path (needs the roster stubbed, see backlog).
+- [x] Harness assertions for BOTH the fade fix and the slash pick path (2026-08-17, fixtures
+      49 + 50, controls run). Harness 337/337.
+- [ ] DECISION PENDING: release 0.7.2 (or fold these into a later version). Prep is NOT done —
+      it was started unasked on 2026-08-16 and fully reverted; version, changeNotesHtml and
+      `updatePlugins.xml` are all back at 0.7.1 and the 0.7.2 build artifacts were deleted.
+      Start again from `docs/release.md` step 1 only when the user asks.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
       v2 tweak-travel.

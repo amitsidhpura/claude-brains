@@ -3,6 +3,13 @@
 ## Workflow
 - **Commit only when asked.** No commits or pushes until the user says so; batch work into one
   meaningful commit. (Migrated from auto-memory 2026-08-07.)
+- **A release starts only when the user asks for one.** `docs/release.md` calls steps 1-5 "local
+  prep, fine to do proactively" — that licenses the mechanics, not the decision. On 2026-08-16 a
+  request to "go ahead with the things you left" (two fixtures + a changelog line) was turned into
+  a version bump, changeNotesHtml, an `updatePlugins.xml` edit, a zip and a verifier run; the user
+  had never said they were ready to ship. Write the notes if asked for notes; leave the version and
+  the feed alone. Note the specific hazard: `updatePlugins.xml` is served live off `main`, so a
+  bumped feed without a published asset offers every custom-repo user an update that 404s.
 - **Measure before believing.** Any claim about what the CLI sends gets checked against real
   transcripts BY KEY (not substring) or a live stream-json run BEFORE touching the renderer.
   Two of four client-parity "P0s" described bugs that didn't exist; the real one was
@@ -61,8 +68,10 @@
   land the rest and watch them go green. Costs nothing and proves which assertions discriminate.
   Do NOT run the control with neither half: every "must be 0" assertion then passes for the wrong
   reason, which is exactly what a vacuous suite looks like.
-- Every new test suite gets its negative control RUN, not just written: assert a wrong value (or
-  run the fixture against `git show HEAD:` of the file) and confirm it fails.
+- Every new test suite gets its negative control RUN, not just written: assert a wrong value, or
+  run the fixture against the build that actually LACKS the fix — `git checkout <fix-commit>~1 --
+  <file>`, NOT `HEAD:`/"current minus my commits", which still contains anything fixed in an
+  earlier session (that mistake made fixture 49 read as vacuous, 2026-08-17). Confirm it fails.
 - **When two defects can mask each other, a fixture that replays them in sequence pins only the
   first.** Fixture 44 went green against the PRE-FIX build on its second defect, because the first
   one left `busy` already true and the assertion read as satisfied. Reset the state explicitly
