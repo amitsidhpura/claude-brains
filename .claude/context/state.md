@@ -6,9 +6,8 @@ a NEW conversation drew its stdout washed out under `#fade-top` (read as striket
 was toggled only by the scroll handler and the two replay paths, so an empty log that never scrolls
 never hid the fade — and local-command output is the one first block with no sticky `.msg-user`
 above it. Fix in `chat.html`: `updateTopFade()` now also runs from `maybeScroll()` (every `el()`
-render) and `clearLogUI()`. `node --check` clean; NOT driven in the live panel (the IDE's 9222
-exposed no target) — confirm on the next `runIde` by typing `/model` on a fresh conversation, then
-add a harness assertion (`body.at-top` present after a bare `.blk` at scrollTop 0). Unreleased.
+render) and `clearLogUI()`. Verified live by the user in `runIde` (`/model` on a fresh
+conversation renders crisp). Committed `3c86aa2`, unreleased; a harness assertion is optional.
 
 **Previous (2026-08-16 third session): 0.7.0 RELEASED and Marketplace-Approved.** Commit `59d94fc`,
 tag `v0.7.0`. Full `docs/release.md` run: verifier Compatible on all seven PhpStorm branches
@@ -59,7 +58,8 @@ highlight); the feedback-field restyle + `.plan-sep`.
 - [x] Release 0.7.0 — done 2026-08-16, Approved on the Marketplace.
 - [x] Five new `design/marketplace/` screenshots uploaded by the user (2026-08-16).
 - [x] Top-fade wash on a fresh conversation fixed (2026-08-16 fourth) — committed, unreleased.
-- [ ] Verify the fade fix on a live `runIde` (`/model` on a new conversation) + harness assertion.
+- [x] Fade fix verified live by the user in `runIde` (2026-08-16, `/model` on a new conversation).
+- [ ] Harness assertion for it (`body.at-top` present after a bare `.blk` at scrollTop 0) — optional.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
       v2 tweak-travel.

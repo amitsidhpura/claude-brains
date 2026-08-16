@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.7.0"
+version = "0.7.1"
 
 repositories {
     mavenCentral()
@@ -100,6 +100,12 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.7.1</b>
+            <ul>
+              <li>The output of a slash command run on a brand-new conversation (for example
+                  /model) now renders crisp — it used to sit washed out under the header fade
+                  until the log was scrolled</li>
+            </ul>
             <b>0.7.0</b>
             <ul>
               <li>A plan card now takes your words, not just a verdict. A "Tell Claude what to
