@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.7.1"
+version = "0.7.2"
 
 repositories {
     mavenCentral()
@@ -100,6 +100,14 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.7.2</b>
+            <ul>
+              <li>Picking a command from the / menu no longer runs it before you have said what
+                  you want. A command that takes an argument — /context, /compact, /code-review,
+                  /simplify, /loop, /batch — now lands in the composer ready for it; commands
+                  that take none still run on the spot</li>
+              <li>The Effort label in the mode menu lines up with the modes above it</li>
+            </ul>
             <b>0.7.1</b>
             <ul>
               <li>The output of a slash command run on a brand-new conversation (for example
