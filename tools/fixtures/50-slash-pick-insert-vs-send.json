@@ -1,0 +1,167 @@
+{
+  "item": "slash menu — insert-vs-send on pick (2026-08-16)",
+  "branch": "cmdTakesArg: any argumentHint inserts '/name ' and waits; only a hint-less command runs on click",
+  "provenance": "Roster entry shapes ({name, description, argumentHint, aliases?}, no type field; custom entries marked only by a ' (project)'/' (user)' description suffix) are fixture 46's, measured 2026-08-15 on CLI 2.1.228. The argumentHint VALUES here were read out of the CLI 2.1.233 binary on 2026-08-16 (`strings` — hints are never persisted to a transcript): /compact carries '<optional custom summarization instructions>', the built-in /context '[all]', /goal '[<condition> | clear]', and the hint set also contains bracket-less forms such as 'key=value' and 'consent | revoke'. The project skill's own hint '[init | load | save | <note to record>]' is this repo's .claude/skills/context/SKILL.md frontmatter, which shadows the built-in /context in the roster. __commands is a PLUGIN-INTERNAL frame (ChatPanel's initialize relay), so assertions stay on what the renderer must do with the shape it is handed. The click steps swap window.__bridge for a recorder inside a try/finally — no turn ever reaches the CLI, and a throw cannot leave the panel mute. NEGATIVE CONTROL: run against `git show HEAD~2:` of chat.html (the cmdNeedsArg build) — the assertions marked DISCRIMINATING fail, the GUARDs stay green. The hint-shape guards go through the RENDERED data-takesarg attribute rather than calling cmdTakesArg directly: on the pre-fix build the function does not exist, and a ReferenceError aborts the whole harness run before the control can report anything (hit 2026-08-16). Step 3 resets busy/log before its click on purpose: without it the PRE-fix build arrives with busy=true from step 2's send, submit() queues the turn instead of sending it, and two guards fail for a reason that has nothing to do with the rule under test (fixture 44's masking trap, found by running this control 2026-08-16).",
+  "steps": [
+    {
+      "note": "roster arrives: every command that advertises an argument is marked, whatever bracket it wears",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); clearComposer();",
+      "frames": [
+        {
+          "type": "__commands",
+          "items": [
+            {
+              "name": "list-agents",
+              "description": "List the agents available to this session",
+              "argumentHint": ""
+            },
+            {
+              "name": "context",
+              "description": "Manage portable project context/memory (project)",
+              "argumentHint": "[init | load | save | <note to record>]"
+            },
+            {
+              "name": "compact",
+              "description": "Free up context by summarizing the conversation so far",
+              "argumentHint": "<optional custom summarization instructions>"
+            },
+            {
+              "name": "goal",
+              "description": "Set or clear the session goal",
+              "argumentHint": "[<condition> | clear]"
+            },
+            {
+              "name": "cfg-probe",
+              "description": "Bracket-less hint, as the CLI spells /config (project)",
+              "argumentHint": "key=value"
+            },
+            {
+              "name": "no-hint-probe",
+              "description": "Entry omitting argumentHint entirely (project)"
+            },
+            {
+              "name": "ws-hint-probe",
+              "description": "Whitespace-only hint (project)",
+              "argumentHint": "   "
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length",
+          "equals": 7,
+          "why": "GUARD: all seven render (allowlisted built-ins + suffix-marked customs)"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/no-hint-probe\"]').dataset.takesarg",
+          "equals": false,
+          "why": "GUARD: an entry with NO argumentHint field must not throw and must stay send-on-click"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/ws-hint-probe\"]').dataset.takesarg",
+          "equals": false,
+          "why": "GUARD: a whitespace-only hint is no hint — trimmed, not truthy"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/context\"]').dataset.takesarg",
+          "equals": true,
+          "why": "DISCRIMINATING: '[init | load | save]' is a MENU of sub-modes — the report (false pre-fix)"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/compact\"]').dataset.takesarg",
+          "equals": true,
+          "why": "DISCRIMINATING: '<optional …>' counts too — the old rule read the word 'optional' (false pre-fix)"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/goal\"]').dataset.takesarg",
+          "equals": true,
+          "why": "DISCRIMINATING: '[<condition> | clear]' (false pre-fix)"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/cfg-probe\"]').dataset.takesarg",
+          "equals": true,
+          "why": "DISCRIMINATING: a hint wearing neither bracket nor angle used to fire bare (false pre-fix)"
+        },
+        {
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/list-agents\"]').dataset.takesarg",
+          "equals": false,
+          "why": "GUARD: hint-less command still acts on click — green in both phases"
+        },
+        {
+          "js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/context\"] .pi-src')||{}).textContent",
+          "equals": "project",
+          "why": "GUARD: the badge still rides an arg-taking custom entry (fixture 46's contract, untouched)"
+        }
+      ]
+    },
+    {
+      "note": "picking an arg-taking command INSERTS it and waits — nothing is sent",
+      "setup": "window.__pick1 = (function () { renderSlash(''); const row = document.querySelector('#slashList .popup-item[data-cmd=\"/context\"]'); if (!row) return { missing: true }; const real = window.__bridge, sent = []; window.__bridge = function (s) { sent.push(s); }; try { row.click(); } finally { window.__bridge = real; } return { value: input.value, sent: sent.length, first: sent[0] || '' };})();",
+      "expect": [
+        {
+          "js": "window.__pick1.missing === true",
+          "equals": false,
+          "why": "GUARD: the row was found to click"
+        },
+        {
+          "js": "window.__pick1.value",
+          "equals": "/context ",
+          "why": "DISCRIMINATING: the composer holds '/context ' with a trailing space for the argument (pre-fix it was cleared and sent)"
+        },
+        {
+          "js": "window.__pick1.sent",
+          "equals": 0,
+          "why": "DISCRIMINATING: NOTHING reached the bridge — the user's report (1 frame pre-fix)"
+        },
+        {
+          "js": "document.activeElement === input",
+          "equals": true,
+          "why": "DISCRIMINATING: focus moves to the composer so the argument can be typed — the send branch never focuses it, so this is part of the insert contract, not a phase-neutral guard"
+        },
+        {
+          "js": "menuEl('slashMenu').classList.contains('show')",
+          "equals": false,
+          "why": "GUARD: the menu closes either way"
+        }
+      ]
+    },
+    {
+      "note": "picking a hint-less command still acts immediately — a command menu should act",
+      "setup": "setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); clearComposer(); window.__pick2 = (function () { renderSlash(''); const row = document.querySelector('#slashList .popup-item[data-cmd=\"/list-agents\"]'); if (!row) return { missing: true }; const real = window.__bridge, sent = []; window.__bridge = function (s) { sent.push(s); }; try { row.click(); } finally { window.__bridge = real; } return { value: input.value, sent: sent.length, first: sent[0] || '' };})();",
+      "expect": [
+        {
+          "js": "window.__pick2.sent",
+          "equals": 1,
+          "why": "GUARD: exactly one turn left the panel — the branch that must NOT have changed"
+        },
+        {
+          "js": "window.__pick2.first",
+          "contains": "\"text\":\"/list-agents\"",
+          "why": "GUARD: and it carried the bare command as a user turn"
+        },
+        {
+          "js": "window.__pick2.value",
+          "equals": "",
+          "why": "GUARD: submit() cleared the composer"
+        }
+      ]
+    },
+    {
+      "note": "cleanup: the send branch left the panel busy with no CLI to answer it",
+      "setup": "setBusy(false); clearComposer(); window.onClaudeEvent(JSON.stringify({type:'__clear'})); delete window.__pick1; delete window.__pick2;",
+      "expect": [
+        {
+          "js": "busy",
+          "equals": false,
+          "why": "GUARD: busy reset — clearLogUI does not do it, and fixture 44 documents what a leaked flag costs"
+        },
+        {
+          "js": "typeof window.__bridge",
+          "equals": "function",
+          "why": "GUARD: the real bridge was restored — a leaked stub would mute the panel for every later fixture"
+        }
+      ]
+    }
+  ]
+}

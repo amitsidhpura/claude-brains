@@ -1,0 +1,115 @@
+{
+  "item": "UI — top fade on a conversation that never scrolls (2026-08-16)",
+  "branch": "body.at-top is set by the RENDER path (maybeScroll) and by clearLogUI, not only by the scroll handler",
+  "provenance": "User report 2026-08-16 (screenshot): `/model` on a NEW conversation drew its stdout greyed and apparently struck through — not a text style, but #fade-top's 18px solid→transparent band crossing the first block (chat.css:162, hidden by `body.at-top #fade-top { opacity: 0 }`). body.at-top was toggled only by the #log scroll handler and the two replay paths, so a log too short to scroll fires no scroll event and never hides the fade; local-command output is the one first block with no sticky .msg-user riding above the fade. Frame shape reused from fixture 47 (a bare whole-message `assistant` frame, measured 2026-08-15 on CLI 2.1.233) — this fixture asserts only what the RENDERER must do with a block it is given, never what the CLI emits. The at-top class is removed in each setup on purpose: the assertion must prove the render path RESTORES it, independently of whatever the previous fixture left on <body>. The two computed-opacity assertions await 250ms on purpose: #fade-top transitions opacity over .12s, so an unsettled read measures whatever the animation happens to be part-way through and passes or fails by timing alone (observed both ways 2026-08-16).",
+  "steps": [
+    {
+      "note": "a block rendered into a fresh, unscrollable log hides the top fade — the reported repro",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); document.body.classList.remove('at-top');",
+      "frames": [
+        {
+          "type": "assistant",
+          "uuid": "tf-1",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Set model to **Opus 5**"
+              }
+            ]
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "duration_ms": 300
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .blk').length",
+          "equals": 1,
+          "why": "GUARD: the block drew at all — green in both phases"
+        },
+        {
+          "js": "log.scrollTop <= 1",
+          "equals": true,
+          "why": "GUARD: the log is too short to scroll, so no scroll event ever fires — the premise"
+        },
+        {
+          "js": "document.body.classList.contains('at-top')",
+          "equals": true,
+          "why": "DISCRIMINATING: maybeScroll() now sets the toggle on every render (absent pre-fix)"
+        },
+        {
+          "js": "new Promise(r => setTimeout(() => r(getComputedStyle(document.getElementById('fade-top')).opacity), 250))",
+          "equals": "0",
+          "why": "DISCRIMINATING: the fade is actually painted away, not just class-toggled (is '1' pre-fix) Read after the .12s opacity transition (chat.css:164) has settled — an immediate getComputedStyle returns the PRE-transition value, which made this a coin flip: the same two runs failed it in step 1 and then in step 3."
+        }
+      ]
+    },
+    {
+      "note": "clearing the log (new conversation / resume / restart) leaves the fade hidden too",
+      "setup": "document.body.classList.remove('at-top'); window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .blk').length",
+          "equals": 0,
+          "why": "GUARD: the log really was emptied"
+        },
+        {
+          "js": "document.body.classList.contains('at-top')",
+          "equals": true,
+          "why": "DISCRIMINATING: clearLogUI() calls updateTopFade() — an emptied log sits at the top (absent pre-fix)"
+        }
+      ]
+    },
+    {
+      "note": "the toggle still discriminates: a log long enough to scroll keeps the fade visible",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); pinned = true;",
+      "frames": [
+        {
+          "type": "assistant",
+          "uuid": "tf-2",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Line 1 — filler long enough to overflow the panel viewport.\n\nLine 2 — filler long enough to overflow the panel viewport.\n\nLine 3 — filler long enough to overflow the panel viewport.\n\nLine 4 — filler long enough to overflow the panel viewport.\n\nLine 5 — filler long enough to overflow the panel viewport.\n\nLine 6 — filler long enough to overflow the panel viewport.\n\nLine 7 — filler long enough to overflow the panel viewport.\n\nLine 8 — filler long enough to overflow the panel viewport.\n\nLine 9 — filler long enough to overflow the panel viewport.\n\nLine 10 — filler long enough to overflow the panel viewport.\n\nLine 11 — filler long enough to overflow the panel viewport.\n\nLine 12 — filler long enough to overflow the panel viewport.\n\nLine 13 — filler long enough to overflow the panel viewport.\n\nLine 14 — filler long enough to overflow the panel viewport.\n\nLine 15 — filler long enough to overflow the panel viewport.\n\nLine 16 — filler long enough to overflow the panel viewport.\n\nLine 17 — filler long enough to overflow the panel viewport.\n\nLine 18 — filler long enough to overflow the panel viewport.\n\nLine 19 — filler long enough to overflow the panel viewport.\n\nLine 20 — filler long enough to overflow the panel viewport.\n\nLine 21 — filler long enough to overflow the panel viewport.\n\nLine 22 — filler long enough to overflow the panel viewport.\n\nLine 23 — filler long enough to overflow the panel viewport.\n\nLine 24 — filler long enough to overflow the panel viewport.\n\nLine 25 — filler long enough to overflow the panel viewport.\n\nLine 26 — filler long enough to overflow the panel viewport.\n\nLine 27 — filler long enough to overflow the panel viewport.\n\nLine 28 — filler long enough to overflow the panel viewport.\n\nLine 29 — filler long enough to overflow the panel viewport.\n\nLine 30 — filler long enough to overflow the panel viewport.\n\nLine 31 — filler long enough to overflow the panel viewport.\n\nLine 32 — filler long enough to overflow the panel viewport.\n\nLine 33 — filler long enough to overflow the panel viewport.\n\nLine 34 — filler long enough to overflow the panel viewport.\n\nLine 35 — filler long enough to overflow the panel viewport.\n\nLine 36 — filler long enough to overflow the panel viewport.\n\nLine 37 — filler long enough to overflow the panel viewport.\n\nLine 38 — filler long enough to overflow the panel viewport.\n\nLine 39 — filler long enough to overflow the panel viewport.\n\nLine 40 — filler long enough to overflow the panel viewport.\n\nLine 41 — filler long enough to overflow the panel viewport.\n\nLine 42 — filler long enough to overflow the panel viewport.\n\nLine 43 — filler long enough to overflow the panel viewport.\n\nLine 44 — filler long enough to overflow the panel viewport.\n\nLine 45 — filler long enough to overflow the panel viewport.\n\nLine 46 — filler long enough to overflow the panel viewport.\n\nLine 47 — filler long enough to overflow the panel viewport.\n\nLine 48 — filler long enough to overflow the panel viewport.\n\nLine 49 — filler long enough to overflow the panel viewport.\n\nLine 50 — filler long enough to overflow the panel viewport.\n\nLine 51 — filler long enough to overflow the panel viewport.\n\nLine 52 — filler long enough to overflow the panel viewport.\n\nLine 53 — filler long enough to overflow the panel viewport.\n\nLine 54 — filler long enough to overflow the panel viewport.\n\nLine 55 — filler long enough to overflow the panel viewport.\n\nLine 56 — filler long enough to overflow the panel viewport.\n\nLine 57 — filler long enough to overflow the panel viewport.\n\nLine 58 — filler long enough to overflow the panel viewport.\n\nLine 59 — filler long enough to overflow the panel viewport.\n\nLine 60 — filler long enough to overflow the panel viewport."
+              }
+            ]
+          }
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "duration_ms": 300
+        }
+      ],
+      "expect": [
+        {
+          "js": "log.scrollHeight > log.clientHeight + 8",
+          "equals": true,
+          "why": "GUARD: the log genuinely overflows, so this is not a vacuous pass"
+        },
+        {
+          "js": "log.scrollTop > 1",
+          "equals": true,
+          "why": "GUARD: pinned rendering scrolled to the bottom"
+        },
+        {
+          "js": "document.body.classList.contains('at-top')",
+          "equals": false,
+          "why": "GUARD: not at the top → the fade stays — proves the assertions above are not always-true"
+        },
+        {
+          "js": "new Promise(r => setTimeout(() => r(getComputedStyle(document.getElementById('fade-top')).opacity), 250))",
+          "equals": "1",
+          "why": "GUARD: and it is painted Read after the .12s opacity transition (chat.css:164) has settled — an immediate getComputedStyle returns the PRE-transition value, which made this a coin flip: the same two runs failed it in step 1 and then in step 3."
+        }
+      ]
+    }
+  ]
+}
