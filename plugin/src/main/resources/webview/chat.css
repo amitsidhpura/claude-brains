@@ -1043,8 +1043,11 @@ blockquote > *:last-child { margin-bottom: 0; }
 .popup-item.on .pi-check { visibility: visible; }
 .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--user-divider);
   color: var(--user-muted); font-size: 12px; }
-.ef-label { display: flex; align-items: center; gap: 8px; }
-.ef-label svg { width: 15px; height: 15px; }
+/* The footer label rides the SAME left rail as a mode title: 14px padding + a 20px icon slot +
+   a 10px gap. The svg keeps its 15px glyph and takes the 20px slot via flex-basis, so it centres
+   on the mode icons' axis exactly as .pi-ic does. */
+.ef-label { display: flex; align-items: center; gap: 10px; }
+.ef-label svg { width: 15px; height: 15px; flex: 0 0 20px; }
 .ef-label b { color: var(--fg); font-weight: 600; }
 .effort { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0; }
 .effort .d { width: 9px; height: 9px; border-radius: 50%; background: #4a4d52; transition: background .1s, transform .1s; }
