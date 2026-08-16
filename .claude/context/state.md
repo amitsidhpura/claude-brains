@@ -1,10 +1,10 @@
 # State
 
 ## Current focus
-**2026-08-16 (fourth session): 0.7.1 RELEASED — the top-fade fix.** Commit `91a6ba5`, tag
-`v0.7.1`; verifier Compatible 242→262, asset 200 + `cmp`-identical, feed advertising 0.7.1,
-marketplace-upload run 31933586034 green in 11s (Marketplace approval not yet confirmed at save —
-check the plugin page). Tests 106/106 (state previously said 107; no test code changed — a count
+**2026-08-16 (fourth session): 0.7.1 RELEASED and Marketplace-Approved — the top-fade fix.**
+Commit `91a6ba5`, tag `v0.7.1`; verifier Compatible 242→262, asset 200 + `cmp`-identical, feed
+advertising 0.7.1, marketplace-upload run 31933586034 green in 11s, **Approved** the same day
+(IDE-run row on 2026.2.1 + verifier 1.408 rows Compatible). Nothing is in flight. Tests 106/106 (state previously said 107; no test code changed — a count
 difference, not a loss). The fix: `/model` on
 a NEW conversation drew its stdout washed out under `#fade-top` (read as strikethrough): `body.at-top`
 was toggled only by the scroll handler and the two replay paths, so an empty log that never scrolls
@@ -63,7 +63,7 @@ highlight); the feedback-field restyle + `.plan-sep`.
 - [x] Five new `design/marketplace/` screenshots uploaded by the user (2026-08-16).
 - [x] Top-fade wash on a fresh conversation fixed and released as 0.7.1 (2026-08-16 fourth).
 - [x] Fade fix verified live by the user in `runIde` (2026-08-16, `/model` on a new conversation).
-- [ ] Confirm 0.7.1 Approved on the Marketplace plugin page (upload run was green).
+- [x] 0.7.1 Approved on the Marketplace (2026-08-16, screenshot from the user).
 - [ ] Harness assertion for it (`body.at-top` present after a bare `.blk` at scrollTop 0) — optional.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
