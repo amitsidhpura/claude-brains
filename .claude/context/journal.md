@@ -3,6 +3,24 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 (third) — 0.7.2 goes out
+- **Released 0.7.2** (`40bc060`, tag `v0.7.2`): the / menu insert-vs-send rule and the Effort
+  label rail. Patch bump — two fixes, no features. Full `docs/release.md` run with the gate held
+  at step 6 until the user had read the complete notes.
+- 106 tests, verifier Compatible ×7 (242→262, no warning files), zip clean, notes baked into the
+  shipped plugin.xml, jar resources confirmed to carry both fixes. Asset 200 + `cmp`-identical,
+  feed serving 0.7.2, upload run 31967154720 success, **Approved the same day**.
+- The Marketplace API lag showed again: `updates?size=3` still named 0.7.1 as newest-approved
+  minutes after a successful upload, while the plugin page already showed 0.7.2 Approved. Third
+  time this has been observed (recorded 2026-08-14) — check the page, not the API.
+- Notes followed the UPDATE-release shape (theme line, two punchy lines, one paragraph, 🐛 Fixes /
+  📥 Install / ⚠️ Notes). Ctrl+Enter is mentioned explicitly because the insert leaves the caret in
+  the composer and the change only reads end-to-end with the send key named.
+- Tooling note: `./gradlew verifyPlugin` needs a Bash timeout above the 120s default — the first
+  attempt was cut off mid-run at exactly 2 minutes.
+- Next: backlog order — plan-card keyboard shortcuts, reloaded-webview log replay,
+  kill-background-process from the panel.
+
 ## 2026-08-17 (second) — the alignment fixture, and the 7px that was never 7px
 - **Fixture 51 `mode-menu-effort-rail`** (7 assertions) closes the last uncovered thing: the
   Effort label's rail. Opens the menu by CLICKING THE CHIP (a force-shown popup skips tg()'s
@@ -233,46 +251,17 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   testing repo driven over CDP + the user's own manual pass.
 - Next: release the next version (changeNotesHtml gate), then backlog order.
 
-## 2026-08-14 (second) — 0.6.0 goes out
-- **Released 0.6.0** (`fa26d57`, tag `v0.6.0`): the in-flight gutter dot and the VFS refresh after
-  CLI writes. Full `docs/release.md` run; the approval gate at step 6 was held for the user.
-- `verifyPlugin` WITHOUT `-PskipVerifierIdes`: Compatible on all seven PhpStorm branches 242→262.
-  Asset HTTP 200 and `cmp`-identical to the local zip; feed advertises 0.6.0; upload workflow green
-  in 14s; Marketplace **Approved** as version id 1138398 with four green verification rows.
-- **Marketplace approval lags the upload.** At release time the API still listed 0.5.3 as newest,
-  which reads like a failure and is not one — `api/plugins/33274/updates` carries `approve` per
-  version and is the way to check. Recorded in state.md.
-- **Two stale premises fell out of the release run**, both the "a doc outlives its decision" pattern
-  conventions.md already names: `updatePlugins.xml` still opened with "Path B — no JetBrains
-  Marketplace" two weeks after both channels went live, and `overview.md`'s listing URL used the
-  xmlId form, which 404s — the numeric `/plugin/33274` is the real one.
-- Next: unchanged — 3.1 custom commands + 9.10 together, then the rest of backlog.md.
-
-## 2026-08-14 — the IDE stops showing yesterday's files
-- **Shipped:** `CliFileSync` + `Vfs.refreshFromDisk`, so an edit lands in an open editor and a new
-  file appears in the tree without "Reload from disk". Two mechanisms: pair a write tool's `tool_use`
-  (which has the path) with its `tool_result` (which says the write finished) and refresh that path;
-  then sweep the project root at every `result`. Reasoning in decisions.md.
-- **The second mechanism exists because the first was measurably not enough.** The backlog scoped
-  this to Write/Edit/MultiEdit. The first real test turn asked the CLI to create one file and
-  overwrite another, and it used a SINGLE Bash call for both — the scoped fix caught nothing. Bash
-  names no path, so the turn-end sweep is what covers it. Gotcha recorded: Bash writes are the
-  common case, not the edge one.
-- **Verified through the plugin's own MCP bridge, which turns out to be an ideal probe.** `openFile`
-  calls `findVFile` and refreshes nothing, so it reports exactly what the VFS knows: `error: file not
-  found` for a file created behind the IDE's back, `opened:` once a turn has refreshed it. The EDIT
-  half was proven with `getDiagnostics` on a JSON file open in the editor — clean while valid, then
-  reporting syntax errors after the CLI made it invalid out of band.
-- **Nearly called a pass a failure.** The first diagnostics read came back empty and looked like the
-  document had not reloaded; it had, and the analyzer simply had not caught up. Only interpretable
-  after proving the probe could see a fault at all, by opening an already-broken file. Both that and
-  "several IDEs may hold the same workspace open — filter the lockfile by ideName or you hit VS
-  Code's bridge" are in gotchas.
-- Verified: 100 Kotlin tests (13 new, negative control RUN — inverting "refresh at tool_use" and
-  "Read refreshes" both fail as they must), live harness 217/217. User confirmed it in their own IDE.
-- Next: unchanged — 3.1 custom commands + 9.10 together.
-
 ## Digest
+- **2026-08-14 (second)** — 0.6.0 released + Approved (verifier Compatible ×7, asset identical,
+  upload green in 14s). Two stale doc premises fell out of the run: `updatePlugins.xml` still said
+  "no Marketplace", `overview.md` used the xmlId listing URL that 404s. Approval-lag lesson
+  promoted to gotchas § Release.
+- **2026-08-14** — `CliFileSync` + `Vfs.refreshFromDisk` shipped: edits land in open editors and
+  new files appear without "Reload from disk". Scoping it to Write/Edit/MultiEdit was measurably
+  not enough — the first real turn did both writes in ONE Bash call — so a turn-end root sweep
+  covers what names no path. Verified through the plugin's own MCP bridge (`openFile` refreshes
+  nothing, so it reports exactly what the VFS knows); 100 Kotlin tests with the negative control
+  run, harness 217/217. Lessons in gotchas.
 - **2026-08-13 (sixth)** — the in-flight gutter dot shipped (white/pulsing → green/red, `--dot-c`,
   `--pulse-period`, first `prefers-reduced-motion` block). Five real-panel bugs the green harness
   could not see, root cause: fixtures fed bare blocks in `#log` with no `.turn-body` — the harness

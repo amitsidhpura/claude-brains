@@ -654,6 +654,19 @@ trusting memory here.
   and is never re-sent. Any such cache must be cleared when the view resets — it tracks intent, and
   `pushEvent` is a fire-and-forget `executeJavaScript` that guarantees nothing about delivery.
 
+## Release / Marketplace
+- **Marketplace approval lags the upload, and the API lags the page.** Minutes after a green
+  `marketplace-upload.yml` run, `api/plugins/33274/updates` still names the PREVIOUS version as
+  newest-approved — it reads like a failed upload and is not one. Seen at 0.6.0, 0.7.0 and 0.7.2.
+  Check the plugin PAGE (`plugins.jetbrains.com/plugin/33274`, numeric id — the xmlId form 404s),
+  or read `approve` per version from the API rather than assuming the first row is live. A failed
+  upload does not burn the version number; only an accepted-then-rejected moderation does.
+- **`./gradlew verifyPlugin` outlives a 2-minute command timeout.** It runs ~30-40s on a warm
+  cached IDE ladder but the ladder resolution alone can exceed the default; a run cut off at
+  exactly 120s looks like a hang. Give it a 10-minute budget. And read the verdicts from
+  `build/reports/pluginVerifier/PS-*/plugins/<id>/<ver>/verification-verdict.txt`, never from the
+  tail of the log, which truncates the per-IDE list.
+
 ## Session tooling (probes, sandboxes, background shells)
 - **`pkill -f <pattern>` from a harness background shell kills ITSELF when the pattern appears
   in the shell's own eval'd command line** (exit 144, and whatever came after the pkill never

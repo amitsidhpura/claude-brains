@@ -1,9 +1,13 @@
 # State
 
 ## Current focus
-**2026-08-17: two UI fixes + their fixtures on main, live-verified and pinned, NOT released.**
-Shipped version stays 0.7.1 — nobody running the plugin has either fix yet. A release is the
-next decision; nothing else is in flight. **Do not start release prep unasked** (see below).
+**2026-08-17: 0.7.2 RELEASED and Marketplace-Approved.** Commit `40bc060`, tag `v0.7.2`. Full
+`docs/release.md` run held at the approval gate: 106 tests, verifier Compatible on all seven
+PhpStorm branches 242→262, asset HTTP 200 + `cmp`-identical, feed advertising 0.7.2, upload run
+31967154720 green, **Approved the same day** (IDE-run row + verifier 1.408 on 2026.2.1 / 2026.1.5
+/ 2025.3.6.1). User re-verified the build in `runIde` afterwards. Nothing is in flight; the next
+work is the backlog order below. **A release starts only when the user asks** — prep was once
+started unasked and had to be reverted (conventions.md).
 1. **Effort label alignment** (`chat.css`, `.ef-label`): the mode-popup footer label sat **4px**
    left of the mode titles (14 + an 18px svg + an 8px gap = 40, against a title's 44). It now
    rides the same rail via `gap: 10px` + `flex: 0 0 20px` on the svg. CSS-only; `design/
@@ -103,10 +107,8 @@ highlight); the feedback-field restyle + `.plan-sep`.
       Harness **344/344**; `./gradlew test` 106/106.
 - [x] Slash-hint inventory measured off the wire, not the binary (2026-08-17) — table in
       `docs/slash-commands.md`; the watch-item is closed.
-- [ ] DECISION PENDING: release 0.7.2 (or fold these into a later version). Prep is NOT done —
-      it was started unasked on 2026-08-16 and fully reverted; version, changeNotesHtml and
-      `updatePlugins.xml` are all back at 0.7.1 and the 0.7.2 build artifacts were deleted.
-      Start again from `docs/release.md` step 1 only when the user asks.
+- [x] Released 0.7.2 (2026-08-17) — Approved on the Marketplace the same day, `runIde`
+      re-verified by the user.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
       v2 tweak-travel.
