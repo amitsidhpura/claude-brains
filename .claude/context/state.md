@@ -1,7 +1,24 @@
 # State
 
 ## Current focus
-**2026-08-16 (fourth session): 0.7.1 RELEASED and Marketplace-Approved — the top-fade fix.**
+**2026-08-16 (fifth session): two small UI fixes on main, both live-verified, NOT released.**
+Shipped version stays 0.7.1; these ride the next bump.
+1. **Effort label alignment** (`chat.css`, `.ef-label`): the mode-popup footer label sat 7px left
+   of the mode titles. It now rides the same rail — `gap: 10px` + `flex: 0 0 20px` on the svg,
+   which keeps the 15px glyph but gives it the 20px `.pi-ic`-sized slot. Measured headless:
+   delta −7 → 0. CSS-only; `design/mockup.html` links the same sheet, so nothing to mirror.
+2. **Slash-menu pick rule** (`chat.html:2493`): `cmdNeedsArg` → `cmdTakesArg` =
+   `!!(c.argumentHint||'').trim()`. Any hint, required or optional, inserts `/name ` and waits;
+   only hint-less commands run on click (`data-needsarg` → `data-takesarg` at both sites).
+   Trigger: clicking `/context` ran it bare instead of allowing `save`. Why + blast radius in
+   decisions.md; the unmeasured half is a backlog watch-item.
+Both verified by the user in `runIde`. No fixture covers either path (offered, not taken).
+Reference facts confirmed this session: the composer sends on **Ctrl+Enter** (plain Enter =
+newline); skills and command files share ONE roster with no type field, told apart only by the
+`" (project)"/" (user)"` description suffix; a built-in `/context` (`[all]`) exists and is
+shadowed by this repo's project skill.
+
+**Previous (2026-08-16 fourth session): 0.7.1 RELEASED and Marketplace-Approved — the top-fade fix.**
 Commit `91a6ba5`, tag `v0.7.1`; verifier Compatible 242→262, asset 200 + `cmp`-identical, feed
 advertising 0.7.1, marketplace-upload run 31933586034 green in 11s, **Approved** the same day
 (IDE-run row on 2026.2.1 + verifier 1.408 rows Compatible). Nothing is in flight. Tests 106/106 (state previously said 107; no test code changed — a count
@@ -64,7 +81,10 @@ highlight); the feedback-field restyle + `.plan-sep`.
 - [x] Top-fade wash on a fresh conversation fixed and released as 0.7.1 (2026-08-16 fourth).
 - [x] Fade fix verified live by the user in `runIde` (2026-08-16, `/model` on a new conversation).
 - [x] 0.7.1 Approved on the Marketplace (2026-08-16, screenshot from the user).
-- [ ] Harness assertion for it (`body.at-top` present after a bare `.blk` at scrollTop 0) — optional.
+- [x] Effort-label alignment + slash-menu insert-vs-send rule (2026-08-16 fifth), both
+      live-verified and committed.
+- [ ] Harness assertion for the fade fix (`body.at-top` present after a bare `.blk` at scrollTop 0)
+      — optional; same for the slash pick path (needs the roster stubbed, see backlog).
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
       v2 tweak-travel.
@@ -80,7 +100,7 @@ highlight); the feedback-field restyle + `.plan-sep`.
   `prefers-reduced-motion` unverified against the real OS setting.
 
 ## Which machine — check FIRST, both are real
-All three 2026-08-16 sessions (incl. the 0.7.0 release) ran on **Linux**
+All five 2026-08-16 sessions (incl. the 0.7.0 and 0.7.1 releases) ran on **Linux**
 (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in overview.md § External
 references. Slash-menu fixtures + plan-probe scratchpad + the verifier's cached IDE ladder exist
 on Linux only.

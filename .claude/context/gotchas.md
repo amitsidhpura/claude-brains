@@ -535,7 +535,11 @@ trusting memory here.
   panel doesn't close it. Any future unsolicited push has the same shape.
 - Headless Chrome is a DIFFERENT browser: (1) don't copy `mockup.html` elsewhere to probe — its
   stylesheet link is relative and silently resolves to nothing, measuring an UNSTYLED page; write
-  probe copies into `design/`. (2) no compositor → rAF fires ~2.5/s, so rAF-driven animation
+  probe copies into `design/`. Same family, cost a false PASS on 2026-08-16: over `file://`
+  Chrome REFUSES a stylesheet whose filename does not end `.css` (a `chat.css.bak` copy kept as a
+  pre-fix control), and the unstyled page happily reported the two elements under test as
+  perfectly aligned. Any before/after CSS measurement must first prove the sheet LOADED — read
+  back a value only the real sheet sets. (2) no compositor → rAF fires ~2.5/s, so rAF-driven animation
   reads frozen — stub `requestAnimationFrame` onto `setTimeout`. (3) `ResizeObserver` exists but
   never reliably fires — give RO-synced code a second trigger and test that. (Also docs/limits.md.)
 - **The spliced-chat harness** (the standing lane for webview JS fixes): splice `chat.css` at

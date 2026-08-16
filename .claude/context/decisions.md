@@ -3,6 +3,23 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-16 — A menu click asks "does it TAKE an argument", not "does it REQUIRE one"
+`cmdTakesArg(c)` in chat.html is now `!!(c.argumentHint||'').trim()`: any non-empty hint —
+`<required>` and `[optional]` alike — inserts `/name ` into the composer and waits; only a
+hint-less command runs on click. Replaces `cmdNeedsArg`, which ran optional-arg commands
+immediately (`data-needsarg` → `data-takesarg`).
+**Why:** the user picked `/context` from the menu to run `/context save` and it fired the bare
+form instead. A hint like `[init | load | save]` is a MENU OF SUB-MODES — "optional" is
+technically true and practically wrong, because a command that advertises choices is one you
+clicked in order to choose. Matches the terminal, where picking a command completes it into the
+prompt and you decide when to send. Measured blast radius on CLI 2.1.233 (`strings`): of the 16
+allowlisted built-ins only `/compact`, `/context` and `/goal` change behaviour; bundled
+skill-commands' hints were NOT resolvable by the probe (see backlog watch-item). Bonus fix —
+hints with neither bracket nor angle (`key=value`, `consent | revoke`) used to fire bare.
+**Rejected:** changing the skill's own `argument-hint` to `<…>` (makes the roster lie — bare
+`/context` is valid, it briefs); a click/Shift-click split (a new idiom the panel does not have).
+**Cost accepted by the user:** `/compact` and friends now need one extra Ctrl+Enter.
+
 ## 2026-08-16 — Card text fields share one dress: `--warn-field` + the ask-input style
 `.plan-fb` and `.ask-other input` both render transparent-frame-on-warn-card style with
 `background: var(--warn-field)` (#201c1a, a sunken step below `--warn-bg`), and the plan card

@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-16 (fifth) — two small alignments: one of pixels, one of intent
+- **Effort label aligned with the mode titles.** A mode row puts its title at 14px padding + a
+  20px `.pi-ic` slot + a 10px gap = 44; `.ef-label` was 14 + a bare 15px svg + 8 = 37. Fixed in
+  chat.css by giving the svg the same rail: `gap: 10px` + `flex: 0 0 20px` while `width: 15px`
+  keeps the glyph its size, so it centres on the mode icons' axis. Measured headless: delta
+  −7 → 0, icon slots both `[15→35]`. CSS-only, so `design/mockup.html` (which links the same
+  sheet) needed no mirroring.
+- **The negative control lied first.** The pre-fix sheet was copied to `chat.css.bak`, which
+  `file://` Chrome refuses to load as CSS — the unstyled page measured a perfect 0 delta. Renamed
+  to `.css`, the control showed the real −7. Promoted to gotchas.
+- **Slash-menu picks now insert whenever a command takes an argument** (user report: clicking
+  `/context` ran it bare instead of letting them type `save`). `cmdNeedsArg` → `cmdTakesArg`;
+  rationale and blast radius in decisions.md. Probed the CLI binary for the built-ins' hints —
+  and learned there is a built-in `/context` (`[all]`) that this repo's project skill shadows.
+- Answered two questions along the way: skills ride the SAME roster as command files (no type
+  field on the wire — only the `" (project)"/" (user)"` description suffix tells them apart, which
+  is why the skill wears a `project` badge), and this composer sends on **Ctrl+Enter**, not
+  Shift+Enter.
+- Both fixes verified by the user in `runIde`. Nothing released — 0.7.1 remains the shipped
+  version; these ride the next one.
+
 ## 2026-08-16 (fourth) — the fade that never learned it was at the top
 - User report (screenshot): `/model` on a NEW conversation rendered "Set model to …" greyed and
   apparently struck through. Not a text style — `#fade-top`'s 18px-solid → transparent band

@@ -20,6 +20,14 @@
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
   keep planning with text, Shift+Tab = approve with text — both slot into the existing `done()`
   paths in chat.html.
+- Watch-item: the bundled skill-commands' `argumentHint` values (`/code-review`, `/loop`,
+  `/batch`, `/deep-research`, `/verify`, `/run`, …) are UNMEASURED — a `strings` probe of CLI
+  2.1.233 resolved hints for `/compact`, `/context` and `/goal` only, and a looser pattern blew
+  past a 2-minute timeout. "No hint found" there is absence of evidence, not evidence of absence.
+  Settle it by dumping the live roster (`initialize` / `commands_changed`) from the panel; it
+  decides which rows insert-and-wait under `cmdTakesArg` (2026-08-16).
+- No fixture covers the slash-menu pick path (insert-vs-send). Would need the roster stubbed with
+  a real `system/commands_changed` event rather than replayed — offered 2026-08-16, not taken.
 - Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.
