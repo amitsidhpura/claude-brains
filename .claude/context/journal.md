@@ -3,6 +3,26 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 (second) — the alignment fixture, and the 7px that was never 7px
+- **Fixture 51 `mode-menu-effort-rail`** (7 assertions) closes the last uncovered thing: the
+  Effort label's rail. Opens the menu by CLICKING THE CHIP (a force-shown popup skips tg()'s
+  positioning) and closes it in the same setup. Harness **344/344**.
+- **Its control corrected the fix's own story.** The real pre-fix misalignment was **4px**, not
+  the 7px reported on 2026-08-16: `#inputbar svg { width:18px; height:18px }` is an ID rule that
+  beats `.ef-label svg {15px}` AND `.pi-ic svg {17px}`, so composer icons are all 18px and the
+  headless probe — a page without the `#inputbar` ancestor — measured a cascade that does not
+  exist in the panel. The fix is still right, and works for a reason worth knowing: `flex-basis`
+  is the one sizing property that ID rule does not set. Promoted to gotchas; chat.css comment and
+  state.md corrected.
+- **The slash-hint watch-item is closed by measurement.** A bare `initialize` control request to
+  CLI 2.1.233 returns 51 entries keyed exactly `{name, description, argumentHint, aliases?}` —
+  no `immediate` flag on the wire though the binary carries one. Of the 15 enabled commands six
+  insert (`/compact` `/context` `/code-review` `/simplify` `/loop` `/batch`), nine act on click.
+  This overturned the earlier `strings` reading: /goal has TWO records in the binary and the wire
+  sends the hintless one. Table now in docs/slash-commands.md; fixture 50 re-cited to the wire
+  probe and its control re-run after the edit.
+- Release still not cut, by the user's call: 0.7.1 remains what users have.
+
 ## 2026-08-17 — the controls earn their keep (continues the 2026-08-16 fifth session)
 - **Fixtures 49 + 50 written and green**: `49-top-fade-at-top` (10 assertions, 3 steps) pins the
   fade fix released in 0.7.1; `50-slash-pick-insert-vs-send` (19 assertions, 4 steps) pins
@@ -34,7 +54,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   chat.css by giving the svg the same rail: `gap: 10px` + `flex: 0 0 20px` while `width: 15px`
   keeps the glyph its size, so it centres on the mode icons' axis. Measured headless: delta
   −7 → 0, icon slots both `[15→35]`. CSS-only, so `design/mockup.html` (which links the same
-  sheet) needed no mirroring.
+  sheet) needed no mirroring. **CORRECTED 2026-08-17:** those headless numbers are real for that
+  probe page but NOT for the panel — it had no `#inputbar` ancestor, so `#inputbar svg {18px}`
+  never applied. In the real panel the gap was 4px and the icons are 18px, not 15 (see the
+  2026-08-17 second entry and gotchas).
 - **The negative control lied first.** The pre-fix sheet was copied to `chat.css.bak`, which
   `file://` Chrome refuses to load as CSS — the unstyled page measured a perfect 0 delta. Renamed
   to `.css`, the control showed the real −7. Promoted to gotchas.

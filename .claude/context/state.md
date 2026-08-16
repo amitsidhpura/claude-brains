@@ -4,22 +4,30 @@
 **2026-08-17: two UI fixes + their fixtures on main, live-verified and pinned, NOT released.**
 Shipped version stays 0.7.1 — nobody running the plugin has either fix yet. A release is the
 next decision; nothing else is in flight. **Do not start release prep unasked** (see below).
-1. **Effort label alignment** (`chat.css`, `.ef-label`): the mode-popup footer label sat 7px left
-   of the mode titles. It now rides the same rail — `gap: 10px` + `flex: 0 0 20px` on the svg,
-   which keeps the 15px glyph but gives it the 20px `.pi-ic`-sized slot. Measured headless:
-   delta −7 → 0. CSS-only; `design/mockup.html` links the same sheet, so nothing to mirror.
+1. **Effort label alignment** (`chat.css`, `.ef-label`): the mode-popup footer label sat **4px**
+   left of the mode titles (14 + an 18px svg + an 8px gap = 40, against a title's 44). It now
+   rides the same rail via `gap: 10px` + `flex: 0 0 20px` on the svg. CSS-only; `design/
+   mockup.html` links the same sheet, so nothing to mirror. Pinned by fixture 51 (2026-08-17),
+   which is also where the correction came from: the "7px" first reported was measured on a
+   headless probe page WITHOUT the `#inputbar` ancestor, so `#inputbar svg {18px}` — an ID rule
+   that beats both `.ef-label svg` and `.pi-ic svg` — never applied. flex-basis works precisely
+   because that rule does not set it.
 2. **Slash-menu pick rule** (`chat.html:2493`): `cmdNeedsArg` → `cmdTakesArg` =
    `!!(c.argumentHint||'').trim()`. Any hint, required or optional, inserts `/name ` and waits;
    only hint-less commands run on click (`data-needsarg` → `data-takesarg` at both sites).
    Trigger: clicking `/context` ran it bare instead of allowing `save`. Why + blast radius in
-   decisions.md; the unmeasured half is a backlog watch-item.
+   decisions.md. Blast radius now MEASURED off the wire (2026-08-17, CLI 2.1.233): of the 15
+   enabled commands, six insert (`/compact` `/context` `/code-review` `/simplify` `/loop`
+   `/batch`) and nine still act on click; table in docs/slash-commands.md. The roster carries no
+   `immediate` flag, so `argumentHint` is the only signal there is.
 Both verified by the user in `runIde`, and now pinned by fixtures (2026-08-17):
 `tools/fixtures/49-top-fade-at-top.json` (10 assertions) and
-`50-slash-pick-insert-vs-send.json` (19). Live harness baseline is now **337** (was 308);
+`50-slash-pick-insert-vs-send.json` (19). Live harness baseline is now **344** (was 308);
 `./gradlew test` 106. Both negative controls were RUN — 49 against `3c86aa2~1` (the pre-FADE
 build; HEAD-minus-this-session still HAS that fix), 50 against `4e351f4`. `docs/slash-commands.md`
 was corrected the same day: it still described the old runs-immediately contract.
-Still uncovered: the `.ef-label` alignment itself (measured headless, no assertion pins it).
+The alignment is pinned too, by `51-mode-menu-effort-rail.json` (7 assertions, control run
+against 4e351f4's chat.css). Harness baseline is now **344**.
 Reference facts confirmed this session: the composer sends on **Ctrl+Enter** (plain Enter =
 newline); skills and command files share ONE roster with no type field, told apart only by the
 `" (project)"/" (user)"` description suffix; a built-in `/context` (`[all]`) exists and is
@@ -90,8 +98,11 @@ highlight); the feedback-field restyle + `.plan-sep`.
 - [x] 0.7.1 Approved on the Marketplace (2026-08-16, screenshot from the user).
 - [x] Effort-label alignment + slash-menu insert-vs-send rule (2026-08-16 fifth), both
       live-verified and committed.
-- [x] Harness assertions for BOTH the fade fix and the slash pick path (2026-08-17, fixtures
-      49 + 50, controls run). Harness 337/337.
+- [x] Harness assertions for the fade fix, the slash pick path AND the Effort-label rail
+      (2026-08-17, fixtures 49 + 50 + 51, every control RUN against the correct pre-fix build).
+      Harness **344/344**; `./gradlew test` 106/106.
+- [x] Slash-hint inventory measured off the wire, not the binary (2026-08-17) — table in
+      `docs/slash-commands.md`; the watch-item is closed.
 - [ ] DECISION PENDING: release 0.7.2 (or fold these into a later version). Prep is NOT done —
       it was started unasked on 2026-08-16 and fully reverted; version, changeNotesHtml and
       `updatePlugins.xml` are all back at 0.7.1 and the 0.7.2 build artifacts were deleted.

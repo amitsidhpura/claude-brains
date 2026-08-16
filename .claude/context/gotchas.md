@@ -199,6 +199,19 @@ trusting memory here.
   session id arriving is NOT evidence the file is there. `SessionStore.titleOf` returning null is
   the normal state for the first few seconds of a session, not an error.
 
+- **The command roster is exactly `{name, description, argumentHint, aliases?}` — there is no
+  `immediate` flag on the wire even though the CLI binary carries one.** Measured 2026-08-17 by
+  sending a bare `initialize` control request to CLI 2.1.233 with the panel's own flags (51
+  entries, keys enumerated across all of them). So "does this command act on click" can only be
+  derived from `argumentHint`; there is no authoritative signal to read instead.
+- **A hint read out of the binary is NOT the hint the wire sends.** `strings` shows TWO records
+  for `/goal`, one carrying `argumentHint:"[<condition> | clear]"` and `immediate:!0`; the roster
+  sends `/goal` an EMPTY hint. Only one record reaches the wire and the binary does not say which.
+  Probe the live roster before believing a hint — this wrongly put /goal on the insert list and
+  wrongly left /code-review, /simplify, /loop and /batch off it (2026-08-17). Recipe: spawn the
+  CLI with the panel's flags, write one `{"type":"control_request","request":{"subtype":
+  "initialize"}}` line, read until the `control_response`. No user turn, nothing persisted.
+
 ## Build / toolchain
 - **A cold configuration cache turns `runIde` into a NETWORK build, and it can fail on TLS.**
   `build.gradle.kts` resolves the verifier's IDE ladder through
@@ -542,6 +555,14 @@ trusting memory here.
   back a value only the real sheet sets. (2) no compositor → rAF fires ~2.5/s, so rAF-driven animation
   reads frozen — stub `requestAnimationFrame` onto `setTimeout`. (3) `ResizeObserver` exists but
   never reliably fires — give RO-synced code a second trigger and test that. (Also docs/limits.md.)
+- **A probe page that omits the real ANCESTOR CHAIN measures a different cascade.** Linking
+  chat.css into a minimal page and measuring `.ef-label` gave a 7px misalignment; the real panel
+  had 4px, because the popup lives inside `#inputbar` and `#inputbar svg { width:18px; height:18px }`
+  is an ID rule that beats both `.ef-label svg {15px}` and `.pi-ic svg {17px}` — those declared
+  sizes are DEAD in the composer and every icon there draws at 18px. Reproduce the ancestors (or
+  measure in the panel) before quoting a number, and prefer a property the winning rule does not
+  set: the alignment fix works because `flex-basis` is untouched by `#inputbar svg`, so no
+  specificity fight was needed (2026-08-17, found by fixture 51's control).
 - **A negative control must run against the build that actually LACKS the fix — not "current
   minus my commits".** Fixture 49's control was run against HEAD-minus-this-session, which still
   contained the fade fix (it shipped in 0.7.1 the session before), so every DISCRIMINATING
