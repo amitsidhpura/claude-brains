@@ -15,8 +15,14 @@ turn. Consequences:
   either local/display/settings/harness-only with no headless effect, or simply **not yet
   verified**.
 
-Picking a command from the menu **runs it immediately** (a command menu should act, not just
-type); to pass an argument, type the command by hand and the menu autocompletes as you go.
+Picking a command from the menu **runs it immediately if it takes no argument** (a command menu
+should act, not just type). A command that advertises an `argumentHint` — required (`<x>`) or
+optional (`[x]`) alike — is **inserted into the composer as `/name ` instead**, so the sub-mode or
+argument can be typed before sending; this matches the terminal, where picking a command completes
+it into the prompt and you decide when to send. The rule is `cmdTakesArg()` in chat.html: any
+non-empty hint inserts. It used to ask whether an argument was REQUIRED, which fired `/context`
+bare when the hint `[init | load | save]` was really a menu of sub-modes (user report 2026-08-16;
+rationale in .claude/context/decisions.md, pinned by fixture 50).
 
 Command detection requires the name to be the **entire first token** — whitespace or
 end-of-message right after it. A message starting with a path (`/home/x …`) is ordinary text:
