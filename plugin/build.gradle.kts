@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.6.0"
+version = "0.7.0"
 
 repositories {
     mavenCentral()
@@ -100,6 +100,34 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.7.0</b>
+            <ul>
+              <li>A plan card now takes your words, not just a verdict. A "Tell Claude what to
+                  change" field rides every plan approval: with Keep planning it becomes the
+                  revision request, and with Approve the note travels with the approved plan so
+                  Claude reads it before the first edit</li>
+              <li>Approve is a split button — approve as-is, or switch to auto-edit / auto mode
+                  for the implementation. The mode you pick now actually sticks; the mode chip
+                  used to snap back after approval</li>
+              <li>Your custom commands, skills and MCP prompts appear in the / menu
+                  automatically, marked with where they come from; /reload-skills picks up
+                  new ones mid-session</li>
+              <li>The / menu grows from 2 to 16 built-in commands — /context, /code-review,
+                  /security-review, /run, /loop and more, each verified in the panel (still an
+                  allowlist)</li>
+              <li>A command that answers without streaming, like /context, now shows its
+                  output — it used to produce a finished turn with nothing in it. A failed one
+                  shows the CLI's reason instead of an empty turn</li>
+              <li>A message sent while Claude is working now survives into the resumed
+                  conversation — replay used to silently drop it</li>
+              <li>The background-tasks chip stays honest: sending a message no longer clears
+                  commands that are still running, and a restarted conversation no longer
+                  inherits ones that are gone</li>
+              <li>Permission cards show the same project-relative path as the tool line above
+                  them, the @-mention menu keeps the filename visible when a long path is cut,
+                  and NotebookEdit shows its file path</li>
+              <li>Popup rows no longer keep a stale highlight after the pointer leaves</li>
+            </ul>
             <b>0.6.0</b>
             <ul>
               <li>A tool that is still running now looks different from one that has finished. Its
