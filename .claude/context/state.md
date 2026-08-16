@@ -1,13 +1,17 @@
 # State
 
 ## Current focus
-**2026-08-16 (fourth session): post-0.7.0 fix — top fade on a fresh conversation.** `/model` on
+**2026-08-16 (fourth session): 0.7.1 RELEASED — the top-fade fix.** Commit `91a6ba5`, tag
+`v0.7.1`; verifier Compatible 242→262, asset 200 + `cmp`-identical, feed advertising 0.7.1,
+marketplace-upload run 31933586034 green in 11s (Marketplace approval not yet confirmed at save —
+check the plugin page). Tests 106/106 (state previously said 107; no test code changed — a count
+difference, not a loss). The fix: `/model` on
 a NEW conversation drew its stdout washed out under `#fade-top` (read as strikethrough): `body.at-top`
 was toggled only by the scroll handler and the two replay paths, so an empty log that never scrolls
 never hid the fade — and local-command output is the one first block with no sticky `.msg-user`
 above it. Fix in `chat.html`: `updateTopFade()` now also runs from `maybeScroll()` (every `el()`
 render) and `clearLogUI()`. Verified live by the user in `runIde` (`/model` on a fresh
-conversation renders crisp). Committed `3c86aa2`, unreleased; a harness assertion is optional.
+conversation renders crisp). Fix commit `3c86aa2`; a harness assertion is optional.
 
 **Previous (2026-08-16 third session): 0.7.0 RELEASED and Marketplace-Approved.** Commit `59d94fc`,
 tag `v0.7.0`. Full `docs/release.md` run: verifier Compatible on all seven PhpStorm branches
@@ -57,8 +61,9 @@ highlight); the feedback-field restyle + `.plan-sep`.
 ## Next steps
 - [x] Release 0.7.0 — done 2026-08-16, Approved on the Marketplace.
 - [x] Five new `design/marketplace/` screenshots uploaded by the user (2026-08-16).
-- [x] Top-fade wash on a fresh conversation fixed (2026-08-16 fourth) — committed, unreleased.
+- [x] Top-fade wash on a fresh conversation fixed and released as 0.7.1 (2026-08-16 fourth).
 - [x] Fade fix verified live by the user in `runIde` (2026-08-16, `/model` on a new conversation).
+- [ ] Confirm 0.7.1 Approved on the Marketplace plugin page (upload run was green).
 - [ ] Harness assertion for it (`body.at-top` present after a bare `.blk` at scrollTop 0) — optional.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject

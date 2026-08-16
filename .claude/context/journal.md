@@ -12,6 +12,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Fix: `updateTopFade()` from `maybeScroll()` (every render) and `clearLogUI()`. Verified by
   `node --check` and by reading the three prior call sites; NOT driven live — the real IDE's 9222
   had no chat-panel target for `tools/cdp.py`. Live check + harness assertion still owed.
+- **Released 0.7.1** the same session (`91a6ba5`, tag `v0.7.1`) — patch bump, one-line notes.
+  Full `docs/release.md` run held at the approval gate; verifier Compatible ×7, asset identical,
+  feed live, Marketplace upload workflow green (run 31933586034). Approval not yet seen at save.
 - Also wrote up the full fade model for the user: bottom `#fade` is never toggled (composer-sized,
   hidden at the end purely by `#log` padding-bottom); top `#fade-top` is the only toggled one.
 
