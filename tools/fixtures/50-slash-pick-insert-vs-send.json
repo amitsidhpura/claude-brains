@@ -1,7 +1,7 @@
 {
   "item": "slash menu — insert-vs-send on pick (2026-08-16)",
   "branch": "cmdTakesArg: any argumentHint inserts '/name ' and waits; only a hint-less command runs on click",
-  "provenance": "Roster entry shapes ({name, description, argumentHint, aliases?}, no type field; custom entries marked only by a ' (project)'/' (user)' description suffix) are fixture 46's, measured 2026-08-15 on CLI 2.1.228. The argumentHint VALUES here were read out of the CLI 2.1.233 binary on 2026-08-16 (`strings` — hints are never persisted to a transcript): /compact carries '<optional custom summarization instructions>', the built-in /context '[all]', /goal '[<condition> | clear]', and the hint set also contains bracket-less forms such as 'key=value' and 'consent | revoke'. The project skill's own hint '[init | load | save | <note to record>]' is this repo's .claude/skills/context/SKILL.md frontmatter, which shadows the built-in /context in the roster. __commands is a PLUGIN-INTERNAL frame (ChatPanel's initialize relay), so assertions stay on what the renderer must do with the shape it is handed. The click steps swap window.__bridge for a recorder inside a try/finally — no turn ever reaches the CLI, and a throw cannot leave the panel mute. NEGATIVE CONTROL: run against `git show HEAD~2:` of chat.html (the cmdNeedsArg build) — the assertions marked DISCRIMINATING fail, the GUARDs stay green. The hint-shape guards go through the RENDERED data-takesarg attribute rather than calling cmdTakesArg directly: on the pre-fix build the function does not exist, and a ReferenceError aborts the whole harness run before the control can report anything (hit 2026-08-16). Step 3 resets busy/log before its click on purpose: without it the PRE-fix build arrives with busy=true from step 2's send, submit() queues the turn instead of sending it, and two guards fail for a reason that has nothing to do with the rule under test (fixture 44's masking trap, found by running this control 2026-08-16).",
+  "provenance": "Roster entry shapes ({name, description, argumentHint, aliases?}, no type field; custom entries marked only by a ' (project)'/' (user)' description suffix) are fixture 46's, measured 2026-08-15 on CLI 2.1.228. The argumentHint VALUES here were MEASURED OFF THE WIRE on 2026-08-17: a bare `initialize` control request to CLI 2.1.233 (the panel's own flags, no user turn) returns 51 entries whose keys are exactly {name, description, argumentHint, aliases?} — confirming again there is no type field, and no `immediate` flag either, though the binary carries one internally. Measured hints used here: /compact '<optional custom summarization instructions>', /context '[init | load | save | <note to record>]' (this repo's skill, shadowing the built-in whose hint is '[all]'), /loop '[interval] [prompt]', /config 'key=value' (the bracket-less shape). An earlier `strings` pass had attributed '[<condition> | clear]' to /goal; the wire sends /goal an EMPTY hint — the binary holds two records for it and only one reaches the roster. The project skill's own hint '[init | load | save | <note to record>]' is this repo's .claude/skills/context/SKILL.md frontmatter, which shadows the built-in /context in the roster. __commands is a PLUGIN-INTERNAL frame (ChatPanel's initialize relay), so assertions stay on what the renderer must do with the shape it is handed. The click steps swap window.__bridge for a recorder inside a try/finally — no turn ever reaches the CLI, and a throw cannot leave the panel mute. NEGATIVE CONTROL RUN 2026-08-17 against commit 4e351f4's chat.html (the last cmdNeedsArg build — pinned, not a relative ref): all 7 DISCRIMINATING assertions failed and all 12 GUARDs passed — the assertions marked DISCRIMINATING fail, the GUARDs stay green. The hint-shape guards go through the RENDERED data-takesarg attribute rather than calling cmdTakesArg directly: on the pre-fix build the function does not exist, and a ReferenceError aborts the whole harness run before the control can report anything (hit 2026-08-16). Step 3 resets busy/log before its click on purpose: without it the PRE-fix build arrives with busy=true from step 2's send, submit() queues the turn instead of sending it, and two guards fail for a reason that has nothing to do with the rule under test (fixture 44's masking trap, found by running this control 2026-08-16).",
   "steps": [
     {
       "note": "roster arrives: every command that advertises an argument is marked, whatever bracket it wears",
@@ -26,9 +26,9 @@
               "argumentHint": "<optional custom summarization instructions>"
             },
             {
-              "name": "goal",
-              "description": "Set or clear the session goal",
-              "argumentHint": "[<condition> | clear]"
+              "name": "loop",
+              "description": "Run a prompt or slash command on a recurring interval",
+              "argumentHint": "[interval] [prompt]"
             },
             {
               "name": "cfg-probe",
@@ -74,9 +74,9 @@
           "why": "DISCRIMINATING: '<optional …>' counts too — the old rule read the word 'optional' (false pre-fix)"
         },
         {
-          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/goal\"]').dataset.takesarg",
+          "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/loop\"]').dataset.takesarg",
           "equals": true,
-          "why": "DISCRIMINATING: '[<condition> | clear]' (false pre-fix)"
+          "why": "DISCRIMINATING: '[interval] [prompt]' (false pre-fix)"
         },
         {
           "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/cfg-probe\"]').dataset.takesarg",

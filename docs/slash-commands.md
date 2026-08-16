@@ -24,6 +24,17 @@ non-empty hint inserts. It used to ask whether an argument was REQUIRED, which f
 bare when the hint `[init | load | save]` was really a menu of sub-modes (user report 2026-08-16;
 rationale in .claude/context/decisions.md, pinned by fixture 50).
 
+Which of the enabled commands that actually means, measured off the wire 2026-08-17 (a bare
+`initialize` control request to CLI 2.1.233 — the roster's keys are exactly `{name, description,
+argumentHint, aliases?}`, with no `immediate` flag despite the binary carrying one internally):
+
+| picked → inserted (has a hint) | picked → runs now (no hint) |
+|---|---|
+| `/compact` `/context` `/code-review` `/simplify` `/loop` `/batch` | `/reload-skills` `/verify` `/run` `/security-review` `/init` `/recap` `/goal` `/deep-research` `/list-agents` |
+
+Re-measure after a CLI upgrade rather than reading hints out of the binary: `strings` holds TWO
+records for `/goal`, one of them with a hint, and the roster sends the hintless one.
+
 Command detection requires the name to be the **entire first token** — whitespace or
 end-of-message right after it. A message starting with a path (`/home/x …`) is ordinary text:
 it is sent as a turn, and the autocomplete menu closes on the second `/` (or whenever the
