@@ -1,12 +1,14 @@
 # State
 
 ## Current focus
-**Plan-card feedback + split Approve button shipped and user-verified (2026-08-16).** The plan
-card now carries a "Tell Claude what to change" input whose text rides EVERY decision, and the
-Yes variants fold behind a split-button caret (Approve, auto-edit / Approve, auto mode;
-bypassPermissions excluded — the CLI refuses runtime elevation). Six-test manual sweep passed;
-the sweep caught two real bugs (steering race, stuck mode chip) that automation had missed —
-both fixed and fixture-pinned. Register still **0 open**. Next real step is the version bump.
+**2026-08-16 (second session): plan-card UI polish shipped + marketplace screenshots refreshed.**
+The plan feedback input now wears the ask card's "Other" dress (shared `--warn-field` #201c1a
+token, warn-border frame) with a `.plan-sep` hairline between plan and decision surface —
+mockup-first, then ported to chat.html (`done()` removes the separator with the input for
+replay parity). Fixture 48 grew 5 assertions; live harness **308**. Five fresh 2400×1520
+listing frames replaced the 2026-07-31 trio in `design/marketplace/` (user uploads them to the
+Marketplace web form manually). Earlier same day: the feedback feature itself (see below).
+Register still **0 open**. Next real step is the version bump.
 
 ## How plan feedback travels (all probed on CLI 2.1.233 — see gotchas for the traps)
 - **Deny** → the typed text IS the control-response `message`, delivered to the model VERBATIM
@@ -29,7 +31,7 @@ both fixed and fixture-pinned. Register still **0 open**. Next real step is the 
   delivered user records). Footers quote via one `fbQuote()` helper (72-char cut, live+replay).
 
 ## Testing — the standing setup
-- Live harness: `python tools/live_harness.py`, baseline **303**; `./gradlew test` **107**.
+- Live harness: `python tools/live_harness.py`, baseline **308**; `./gradlew test` **107**.
   Fixture 48 (10 steps) is the first-ever plan-card coverage; its negative control was RUN
   (7 render assertions failed pre-fix; SessionStore stash-runs failed 2 and 3).
 - Sandbox debug port: `./gradlew runIde -PjcefDebugPort=9223` + `CLAUDE_BRAINS_CDP_PORT` for
@@ -41,9 +43,11 @@ both fixed and fixture-pinned. Register still **0 open**. Next real step is the 
 
 ## Next steps
 - [ ] **Release the next version** (`docs/release.md`). New since 0.6.0: custom-command menu,
-      the 16-command set, three rendering fixes, three UI fixes (2026-08-15), and the plan-card
-      feedback feature + chip alias (2026-08-16). `changeNotesHtml` in `plugin/build.gradle.kts`
-      must be rewritten or `buildPlugin` refuses.
+      the 16-command set, three rendering fixes, three UI fixes (2026-08-15), the plan-card
+      feedback feature + chip alias, and the feedback-field restyle + separator (2026-08-16).
+      `changeNotesHtml` in `plugin/build.gradle.kts` must be rewritten or `buildPlugin` refuses.
+- [ ] User uploads the five new `design/marketplace/` screenshots via the Marketplace web form
+      (listing screenshots are manual — the workflow only re-posts the zip).
 - [ ] Then backlog order: reloaded-webview log replay, kill-background-process from the panel,
       editor accept/reject v2 tweak-travel.
 

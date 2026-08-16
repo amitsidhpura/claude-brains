@@ -3,6 +3,19 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-16 — Card text fields share one dress: `--warn-field` + the ask-input style
+`.plan-fb` and `.ask-other input` both render transparent-frame-on-warn-card style with
+`background: var(--warn-field)` (#201c1a, a sunken step below `--warn-bg`), and the plan card
+gains `.plan-sep` — a full-bleed hairline (`margin: 10px -12px 0; border-top: 1px solid
+var(--border)`, the composer `#inputbar` idiom) between plan body and decision surface. The
+separator is a div of its own (inputs cannot carry pseudo-elements) and `done()` removes it with
+the input so a decided card matches the replayed one (plan + footer only).
+**Why:** the panel's two type-your-answer-on-a-card surfaces must read as one control (the same
+argument `fillPath` made for paths), and the user reported the plan/field boundary was hard to
+see. Final colour user-picked over three mockup iterations, per the mockup-first convention.
+**Rejected en route:** `#1b1b1b` on `--panel` styling (first draft), fully transparent field
+(matched ask exactly but the user wanted the well back) — both superseded the same day.
+
 ## 2026-08-16 — Approve-with-notes rides `updatedInput.plan`, not a steered message
 The plan card's typed note, on ANY approve path, is appended to the approved plan under
 `RenderLimits.PLAN_NOTES_MARKER` and sent via `updatedInput`; SessionStore parses it back out of

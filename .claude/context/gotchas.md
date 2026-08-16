@@ -620,3 +620,20 @@ trusting memory here.
   system property), so the sandbox came up on 9222 anyway — meanwhile the REAL IDE can also be
   serving 9222 with its own "Claude Brains — chat panel" target. Before driving any panel over
   CDP, verify identity BY CONTENT (turn count, distinctive conversation text), never by port.
+- **JCEF OSR cannot produce stills under an emulated viewport.** `Emulation.setDeviceMetricsOverride`
+  applies (innerWidth/dpr change correctly) but `Page.captureScreenshot` returns the OSR surface
+  with MULTIPLE paints of the viewport tiled/stacked into it — clip+scale just tiles at 4x. Found
+  2026-08-16 making marketplace screenshots. Pixel-exact panel captures come from the spliced
+  chat.html in headless Chrome instead (real CSS + LIMITS captured off the live panel via cdp.py);
+  drive states through the builders `__gallery()` uses, and freeze animations with injected CSS —
+  headless catches them at arbitrary phase (shimmer text can render transparent).
+- **A popup force-shown with `classList.add('show')` skips `tg()`'s positioning** and can render
+  shifted or overflowing — open menus through their real chip handlers (`modeChip.click()`,
+  `bgChip.click()`). And `.popup` width is max-content with only a MIN-width: a menu that fits the
+  wide real panel (mode menu's long descriptions) overflows a 394px screenshot viewport; clamp its
+  width for captures.
+- **Patching a file that contains `\uXXXX` escapes must go through the Edit tool.** A python
+  heredoc's string literal decodes backslash-u escapes (backslash-u-2014 becomes the em-dash
+  character), so `str.replace` silently
+  misses the file's literal backslash-u text — two patch rounds "applied" cleanly while changing
+  nothing (2026-08-16). The Edit tool passes the text through undecoded.

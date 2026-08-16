@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-16 (second) — the plan field joins the ask family; the storefront reshot from the real renderer
+- **Plan-feedback field restyled, mockup-first per convention:** three user iterations (#1b1b1b →
+  "match the ask Other input" → #201c19 → #201c1a) landed as one `--warn-field` token shared by
+  `.plan-fb` and `.ask-other input` — the panel's two type-your-answer-on-a-card surfaces now one
+  control. A `.plan-sep` hairline (composer `#inputbar` idiom, its own div because an input cannot
+  carry a pseudo-element) marks where the plan ends. Ported to chat.html; `done()` removes the
+  separator WITH the input, because the replayed card draws plan + footer only and the two paths
+  must not disagree.
+- Fixture 48 +5 assertions (separator exists/positioned/actually-drawn via computed style, field
+  bg = the token's exact rgb, separator gone after decision). Harness **308/308** — after finding
+  the 9222 panel was the PREVIOUS session's sandbox still running the old build (killed
+  gracefully, relaunched, build verified BY CONTENT before measuring).
+- **Marketplace screenshots: five fresh 2400×1520 frames replace the 2026-07-31 trio.** The
+  live-JCEF capture route is a dead end — under `Emulation.setDeviceMetricsOverride` the OSR
+  surface TILES multiple paints into `captureScreenshot` (clip+scale doesn't help). The shots
+  come from the spliced chat.html in headless Chrome (real CSS + LIMITS captured off the live
+  panel), states driven through the same builders `__gallery()` uses, animations frozen at
+  legible values, colours/geometry measured off the old PNGs. Pipeline in the session scratchpad
+  (mkshots.py / mkshots2.py / compose.py), not committed.
+- Traps for the file: popups force-shown via `classList.add('show')` skip `tg()`'s positioning
+  (open via the chip's real click); `.popup` width is max-content, so a menu that fits the wide
+  IDE overflows a 394px shot; and `\uXXXX`-escaped file content must be patched with the Edit
+  tool — a python-heredoc string literal decodes the escape and silently misses.
+- Next: version bump (changeNotesHtml now carries 2026-08-15's tranches + both 2026-08-16 rounds).
+
 ## 2026-08-16 — plan feedback ships; the user's sweep beats the harness twice
 - **Shipped the plan-card feedback feature** (the user's ask after learning the terminal's
   "keep planning" is an input): a "Tell Claude what to change" field riding every decision, and
