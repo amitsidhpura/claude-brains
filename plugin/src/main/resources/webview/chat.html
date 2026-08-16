@@ -229,6 +229,12 @@
       if (!scrollRaf) scrollRaf = requestAnimationFrame(function () { scrollRaf = 0; if (pinned) log.scrollTop = log.scrollHeight; });
     }
     updateScrollBtn();
+    // A render that leaves the log too short to scroll fires no scroll event, so the toggle would
+    // otherwise never be set on a fresh conversation — and the first block drawn WITHOUT a sticky
+    // user bubble above it (a local command's stdout, e.g. `/model` on a new conversation) sat
+    // washed out under #fade-top (user report 2026-08-16). Same mechanism as the `truncated`
+    // marker; el() → maybeScroll() is the one path every render takes.
+    updateTopFade();
   }
   // animated glide to bottom (manual easeOutCubic — native smooth-scroll doesn't animate reliably
   // in every CEF build). Recomputes the target each frame so it still lands if content grows.
@@ -1108,6 +1114,7 @@
     pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';
+    updateTopFade();   // emptied log sits at the top; a clamped scrollTop fires no reliable event
     earlierRemaining = 0; earlierInFlight = false;  // never pull a previous session's chunks
     curBubble = null; curRaw = ''; mdPending = false; curThink = null; curThinkRaw = ''; thinkTok = null;
     thinkTokReal = null;   // a stale real count must not leak into the next block's fallback

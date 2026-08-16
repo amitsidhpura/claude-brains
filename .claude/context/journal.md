@@ -3,6 +3,18 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-16 (fourth) — the fade that never learned it was at the top
+- User report (screenshot): `/model` on a NEW conversation rendered "Set model to …" greyed and
+  apparently struck through. Not a text style — `#fade-top`'s 18px-solid → transparent band
+  crossing the first block. `body.at-top` (which hides the fade at `scrollTop <= 1`) was set only
+  by the scroll handler and the two replay paths; a fresh empty log fires no scroll event and has no
+  sticky `.msg-user` to ride above the fade when the first block is a local command's stdout.
+- Fix: `updateTopFade()` from `maybeScroll()` (every render) and `clearLogUI()`. Verified by
+  `node --check` and by reading the three prior call sites; NOT driven live — the real IDE's 9222
+  had no chat-panel target for `tools/cdp.py`. Live check + harness assertion still owed.
+- Also wrote up the full fade model for the user: bottom `#fade` is never toggled (composer-sized,
+  hidden at the end purely by `#log` padding-bottom); top `#fade-top` is the only toggled one.
+
 ## 2026-08-16 (third) — 0.7.0 goes out, quietly
 - **Released 0.7.0** (`59d94fc`, tag `v0.7.0`): plan-card feedback + split Approve, custom
   commands in the / menu, 16 built-ins, and the 2026-08-15 fix tranche. Full `docs/release.md`

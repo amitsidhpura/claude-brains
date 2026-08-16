@@ -1,7 +1,16 @@
 # State
 
 ## Current focus
-**2026-08-16 (third session): 0.7.0 RELEASED and Marketplace-Approved.** Commit `59d94fc`,
+**2026-08-16 (fourth session): post-0.7.0 fix — top fade on a fresh conversation.** `/model` on
+a NEW conversation drew its stdout washed out under `#fade-top` (read as strikethrough): `body.at-top`
+was toggled only by the scroll handler and the two replay paths, so an empty log that never scrolls
+never hid the fade — and local-command output is the one first block with no sticky `.msg-user`
+above it. Fix in `chat.html`: `updateTopFade()` now also runs from `maybeScroll()` (every `el()`
+render) and `clearLogUI()`. `node --check` clean; NOT driven in the live panel (the IDE's 9222
+exposed no target) — confirm on the next `runIde` by typing `/model` on a fresh conversation, then
+add a harness assertion (`body.at-top` present after a bare `.blk` at scrollTop 0). Unreleased.
+
+**Previous (2026-08-16 third session): 0.7.0 RELEASED and Marketplace-Approved.** Commit `59d94fc`,
 tag `v0.7.0`. Full `docs/release.md` run: verifier Compatible on all seven PhpStorm branches
 242→262 (zero warnings), asset HTTP 200 + `cmp`-identical, feed advertising 0.7.0, upload
 workflow green in 17s (run 31932129931), Approved the same day with green IDE-run + verifier
@@ -49,6 +58,8 @@ highlight); the feedback-field restyle + `.plan-sep`.
 ## Next steps
 - [x] Release 0.7.0 — done 2026-08-16, Approved on the Marketplace.
 - [x] Five new `design/marketplace/` screenshots uploaded by the user (2026-08-16).
+- [x] Top-fade wash on a fresh conversation fixed (2026-08-16 fourth) — committed, unreleased.
+- [ ] Verify the fade fix on a live `runIde` (`/model` on a new conversation) + harness assertion.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
       v2 tweak-travel.

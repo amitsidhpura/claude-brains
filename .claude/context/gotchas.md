@@ -504,7 +504,11 @@ trusting memory here.
   that is normally FIRST in the log is invisibly protected by that stickiness, and any NEW kind of
   first block (the `truncated` marker) lands under a 48px wash and is unreadable. It is now
   switched off at `scrollTop <= 1`, where it was describing content that does not exist anyway.
-  Check the top-of-log state whenever a new block type can be first.
+  Check the top-of-log state whenever a new block type can be first. **Second bite 2026-08-16:**
+  the `at-top` toggle lived only in the scroll handler + replay paths, so a FRESH conversation
+  (no scroll event ever) never hid the fade and `/model`'s stdout `.blk` was washed out — it read
+  as strikethrough in the screenshot. Now refreshed from `maybeScroll()` and `clearLogUI()`. A
+  greyed line with a horizontal band through it at the top of the log = the fade, not a style.
 - **CSS layout claims must be measured on REAL JCEF, not headless.** Beyond the rAF/RO caveats
   below, headless disagreed on *rendered output*: it showed a flex child ellipsised where JCEF
   measured it whole (70/70), and two headless runs of the same page disagreed with each other
