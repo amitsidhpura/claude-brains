@@ -16,7 +16,7 @@ one row per feature, measured against both reference clients.
 | 🟡 | partial |
 | 🟥 | open — high: next up, or the strongest candidates awaiting a decision |
 | 🟧 | open — medium: roadmap, worth a pass when its turn comes |
-| 🟨 | open — low: watch / probe first / polish; some lean ➖ |
+| ⬜ | open — low: watch / probe first / polish; some lean ➖ |
 | ➖ | by design — the terminal's half, or N/A in JetBrains |
 | 🚫 | declined by the user (revivable; recorded in `.claude/context/`) |
 
@@ -36,7 +36,7 @@ outlives one event.
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no → re-mark ➖/🚫) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
-hour while writing code? Yes → panel (🟥🟧🟨 until built). No → terminal (➖).
+hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
 
 **Work order** (from `.claude/context/backlog.md`): plan-card shortcuts (if un-deferred) →
 reloaded-webview log replay → kill-background-process → editor accept/reject v2 tweak-travel →
@@ -79,11 +79,11 @@ auto-include selection, voice.
 - **1.19** ✅ Server-side tool blocks (web search); tool-returned **images** (`isImage` Bash results)
       in the lightbox
 - **1.20** ✅ Local-command output (`<local-command-stdout>` / `-stderr>`) rendered as markdown
-- **1.21** 🟨 [XS] `redacted_thinking` placeholder — never seen locally
-- **1.22** 🟨 [SM] `tool_progress` heartbeat ("still running · 45s") — not yet emitted to stream-json
+- **1.21** ⬜ [XS] `redacted_thinking` placeholder — never seen locally
+- **1.22** ⬜ [SM] `tool_progress` heartbeat ("still running · 45s") — not yet emitted to stream-json
       clients; probe first (client-parity § not taken)
-- **1.23** 🟨 [SM] `permission_denied` reason / `decision_reason` on the permission card — P3 polish
-- **1.24** 🟨 [SM] `result.terminal_reason` (19 values) surfaced when a turn ends oddly — P3 polish
+- **1.23** ⬜ [SM] `permission_denied` reason / `decision_reason` on the permission card — P3 polish
+- **1.24** ⬜ [SM] `result.terminal_reason` (19 values) surfaced when a turn ends oddly — P3 polish
 
 ## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged in 2.1.233)
 - **2.1** ✅ `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`, `getLatestSelection`,
@@ -160,10 +160,10 @@ auto-include selection, voice.
       chips preview in the lightbox or save via the IDE dialog
 - **6.3** ✅ Injected IDE context (`<ide_selection>` etc.) stripped on replay
 - **6.4** 🟧 [MD] @-mention **symbols** — roadmap
-- **6.5** 🟨 [SM] **Alt+K / "Insert @-mention" from the editor** — needs a plugin action; the plugin
+- **6.5** ⬜ [SM] **Alt+K / "Insert @-mention" from the editor** — needs a plugin action; the plugin
       binds no shortcuts today, but an unbound action the user can map is compatible with that
 - **6.6** 🚫 Auto-include current **selection** on ask — deferred by the user (do last)
-- **6.7** 🟨 [SM] VS Code `list_files_request` **[NEW]** / `respectGitIgnore` in the picker — our picker is
+- **6.7** ⬜ [SM] VS Code `list_files_request` **[NEW]** / `respectGitIgnore` in the picker — our picker is
       IDE-indexed; ➖ unless a real gap shows
 - **6.8** ➖ `@terminal` (`get_terminal_contents`) **[NEW]** — the panel does not own a terminal
 
@@ -210,10 +210,10 @@ auto-include selection, voice.
       `/fork`). Per-turn file rewind was REMOVED 2026-07-30; revival notes in gotchas § Protocol
       (`CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, git repo, client uuids via `stampMessage`,
       dry_run first). **Status: still UNDECIDED — needs an explicit yes / later / no**
-- **8.8** 🟨 [MD] Reopen closed session (Ctrl+Shift+T) — ➖ while the plugin binds no shortcuts and has
+- **8.8** ⬜ [MD] Reopen closed session (Ctrl+Shift+T) — ➖ while the plugin binds no shortcuts and has
       no tabs
 - **8.9** 🚫 Multiple conversation **tabs** — deferred by the user (do last)
-- **8.10** 🟨 [LG] **Session groups / sessions sidebar** **[NEW · DECIDE]** — a `claude-sessions-sidebar`
+- **8.10** ⬜ [LG] **Session groups / sessions sidebar** **[NEW · DECIDE]** — a `claude-sessions-sidebar`
       view, `get_session_groups` / `update_session_groups`, `list_sessions_request`. Take: our
       history popup already lists per-project sessions; grouping is only worth it once tabs or
       worktrees exist. Watch
@@ -241,7 +241,7 @@ auto-include selection, voice.
 - **9.6** ➖ Cost / token breakdown / usage panel (`get_usage`, `get_context_usage`,
       `request_usage_update` **[NEW]**; TUI `/usage`, `/cost`, `/context`) — declined 2026-08-06; the
       built-in `/context` is enabled as a turn for the rare look
-- **9.7** 🟨 [MD] Fable overage / `model_consent_fallback` gate — no `supportedDialogKinds` declared, so
+- **9.7** ⬜ [MD] Fable overage / `model_consent_fallback` gate — no `supportedDialogKinds` declared, so
       the CLI stays silent; the model chip could lie if the gate fires. Probe by exercising it
 - **9.8** ➖ Subagent model (`CLAUDE_CODE_SUBAGENT_MODEL`), Bedrock / Vertex / Foundry setup — env
       and terminal configuration
@@ -263,7 +263,7 @@ auto-include selection, voice.
       has no host-side control request for it (only the model's `TaskStop`). Backlog § Next up;
       protocol check first
 - **11.4** 🟧 [MD] Sub-agent WORK outcome (the dot was built and withdrawn 2026-08-13) — known gap
-- **11.5** 🟨 [SM] Elicitation (`elicitation` control request) — our empty ack answers it with neither
+- **11.5** ⬜ [SM] Elicitation (`elicitation` control request) — our empty ack answers it with neither
       decline nor an answer; no local MCP server elicits today. Probe if one ever does
 - **11.6** 🟧 [MD] Extensibility **status view** (read-only: which MCP servers/plugins are live) — roadmap
       tail; philosophy leans terminal
@@ -272,7 +272,7 @@ auto-include selection, voice.
 - **12.1** ✅ Right-anchored tool window (JetBrains moves/floats/undocks it natively — covers
       `preferredLocation`, sidebar/panel, new window)
 - **12.2** ✅ Dev aid: "Claude Brains: Open DevTools" action (Find Action; no default chord)
-- **12.3** 🟨 [MD] Open in **editor tab** **[NEW · DECIDE]** (`editor.open` / `primaryEditor.open`) — a
+- **12.3** ⬜ [MD] Open in **editor tab** **[NEW · DECIDE]** (`editor.open` / `primaryEditor.open`) — a
       second host for the same webview; only worth it if someone wants a wide chat. Watch
 - **12.4** ➖ Focus / blur input shortcut, Ctrl+N new conversation, Ctrl+Shift+T — **the plugin binds
       NO keyboard shortcuts** (2026-08-09, chords proved unreliable across setups). Users can
@@ -296,7 +296,7 @@ auto-include selection, voice.
 
 ## 14. Worktrees & git
 - **14.1** 🟧 [LG] **Create worktree** (`create_worktree`; TUI `/branch`) — roadmap
-- **14.2** 🟨 [MD] Git actions in the host **[NEW · DECIDE]** — `checkout_branch`, `check_git_status`,
+- **14.2** ⬜ [MD] Git actions in the host **[NEW · DECIDE]** — `checkout_branch`, `check_git_status`,
       `update_skipped_branch`. Take: read the webview flow before deciding; probably belongs
       with worktrees
 - **14.3** 🟧 [LG] Git-aware diff/context — roadmap
@@ -309,9 +309,9 @@ auto-include selection, voice.
 - **15.3** ➖ Message rating + `/feedback` / `/bug`, prompt suggestions, Artifact auto-open, "Explored"
       grouping of consecutive Reads, `/stickers`, `/radio`, `/powerup` — small chrome, leaning no
 - **15.4** ➖ `/share` / `/export` / `/copy` — the transcript is on disk; the terminal exports it
-- **15.5** 🟨 [LG] `ask_debugger_help` **[NEW]** (VS Code hands the debug console to Claude) — no
+- **15.5** ⬜ [LG] `ask_debugger_help` **[NEW]** (VS Code hands the debug console to Claude) — no
       PhpStorm analog probed; ➖ until someone asks
-- **15.6** 🟨 [SM] Chrome MCP / Jupyter MCP toggles **[NEW]** (`ensure_chrome_mcp_enabled`, `enable_jupyter_mcp`) —
+- **15.6** ⬜ [SM] Chrome MCP / Jupyter MCP toggles **[NEW]** (`ensure_chrome_mcp_enabled`, `enable_jupyter_mcp`) —
       configuration; ➖
 
 ## 16. Quality gates (not features, but part of "what we have")

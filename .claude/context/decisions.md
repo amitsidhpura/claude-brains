@@ -3,6 +3,18 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-17 — Low-priority rows are ⬜, not 🟨 yellow
+`docs/feature-checklist.md` marks open-low with ⬜; the rest of the set is unchanged
+(✅ / 🟡 partial / 🟥 high / 🟧 medium / ➖ / 🚫).
+**Why:** the user could not tell 🟨 from 🟧 at a glance — adjacent hues on the same square glyph,
+which defeats the point of a colour tier. ⬜ is the user's pick: unmistakable against the three
+warm tiers, and "low" and "not started" are close enough in practice that the old reason for
+banning ⬜ (2026-08-17 register entry) no longer costs anything.
+**Rejected:** 🟦 blue (tried first this session, the user preferred ⬜); 🟩 (too close to ✅ done);
+reordering the tiers (ids and marks are meant to be stable).
+Amends the 2026-08-17 "numbered, colour-tiered register" entry below, which had declared "no ⬜" —
+that ban is lifted for the low tier only.
+
 ## 2026-08-17 — A slash alias IS its command: filter, row, gate and wire all resolve it
 `canonicalCmd()` maps any roster alias to its command; the menu ranks aliases like names, rows show
 them muted, `cmdKind()` and `submit()` see the canonical name, and the turn is sent under it.

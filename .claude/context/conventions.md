@@ -89,6 +89,11 @@
   two weeks after the plugin was listed there; the README's Docs list linked a `CLAUDE.md` deleted
   on 2026-08-07. Audit the PREMISE of a doc, not just its details, whenever its subject changes —
   and check that every relative link still resolves.
+- **Never copy ids out of a numbered register into a summary — re-derive them.** `state.md`'s 🟥
+  list had cited 8.5 / 8.9 / 8.13 for rewind-fork, side-question and reload-log-replay when
+  `docs/feature-checklist.md` said 8.7 / 8.11 / 8.14, and counted eight [DECIDE] rows when there
+  were nine (found 2026-08-17 seventh, at load). The register is the source of truth; a paraphrase
+  written from memory drifts silently and then gets copied forward every save.
 - Release notes and status prose must keep **By design / Declined / Deferred** apart (glossary.md).
   The README had usage/token display under "deferred but wanted" when it was declined outright on
   2026-08-06 — a reader takes that as a promise.

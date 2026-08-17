@@ -3,6 +3,26 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 (seventh) — the low tier stops looking like the medium one
+- **Session was a `/context load` briefing plus one mark change.** `docs/feature-checklist.md`'s
+  open-low mark went 🟨 → 🟦 → ⬜ (the user could not tell yellow from orange; blue was my pick,
+  ⬜ was theirs). 16 rows, the status-mark key, and the scope-rule line. Mark set now
+  ✅ / 🟡 partial / 🟥 / 🟧 / ⬜ / ➖ / 🚫.
+- The 2026-08-17 register decision had explicitly banned ⬜ ("reads as not started"); the new
+  decisions entry lifts that ban for the low tier and says so, so a later session does not
+  "correct" it back. 🟨 left untouched in this journal and in the superseded decisions entry —
+  history stays as written.
+- **Load-time verification caught four drifts in `state.md`**, all fixed in this save: the 🟥 list
+  cited 8.5 / 8.9 / 8.13 for rewind-fork, side-question and reload-log-replay, but those ids are
+  **8.7 / 8.11 / 8.14** (8.5 is ✅ Delete conversation, 8.9 is 🚫 tabs, 8.13 is ➖
+  `generate_session_title`); and the [DECIDE] rows number **nine**, not eight. The checklist was
+  right every time — `state.md`'s summary had been written from memory.
+- Standing lesson, cheap here and expensive later: when `state.md` paraphrases a numbered
+  register, re-derive the ids from the register at load, never copy them forward.
+- Context files are well over the retention targets (`decisions.md` 761 lines, `gotchas.md` 729,
+  targets ~100). Not addressed; flagged for a consolidation pass.
+- Next: unchanged — the nine [DECIDE] rows, then 9.4 fast-mode toggle [SM], the cheapest 🟥.
+
 ## 2026-08-17 (sixth) — aliases become names, and the roster survives a reload
 - **7.7 shipped**: aliases score like names in the / menu filter, ride the row muted, and a typed
   alias is canonicalised before the allowlist gate (`canonicalCmd`). Motivation from the roster
@@ -199,32 +219,14 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   page had 0.7.0 Approved by the time the user looked. Known lag, recorded 2026-08-14.
 - Next: backlog order — plan-card shortcuts, reloaded-webview log replay, kill-bg-process.
 
-## 2026-08-16 (second) — the plan field joins the ask family; the storefront reshot from the real renderer
-- **Plan-feedback field restyled, mockup-first per convention:** three user iterations (#1b1b1b →
-  "match the ask Other input" → #201c19 → #201c1a) landed as one `--warn-field` token shared by
-  `.plan-fb` and `.ask-other input` — the panel's two type-your-answer-on-a-card surfaces now one
-  control. A `.plan-sep` hairline (composer `#inputbar` idiom, its own div because an input cannot
-  carry a pseudo-element) marks where the plan ends. Ported to chat.html; `done()` removes the
-  separator WITH the input, because the replayed card draws plan + footer only and the two paths
-  must not disagree.
-- Fixture 48 +5 assertions (separator exists/positioned/actually-drawn via computed style, field
-  bg = the token's exact rgb, separator gone after decision). Harness **308/308** — after finding
-  the 9222 panel was the PREVIOUS session's sandbox still running the old build (killed
-  gracefully, relaunched, build verified BY CONTENT before measuring).
-- **Marketplace screenshots: five fresh 2400×1520 frames replace the 2026-07-31 trio.** The
-  live-JCEF capture route is a dead end — under `Emulation.setDeviceMetricsOverride` the OSR
-  surface TILES multiple paints into `captureScreenshot` (clip+scale doesn't help). The shots
-  come from the spliced chat.html in headless Chrome (real CSS + LIMITS captured off the live
-  panel), states driven through the same builders `__gallery()` uses, animations frozen at
-  legible values, colours/geometry measured off the old PNGs. Pipeline in the session scratchpad
-  (mkshots.py / mkshots2.py / compose.py), not committed.
-- Traps for the file: popups force-shown via `classList.add('show')` skip `tg()`'s positioning
-  (open via the chip's real click); `.popup` width is max-content, so a menu that fits the wide
-  IDE overflows a 394px shot; and `\uXXXX`-escaped file content must be patched with the Edit
-  tool — a python-heredoc string literal decodes the escape and silently misses.
-- Next: version bump (changeNotesHtml now carries 2026-08-15's tranches + both 2026-08-16 rounds).
-
 ## Digest
+- **2026-08-16 (second)** — plan-feedback field restyled mockup-first over three user iterations
+  into one shared `--warn-field` token (`.plan-fb` + `.ask-other input`) plus a `.plan-sep`
+  hairline removed with the input so live and replay agree; fixture 48 +5, harness 308. Five fresh
+  2400×1520 Marketplace screenshots, rendered from the spliced chat.html in headless Chrome
+  because JCEF OSR tiles its paints under an emulated viewport — that trap, the force-shown-popup
+  positioning trap and the `\uXXXX`-escape patching trap all live in gotchas.
+
 - **2026-08-16** — plan feedback ships: deny text = verbatim tool_result message; approve note
   appended under `PLAN_NOTES_MARKER` via `updatedInput.plan` (probed: a `feedback` field is
   schema-dropped, stdin steering races the model call); mode rows park in `pendingPlanMode` until

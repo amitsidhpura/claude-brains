@@ -14,7 +14,8 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
-- The eight remaining **[DECIDE]** rows in `docs/feature-checklist.md` need a yes / later / no;
+- The nine remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11, 9.4,
+  9.5, 12.3, 12.6, 13.2, 14.2) need a yes / later / no;
   9.4 fast-mode toggle [SM] is the cheapest 🟥 left.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
   keep planning with text, Shift+Tab = approve with text — both slot into the existing `done()`
@@ -23,12 +24,13 @@
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.
 
-- Replay the conversation into a RELOADED webview. `seedUi()` (2026-08-13) restores the chrome on
+- **8.14** Replay the conversation into a RELOADED webview (the *log* half; the roster half
+  shipped as 7.10 on 2026-08-17). `seedUi()` (2026-08-13) restores the chrome on
   every page load, but the log itself is still lost — the transcript would have to be pushed WITHOUT
   restarting the CLI (unlike `refresh`, which restarts it) and reconciled against frames still
   arriving mid-turn. Deliberately deferred: no reload has ever been observed in the wild, and the
   chrome was the part that could never heal.
-- Kill a background process from the panel: the roster rows (`renderBgTasks`) are display-only and
+- **11.3** Kill a background process from the panel: the roster rows (`renderBgTasks`) are display-only and
   `interrupt()` only stops the in-flight response — the CLI kills shells via the `TaskStop` tool,
   which only the model can call. Needs a bridge verb + an action on the roster row (conversations-
   list hover-gutter idiom). Found 2026-08-12 while fixing the busy-state defects; the CLI has no
