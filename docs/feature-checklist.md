@@ -177,7 +177,9 @@ auto-include selection, voice.
 - **7.5** ✅ Pick rule: a command with ANY `argumentHint` inserts `/name ` and waits; hint-less runs
       (2026-08-16; the roster carries no `immediate` flag)
 - **7.6** ✅ `/clear` native (→ new conversation)
-- **7.7** 🟧 [XS] `aliases` in the menu filter (`/review` → `/code-review`) — display-only today
+- **7.7** ✅ `aliases` are first-class: the menu filter scores them like names, rows show them
+      muted (`.pi-alias`), and a typed alias resolves to its command before the allowlist gate
+      (`canonicalCmd`; `/review` → `/code-review`, `/new` → `/clear`). Fixture 52, 2026-08-17
 - **7.8** ➖ TUI-only commands (never on the headless roster): `/login /logout /resume /help
       /add-dir /rewind /diff /update /theme /vim /keybindings /export /copy /bug /feedback
       /memory /permissions /hooks /mcp /plugin /agents /doctor /status /config /ide /terminal-setup
@@ -187,8 +189,9 @@ auto-include selection, voice.
       its own section (rename, model, effort, mode, resume, tasks, focus)
 - **7.9** ✅ TUI commands that already have a panel equivalent: `/rename` (header pencil), `/model` +
       `/effort` (chips), `/tasks` (bg roster, read-only), `/resume` (history), `/clear` (New)
-- **7.10** 🟧 [SM] Reloaded-webview roster: a reload replays the INITIALIZE-time roster; mid-session
-      `commands_changed` payloads should be cached in ChatPanel (backlog housekeeping)
+- **7.10** ✅ Reloaded-webview roster: `ChatPanel` keeps the newest `commands_changed` frame from
+      the current CLI and replays it after the init seed on every page load (cleared on a fresh
+      `initialize`). Driven live over CDP 2026-08-17: a mid-session command survived `location.reload()`
 
 ## 8. Sessions / history
 - **8.1** ✅ New conversation; **Resume** (history list → `--resume <id>`); **Refresh** (re-resume,

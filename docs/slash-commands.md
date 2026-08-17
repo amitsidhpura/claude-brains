@@ -70,8 +70,11 @@ Two consequences worth knowing:
   `~/.claude/commands/` produced no push (user manual pass, 2026-08-15) — user-level changes
   need `/reload-skills` (headless-safe, verified, Enabled), which also remains the manual
   re-sync lever if a project watcher event is ever missed.
-- **`aliases` is display-only today.** The menu filter matches `name` and `description` only;
-  typing `/review` will not surface `/code-review`. Known non-feature, not a bug.
+- **`aliases` are first-class (2026-08-17).** The menu filter scores an alias like the name it
+  stands for (`/review` surfaces `/code-review` at rank 0, `/peers` → `/list-agents`), rows show
+  aliases muted beside the name, and a TYPED alias is resolved to its command before the allowlist
+  gate and sent under the canonical name — so `/new` and `/reset` reach `/clear`'s native branch.
+  `canonicalCmd()` in chat.html; pinned by fixture 52.
 
 BUILT-INS remain a hand-maintained allowlist in `chat.html` (`CMD_NATIVE` + `CMD_ALLOWED`):
 we start minimal and reveal one command at a time as each is verified in `runIde`.

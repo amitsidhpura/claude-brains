@@ -52,10 +52,6 @@
 ## Housekeeping (one line each, do opportunistically)
 - Marketplace-screenshot pipeline (mkshots.py/mkshots2.py/compose.py) lives only in the
   2026-08-16 session scratchpad — commit under `tools/` if refreshing the listing becomes routine.
-- A webview reload replays the INITIALIZE-time roster (`lastInitMeta`), so commands discovered
-  mid-session via `commands_changed` vanish from the menu until the next `commands_changed` (a
-  `/reload-skills` re-syncs). Pre-existing gap, flagged 2026-08-15 during 3.1/9.10; fix would be
-  ChatPanel caching the last commands_changed payload (CliFileSync-style stream watching).
 - **Does the OS's reduce-motion setting reach JCEF?** chat.css got a `@media
   (prefers-reduced-motion: reduce)` block on 2026-08-13 covering all four animated surfaces
   (in-flight ring, `.bg::before`, `.shimmer`, `.generating .verb`). Half of this is now SETTLED:

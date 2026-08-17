@@ -1,0 +1,116 @@
+{
+ "item": "checklist 7.7",
+ "branch": "slash menu — aliases match in the filter, show on the row, and resolve at the gate",
+ "provenance": "Entry shape {name, description, argumentHint, aliases?} and the alias values (/code-review→review, /clear→reset,new, /list-agents→peers) are from the initialize roster captured off CLI 2.1.228/2.1.233 (docs/slash-commands.md table). Fix: renderSlash scores aliases like names, rows carry .pi-alias, canonicalCmd() maps an alias to its command before cmdKind/submit (2026-08-17). Negative control RUN 2026-08-17 against eb52eb1's chat.html: 7 DISCRIMINATING rows fail, 5 GUARDs pass. Every expression is null-safe so the pre-fix build reports failures instead of aborting the run (gotchas).",
+ "steps": [
+  {
+   "note": "a roster with aliases arrives; the filter and the row learn them",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); clearComposer();",
+   "frames": [
+    {
+     "type": "__commands",
+     "items": [
+      {
+       "name": "code-review",
+       "description": "Review the current diff",
+       "argumentHint": "[target]",
+       "aliases": [
+        "review"
+       ]
+      },
+      {
+       "name": "clear",
+       "description": "Start a new session",
+       "aliases": [
+        "reset",
+        "new"
+       ]
+      },
+      {
+       "name": "list-agents",
+       "description": "List subagents",
+       "aliases": [
+        "peers"
+       ]
+      },
+      {
+       "name": "compact",
+       "description": "Free up context by summarizing the conversation so far — the review is not part of it"
+      },
+      {
+       "name": "simplify",
+       "description": "Review the changed code for reuse"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length",
+     "equals": 5,
+     "why": "GUARD: all five allowlisted rows render"
+    },
+    {
+     "js": "renderSlash('reset'); var r=document.querySelector('#slashList .popup-item'); r ? r.dataset.cmd : null",
+     "equals": "/clear",
+     "why": "DISCRIMINATING: '/reset' finds /clear at rank 0; pre-fix the alias matched nothing (not in name, not in description)"
+    },
+    {
+     "js": "renderSlash('peers'); document.querySelectorAll('#slashList .popup-item').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: an alias with no description echo used to yield 'No matching commands'"
+    },
+    {
+     "js": "renderSlash('peers'); var r=document.querySelector('#slashList .popup-item'); r ? r.dataset.cmd : null",
+     "equals": "/list-agents",
+     "why": "DISCRIMINATING: the alias hit is the command it stands for"
+    },
+    {
+     "js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/clear\"] .pi-alias')||{}).textContent || ''",
+     "equals": "/reset /new",
+     "why": "DISCRIMINATING: aliases ride the title, muted, in roster order"
+    },
+    {
+     "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/compact\"] .pi-alias')",
+     "equals": false,
+     "why": "GUARD: a command without aliases carries no alias span"
+    },
+    {
+     "js": "renderSlash('review'); var r=document.querySelector('#slashList .popup-item'); r ? r.dataset.cmd + '|' + (r.dataset.takesarg||'') : null",
+     "equals": "/code-review|1",
+     "why": "GUARD: the alias hit keeps its command's insert-vs-send rule (has a hint → inserts); note 'review' is also a substring of the name, so this row is not a discriminator"
+    }
+   ]
+  },
+  {
+   "note": "a typed alias resolves to its command before the allowlist gate",
+   "expect": [
+    {
+     "js": "cmdKind('review')",
+     "equals": "text",
+     "why": "DISCRIMINATING: '/review' typed reaches /code-review's branch (was 'tui' → refused as not available in the IDE)"
+    },
+    {
+     "js": "cmdKind('peers')",
+     "equals": "text",
+     "why": "DISCRIMINATING: same for /peers → /list-agents"
+    },
+    {
+     "js": "cmdKind('new')",
+     "equals": "native",
+     "why": "DISCRIMINATING: /new and /reset are /clear's aliases → the IDE's own branch"
+    },
+    {
+     "js": "cmdKind('nonesuch')",
+     "equals": "tui",
+     "why": "GUARD: an unknown name is still hidden"
+    },
+    {
+     "js": "cmdKind('CODE-REVIEW')",
+     "equals": "text",
+     "why": "GUARD: case-insensitive as before"
+    }
+   ]
+  }
+ ]
+}

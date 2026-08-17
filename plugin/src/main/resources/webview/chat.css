@@ -1038,6 +1038,9 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* Source badge on custom slash commands ("project" / "user" / "mcp") — the TUI's "(project)"
    marker, worn as muted metadata after the name instead of inside the description. */
 .pi-src { color: var(--user-muted); font-size: 10px; margin-left: 8px; }
+/* a command's aliases, muted beside its name — same tone as the source badge, kept at the
+   title's own size because it is a name too, not a label */
+.pi-alias { color: var(--user-muted); margin-left: 8px; font-weight: 400; }
 .pi-check { color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
 .pi-check svg { width: 16px; height: 16px; }
 .popup-item.on .pi-check { visibility: visible; }

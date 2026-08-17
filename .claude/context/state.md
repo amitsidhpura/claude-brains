@@ -1,35 +1,37 @@
 # State
 
 ## Current focus
-**2026-08-17 (fifth session): checklist rows 2.10 + 2.11 done and live-verified; committed +
+**2026-08-17 (sixth session): checklist rows 7.7 + 7.10 done, pinned and live-verified; committed +
 pushed by this save.** Nothing in flight.
-- **2.10 Autosave before read/write** — a host-registered SDK hook over stream-json:
-  `ClaudeCli.sendInitialize` declares `hooks:{PreToolUse:[{matcher:"Edit|Write|MultiEdit|Read",
-  hookCallbackIds:["autosave"]}]}`; the CLI blocks each matching call on
-  `control_request{subtype:hook_callback,callback_id,input,tool_use_id}`; `ClaudeCli.onHook` →
-  `ClaudeSessionService` → `Autosave.handle` saves the document if `isDocumentUnsaved` and replies
-  `{continue:true}` from the EDT AFTER the save (every failure path still replies — an unanswered
-  hook stalls the CLI to its timeout). Always on (no settings page by design). Measured first
-  headlessly (probe: initialize accepted, `hook_callback id=autosave` arrived before Read), then
-  live in `runIde`: unsaved `ZEBRA-43` buffer → `Read` returned ZEBRA-43; `idea.log`
-  `autosaved before Read` 7ms before the file mtime. Same mechanism as VS Code's
-  `claudeCode.autosave` (`saveFileIfNeeded`, extension.js 2.1.233). Only the four named tools
-  fire it — a `Bash cat` bypasses it, by construction (same as the reference).
-- **2.11 Stale IDE locks** — `IdeLockFile.sweepStale` runs on every lock write: any
-  `~/.claude/ide/*.lock` whose pid is dead is deleted (the CLI's own rule; it never runs it for us
-  because `--mcp-config` skips IDE enumeration). 17 → 2 on the first run.
-- Test tooling used this session (scratchpad, not committed): `probe_close_tab.py` (bridge WS:
-  two openDiffs + close_tab / closeAllDiffTabs) and `probe_hook.py` (headless CLI with hooks on
-  initialize; auto-answers hook_callback + can_use_tool). Recipes are in journal 2026-08-17
-  fourth/fifth if they need rebuilding.
-- **Row ids in `docs/feature-checklist.md` are the way to refer to features** — the 🟥 high rows
-  left: **3.5** tweak-travel [LG], **8.5** rewind/fork [LG, undecided since 2026-07-30], **8.9**
-  side question [MD], **8.13** reloaded-webview log replay [LG], **9.4** fast-mode toggle [SM],
-  **11.3** kill-background-process [MD]. Eight **[DECIDE]** rows still await the user.
-- Noticed, not touched: `plugin.xml` description still says only `/compact` + `/clear` are
-  enabled (16 built-ins are) — fix in the next release's notes pass. Two features (2.4, 2.10,
-  2.11) are on main UNRELEASED; 0.7.2 remains what users have. **A release starts only when the
-  user asks.**
+- **7.7 slash aliases** — `canonicalCmd()` in chat.html maps a roster alias to its command;
+  `renderSlash` scores aliases like names (rank 0/1/2) and shows them muted on the row
+  (`.pi-alias`, chat.css); `submit()` resolves a typed alias BEFORE `cmdKind` and rewrites the
+  turn to the canonical name (`/review …` → `/code-review …`; `/new`/`/reset` → `/clear`'s native
+  branch). Fixture **52-slash-aliases** (12 assertions), negative control RUN against eb52eb1's
+  chat.html: 7 DISCRIMINATING fail / 5 GUARD pass — and the control corrected the fixture (the
+  first "review → /code-review first" row was not a discriminator: `review` is a substring of the
+  name; `/reset → /clear` is the rank-0 proof now). Live harness baseline **356** (was 344).
+- **7.10 reloaded-webview roster** — `ChatPanel.lastCommandsChanged` keeps the newest raw
+  `commands_changed` frame from the current CLI (cleared in `onInit`) and `seedUi()` replays it
+  after `pushInitMeta` (REPLACE semantics, same handler). Verified live over CDP: a command file
+  dropped mid-session → roster 54 with `reload-probe` (project badge) → `location.reload()` →
+  still 54 with it, `renderSlash('reload')` lists it. No fixture (the harness cannot reload the
+  page it drives); the CDP recipe is in journal 2026-08-17 sixth.
+- **Docs**: `docs/slash-commands.md` "aliases is display-only" note rewritten; checklist rows
+  7.7/7.10 ✅; backlog housekeeping item for the reload roster removed.
+- The 🟥 high rows left: **3.5** tweak-travel [LG], **8.5** rewind/fork [LG, undecided since
+  2026-07-30], **8.9** side question [MD], **8.13** reloaded-webview LOG replay [LG] (the roster
+  half is done, the log half is not), **9.4** fast-mode toggle [SM], **11.3**
+  kill-background-process [MD]. Eight **[DECIDE]** rows still await the user.
+- Five features on main UNRELEASED since 0.7.2 (2.4, 2.10, 2.11, 7.7, 7.10). `plugin.xml`
+  description still says only `/compact` + `/clear` are enabled — fix in the release-notes pass.
+  **A release starts only when the user asks.**
+
+**Previous (2026-08-17 fifth): rows 2.10 + 2.11.** Autosave-before-read/write as a host SDK hook
+(`initialize` declares `PreToolUse Edit|Write|MultiEdit|Read → autosave`; `hook_callback` answered
+from the EDT after `saveDocument`, `{continue:true}` on every path; `Autosave.kt`). Verified
+headlessly and live (unsaved buffer is what Read returned). Stale `~/.claude/ide/*.lock` swept
+dead-pid on every lock write (`IdeLockFile.sweepStale`, 17 → 2).
 
 **Previous (2026-08-17 fourth): feature checklist re-audited against 2.1.233; `close_tab` finished
 (row 2.4).** `docs/feature-checklist.md` is now 16 sections, 124 rows numbered `section.row`
@@ -92,7 +94,7 @@ highlight); the feedback-field restyle + `.plan-sep`.
   delivered user records). Footers quote via one `fbQuote()` helper (72-char cut, live+replay).
 
 ## Testing — the standing setup
-- Live harness: `python tools/live_harness.py`, baseline **308**; `./gradlew test` **107**.
+- Live harness: `python tools/live_harness.py`, baseline **356** (fixtures to 52); `./gradlew test` **106**.
   Fixture 48 (10 steps) is the first-ever plan-card coverage; its negative control was RUN
   (7 render assertions failed pre-fix; SessionStore stash-runs failed 2 and 3).
 - Sandbox debug port: `./gradlew runIde -PjcefDebugPort=9223` + `CLAUDE_BRAINS_CDP_PORT` for
@@ -120,6 +122,7 @@ highlight); the feedback-field restyle + `.plan-sep`.
 - [x] Feature checklist re-audited vs 2.1.233, numbered/coloured/effort-tagged (2026-08-17 fourth).
 - [x] Checklist 2.4 `close_tab` by name — done + live-verified (2026-08-17 fourth).
 - [x] Checklist 2.10 autosave hook + 2.11 stale-lock sweep — done + live-verified (2026-08-17 fifth).
+- [x] Checklist 7.7 aliases (fixture 52, control run) + 7.10 reload roster (CDP-verified) (2026-08-17 sixth).
 - [ ] Get the user's yes/later/no on the eight remaining **[DECIDE]** rows in `docs/feature-checklist.md`.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
       reloaded-webview log replay (8.13), kill-background-process (11.3), tweak-travel (3.5);

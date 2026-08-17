@@ -573,6 +573,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         session.start(
             onEvent = { line ->
                 pushEvent(line)
+                // The roster after a `commands_changed` push is state the page cannot recover on
+                // its own: a reload used to replay only the INITIALIZE-time roster, so a skill
+                // discovered mid-session vanished from the / menu (checklist 7.10). Keep the raw
+                // frame and replay it after the init seed — same handler, same REPLACE semantics.
+                if (line.contains("\"commands_changed\"")) lastCommandsChanged = line
                 // The CLI names a thread with an `ai-title` record written around the end of a
                 // turn, so re-read at every result; pushTitle no-ops unless the name changed.
                 if (line.contains("\"type\":\"result\"")) {
@@ -607,6 +612,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             },
             onInit = { metaJson ->
                 lastInitMeta = metaJson   // kept so a reloaded page can be seeded without a CLI restart
+                lastCommandsChanged = null // a fresh initialize is the newer roster; a push from the old CLI is stale
                 pushInitMeta(metaJson)
             },
             // Carry the stderr tail on a NON-ZERO exit: "claude process exited (1)" with the reason
@@ -625,6 +631,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
 
     /** The CLI's `initialize` payload, replayed into a reloaded page — it arrives only at CLI start. */
     private var lastInitMeta: String? = null
+
+    /** The newest `system/commands_changed` frame from THIS CLI process, replayed after [lastInitMeta]. */
+    private var lastCommandsChanged: String? = null
 
     /** Slash commands + the model roster, from the CLI's initialize payload. */
     private fun pushInitMeta(metaJson: String) {
@@ -667,6 +676,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         project.basePath?.let { pushFrame(buildJsonObject { put("type", "__project"); put("root", it) }) }
 
         lastInitMeta?.let { pushInitMeta(it) }
+        lastCommandsChanged?.let { pushEvent(it) }   // after the seed: it REPLACES the init roster
 
         lastTitle = null; titleProbed = false
         pushTitle(session.currentSessionId())

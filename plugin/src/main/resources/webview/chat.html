@@ -2352,7 +2352,7 @@
   }
 
   function submit() {
-    const t = input.value.trim();
+    let t = input.value.trim();
     if (!t && !pending.length) return;
     // slash-command routing (only for a bare "/cmd [args]" turn with no attachments): native
     // commands are handled in the IDE; TUI-only built-ins are refused rather than sent as literal
@@ -2361,7 +2361,11 @@
     // with a path ("/home/x …") is ordinary text, not a command named "home".
     const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/i);
     if (sc) {
-      const name = sc[1].toLowerCase();
+      // Aliases resolve to their command before the gate: the CLI advertises `/review` for
+      // `/code-review` and `/reset`/`/new` for `/clear`, and a typed alias must reach the same
+      // branch as the name it stands for. The turn is sent under the canonical name too.
+      const name = canonicalCmd(sc[1]);
+      if (name !== sc[1].toLowerCase()) t = '/' + name + (sc[2] != null ? ' ' + sc[2] : '');
       if (name === 'clear') { clearComposer(); bridge({ kind: 'new' }); return; }         // fresh conversation
       if (cmdKind(name) === 'tui') {
         clearComposer();
@@ -2474,8 +2478,20 @@
     'init', 'recap', 'goal',                                                    // session workflow
     'loop', 'batch', 'deep-research', 'list-agents',                            // orchestration
   ]);   // forwarded to the CLI as a turn
-  function cmdKind(name) {
+  // An alias the roster advertises (`aliases: [...]` on the entry) → the command it names;
+  // anything else passes through unchanged. Case-insensitive, like every other name check.
+  function canonicalCmd(name) {
     const n = (name || '').toLowerCase();
+    for (let i = 0; i < slashCommands.length; i++) {
+      const al = slashCommands[i].aliases;
+      if (Array.isArray(al) && al.some(function (a) { return String(a).toLowerCase() === n; })) {
+        return (slashCommands[i].name || n).toLowerCase();
+      }
+    }
+    return n;
+  }
+  function cmdKind(name) {
+    const n = canonicalCmd(name);
     // native/allowlist first: a project file named clear.md must not shadow the IDE's /clear
     if (CMD_NATIVE.has(n)) return 'native';
     if (CMD_ALLOWED.has(n)) return 'text';
@@ -2496,14 +2512,22 @@
     const ql = (q || '').toLowerCase();
     // rank: exact name (0) → name prefix (1) → name substring (2) → description-only (3), so an
     // exact match like "/model" leads instead of sinking below commands that merely mention it in
-    // their description. Array.sort is stable, so ties keep the CLI's original order.
+    // their description. Array.sort is stable, so ties keep the CLI's original order. An alias
+    // scores like the name it stands for, so typing "/review" surfaces /code-review at rank 0 —
+    // it used to fall through to the description-only tier or vanish (checklist 7.7).
     const hits = slashCommands.map(function (c) {
-      const name = (c.name || '').toLowerCase(), desc = (c.description || '').toLowerCase();
+      const names = [(c.name || '').toLowerCase()].concat(
+        Array.isArray(c.aliases) ? c.aliases.map(function (a) { return String(a).toLowerCase(); }) : []);
+      const desc = (c.description || '').toLowerCase();
       let score = -1;
-      if (name === ql) score = 0;
-      else if (name.indexOf(ql) === 0) score = 1;
-      else if (name.indexOf(ql) !== -1) score = 2;
-      else if (desc.indexOf(ql) !== -1) score = 3;
+      names.forEach(function (name) {
+        let sc = -1;
+        if (name === ql) sc = 0;
+        else if (name.indexOf(ql) === 0) sc = 1;
+        else if (name.indexOf(ql) !== -1) sc = 2;
+        if (sc >= 0 && (score < 0 || sc < score)) score = sc;
+      });
+      if (score < 0 && desc.indexOf(ql) !== -1) score = 3;
       return { c: c, score: score };
     }).filter(function (x) { return x.score >= 0 && cmdKind(x.c.name) !== 'tui'; })  // hide unconfirmed
       .sort(function (a, b) { return a.score - b.score; })
@@ -2513,9 +2537,12 @@
       // Source badge: markCustom() recorded src for suffix-marked entries; MCP prompts are
       // recognisable by name alone. Built-ins get none — quiet is the default.
       const src = c.src || ((c.name || '').indexOf('mcp__') === 0 ? 'mcp' : null);
+      // Aliases ride the title, muted, so the row that matched "/review" says why it is here.
+      const aliases = Array.isArray(c.aliases) && c.aliases.length
+        ? '<span class="pi-alias">' + c.aliases.map(function (a) { return '/' + esc(String(a)); }).join(' ') + '</span>' : '';
       return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '"' +
         (cmdTakesArg(c) ? ' data-takesarg="1"' : '') + '>' +
-        '<div class="pi-body"><div class="pi-title">/' + esc(c.name) +
+        '<div class="pi-body"><div class="pi-title">/' + esc(c.name) + aliases +
         (src ? '<span class="pi-src">' + esc(src) + '</span>' : '') + '</div>' +
         (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
     }).join('');

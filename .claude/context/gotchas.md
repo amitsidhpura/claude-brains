@@ -668,6 +668,14 @@ trusting memory here.
   tail of the log, which truncates the per-IDE list.
 
 ## Session tooling (probes, sandboxes, background shells)
+- **`pgrep -f <pattern>` matches the shell that runs it** when the pattern appears in that shell's
+  own command line (the Bash tool's `zsh -c "... pgrep -f 'PhpStorm-2024.2/jbr/bin/java' ..."`).
+  "Still running" three times in a row on 2026-08-17 was the probe seeing itself. Read `ps -o cmd
+  -p <pid>` before believing it, or anchor on the lock file / a `ps` filter that excludes `pgrep`.
+- **A negative control can pass for the wrong reason: a "discriminator" that is a substring of the
+  thing it tests.** Fixture 52's `review → /code-review` row was green pre-fix because `review` is
+  IN `code-review`. Before calling an assertion DISCRIMINATING, ask what the OLD code would return
+  for that exact input; pick inputs the old path cannot reach (`reset` → `/clear`).
 - **Testing anything "before Claude reads/writes" in `runIde`: PhpStorm saves on frame
   deactivation.** Alt-tabbing out of the sandbox to report back writes every dirty buffer, so disk
   and editor agree before the tool runs and the test proves nothing (2026-08-17: two runs lost).

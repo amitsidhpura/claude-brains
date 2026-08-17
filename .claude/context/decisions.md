@@ -3,6 +3,16 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-17 — A slash alias IS its command: filter, row, gate and wire all resolve it
+`canonicalCmd()` maps any roster alias to its command; the menu ranks aliases like names, rows show
+them muted, `cmdKind()` and `submit()` see the canonical name, and the turn is sent under it.
+**Why:** the CLI advertises the aliases (`/review`, `/peers`, `/reset`, `/new`) so users type them;
+refusing a typed alias as "not available" was the plugin contradicting the roster it displays.
+Sending the canonical name removes any dependence on the CLI's own alias expansion.
+**Rejected:** display-only aliases (the previous state — a known non-feature that failed the first
+person to type `/review`); adding aliases to the allowlist by hand (drifts with every CLI update;
+the roster already carries them).
+
 ## 2026-08-17 — Autosave rides the SDK hook lane, always on, four tools only
 The plugin declares ONE host hook on `initialize` — `PreToolUse Edit|Write|MultiEdit|Read →
 autosave` — and answers `hook_callback` after saving a dirty document. No toggle.

@@ -3,6 +3,29 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 (sixth) — aliases become names, and the roster survives a reload
+- **7.7 shipped**: aliases score like names in the / menu filter, ride the row muted, and a typed
+  alias is canonicalised before the allowlist gate (`canonicalCmd`). Motivation from the roster
+  itself: `/review`, `/peers`, `/reset`, `/new` are what the CLI advertises, and a typed `/review`
+  was being refused as "not available in the IDE".
+- **The negative control earned its keep again**: the fixture's first "discriminator" — typing
+  `review` puts /code-review first — PASSED on the pre-fix build, because `review` is a substring
+  of the name and already ranked 2 above compact's description-only 3. Re-expressed as `/reset →
+  /clear` (in neither name nor description pre-fix). One expression also threw on null on the
+  pre-fix build and aborted the run — every row is null-safe now (the 2026-08-17 lesson, relearned
+  cheaply). Final control 7 fail / 5 pass; fixed build 12/12; whole harness 356/356.
+- **7.10 shipped**: ChatPanel caches the newest raw `commands_changed` frame and replays it after
+  the init seed on every page load. Verified live without a fixture, over CDP: drop
+  `reload-probe.md` into the testing repo's `.claude/commands/` (the CLI watcher pushed within
+  ~6s), assert roster 54 + badge, `location.reload()`, assert again. Pre-fix the reload replayed the
+  53-entry initialize roster.
+- Control build via `git stash push -- chat.html chat.css` → runIde → harness → `stash pop` →
+  runIde: two IDE launches, cheaper than building a pinned commit, and honest because ChatPanel's
+  Kotlin change is orthogonal to what fixture 52 asserts.
+- Trap noted: `pgrep -f 'PhpStorm-2024.2/jbr/bin/java'` matches the pgrep-launching shell itself
+  (its command line carries the pattern) — read the pid's cmd before concluding "still running".
+- Next: the eight [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥.
+
 ## 2026-08-17 (fifth) — 2.10 and 2.11: the hook lane opens, and the locks get swept
 - **Autosave-before-read/write shipped as a host-registered SDK hook.** Read out of extension.js
   2.1.233 first: VS Code's `claudeCode.autosave` (default on) is `saveFileIfNeeded`, a `PreToolUse
@@ -201,38 +224,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   tool — a python-heredoc string literal decodes the escape and silently misses.
 - Next: version bump (changeNotesHtml now carries 2026-08-15's tranches + both 2026-08-16 rounds).
 
-## 2026-08-16 — plan feedback ships; the user's sweep beats the harness twice
-- **Shipped the plan-card feedback feature** (the user's ask after learning the terminal's
-  "keep planning" is an input): a "Tell Claude what to change" field riding every decision, and
-  the Yes variants folded behind a split Approve caret. Wire mechanisms all probed on 2.1.233
-  BEFORE coding: deny message = verbatim tool_result; allow `feedback` field = silently
-  schema-stripped; the winner for approve is appending the note to `updatedInput.plan` (the
-  terminal's own ctrl+g field) so it arrives in the SAME message as the approval.
-- **The first approve mechanism was wrong and only the user's manual test caught it.** stdin
-  steering measured as "delivered before the first Write" in the probe — but it races the model
-  call cycle, and in the user's run the note arrived after implementation started ("if I want
-  two→three it might write two then update"). The probe's one green run was timing luck.
-  Lesson: a race you measured passing once is still a race.
-- **Guided six manual tests, one at a time; two more finds:** the mode chip stuck on Plan after
-  approval (the CLI restores prePlanMode but broadcasts its INTERNAL name `default`, which the
-  chip's unknown-mode guard dropped — one-line alias), and earlier the "2 background processes"
-  chip that was truthfully reporting my own orphaned probe scripts (blocking readline(), the
-  same waiter-loop family as 2026-08-15 — now always `timeout N` wrapped).
-- Also fixed en route: an immediate post-approval set_permission_mode ALWAYS loses to the CLI's
-  prePlanMode restore (mode rows now park in `pendingPlanMode` until the broadcast); mid-turn
-  steered messages persist ONLY as `queued_command` attachment records, so replay silently lost
-  them (SessionStore now maps mode=prompt ones to user bubbles, deduped against delivered
-  copies).
-- Sandbox vs real IDE on one debug port: the real IDE held 9222, so runIde gained
-  `-PjcefDebugPort` and cdp.py `CLAUDE_BRAINS_CDP_PORT` — then the sandbox's own hand-set
-  Registry value beat the property anyway. Panel identity is now verified BY CONTENT before any
-  harness run.
-- Verified: live harness **303** (fixture 48, 10 steps, negative control run), `./gradlew test`
-  **107** (3 new SessionStore tests, stash-run controls failed 2 and 3 pre-fix), six-test manual
-  sweep by the user, replay re-checked against the real e2e transcripts.
-- Next: version bump (changeNotesHtml gate) — now carrying 2026-08-15's three tranches AND this.
-
 ## Digest
+- **2026-08-16** — plan feedback ships: deny text = verbatim tool_result message; approve note
+  appended under `PLAN_NOTES_MARKER` via `updatedInput.plan` (probed: a `feedback` field is
+  schema-dropped, stdin steering races the model call); mode rows park in `pendingPlanMode` until
+  the CLI's restore broadcast. The user's manual sweep beat the harness twice — the lesson lives in
+  gotchas (plan-probe traps) and decisions (three 2026-08-16 entries).
 - **2026-08-15 (third)** — three user reports: the bg chip was right (roster reset at the CLI
   boundary), the stuck popup highlight was not, and one file was being named two ways (card vs
   tool line) → paths project-relative + middle-ellipsised everywhere, absolute kept on
