@@ -5,6 +5,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
 import java.nio.file.Files
 import java.nio.file.Path
@@ -24,6 +27,7 @@ class IdeLockFile(
     private val path: Path = ideDir().resolve("$port.lock")
 
     fun write(workspaceFolders: List<String>, ideName: String) {
+        sweepStale(path.parent)
         val json = buildJsonObject {
             put("pid", ProcessHandle.current().pid())
             put("workspaceFolders", JsonArray(workspaceFolders.map { JsonPrimitive(it) }))
@@ -39,6 +43,29 @@ class IdeLockFile(
 
     fun delete() {
         runCatching { Files.deleteIfExists(path) }
+    }
+
+    /**
+     * Remove lock files whose writer is gone. [delete] only runs on an orderly dispose — a killed
+     * sandbox, a crashed IDE or a hot-reload that skipped dispose leaves its lock behind (17 files,
+     * 15 dead, found in `~/.claude/ide/` on 2026-08-17). The CLI has the same sweep (dead pid →
+     * unlink) but runs it only when it ENUMERATES IDEs, which our `--mcp-config` route never asks
+     * it to, so nothing else ever cleans up. Same rule as the CLI's: pid absent → stale. A lock
+     * with a live pid — ours, another IDE's, a reused pid — is left alone; a lock we cannot read
+     * is left alone too (the CLI deletes those; we stay in our lane).
+     */
+    private fun sweepStale(dir: Path) {
+        val me = ProcessHandle.current().pid()
+        runCatching {
+            Files.list(dir).use { files ->
+                files.filter { it.fileName.toString().endsWith(".lock") }.forEach { f ->
+                    val pid = runCatching {
+                        Json.parseToJsonElement(Files.readString(f)).jsonObject["pid"]?.jsonPrimitive?.long
+                    }.getOrNull() ?: return@forEach
+                    if (pid != me && ProcessHandle.of(pid).isEmpty) runCatching { Files.deleteIfExists(f) }
+                }
+            }
+        }
     }
 
     private fun ideDir(): Path {

@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 (fifth) — 2.10 and 2.11: the hook lane opens, and the locks get swept
+- **Autosave-before-read/write shipped as a host-registered SDK hook.** Read out of extension.js
+  2.1.233 first: VS Code's `claudeCode.autosave` (default on) is `saveFileIfNeeded`, a `PreToolUse
+  Edit|Write|Read` callback that saves a dirty document. Our stream-json CLI takes the same thing:
+  `initialize` accepts `hooks:{Event:[{matcher,hookCallbackIds}]}` (schema pulled from the CLI
+  binary; validated strictly) and then sends `control_request{subtype:hook_callback}` per matching
+  call. Until now that arm fell into the generic empty-`{}` ack. New `Autosave.kt`; the reply goes
+  out from the EDT after `saveDocument`, `{continue:true}` on every path.
+- **Measured before believing, twice.** Headless probe (`probe_hook.py`, scratchpad): initialize
+  with hooks → success; `hook_callback id=autosave event=PreToolUse tool=Read path=…` arrived
+  before the Read ran. Then live in `runIde`: unsaved `ZEBRA-43` buffer, `Read` returned ZEBRA-43,
+  `idea.log` shows `autosaved before Read` at 22:01:07.320, file mtime 22:01:07.313.
+- **Two contaminated runs before the clean one, both instructive:** (1) PhpStorm's own
+  "save on frame deactivation" wrote the buffer the moment the user alt-tabbed to report back, so
+  disk and buffer agreed before any tool ran — the test must stay inside the sandbox until the
+  answer lands; (2) the model chose `Bash cat` over the `Read` tool, which no PreToolUse
+  file-matcher can see — pin the tool in the prompt ("Use the Read tool — not Bash"). Neither is a
+  defect; both are in gotchas.
+- **Stale-lock sweep** (`IdeLockFile.sweepStale`, on every write): the CLI's own rule (dead pid →
+  unlink) exists in the binary but only runs when it ENUMERATES IDEs, which `--mcp-config` never
+  triggers — so nothing had ever cleaned up. 17 locks → 2 on the first sandbox start.
+- `runIde` hit the known `teamcity.jetbrains.com` config-cache eviction (2m20s "Connection timed
+  out") — `-PskipVerifierIdes` cleared it, exactly as gotchas § Build says.
+- Next: the eight remaining [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥.
+
 ## 2026-08-17 (fourth) — the checklist re-audited, and 2.4 finished
 - **`docs/feature-checklist.md` rewritten** against VS Code 2.1.233 + CLI 2.1.233 (installed here;
   the file had been on 2.1.220/222). Sources: `package.json` contributions, the `case"…"` host-
@@ -207,29 +232,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   sweep by the user, replay re-checked against the real e2e transcripts.
 - Next: version bump (changeNotesHtml gate) — now carrying 2026-08-15's three tranches AND this.
 
-## 2026-08-15 (third) — three user reports, three fixes, and one premise I had backwards
-- **"The chip said 2 tasks but there were none."** It was RIGHT: the process tree showed two shells
-  genuinely alive under the panel's `claude` pid — my own orphaned `until … sleep 30 … done` waiter
-  loops from the sweep, 2h34m and 1h31m old (killing them fired exactly two task notifications).
-  Checking the process tree BEFORE the code is what turned this from a phantom into a fact.
-- The real defect underneath was the inverse of the report: the roster reset lived in `sendTurn`
-  (wiping shells that were still running) while `clearLogUI` — the actual CLI-restart boundary —
-  never cleared it. The CLI's own schema settles it: the level is per-process. `docs/client-parity.md`
-  had CLAIMED clearLogUI did this since before the code ever did.
-- **Stuck popup highlight.** The user's wording ("dark on hover, lighter after") was exact and both
-  halves had separate causes: a `.bg-row` CSS opt-out that beats `:hover` but only TIES with `.sel`,
-  plus a document-level `mouseover` painter with no exit counterpart. Fixed with a `nosel` marker;
-  the roster takes no cursor at all. Verified with REAL CEF mouse events, not synthetic ones.
-- **One path renderer everywhere.** The decision card printed the absolute path while the tool line
-  above it printed the relative one. Both card surfaces now use `fillPath`; an audit then found the
-  @-mention menu ellipsising at the WRONG END (eating filenames) and `notebook_path` missing from
-  DESC_KEYS/PATH_KEYS entirely, so NotebookEdit showed no path at all. Cut extracted to `pathParts()`.
-- **A test caught my own over-correction twice this session:** fixture 47's step-2 guard rejected a
-  `message_stop` reset within the hour, and fixture 04's restart step passed VACUOUSLY at first
-  because the previous step's `sendTurn` had already emptied the roster.
-- Verified: live harness **273**, Kotlin **103**, register 0 open. Next: version bump.
-
 ## Digest
+- **2026-08-15 (third)** — three user reports: the bg chip was right (roster reset at the CLI
+  boundary), the stuck popup highlight was not, and one file was being named two ways (card vs
+  tool line) → paths project-relative + middle-ellipsised everywhere, absolute kept on
+  `dataset.path`/`title`. `<local-command-stderr>` and mid-turn steered messages fixed the same day.
 - **2026-08-15 (second)** — 16 built-ins enabled (user-picked set) and every one driven through the
   LIVE panel, not the headless smoke: `/context` rendered nothing (bare whole-message `assistant`
   frame, zero stream events → `msgStreamed`), `/security-review` dropped its `<local-command-stderr>`

@@ -182,6 +182,13 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
     a refused host request this way too (e.g. `set_permission_mode` to bypass); surface it, don't drop it.
 - Other control subtypes: `initialize` (host→CLI: declares `hooks`, `sdkMcpServers`, `jsonSchema`,
   `systemPrompt`), `set_permission_mode` (host→CLI: `{subtype,mode}`), `hook_callback`, `mcp_message`.
+- **Host hooks over stream-json (measured 2026-08-17, CLI 2.1.233):** `initialize` takes
+  `hooks: {<HookEvent>: [{matcher?, hookCallbackIds: [id…], timeout?}]}` (validated strictly); the
+  CLI then blocks each matching call on `control_request{subtype:"hook_callback", callback_id,
+  input:{hook_event_name, tool_name, tool_input, session_id…}, tool_use_id}` until the host answers
+  `control_response{…, response:<hook JSON output>}` — `{continue:true}` to carry on. We register
+  ONE: `PreToolUse Edit|Write|MultiEdit|Read → autosave` (`ClaudeCli.sendInitialize` / `Autosave.kt`),
+  the VS Code host's `saveFileIfNeeded` equivalent.
 - Permission modes (`--permission-mode`, re-probed 2026-08-03 on 2.1.220 — the advertised set has
   GROWN): `manual` (ask), `acceptEdits` (auto-approves **edits only** — Bash etc. still ask),
   `plan`, `auto`, `dontAsk`, `bypassPermissions`. `default` still parses but is no longer

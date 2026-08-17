@@ -1,30 +1,43 @@
 # State
 
 ## Current focus
-**2026-08-17 (fourth session): feature checklist re-audited against 2.1.233; `close_tab` finished
-(row 2.4).** Uncommitted at save time, committed + pushed by this save (user asked).
-- **`docs/feature-checklist.md` REWRITTEN** against VS Code 2.1.233 + CLI/TUI 2.1.233 (was
-  2.1.220/222 and last touched 2026-08-15). Shape now: 16 sections, **124 rows numbered
-  `section.row`** (ids are STABLE — retire by striking, never delete), each row `- **N.n** <mark>
-  [effort] …`. Marks: ✅ 66 · 🟡 0 · 🟥 high 7 · 🟧 medium 12 · 🟨 low 15 · ➖ by design 18 ·
-  🚫 declined 5. Effort tags `[XS|SM|MD|LG]` on open rows only. Row tags **[NEW]** (2.1.233
-  additions) and **[DECIDE]** (needs the user's yes/later/no). Header carries legend, tags,
-  scope rule, work order — no bottom sections. The user shaped every one of those choices in turn
-  (colours by importance, effort tags, numbering, uncluttered header).
-- **2.4 `close_tab` done** (`DiffReview.kt` `tabNames` + `completeTabClosed(name)`;
-  `IdeTools.closeTab`). Reference-exact replies now: `close_tab` → `TAB_CLOSED` always,
-  `closeAllDiffTabs` → `CLOSED_<n>_DIFF_TABS` (was a made-up `"closed diff tabs"`). **Verified
-  live over the bridge WS in `runIde` 2026-08-17**, two probes: (1) two openDiffs + `close_tab
-  ALPHA` → only ALPHA resolved TAB_CLOSED, BETA stayed pending until the user clicked Accept
-  (`FILE_SAVED`); (2) `closeAllDiffTabs` → both TAB_CLOSED + `CLOSED_2_DIFF_TABS`. Compile
-  green; no unit test (needs a Project). `docs/ide-mcp-protocol.md` tool table updated.
-- The 🟥 high rows to pick from next: **2.13** autosave-before-read/write [SM], **3.5**
-  tweak-travel [LG], **8.5** rewind/fork [LG, undecided since 2026-07-30], **8.9** side
-  question [MD], **8.13** reloaded-webview log replay [LG], **9.4** fast-mode toggle [SM],
-  **11.3** kill-background-process [MD]. Ten **[DECIDE]** rows await the user.
+**2026-08-17 (fifth session): checklist rows 2.10 + 2.11 done and live-verified; committed +
+pushed by this save.** Nothing in flight.
+- **2.10 Autosave before read/write** — a host-registered SDK hook over stream-json:
+  `ClaudeCli.sendInitialize` declares `hooks:{PreToolUse:[{matcher:"Edit|Write|MultiEdit|Read",
+  hookCallbackIds:["autosave"]}]}`; the CLI blocks each matching call on
+  `control_request{subtype:hook_callback,callback_id,input,tool_use_id}`; `ClaudeCli.onHook` →
+  `ClaudeSessionService` → `Autosave.handle` saves the document if `isDocumentUnsaved` and replies
+  `{continue:true}` from the EDT AFTER the save (every failure path still replies — an unanswered
+  hook stalls the CLI to its timeout). Always on (no settings page by design). Measured first
+  headlessly (probe: initialize accepted, `hook_callback id=autosave` arrived before Read), then
+  live in `runIde`: unsaved `ZEBRA-43` buffer → `Read` returned ZEBRA-43; `idea.log`
+  `autosaved before Read` 7ms before the file mtime. Same mechanism as VS Code's
+  `claudeCode.autosave` (`saveFileIfNeeded`, extension.js 2.1.233). Only the four named tools
+  fire it — a `Bash cat` bypasses it, by construction (same as the reference).
+- **2.11 Stale IDE locks** — `IdeLockFile.sweepStale` runs on every lock write: any
+  `~/.claude/ide/*.lock` whose pid is dead is deleted (the CLI's own rule; it never runs it for us
+  because `--mcp-config` skips IDE enumeration). 17 → 2 on the first run.
+- Test tooling used this session (scratchpad, not committed): `probe_close_tab.py` (bridge WS:
+  two openDiffs + close_tab / closeAllDiffTabs) and `probe_hook.py` (headless CLI with hooks on
+  initialize; auto-answers hook_callback + can_use_tool). Recipes are in journal 2026-08-17
+  fourth/fifth if they need rebuilding.
+- **Row ids in `docs/feature-checklist.md` are the way to refer to features** — the 🟥 high rows
+  left: **3.5** tweak-travel [LG], **8.5** rewind/fork [LG, undecided since 2026-07-30], **8.9**
+  side question [MD], **8.13** reloaded-webview log replay [LG], **9.4** fast-mode toggle [SM],
+  **11.3** kill-background-process [MD]. Eight **[DECIDE]** rows still await the user.
 - Noticed, not touched: `plugin.xml` description still says only `/compact` + `/clear` are
-  enabled (16 built-ins are) — fix in the next release's notes pass.
-- 0.7.2 remains what users have; **a release starts only when the user asks.**
+  enabled (16 built-ins are) — fix in the next release's notes pass. Two features (2.4, 2.10,
+  2.11) are on main UNRELEASED; 0.7.2 remains what users have. **A release starts only when the
+  user asks.**
+
+**Previous (2026-08-17 fourth): feature checklist re-audited against 2.1.233; `close_tab` finished
+(row 2.4).** `docs/feature-checklist.md` is now 16 sections, 124 rows numbered `section.row`
+(ids STABLE — retire by striking, never delete), marks ✅ / 🟥🟧🟨 open by importance / ➖ by
+design / 🚫 declined, effort `[XS|SM|MD|LG]` on open rows, tags **[NEW]** / **[DECIDE]**, all meta
+in the header. 2.4: `close_tab` resolves only the review opened under that `tab_name`; both close
+tools reply reference-exact (`TAB_CLOSED` / `CLOSED_<n>_DIFF_TABS`); verified over the bridge WS
+with two open diffs.
 
 **Previous (2026-08-17 third): 0.7.2 RELEASED and Marketplace-Approved.** Commit `40bc060`, tag
 `v0.7.2` — the / menu insert-vs-send rule (`cmdTakesArg`, chat.html) and the Effort-label rail
@@ -106,9 +119,11 @@ highlight); the feedback-field restyle + `.plan-sep`.
       re-verified by the user.
 - [x] Feature checklist re-audited vs 2.1.233, numbered/coloured/effort-tagged (2026-08-17 fourth).
 - [x] Checklist 2.4 `close_tab` by name — done + live-verified (2026-08-17 fourth).
-- [ ] Get the user's yes/later/no on the ten **[DECIDE]** rows in `docs/feature-checklist.md`.
+- [x] Checklist 2.10 autosave hook + 2.11 stale-lock sweep — done + live-verified (2026-08-17 fifth).
+- [ ] Get the user's yes/later/no on the eight remaining **[DECIDE]** rows in `docs/feature-checklist.md`.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
-      reloaded-webview log replay (8.13), kill-background-process (11.3), tweak-travel (3.5).
+      reloaded-webview log replay (8.13), kill-background-process (11.3), tweak-travel (3.5);
+      9.4 fast-mode toggle is the cheapest 🟥 left.
 - [ ] `plugin.xml` description: "/compact, /clear only" line is stale — next release.
 
 ## Known gaps (deliberately left)

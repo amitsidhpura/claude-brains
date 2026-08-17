@@ -668,6 +668,15 @@ trusting memory here.
   tail of the log, which truncates the per-IDE list.
 
 ## Session tooling (probes, sandboxes, background shells)
+- **Testing anything "before Claude reads/writes" in `runIde`: PhpStorm saves on frame
+  deactivation.** Alt-tabbing out of the sandbox to report back writes every dirty buffer, so disk
+  and editor agree before the tool runs and the test proves nothing (2026-08-17: two runs lost).
+  Stay inside the sandbox until the answer lands, or untick Settings → System Settings → "Save
+  files when switching to a different application". Also PIN THE TOOL in the prompt — the model
+  reached for `Bash cat` over `Read`, and no PreToolUse file matcher can see a Bash command.
+- **`hook_callback` is a blocking control request** — the CLI waits (to `hook_callback_timeout`)
+  for the reply; every path in a hook handler must answer, including exceptions. Reply AFTER the
+  side effect (from the EDT for saves), or the tool outruns it.
 - **`~/.claude/ide/*.lock` accumulates dead locks (16 seen 2026-08-17)** — a bridge probe that
   takes "the newest lock" can pick a corpse. Pick by `os.kill(pid, 0)` AND `workspaceFolders`
   matching the sandbox project, then confirm the connect. Root cause is the hot-reload dispose

@@ -3,6 +3,26 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-17 — Autosave rides the SDK hook lane, always on, four tools only
+The plugin declares ONE host hook on `initialize` — `PreToolUse Edit|Write|MultiEdit|Read →
+autosave` — and answers `hook_callback` after saving a dirty document. No toggle.
+**Why:** it is the reference's exact mechanism (`saveFileIfNeeded`), the only pre-tool moment
+that fires under acceptEdits/auto/saved rules and for Read (no `can_use_tool` there), and the
+plugin has no settings page by design; the IDE already saves on frame deactivation, so an explicit
+save is the norm, not a surprise. MultiEdit added because it takes the same `file_path`.
+**Rejected:** saving from the permission card (misses pre-approved tools and Read); a Bash matcher
+(a command names no file the host can save — the reference does not try either); a settings toggle
+(would need the settings page the philosophy declines).
+
+## 2026-08-17 — Stale IDE locks are swept on every lock write, dead pid only
+`IdeLockFile.write` first deletes every `~/.claude/ide/*.lock` whose `pid` is not running (never
+its own, never an unreadable one).
+**Why:** `delete()` only runs on an orderly dispose; killed sandboxes and crashes left 15 corpses.
+The CLI has the same rule but only applies it while enumerating IDEs, which our `--mcp-config`
+route never asks for — so we are the only sweeper on this path. Dead-pid is the CLI's own test.
+**Rejected:** matching `ideName` (a dead pid is dead whoever wrote it); a port probe (the CLI's WSL
+nuance — not needed here); leaving unreadable locks (the CLI deletes those; we stay in our lane).
+
 ## 2026-08-17 — The feature checklist is a numbered, colour-tiered register with stable ids
 `docs/feature-checklist.md` rows are `- **N.n** <mark> [effort] …`: ids are `section.row` and
 STABLE (retire by striking, never delete or renumber); marks are ✅ / 🟥 high / 🟧 medium / 🟨 low

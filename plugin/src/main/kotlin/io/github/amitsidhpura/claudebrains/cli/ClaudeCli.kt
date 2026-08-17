@@ -4,6 +4,8 @@ import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -31,6 +33,12 @@ data class Attachment(val kind: String, val mediaType: String, val data: String,
  *
  * Permission routing is enabled by `--permission-prompt-tool stdio` (the SDK sentinel that sends
  * permission requests over stdio) plus `--permission-mode`.
+ *
+ * A third lane rides the same control channel: host-registered HOOKS. The `initialize` request
+ * declares them (`hooks: {PreToolUse: [{matcher, hookCallbackIds}]}` — the SDK's own shape, read
+ * from the 2.1.233 binary), and the CLI then blocks each matching tool call on a
+ * `control_request{subtype:hook_callback, callback_id, input, tool_use_id}` until we answer.
+ * [onHook] receives them; the answer is a hook JSON output (`{continue:true}` for "carry on").
  */
 class ClaudeCli(
     private val workingDir: File,
@@ -43,6 +51,9 @@ class ClaudeCli(
     private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?) -> Unit,
     private val onInit: (commandsJson: String) -> Unit,
     private val onExit: (Int) -> Unit,
+    /** A declared hook fired: [respond] MUST be called (once) or the CLI stalls until its timeout. */
+    private val onHook: (callbackId: String, input: JsonObject, respond: (JsonObject) -> Unit) -> Unit =
+        { _, _, respond -> respond(buildJsonObject { put("continue", true) }) },
 ) {
     private val log = Logger.getInstance(ClaudeCli::class.java)
 
@@ -181,7 +192,21 @@ class ClaudeCli(
         val line = json.encodeToString(JsonObject.serializer(), buildJsonObject {
             put("type", "control_request")
             put("request_id", INIT_REQ_ID)
-            put("request", buildJsonObject { put("subtype", "initialize") })
+            put("request", buildJsonObject {
+                put("subtype", "initialize")
+                // The autosave hook, registered exactly as the VS Code host registers its own
+                // (`PreToolUse Edit|Write|Read → saveFileIfNeeded`, extension.js 2.1.233; we add
+                // MultiEdit, which takes the same file_path). The CLI validates this shape strictly:
+                // an object of hook events → arrays of {matcher?, hookCallbackIds[], timeout?}.
+                put("hooks", buildJsonObject {
+                    put("PreToolUse", buildJsonArray {
+                        add(buildJsonObject {
+                            put("matcher", "Edit|Write|MultiEdit|Read")
+                            put("hookCallbackIds", buildJsonArray { add(JsonPrimitive(HOOK_AUTOSAVE)) })
+                        })
+                    })
+                })
+            })
         })
         writeLine(line)
     }
@@ -245,7 +270,12 @@ class ClaudeCli(
                     else null
                 onPermission(reqId, tool, input, suggestions)
             }
-            // Anything else we don't implement (hooks, sdk mcp): acknowledge so the CLI won't hang.
+            "hook_callback" -> {
+                val id = request["callback_id"]?.jsonPrimitive?.content ?: ""
+                val input = request["input"]?.jsonObject ?: JsonObject(emptyMap())
+                onHook(id, input) { out -> writeControlResponse(reqId, out) }
+            }
+            // Anything else we don't implement (sdk mcp, elicitation): acknowledge so the CLI won't hang.
             else -> writeControlResponse(reqId, buildJsonObject {})
         }
     }
@@ -405,8 +435,10 @@ class ClaudeCli(
         runCatching { process?.waitFor(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS) }
     }
 
-    private companion object {
+    companion object {
         const val INIT_REQ_ID = "sdk-init"
+        /** callback_id of the PreToolUse autosave hook declared in [sendInitialize]. */
+        const val HOOK_AUTOSAVE = "autosave"
         /** stderr lines kept for the exit message — the tail is what explains a crash. */
         const val STDERR_TAIL = 8
     }

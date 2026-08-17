@@ -143,6 +143,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             },
             onInit = { commandsJson -> onInitCb?.invoke(commandsJson) },
             onExit = { code -> onExitCb?.invoke(code) },
+            onHook = { id, input, respond ->
+                if (id == ClaudeCli.HOOK_AUTOSAVE) Autosave.handle(input, respond)
+                else respond(kotlinx.serialization.json.buildJsonObject { put("continue", true) })
+            },
         ).apply { start() }
 
         // Re-apply the persisted model on every (re)start.

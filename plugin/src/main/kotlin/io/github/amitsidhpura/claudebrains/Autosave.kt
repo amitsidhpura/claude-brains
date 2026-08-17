@@ -1,0 +1,57 @@
+package io.github.amitsidhpura.claudebrains
+
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
+/**
+ * Save a dirty editor before Claude reads or writes its file — the VS Code host's
+ * `claudeCode.autosave` (default on), which it implements as an SDK `PreToolUse` hook on
+ * `Edit|Write|Read` that saves the document if `isDirty` (extension.js 2.1.233, `saveFileIfNeeded`).
+ *
+ * WHY A HOOK AND NOT THE PERMISSION CARD: under acceptEdits/auto or a saved rule no `can_use_tool`
+ * arrives, and Read never asks — the hook is the only pre-tool moment that fires for every call.
+ * WHY IT MATTERS: without it Claude reads the on-disk text while the user's unsaved typing sits in
+ * the editor, edits against a stale baseline, and the IDE later reports the write as an external
+ * change conflicting with the buffer. Saving first makes disk and editor agree at the instant the
+ * tool runs; CliFileSync then handles the other direction (the CLI's write → the editor).
+ *
+ * The reply is always "carry on" (`{continue:true}`, the reference's exact output). Every failure
+ * path — no path, unknown file, no document, save exception — still replies, because an unanswered
+ * hook_callback stalls the CLI until its timeout. Always on: the plugin has no settings page by
+ * design, and the IDE's own "save on frame deactivation" makes an explicit save the expected norm.
+ */
+object Autosave {
+    private val log = Logger.getInstance(Autosave::class.java)
+    private val CONTINUE: JsonObject = buildJsonObject { put("continue", true) }
+
+    /** Hook input is the CLI's standard shape: `{hook_event_name, tool_name, tool_input:{file_path…}}`. */
+    fun handle(input: JsonObject, respond: (JsonObject) -> Unit) {
+        val toolInput = input["tool_input"]?.jsonObject
+        val path = toolInput?.get("file_path")?.jsonPrimitive?.contentOrNull
+            ?: toolInput?.get("notebook_path")?.jsonPrimitive?.contentOrNull
+        val vf = path?.takeIf { it.isNotBlank() && !it.startsWith("file:", ignoreCase = true) }?.let(::findVFile)
+        if (vf == null) { respond(CONTINUE); return }
+        // Reply from the EDT AFTER the save, so the tool cannot outrun the disk write.
+        ApplicationManager.getApplication().invokeLater {
+            try {
+                val fdm = FileDocumentManager.getInstance()
+                val doc = fdm.getDocument(vf)
+                if (doc != null && fdm.isDocumentUnsaved(doc)) {
+                    fdm.saveDocument(doc)
+                    log.info("autosaved before ${input["tool_name"]?.jsonPrimitive?.contentOrNull}: ${vf.path}")
+                }
+            } catch (t: Throwable) {
+                log.warn("autosave failed for ${vf.path}", t)
+            } finally {
+                respond(CONTINUE)
+            }
+        }
+    }
+}

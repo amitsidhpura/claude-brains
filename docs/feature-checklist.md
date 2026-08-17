@@ -103,9 +103,12 @@ auto-include selection, voice.
       VS Code gets this from its own FS watcher; here it had to be built
 - **2.9** ✅ **Login-shell environment** captured once per IDE run (`ShellEnv.kt`) so nvm/PATH-
       dependent MCP servers start under a GUI-launched IDE
-- **2.10** 🟥 [SM] **Autosave before read/write** **[DECIDE]** (VS Code `claudeCode.autosave`: save dirty documents
-      before Claude touches them). Take: small, editor-hourly, fits — a candidate, not yet asked for
-- **2.11** 🟨 [XS] Stale `~/.claude/ide/*.lock` after a plugin hot-reload (backlog; harmless in normal use)
+- **2.10** ✅ **Autosave before read/write** — a host-registered SDK `PreToolUse` hook on
+      `Edit|Write|MultiEdit|Read` (declared on `initialize`, answered after `saveDocument` on the
+      EDT; `Autosave.kt`). Same mechanism as VS Code's `claudeCode.autosave`; always on. Verified
+      live 2026-08-17: an unsaved `ZEBRA-43` buffer was what `Read` returned
+- **2.11** ✅ Stale `~/.claude/ide/*.lock` files swept on every lock write (dead pid → delete, the
+      CLI's own rule; `IdeLockFile.sweepStale`). 17 → 2 on first run, 2026-08-17
 
 ## 3. Diffs & edit approval
 - **3.1** ✅ **Permission gate** via `can_use_tool` (`--permission-prompt-tool stdio`)

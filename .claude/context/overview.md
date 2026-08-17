@@ -54,7 +54,8 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   stream-json --include-partial-messages --verbose --permission-prompt-tool stdio
   --permission-mode <mode>` with env `CLAUDE_CODE_SSE_PORT=<port>`. Routes control protocol
   (`can_use_tool`, `initialize`, `set_model`, `set_permission_mode`, `interrupt`) separately
-  from conversation events.
+  from conversation events. Declares ONE host hook on `initialize` (`PreToolUse
+  Edit|Write|MultiEdit|Read → autosave`, `Autosave.kt`) and answers its `hook_callback`s.
 - **UI** (`ui/ChatPanel.kt` + `resources/webview/chat.html`): JCEF panel in a right-anchored
   tool window. Single JS<->Kotlin channel: `window.__bridge(json)` up,
   `window.onClaudeEvent(line)` down. Styles ONLY in `webview/chat.css` (spliced at `<!--CSS-->`;
