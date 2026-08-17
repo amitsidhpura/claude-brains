@@ -64,6 +64,9 @@ class DiffReview(private val project: Project) {
      */
     private val files = ConcurrentHashMap<CompletableFuture<List<String>>, ChainDiffVirtualFile>()
 
+    /** The `tab_name` each pending review was opened under — what `close_tab` names it by. */
+    private val tabNames = ConcurrentHashMap<CompletableFuture<List<String>>, String>()
+
     /**
      * [readOnly] locks both panes. The bridge flow leaves the right pane editable because its
      * final text travels back in the FILE_SAVED verdict; the permission flow answers allow/deny
@@ -79,6 +82,7 @@ class DiffReview(private val project: Project) {
     ): CompletableFuture<List<String>> {
         val future = CompletableFuture<List<String>>()
         pending.add(future)
+        tabNames[future] = tabName
         val vf = findVFile(oldPath)
         val fileName = vf?.name ?: File(oldPath).name
         val fileType = FileTypeManager.getInstance().getFileTypeByFileName(fileName)
@@ -215,9 +219,26 @@ class DiffReview(private val project: Project) {
         addActionListener { onClick() }
     }
 
-    /** close_tab / closeAllDiffTabs: an undecided review resolves TAB_CLOSED, as the reference's own close path does. */
-    fun completeAllTabClosed() {
-        pending.forEach { it.complete(listOf("TAB_CLOSED")) }
+    /**
+     * closeAllDiffTabs: every undecided review resolves TAB_CLOSED, as the reference's own close
+     * path does. Returns how many were still open, for the reference's `CLOSED_<n>_DIFF_TABS` reply.
+     */
+    fun completeAllTabClosed(): Int {
+        val open = pending.toList()
+        open.forEach { it.complete(listOf("TAB_CLOSED")) }
+        return open.size
+    }
+
+    /**
+     * close_tab: only the review opened under [tabName] resolves TAB_CLOSED — the reference
+     * closes the one tab whose label equals `tab_name` and leaves the rest alone. Matched on the
+     * name the caller passed to [open], the same string it hands back here. Returns whether one
+     * was found; the reply is TAB_CLOSED either way, as in the reference.
+     */
+    fun completeTabClosed(tabName: String): Boolean {
+        val hits = tabNames.filterValues { it == tabName }.keys
+        hits.forEach { it.complete(listOf("TAB_CLOSED")) }
+        return hits.isNotEmpty()
     }
 
     /** The caller is gone (socket closed, server shutdown): unblock the dispatch threads and clean up. */
@@ -243,6 +264,7 @@ class DiffReview(private val project: Project) {
     private fun closeWith(future: CompletableFuture<List<String>>) {
         future.whenComplete { _, _ ->
             pending.remove(future)
+            tabNames.remove(future)
             val diffFile = files.remove(future)
             ApplicationManager.getApplication().invokeLater {
                 diffFile?.let { FileEditorManager.getInstance(project).closeFile(it) }

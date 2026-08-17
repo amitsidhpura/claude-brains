@@ -17,6 +17,8 @@
   lockfile cleanup on unload if touched anyway.
 
 ## Next up
+- The ten **[DECIDE]** rows in `docs/feature-checklist.md` need a yes / later / no; the 🟥 [SM]
+  ones (2.13 autosave-before-read/write, 9.4 fast-mode toggle) are the cheapest wins.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
   keep planning with text, Shift+Tab = approve with text — both slot into the existing `done()`
   paths in chat.html.

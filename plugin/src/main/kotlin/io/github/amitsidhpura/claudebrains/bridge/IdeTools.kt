@@ -38,8 +38,8 @@ class IdeTools(private val project: Project) {
         "checkDocumentDirty" -> one(checkDocumentDirty(args.str("filePath") ?: args.str("path").orEmpty()))
         "openDiff" -> openDiff(args)
         "closeAllDiffTabs" -> one(closeAllDiffTabs())
-        "close_tab" -> one(closeAllDiffTabs()) // best-effort: close diff tabs
-        // (both close tools also resolve any review still waiting — see closeAllDiffTabs)
+        "close_tab" -> one(closeTab(args.str("tab_name").orEmpty()))
+        // (both close tools also resolve the reviews still waiting — see closeAllDiffTabs)
         "getDiagnostics" -> one(getDiagnostics(args.str("uri")))
         "executeCode" -> one("TODO: executeCode (Jupyter) not implemented")
         else -> throw IllegalArgumentException("Unknown tool: $name")
@@ -106,8 +106,20 @@ class IdeTools(private val project: Project) {
         // 2026-08-09 — a visible diff tab alongside an empty openFiles), so the old
         // find-by-class-name filter here had been closing nothing. Every diff we ever open is
         // a tracked review; other plugins' diffs are not ours to close.
-        diffReview.completeAllTabClosed()
-        return "closed diff tabs"
+        val n = diffReview.completeAllTabClosed()
+        return "CLOSED_${n}_DIFF_TABS" // the reference's exact reply shape
+    }
+
+    /**
+     * Closes ONE review, by the `tab_name` its openDiff was given — the reference closes the tab
+     * whose label equals the name and replies TAB_CLOSED whether or not it found one. Every tab
+     * the CLI can name is a diff we opened (it never learns other tab titles), so an unknown name
+     * is a no-op, not an error. Used to sweep every diff tab; with two reviews open that resolved
+     * both from one close.
+     */
+    private fun closeTab(tabName: String): String {
+        diffReview.completeTabClosed(tabName)
+        return "TAB_CLOSED"
     }
 
     /** The WS client vanished: nothing can consume a verdict, so unblock any waiting openDiff. */

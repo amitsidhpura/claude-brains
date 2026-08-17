@@ -3,6 +3,35 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-17 (fourth) — the checklist re-audited, and 2.4 finished
+- **`docs/feature-checklist.md` rewritten** against VS Code 2.1.233 + CLI 2.1.233 (installed here;
+  the file had been on 2.1.220/222). Sources: `package.json` contributions, the `case"…"` host-
+  message vocabulary grepped out of `extension.js`, the `name:"…",description:"…"` command records
+  out of the CLI binary, and our own docs/context. Stale rows found: editor accept/reject listed ⬜
+  (shipped 2026-08-09), bypass-by-relaunch (removed 2026-08-03), no plan-feedback/split-approve, no
+  effort slider / gauge / rename / delete; whole families we built (queue, bg roster, todo,
+  compaction, retries, hooks, CliFileSync, ShellEnv…) absent. IDE-MCP tool set unchanged at 12.
+- New in 2.1.233 worth a row: `side_question`, session groups + a sessions sidebar view,
+  `set_thinking_level`, `set_focus_view`, `primaryEditor.open`, `open_file_diffs`, git host actions,
+  `ask_debugger_help`, `get_terminal_contents`, speech-to-text. Each carries **[NEW]** and a take.
+- The user iterated the FORMAT six times, each a one-line ask: no `[x]` beside the emoji (redundant);
+  fold the two summary lists into rows as tags; move the key to the top; uncluttered header (two
+  small tables); ⬜ → 🟥🟧🟨 by importance; `[XS/SM/MD/LG]` effort after the mark; `section.row`
+  numbers. Ended at 124 rows, header-only meta, ids declared stable.
+- **2.4 `close_tab` finished**: it had swept every diff tab (`closeAllDiffTabs()` under the hood).
+  Now per-review by the `tab_name` given at open; both close tools reply with the reference's
+  exact strings (read from extension.js: `tab.label === tab_name` → `TAB_CLOSED`;
+  ``CLOSED_${n}_DIFF_TABS``). Verified live in `runIde` over MCP-over-WS (websockets, subprotocol
+  `mcp`, auth header from the LIVE lock — 16 stale locks were sitting in `~/.claude/ide/`, picked
+  by `os.kill(pid,0)` + workspaceFolders): close_tab ALPHA left BETA pending until Accept;
+  closeAllDiffTabs resolved both + `CLOSED_2_DIFF_TABS`. Probe recipe: two `tools/call openDiff`
+  with distinct `tab_name`, sleep, one close call, print verdicts as they land.
+- Tooling notes: `./gradlew runIde` returned "BUILD SUCCESSFUL in 7s" while the sandbox JVM kept
+  running (verify by `pgrep` + jar contents, not by the Gradle exit); a heredoc python one-liner
+  over the 15KB `package.json` timed out at 120s once for no reason found — writing the script to
+  the scratchpad and running it under `timeout` worked first time.
+- Next: the ten **[DECIDE]** rows; then backlog order.
+
 ## 2026-08-17 (third) — 0.7.2 goes out
 - **Released 0.7.2** (`40bc060`, tag `v0.7.2`): the / menu insert-vs-send rule and the Effort
   label rail. Patch bump — two fixes, no features. Full `docs/release.md` run with the gate held
@@ -200,58 +229,18 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   because the previous step's `sendTurn` had already emptied the roster.
 - Verified: live harness **273**, Kotlin **103**, register 0 open. Next: version bump.
 
-## 2026-08-15 (second) — 16 commands enabled, then swept; two rendering bugs and a self-inflicted third
-- **Enabled an IDE-development set of 16 built-ins** (user-picked: core dev + session workflow +
-  orchestration), regrouped docs/slash-commands.md by relevance, and re-captured the roster against
-  CLI 2.1.233 (identical 50 names to 2.1.228 — nothing to add).
-- **The user ran `/context` and saw "Puttered for 1s" and nothing else.** A local built-in answers
-  as a bare whole-message `assistant` frame with ZERO stream events, and rendering was entirely
-  delta-driven. Fixed with `msgStreamed`; replay needed its own fix (`system/local_command`).
-- **Then swept all 16 through the live panel** rather than trusting the headless smoke that had
-  missed it. 15 rendered; `/security-review` produced a completed turn with NOTHING in it. The
-  wire tape proved the CLI HAD sent the reason — a `user` frame whose content is a STRING carrying
-  `<local-command-stderr>`, dropped at `!Array.isArray(content)`. Fixed live + replay.
-- **The tape is the lesson.** DOM evidence alone cannot separate "the CLI sent nothing" from "the
-  panel dropped it", and a throw inside `onClaudeEvent` is swallowed by JCEF with no trace. 3016
-  frames taped, zero handler errors — worth measuring rather than assuming.
-- **Closing the last caveat found a regression I had just introduced.** Verifying
-  `/security-review`'s success path (gave the sandbox a real `origin/HEAD` + a deliberately
-  vulnerable file) showed every message after the first rendered TWICE. Cause: the CLI emits an
-  `assistant` frame PER CONTENT BLOCK, so a message that thinks first sends two and the first was
-  consuming the flag. `msgStreamed` is now turn-level. **A `message_stop` reset was tried and
-  rejected within the hour — fixture 47's own step-2 guard caught it double-rendering the other
-  way.** The guard written hours earlier caught the over-correction.
-- Also closed: `/batch`'s real fan-out (plan gate APPROVED this time) — two parallel worktree
-  agents, branches pushed, "2 tasks" chip, `PR: none — no GitHub remote` as the graceful failure.
-- Verified: live harness **256/256**, Kotlin **103**, register **0 open / 27 resolved**.
-- Next: version bump (changeNotesHtml gate), then backlog order.
-
-## 2026-08-15 — the / menu learns custom commands; the register hits zero
-- **Shipped 3.1 + 9.10 together** (the last 2 open register items → **0 open / 25 resolved**):
-  custom commands, skills and MCP prompts auto-enable in the `/` menu with muted source badges
-  (`.pi-src`), `/reload-skills` enabled, and `cleanInjected` fixed for the second command-wrapper
-  shape (arg-less custom = message→name, NO args tag) that was leaking raw XML into a session
-  title. All user-verified in a 9-test manual pass, incl. required-arg insert-and-wait and
-  $ARGUMENTS expansion.
-- **The approved plan died in Phase 0, correctly.** The plan was a Kotlin disk scan; the wire
-  probes found the CLI marks every custom entry with a " (project)"/" (user)" description suffix
-  (zero false positives across 107 built-ins), and the user approved the pivot to a webview-only
-  suffix parse — no Kotlin, no rescan round-trip, plugin-sourced commands covered for free.
-- **Measured twice, still wrong once:** a headless probe concluded "nothing fires on a bare file
-  drop; /reload-skills is the lever" — the user's manual pass showed the menu updating WITHOUT
-  it. Re-probe with a 45s quiet wait: the CLI watches the PROJECT commands dir (drop ≈2.5s,
-  delete ≈1s pushes commands_changed); the first probe had sent /reload-skills inside the
-  watcher's debounce window and conflated the two pushes. `~/.claude/commands` is NOT watched.
-- Negative controls both RUN: fixture 46's storage-only build failed exactly its 8 discriminating
-  assertions; the SessionStore wrapper test was written first and failed pre-fix.
-- docs/slash-commands.md rewritten around the mechanism + roster re-captured from 2.1.228
-  (50 built-ins, new `aliases` field, 13 commands new since the old capture, /review now an
-  alias of /code-review).
-- Verified: live harness **242/242**, `./gradlew test` **101 green**, runIde end-to-end on the
-  testing repo driven over CDP + the user's own manual pass.
-- Next: release the next version (changeNotesHtml gate), then backlog order.
-
 ## Digest
+- **2026-08-15 (second)** — 16 built-ins enabled (user-picked set) and every one driven through the
+  LIVE panel, not the headless smoke: `/context` rendered nothing (bare whole-message `assistant`
+  frame, zero stream events → `msgStreamed`), `/security-review` dropped its `<local-command-stderr>`
+  (string-content `user` frame). The fix then double-rendered thinking turns — the CLI emits an
+  `assistant` frame PER CONTENT BLOCK — and fixture 47's own guard caught the over-correction within
+  the hour. Lesson kept: tape the wire before blaming either side. Harness 256, Kotlin 103, register 0.
+- **2026-08-15** — custom commands / skills / MCP prompts auto-enable in the / menu (3.1 + 9.10 →
+  register 0 open). The approved Kotlin disk-scan plan died in Phase 0, correctly: the wire marks
+  every custom entry with a " (project)"/" (user)" suffix, so a webview-only parse won. The CLI
+  watches the PROJECT commands dir itself (~2.5s drop / ~1s delete); `~/.claude/commands` is not
+  watched — a first probe conflated its push with `/reload-skills`' inside the debounce window.
 - **2026-08-14 (second)** — 0.6.0 released + Approved (verifier Compatible ×7, asset identical,
   upload green in 14s). Two stale doc premises fell out of the run: `updatePlugins.xml` still said
   "no Marketplace", `overview.md` used the xmlId listing URL that 404s. Approval-lag lesson

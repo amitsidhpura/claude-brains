@@ -668,6 +668,14 @@ trusting memory here.
   tail of the log, which truncates the per-IDE list.
 
 ## Session tooling (probes, sandboxes, background shells)
+- **`~/.claude/ide/*.lock` accumulates dead locks (16 seen 2026-08-17)** — a bridge probe that
+  takes "the newest lock" can pick a corpse. Pick by `os.kill(pid, 0)` AND `workspaceFolders`
+  matching the sandbox project, then confirm the connect. Root cause is the hot-reload dispose
+  skip already in backlog.
+- **`./gradlew runIde` can return "BUILD SUCCESSFUL" in seconds while the sandbox keeps
+  running** (2026-08-17: 7s, IDE alive for the whole session). Do not read the Gradle exit as
+  "the IDE quit" — `pgrep -fa PhpStorm-2024.2/jbr/bin/java` + check the sandbox jar
+  (`build/idea-sandbox/PS-2024.2/plugins/claude-brains/lib/*.jar`) carries the new symbols.
 - **`pkill -f <pattern>` from a harness background shell kills ITSELF when the pattern appears
   in the shell's own eval'd command line** (exit 144, and whatever came after the pkill never
   runs — a runIde relaunch silently didn't happen twice on 2026-08-16). Run the kill and the

@@ -1,41 +1,36 @@
 # State
 
 ## Current focus
-**2026-08-17: 0.7.2 RELEASED and Marketplace-Approved.** Commit `40bc060`, tag `v0.7.2`. Full
-`docs/release.md` run held at the approval gate: 106 tests, verifier Compatible on all seven
-PhpStorm branches 242→262, asset HTTP 200 + `cmp`-identical, feed advertising 0.7.2, upload run
-31967154720 green, **Approved the same day** (IDE-run row + verifier 1.408 on 2026.2.1 / 2026.1.5
-/ 2025.3.6.1). User re-verified the build in `runIde` afterwards. Nothing is in flight; the next
-work is the backlog order below. **A release starts only when the user asks** — prep was once
-started unasked and had to be reverted (conventions.md).
-1. **Effort label alignment** (`chat.css`, `.ef-label`): the mode-popup footer label sat **4px**
-   left of the mode titles (14 + an 18px svg + an 8px gap = 40, against a title's 44). It now
-   rides the same rail via `gap: 10px` + `flex: 0 0 20px` on the svg. CSS-only; `design/
-   mockup.html` links the same sheet, so nothing to mirror. Pinned by fixture 51 (2026-08-17),
-   which is also where the correction came from: the "7px" first reported was measured on a
-   headless probe page WITHOUT the `#inputbar` ancestor, so `#inputbar svg {18px}` — an ID rule
-   that beats both `.ef-label svg` and `.pi-ic svg` — never applied. flex-basis works precisely
-   because that rule does not set it.
-2. **Slash-menu pick rule** (`chat.html:2493`): `cmdNeedsArg` → `cmdTakesArg` =
-   `!!(c.argumentHint||'').trim()`. Any hint, required or optional, inserts `/name ` and waits;
-   only hint-less commands run on click (`data-needsarg` → `data-takesarg` at both sites).
-   Trigger: clicking `/context` ran it bare instead of allowing `save`. Why + blast radius in
-   decisions.md. Blast radius now MEASURED off the wire (2026-08-17, CLI 2.1.233): of the 15
-   enabled commands, six insert (`/compact` `/context` `/code-review` `/simplify` `/loop`
-   `/batch`) and nine still act on click; table in docs/slash-commands.md. The roster carries no
-   `immediate` flag, so `argumentHint` is the only signal there is.
-Both verified by the user in `runIde`, and now pinned by fixtures (2026-08-17):
-`tools/fixtures/49-top-fade-at-top.json` (10 assertions) and
-`50-slash-pick-insert-vs-send.json` (19). Live harness baseline is now **344** (was 308);
-`./gradlew test` 106. Both negative controls were RUN — 49 against `3c86aa2~1` (the pre-FADE
-build; HEAD-minus-this-session still HAS that fix), 50 against `4e351f4`. `docs/slash-commands.md`
-was corrected the same day: it still described the old runs-immediately contract.
-The alignment is pinned too, by `51-mode-menu-effort-rail.json` (7 assertions, control run
-against 4e351f4's chat.css). Harness baseline is now **344**.
-Reference facts confirmed this session: the composer sends on **Ctrl+Enter** (plain Enter =
-newline); skills and command files share ONE roster with no type field, told apart only by the
-`" (project)"/" (user)"` description suffix; a built-in `/context` (`[all]`) exists and is
-shadowed by this repo's project skill.
+**2026-08-17 (fourth session): feature checklist re-audited against 2.1.233; `close_tab` finished
+(row 2.4).** Uncommitted at save time, committed + pushed by this save (user asked).
+- **`docs/feature-checklist.md` REWRITTEN** against VS Code 2.1.233 + CLI/TUI 2.1.233 (was
+  2.1.220/222 and last touched 2026-08-15). Shape now: 16 sections, **124 rows numbered
+  `section.row`** (ids are STABLE — retire by striking, never delete), each row `- **N.n** <mark>
+  [effort] …`. Marks: ✅ 66 · 🟡 0 · 🟥 high 7 · 🟧 medium 12 · 🟨 low 15 · ➖ by design 18 ·
+  🚫 declined 5. Effort tags `[XS|SM|MD|LG]` on open rows only. Row tags **[NEW]** (2.1.233
+  additions) and **[DECIDE]** (needs the user's yes/later/no). Header carries legend, tags,
+  scope rule, work order — no bottom sections. The user shaped every one of those choices in turn
+  (colours by importance, effort tags, numbering, uncluttered header).
+- **2.4 `close_tab` done** (`DiffReview.kt` `tabNames` + `completeTabClosed(name)`;
+  `IdeTools.closeTab`). Reference-exact replies now: `close_tab` → `TAB_CLOSED` always,
+  `closeAllDiffTabs` → `CLOSED_<n>_DIFF_TABS` (was a made-up `"closed diff tabs"`). **Verified
+  live over the bridge WS in `runIde` 2026-08-17**, two probes: (1) two openDiffs + `close_tab
+  ALPHA` → only ALPHA resolved TAB_CLOSED, BETA stayed pending until the user clicked Accept
+  (`FILE_SAVED`); (2) `closeAllDiffTabs` → both TAB_CLOSED + `CLOSED_2_DIFF_TABS`. Compile
+  green; no unit test (needs a Project). `docs/ide-mcp-protocol.md` tool table updated.
+- The 🟥 high rows to pick from next: **2.13** autosave-before-read/write [SM], **3.5**
+  tweak-travel [LG], **8.5** rewind/fork [LG, undecided since 2026-07-30], **8.9** side
+  question [MD], **8.13** reloaded-webview log replay [LG], **9.4** fast-mode toggle [SM],
+  **11.3** kill-background-process [MD]. Ten **[DECIDE]** rows await the user.
+- Noticed, not touched: `plugin.xml` description still says only `/compact` + `/clear` are
+  enabled (16 built-ins are) — fix in the next release's notes pass.
+- 0.7.2 remains what users have; **a release starts only when the user asks.**
+
+**Previous (2026-08-17 third): 0.7.2 RELEASED and Marketplace-Approved.** Commit `40bc060`, tag
+`v0.7.2` — the / menu insert-vs-send rule (`cmdTakesArg`, chat.html) and the Effort-label rail
+(`chat.css` `.ef-label`, real gap was 4px not 7 — the headless probe lacked the `#inputbar`
+ancestor). Fixtures 49/50/51 pin fade, pick rule, rail; harness **344**, `./gradlew test` 106.
+Slash-hint inventory measured off the wire (`docs/slash-commands.md` table).
 
 **Previous (2026-08-16 fourth session): 0.7.1 RELEASED and Marketplace-Approved — the top-fade fix.**
 Commit `91a6ba5`, tag `v0.7.1`; verifier Compatible 242→262, asset 200 + `cmp`-identical, feed
@@ -109,9 +104,12 @@ highlight); the feedback-field restyle + `.plan-sep`.
       `docs/slash-commands.md`; the watch-item is closed.
 - [x] Released 0.7.2 (2026-08-17) — Approved on the Marketplace the same day, `runIde`
       re-verified by the user.
+- [x] Feature checklist re-audited vs 2.1.233, numbered/coloured/effort-tagged (2026-08-17 fourth).
+- [x] Checklist 2.4 `close_tab` by name — done + live-verified (2026-08-17 fourth).
+- [ ] Get the user's yes/later/no on the ten **[DECIDE]** rows in `docs/feature-checklist.md`.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab),
-      reloaded-webview log replay, kill-background-process from the panel, editor accept/reject
-      v2 tweak-travel.
+      reloaded-webview log replay (8.13), kill-background-process (11.3), tweak-travel (3.5).
+- [ ] `plugin.xml` description: "/compact, /clear only" line is stale — next release.
 
 ## Known gaps (deliberately left)
 - Plan-card keyboard shortcuts (Enter = keep planning, Shift+Tab = approve with feedback)

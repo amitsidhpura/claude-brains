@@ -3,6 +3,30 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-17 — The feature checklist is a numbered, colour-tiered register with stable ids
+`docs/feature-checklist.md` rows are `- **N.n** <mark> [effort] …`: ids are `section.row` and
+STABLE (retire by striking, never delete or renumber); marks are ✅ / 🟥 high / 🟧 medium / 🟨 low
+/ ➖ by design / 🚫 declined (no ⬜, no `[x]` checkboxes — the emoji carries the state); effort
+`[XS|SM|MD|LG]` on open rows only; **[NEW]** / **[DECIDE]** tags; all meta in the header, no
+bottom sections. Measured against BOTH reference clients on one version (2.1.233).
+**Why:** the user wants to refer to rows by id ("what is 2.4?"), see importance at a glance, and
+know cost before choosing — and the old file duplicated state (checkbox + emoji) and buried the
+key at the bottom. Two clients on one version because the TUI has commands VS Code lacks (and
+vice versa) and the philosophy sorts them differently.
+**Rejected:** a separate "open decisions" list (duplicated rows — folded into **[DECIDE]** tags);
+priority as a column table (rows are prose-length; a table would wrap badly).
+
+## 2026-08-17 — `close_tab` closes one review by name; both close tools reply reference-exact
+`DiffReview.completeTabClosed(tabName)` resolves only the review opened under that `tab_name`;
+`close_tab` replies `TAB_CLOSED` whether or not it found one; `closeAllDiffTabs` replies
+`CLOSED_<n>_DIFF_TABS`.
+**Why:** the reference (extension.js 2.1.233) closes the single tab whose label equals
+`tab_name` and always answers TAB_CLOSED; ours swept every diff — with two proposals open, closing
+one resolved both. Matching the reply strings costs nothing and keeps the CLI's consumer on the
+path it was written for.
+**Rejected:** erroring on an unknown name (the reference does not; every name the CLI can send is
+a diff we opened, so a miss is a benign no-op).
+
 ## 2026-08-16 — A menu click asks "does it TAKE an argument", not "does it REQUIRE one"
 `cmdTakesArg(c)` in chat.html is now `!!(c.argumentHint||'').trim()`: any non-empty hint —
 `<required>` and `[optional]` alike — inserts `/name ` into the composer and waits; only a

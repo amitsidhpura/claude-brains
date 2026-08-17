@@ -141,8 +141,8 @@ These are what the CLI calls to act on the editor:
 | `getDiagnostics` | Language diagnostics from the IDE | optional uri filter |
 | `saveDocument` | Save a document with unsaved changes | file path |
 | `checkDocumentDirty` | Whether a document has unsaved changes | file path |
-| `closeAllDiffTabs` | Close all diff tabs | — |
-| `close_tab` | Close a named tab | `tab_name` |
+| `closeAllDiffTabs` | Close all diff tabs; replies `CLOSED_<n>_DIFF_TABS` | — |
+| `close_tab` | Close the one tab whose label equals `tab_name` (an unknown name is a no-op); replies `TAB_CLOSED` either way | `tab_name` |
 | `executeCode` | Execute code (Jupyter controller path) | code/cell |
 
 (`openDiff`'s two `*_file_path` args both describe "uses active editor if not provided"; the diff
