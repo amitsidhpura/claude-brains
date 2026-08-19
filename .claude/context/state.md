@@ -1,102 +1,66 @@
 # State
 
 ## Current focus
-**2026-08-17 (seventh session): the checklist's low-tier mark changed 🟨 → ⬜; state ids corrected.**
-Nothing in flight. No code touched — docs and context only.
-- `docs/feature-checklist.md` open-low is now **⬜** (16 rows + the status-mark key + the scope-rule
-  line). Full set: ✅ done / 🟡 partial / 🟥 high / 🟧 medium / ⬜ low / ➖ by design / 🚫 declined.
-  The earlier "no ⬜" rule from the 2026-08-17 register decision is explicitly lifted for the low
-  tier (see the newest `decisions.md` entry) — do not "correct" it back. 🟨 survives only in
-  `journal.md` and the superseded decisions entry, on purpose.
-- **Ids in this file had drifted from the register and are now re-derived from it.** If you
-  paraphrase `docs/feature-checklist.md` here again, read the ids out of the file — never copy
-  them forward from a previous save.
+**2026-08-19 (eighth session): the webview script split into files, and an effort-label wrap fix.
+Committed as `41f24f9` + `e06add1`, pushed. Nothing in flight.**
+- **`chat.html` is markup-only now (131 lines).** The JS lives in `webview/js/` as 14 numbered
+  files (`00-core.js` … `90-gallery.js`, prefixes = load order, gaps for insertion), concatenated
+  back into the page's single `<script>` block by `ui/WebviewAssets.kt` (`page()`, at the
+  `<!--JS-->` marker — same trick as the CSS/LIMITS splices). One shared script scope, no modules;
+  the assembled page was verified byte-identical to the pre-split file modulo the
+  `/* ===== file: NN-name.js ===== */` banner lines that map DevTools line numbers to files.
+  `WebviewAssets.JS_FILES` is the ONLY copy of the order; `RenderLimitsTest` asserts over the
+  ASSEMBLED page + manifest ⇄ directory equality. Negative control was RUN (broken marker +
+  dropped manifest entry → 4 discriminating failures). The user hand-verified a 7-step ladder in
+  the sandbox covering every file (welcome, live turn, slash+alias, permission card, replay,
+  __gallery, pickers/gauge/markdown).
+- **Effort label fix** (`e06add1`): "Very High" wrapped to two lines in the mode-menu footer —
+  JCEF sizes a text flex item's base a hair under max-content (53px vs 55; desktop Chrome does
+  not, so the mockup could never show it). Fix: `white-space: nowrap` on `.ef-label` (chat.css).
+  Fixture 51 gained a step (label → "Very High" via `setEffortUI`, asserts one line); control run
+  against the still-running pre-fix sandbox (bH 37 → fail), fixed build 12/12.
+- Marketplace-update restart question answered from the real IDE's log (PhpStorm 2026.2.1 snap):
+  the 0.7.1 no-restart install died on `NoSuchFileException` for the download-cache zip → fell
+  back to install-on-restart. IDE-side cache race, nothing in plugin.xml; JCEF/WS/process unload
+  would likely force restarts anyway. **User accepted it — do not engineer around it.**
 
-**Previous (2026-08-17 sixth): checklist rows 7.7 + 7.10, committed as `a66fb17`.**
-- **7.7 slash aliases** — `canonicalCmd()` in chat.html maps a roster alias to its command;
-  `renderSlash` scores aliases like names (rank 0/1/2) and shows them muted on the row
-  (`.pi-alias`, chat.css); `submit()` resolves a typed alias BEFORE `cmdKind` and rewrites the
-  turn to the canonical name (`/review …` → `/code-review …`; `/new`/`/reset` → `/clear`'s native
-  branch). Fixture **52-slash-aliases** (12 assertions), negative control RUN against eb52eb1's
-  chat.html: 7 DISCRIMINATING fail / 5 GUARD pass — and the control corrected the fixture (the
-  first "review → /code-review first" row was not a discriminator: `review` is a substring of the
-  name; `/reset → /clear` is the rank-0 proof now). Live harness baseline **356** (was 344).
-- **7.10 reloaded-webview roster** — `ChatPanel.lastCommandsChanged` keeps the newest raw
-  `commands_changed` frame from the current CLI (cleared in `onInit`) and `seedUi()` replays it
-  after `pushInitMeta` (REPLACE semantics, same handler). Verified live over CDP: a command file
-  dropped mid-session → roster 54 with `reload-probe` (project badge) → `location.reload()` →
-  still 54 with it, `renderSlash('reload')` lists it. No fixture (the harness cannot reload the
-  page it drives); the CDP recipe is in journal 2026-08-17 sixth.
-
-## Open work — ids re-derived from `docs/feature-checklist.md` on 2026-08-17 (seventh)
+## Open work — ids re-verified against `docs/feature-checklist.md` on 2026-08-19
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG, undecided since
   2026-07-30] · **8.11** side question [MD, NEW] · **8.14** reloaded-webview **log** replay [LG]
-  (the roster half shipped as 7.10; the log half has not) · **9.4** fast-mode toggle [SM] ·
-  **11.3** kill-background-process [MD].
+  (roster half shipped as 7.10) · **9.4** fast-mode toggle [SM] · **11.3** kill-background-process [MD].
 - **Nine [DECIDE] rows** await the user: 8.7, 8.10, 8.11, 9.4, 9.5, 12.3, 12.6, 13.2, 14.2.
-- Five features on main UNRELEASED since 0.7.2 (2.4, 2.10, 2.11, 7.7, 7.10). `plugin.xml`
-  description still says only `/compact` + `/clear` are enabled — fix in the release-notes pass.
-  **A release starts only when the user asks.**
+- UNRELEASED on main since 0.7.2: features 2.4, 2.10, 2.11, 7.7, 7.10; the webview split
+  (refactor); the effort-label fix. `plugin.xml` description still says only `/compact` +
+  `/clear` are enabled — fix in the release-notes pass. **A release starts only when the user asks.**
 
-**Previous (2026-08-17 fifth): rows 2.10 + 2.11.** Autosave-before-read/write as a host SDK hook
-(`initialize` declares `PreToolUse Edit|Write|MultiEdit|Read → autosave`; `hook_callback` answered
-from the EDT after `saveDocument`, `{continue:true}` on every path; `Autosave.kt`). Verified
-headlessly and live (unsaved buffer is what Read returned). Stale `~/.claude/ide/*.lock` swept
-dead-pid on every lock write (`IdeLockFile.sweepStale`, 17 → 2).
+**Releases so far — all Approved on the Marketplace the same day** (detail in `journal.md`;
+process in `docs/release.md`): 0.7.2 (2026-08-17, `40bc060`), 0.7.1 (2026-08-16, `91a6ba5`),
+0.7.0 (2026-08-16, `59d94fc`). Manual-test issue register: 0 open / 25 resolved.
 
-**Previous (2026-08-17 fourth): feature checklist re-audited against 2.1.233; `close_tab` finished
-(row 2.4).** `docs/feature-checklist.md` is now 16 sections, 124 rows numbered `section.row`
-(ids STABLE — retire by striking, never delete), marks ✅ / 🟥🟧⬜ open by importance / ➖ by
-design / 🚫 declined, effort `[XS|SM|MD|LG]` on open rows, tags **[NEW]** / **[DECIDE]**, all meta
-in the header. 2.4: `close_tab` resolves only the review opened under that `tab_name`; both close
-tools reply reference-exact (`TAB_CLOSED` / `CLOSED_<n>_DIFF_TABS`); verified over the bridge WS
-with two open diffs.
-
-**Releases so far — all Approved on the Marketplace the same day they went up** (detail per
-release in `journal.md`; process in `docs/release.md`):
-- **0.7.2** (2026-08-17, `40bc060` / `v0.7.2`) — / menu insert-vs-send rule (`cmdTakesArg`) and
-  the Effort-label rail (`.ef-label`; the real gap was 4px not 7 — the headless probe lacked the
-  `#inputbar` ancestor). Fixtures 49/50/51.
-- **0.7.1** (2026-08-16, `91a6ba5` / `v0.7.1`, fix `3c86aa2`) — the top-fade wash: `body.at-top`
-  was toggled only by the scroll handler and the two replay paths, so a log that never scrolls
-  never hid `#fade-top`, and local-command output is the one first block with no sticky
-  `.msg-user` above it. `updateTopFade()` now also runs from `maybeScroll()` and `clearLogUI()`.
-- **0.7.0** (2026-08-16, `59d94fc` / `v0.7.0`) — plan-card feedback field + split Approve + mode
-  parking + `default`→manual chip alias; custom commands / skills / MCP prompts auto-enabled in
-  the / menu with source badges; 16 built-ins enabled; the 2026-08-15 fixes; feedback-field
-  restyle + `.plan-sep`. Five new `design/marketplace/` screenshots uploaded by the user.
-- Manual-test issue register: **0 open / 25 resolved**. Tests 106; harness 356.
-
-## How plan feedback travels (all probed on CLI 2.1.233 — see gotchas for the traps)
-- **Deny** → the typed text IS the control-response `message`, delivered to the model VERBATIM
-  as the ExitPlanMode tool_result → it revises without asking. Empty text → the stock
-  `RenderLimits.REJECT_MESSAGE` (one copy, shared with SessionStore's replay filter).
-- **Approve** → the text is APPENDED TO THE APPROVED PLAN via `updatedInput.plan` under
-  `RenderLimits.PLAN_NOTES_MARKER` ("## User notes on approval") — the tool_result echoes the
-  approved plan, so the model reads the note in the SAME message as the approval, before its
-  first implementation call. Terminal-equivalent: the TUI's shift+tab pushes acceptFeedback as
-  an extra text block on that same tool_result (internal-only path; see gotchas for why we
-  cannot use it). The note also lands in the saved plan file — a deliberate trade.
-- **Mode rows** park their switch in `pendingPlanMode` (chat.html) and only bridge when the
-  CLI's post-approval permissionMode broadcast arrives — an immediate set_permission_mode ALWAYS
-  lost to the CLI's prePlanMode restore. The chip aliases the broadcast `default` → `manual`.
-- Wire path: chat.html `respondPermission(id, allow, suggIdxs, text)` → ChatPanel "perm" reads
-  `text` → ClaudeSessionService → ClaudeCli builds the response. Webview is mechanism-blind.
-- Replay: SessionStore captures `planFeedback` (deny = tool_result string, filtered against the
-  stock message; approve = parsed back out of `toolUseResult.plan` by the marker) and maps
-  mid-turn `queued_command`/`prompt` attachment records to user bubbles (deduped against
-  delivered user records). Footers quote via one `fbQuote()` helper (72-char cut, live+replay).
+## How plan feedback travels (probed on CLI 2.1.233 — traps in gotchas)
+- **Deny** → typed text IS the control-response `message`, delivered VERBATIM as the ExitPlanMode
+  tool_result. Empty → stock `RenderLimits.REJECT_MESSAGE` (one copy, shared with replay filter).
+- **Approve** → text APPENDED TO THE APPROVED PLAN via `updatedInput.plan` under
+  `RenderLimits.PLAN_NOTES_MARKER` — the model reads the note in the SAME message as the approval.
+  Also lands in the saved plan file (deliberate trade). TUI-equivalent path unusable (gotchas).
+- **Mode rows** park in `pendingPlanMode` (webview) and bridge only on the CLI's post-approval
+  permissionMode broadcast — an immediate set always lost to the CLI's prePlanMode restore.
+  Chip aliases broadcast `default` → `manual`.
+- Wire: webview `respondPermission(id, allow, suggIdxs, text)` → ChatPanel "perm" →
+  ClaudeSessionService → ClaudeCli. Webview is mechanism-blind.
+- Replay: SessionStore captures `planFeedback` (deny = tool_result string filtered against stock;
+  approve = parsed back out of `toolUseResult.plan` by the marker); mid-turn queued/prompt
+  records map to user bubbles. Footers quote via one `fbQuote()` (72-char cut, live+replay).
 
 ## Testing — the standing setup
-- Live harness: `python tools/live_harness.py`, baseline **356** (fixtures to 52); `./gradlew test` **106**.
-  Fixture 48 (10 steps) is the first-ever plan-card coverage; its negative control was RUN
-  (7 render assertions failed pre-fix; SessionStore stash-runs failed 2 and 3).
-- Sandbox debug port: `./gradlew runIde -PjcefDebugPort=9223` + `CLAUDE_BRAINS_CDP_PORT` for
-  cdp.py/harness — added because the real IDE held 9222. CAVEAT: the sandbox's own hand-set
-  Registry value (9222) beats the property; verify which panel a port serves BY CONTENT before
-  driving it (turns count / distinctive text), never by assumption.
-- Probe scripts for the wire live in the session scratchpad (probe_plan_*.py, not committed);
-  always run them under `timeout N` — a bare blocking readline() orphans them (see gotchas).
+- Live harness: `python3 tools/live_harness.py`, baseline **361** (fixtures to 52; fixture 51 is
+  now 2 steps); `./gradlew test` **107** (106 + WebviewAssets manifest test).
+- Sandbox debug port: the sandbox's hand-set Registry value keeps CDP on **9222** even when
+  `-PjcefDebugPort=9223` is passed — verify which panel a port serves BY CONTENT, never assume.
+- The live panel loads webview JS from the built jar, so a passing harness also proves
+  `webview/js/` packaging. Control builds restore the WHOLE `plugin/src/main/resources/webview/`
+  directory (conventions.md).
+- Probe scripts live in session scratchpads (not committed); always run under `timeout N`.
 
 ## Next steps
 Done items live in `journal.md`; this list is only what is still open.
@@ -106,21 +70,23 @@ Done items live in `journal.md`; this list is only what is still open.
       reloaded-webview **log** replay (**8.14**) → kill-background-process (**11.3**) →
       tweak-travel (**3.5**). **9.4** fast-mode toggle [SM] is the cheapest 🟥 left.
 - [ ] `plugin.xml` description: the "/compact, /clear only" line is stale — fix in the next release.
-- [ ] Consolidation pass on the context files: `decisions.md` (761 lines) and `gotchas.md` (729)
-      are far over the ~100-line target — promote, then cut. Flagged 2026-08-17 (seventh).
+- [ ] On the Windows box, run `./gradlew test` once — the CRLF-checkout path of the `<!--JS-->`
+      splice (`WebviewAssets.page()` replaces marker text only) is reasoned, not yet run there.
+- [ ] Consolidation pass on the context files: `decisions.md` and `gotchas.md` are far over the
+      ~100-line target — promote, then cut. Flagged 2026-08-17, still pending.
 
 ## Known gaps (deliberately left)
 - Plan-card keyboard shortcuts (Enter = keep planning, Shift+Tab = approve with feedback)
   deferred by the user 2026-08-16; handlers slot into the same `done()` paths (backlog).
 - Feedback input surfaced on plan cards only; the wire plumbing is generic for other cards.
-- Paths inside free prose still not shortened; `/batch` fan-out verified at N=2 only; the
-  command sweep ran against one PHP CLI repo; queue-path `.q-row` sweep still inconclusive.
-- Webview reload replays the INITIALIZE-time roster (mid-session commands vanish — backlog).
+- Paths inside free prose still not shortened; `/batch` fan-out verified at N=2 only;
+  queue-path `.q-row` sweep still inconclusive.
 - Sub-agent WORK outcome not surfaced; no kill-background-process from the panel;
   `prefers-reduced-motion` unverified against the real OS setting.
+- Marketplace updates of the plugin may prompt an IDE restart (download-cache race +
+  JCEF unload) — accepted by the user 2026-08-19, not a defect to fix.
 
 ## Which machine — check FIRST, both are real
-All five 2026-08-16 sessions (incl. the 0.7.0 and 0.7.1 releases) ran on **Linux**
-(`/home/syncroze/Sites/claude-brains`). Paths for both boxes in overview.md § External
-references. Slash-menu fixtures + plan-probe scratchpad + the verifier's cached IDE ladder exist
-on Linux only.
+This session ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in
+overview.md § External references. Slash-menu fixtures + probe scratchpads + the verifier's
+cached IDE ladder exist on Linux only. The Windows box still owes the CRLF splice check above.

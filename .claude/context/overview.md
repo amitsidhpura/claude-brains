@@ -56,10 +56,12 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   (`can_use_tool`, `initialize`, `set_model`, `set_permission_mode`, `interrupt`) separately
   from conversation events. Declares ONE host hook on `initialize` (`PreToolUse
   Edit|Write|MultiEdit|Read → autosave`, `Autosave.kt`) and answers its `hook_callback`s.
-- **UI** (`ui/ChatPanel.kt` + `resources/webview/chat.html`): JCEF panel in a right-anchored
-  tool window. Single JS<->Kotlin channel: `window.__bridge(json)` up,
-  `window.onClaudeEvent(line)` down. Styles ONLY in `webview/chat.css` (spliced at `<!--CSS-->`;
-  the mockup links the same file).
+- **UI** (`ui/ChatPanel.kt` + `resources/webview/`): JCEF panel in a right-anchored tool window.
+  Single JS<->Kotlin channel: `window.__bridge(json)` up, `window.onClaudeEvent(line)` down.
+  `chat.html` is markup only; the JS is 14 numbered files in `webview/js/`, spliced back into the
+  page's ONE `<script>` block by `ui/WebviewAssets.kt` at `<!--JS-->` (manifest `JS_FILES` is the
+  only copy of the order — one shared script scope, no modules). Styles ONLY in `webview/chat.css`
+  (spliced at `<!--CSS-->`; the mockup links the same file).
 - **Sessions** (`session/SessionStore.kt`): reads `~/.claude/projects/<enc-cwd>/*.jsonl`
   (enc = cwd with non-alphanumerics → `-`); resume via `--resume <id>`; transcript replayed
   into the UI through rich `JsonObject` blocks so replay matches live rendering.
@@ -70,7 +72,7 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 `cd plugin && ./gradlew runIde` (sandbox PhpStorm 2024.2). `./gradlew compileKotlin` for a fast
 type-check; `buildPlugin` → installable zip in `build/distributions/`; `./gradlew test` (plain
 JUnit 5 over SessionStore/RenderLimits); `./gradlew probe --args="<projectPath> <sessionId>"`
-dumps replay blocks without the IDE. Resource-only changes (chat.html) need only a `runIde`
+dumps replay blocks without the IDE. Resource-only changes (chat.html, webview/js/, chat.css) need only a `runIde`
 restart. `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
 Sandbox JCEF debug port: `-PjcefDebugPort=<n>` on runIde + `CLAUDE_BRAINS_CDP_PORT` for
 tools/cdp.py — but a hand-set sandbox Registry value still wins (gotchas).

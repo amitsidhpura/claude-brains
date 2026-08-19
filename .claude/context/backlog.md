@@ -68,6 +68,9 @@
   so the `/context` workflow itself does NOT travel to a fresh clone — un-ignore if wanted.
 
 ## Someday / conditional
+- Real ES modules for `webview/js/` (CefResourceHandler or file:// base) — only if per-file
+  scope ever earns the resource-serving layer + deferred-load rewiring; the 2026-08-19 concat
+  splice is the stepping stone.
 - Author-signing the plugin (`signPlugin` + a generated key/chain, key in a GitHub secret). Today the
   zip goes up UNSIGNED and the Marketplace signs its own copy — five releases accepted that way, so
   this buys only the "installed from disk" trust path. Take it if that ever matters.

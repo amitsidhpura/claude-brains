@@ -213,6 +213,10 @@ trusting memory here.
   "initialize"}}` line, read until the `control_response`. No user turn, nothing persisted.
 
 ## Build / toolchain
+- **Kotlin block comments NEST.** A literal `/*` inside a KDoc — e.g. writing the glob
+  `js/*.js` in a doc sentence — opens a nested comment that never closes, and the compiler
+  reports "Unclosed comment" at the file's LAST line, nowhere near the cause (hit in
+  WebviewAssets.kt, 2026-08-19). Say "files under js/" in comments; globs only in strings.
 - **A cold configuration cache turns `runIde` into a NETWORK build, and it can fail on TLS.**
   `build.gradle.kts` resolves the verifier's IDE ladder through
   `ProductReleasesValueSource`, which hits `teamcity.jetbrains.com`. While a config-cache entry
@@ -342,6 +346,12 @@ trusting memory here.
   `content_block_stop`; by `tool_result` they correctly degrade to no line numbers.
 
 ## JCEF is not a browser (Linux)
+- **JCEF sizes a text flex item's base a hair under its max-content, so a two-word label can
+  wrap with the row half empty.** "Very High" (needs 55px) got a 53px flex base in the mode-menu
+  footer and wrapped; desktop Chrome on the SAME markup+CSS keeps one line — so design/mockup.html
+  and headless Chrome can NEVER reproduce this class of bug, only the live panel over CDP can.
+  Fix pattern: `white-space: nowrap` where a label must not wrap (`.ef-label`, 2026-08-19,
+  pinned by fixture 51 step 2).
 - Text fields: the Delete key INSERTS keyChar 0x7F as a tofu char instead of forward-deleting
   (backspace is fine). chat.html carries a two-layer document-level workaround (manual
   forward-delete on keydown + capture-phase control-char strip on input), so any NEW text input
@@ -668,6 +678,16 @@ trusting memory here.
   tail of the log, which truncates the per-IDE list.
 
 ## Session tooling (probes, sandboxes, background shells)
+- **A sandbox launched BEFORE a CSS/resource edit is a free pre-fix build** — chat.css/JS are
+  spliced at page load, so the running panel still serves the old bytes. Run a new fixture's
+  negative control against it BEFORE asking for the restart that picks up the fix (done for
+  fixture 51 step 2, 2026-08-19). Only works for resource changes; Kotlin changes need a rebuild.
+- **Marketplace updates of the plugin may prompt an IDE restart — that is the IDE, not us.**
+  Real-IDE idea.log 2026-08-16: the no-restart install died on NoSuchFileException for the
+  download-cache zip (`~/.cache/JetBrains/<IDE>/plugins/claude-brains.zip`, a cache race when two
+  updates landed 39 min apart) → fallback to install-on-restart. plugin.xml forces nothing (no
+  require-restart, all EPs dynamic), and unloading live JCEF + the WS server + the claude process
+  would rarely pass the GC check anyway. User accepted this 2026-08-19 — do not engineer around it.
 - **`pgrep -f <pattern>` matches the shell that runs it** when the pattern appears in that shell's
   own command line (the Bash tool's `zsh -c "... pgrep -f 'PhpStorm-2024.2/jbr/bin/java' ..."`).
   "Still running" three times in a row on 2026-08-17 was the probe seeing itself. Read `ps -o cmd

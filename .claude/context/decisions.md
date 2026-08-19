@@ -3,6 +3,22 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-19 — The webview JS lives in webview/js/, spliced back into one script scope
+`chat.html` is markup only; the panel's JS is 14 numbered files under `webview/js/`
+(prefix = load order), concatenated in `WebviewAssets.JS_FILES` order into the page's single
+`<script>` block at the `<!--JS-->` marker, each behind a `/* ===== file: … ===== */` banner.
+The manifest is the ONLY copy of the order; `RenderLimitsTest` asserts over the assembled page
+and pins manifest ⇄ directory equality.
+**Why:** 4542 lines was unreadable and unreviewable; the concat splice reuses the seam already
+proven for chat.css and window.LIMITS (loadHTML has no base URL), keeps ONE shared script scope
+so semantics are provably unchanged (assembled page byte-identical to the pre-split file, banners
+aside), and the banners give DevTools line numbers a way back to a source file.
+**Rejected:** real ES modules via a CefResourceHandler or file:// base (per-file scope, but adds
+a resource-serving layer and deferred-load timing — `window.onClaudeEvent` would need explicit
+global wiring before Kotlin's first push; the concat split is the stepping stone if ever wanted);
+leaving the file whole (the status quo this replaces); splitting the markup too (131 lines does
+not need it, and the mockup-mirroring convention favours one markup file).
+
 ## 2026-08-17 — Low-priority rows are ⬜, not 🟨 yellow
 `docs/feature-checklist.md` marks open-low with ⬜; the rest of the set is unchanged
 (✅ / 🟡 partial / 🟥 high / 🟧 medium / ➖ / 🚫).
