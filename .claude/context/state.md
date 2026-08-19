@@ -1,8 +1,8 @@
 # State
 
 ## Current focus
-**2026-08-19 (eighth session): the webview script split into files, and an effort-label wrap fix.
-Committed as `41f24f9` + `e06add1`, pushed. Nothing in flight.**
+**2026-08-19 (eighth session): the webview split + effort-label fix shipped, then 0.8.0 RELEASED
+and Approved the same day. Nothing in flight, nothing unreleased on main.**
 - **`chat.html` is markup-only now (131 lines).** The JS lives in `webview/js/` as 14 numbered
   files (`00-core.js` … `90-gallery.js`, prefixes = load order, gaps for insertion), concatenated
   back into the page's single `<script>` block by `ui/WebviewAssets.kt` (`page()`, at the
@@ -29,13 +29,15 @@ Committed as `41f24f9` + `e06add1`, pushed. Nothing in flight.**
   2026-07-30] · **8.11** side question [MD, NEW] · **8.14** reloaded-webview **log** replay [LG]
   (roster half shipped as 7.10) · **9.4** fast-mode toggle [SM] · **11.3** kill-background-process [MD].
 - **Nine [DECIDE] rows** await the user: 8.7, 8.10, 8.11, 9.4, 9.5, 12.3, 12.6, 13.2, 14.2.
-- UNRELEASED on main since 0.7.2: features 2.4, 2.10, 2.11, 7.7, 7.10; the webview split
-  (refactor); the effort-label fix. `plugin.xml` description still says only `/compact` +
-  `/clear` are enabled — fix in the release-notes pass. **A release starts only when the user asks.**
+- Nothing unreleased: 0.8.0 (`dce3600` / `v0.8.0`, 2026-08-19) shipped 2.4, 2.10, 2.11, 7.7,
+  7.10, the webview split and the effort-label fix, and fixed `plugin.xml`'s stale
+  "/compact + /clear only" description line. **A release starts only when the user asks.**
 
 **Releases so far — all Approved on the Marketplace the same day** (detail in `journal.md`;
-process in `docs/release.md`): 0.7.2 (2026-08-17, `40bc060`), 0.7.1 (2026-08-16, `91a6ba5`),
-0.7.0 (2026-08-16, `59d94fc`). Manual-test issue register: 0 open / 25 resolved.
+process in `docs/release.md`): 0.8.0 (2026-08-19, `dce3600`), 0.7.2 (2026-08-17, `40bc060`),
+0.7.1 (2026-08-16, `91a6ba5`), 0.7.0 (2026-08-16, `59d94fc`). Manual-test register: 0 open / 25
+resolved. New on the 0.8.0 verification page: JetBrains now also runs a live "IDE run with the
+plugin installed" check (passed) on top of the verifier ladder.
 
 ## How plan feedback travels (probed on CLI 2.1.233 — traps in gotchas)
 - **Deny** → typed text IS the control-response `message`, delivered VERBATIM as the ExitPlanMode
@@ -69,7 +71,9 @@ Done items live in `journal.md`; this list is only what is still open.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts (Enter / Shift+Tab) →
       reloaded-webview **log** replay (**8.14**) → kill-background-process (**11.3**) →
       tweak-travel (**3.5**). **9.4** fast-mode toggle [SM] is the cheapest 🟥 left.
-- [ ] `plugin.xml` description: the "/compact, /clear only" line is stale — fix in the next release.
+- [ ] Sync the **Marketplace web description** (hand-edited Markdown, NOT refreshed by uploads)
+      to plugin.xml's new slash-commands wording ("sixteen built-ins … plus auto-enabled custom
+      commands, skills and MCP prompts") — the user edits it at plugins.jetbrains.com.
 - [ ] On the Windows box, run `./gradlew test` once — the CRLF-checkout path of the `<!--JS-->`
       splice (`WebviewAssets.page()` replaces marker text only) is reasoned, not yet run there.
 - [ ] Consolidation pass on the context files: `decisions.md` and `gotchas.md` are far over the

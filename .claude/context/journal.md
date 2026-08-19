@@ -3,6 +3,24 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-19 (second) — 0.8.0 goes out
+- **Released 0.8.0** (`dce3600`, tag `v0.8.0`): aliases (7.7), autosave hook (2.10), roster
+  across reload (7.10), per-review close_tab (2.4), lock sweep (2.11), effort-label fix — plus
+  the webview split riding along unadvertised (internal, per release.md). Minor bump: features.
+- Full `docs/release.md` run, gate held at step 6 until the user read the complete notes.
+  Verifier Compatible ×7 (242 → 262), 0 warnings; zip carried all 14 `webview/js/` files and the
+  baked 0.8.0 notes; asset 200 + `cmp`-identical; feed serving 0.8.0 within a minute; upload run
+  32276262660 success (11s); **Approved the same day** (sixth in a row).
+- `plugin.xml` description un-staled in the same release: "sixteen built-ins … plus auto-enabled
+  custom commands, skills and MCP prompts" replaces "/compact + /clear only". The Marketplace
+  WEB description still carries the old wording — hand-edited Markdown, uploads don't touch it;
+  left with the user (now in state.md next steps).
+- Marketplace API lag showed a fourth time: `updates?size=2` still named 0.7.2 newest after the
+  successful upload; the plugin page showed 0.8.0 Approved. The page is the truth.
+- New on the version page: alongside the verifier ladder, JetBrains ran a live "IDE run with the
+  plugin installed" check on 2026.2.1 — "No issues occurred". The split webview loaded clean in
+  their environment too.
+
 ## 2026-08-19 — chat.html becomes fourteen files, and "Very High" gets its line back
 - **The webview split shipped** (`41f24f9`): chat.html (4542 lines, one 4400-line `<script>`) is
   markup-only at 131 lines; the JS lives in `webview/js/` as 14 numbered files cut at the existing
