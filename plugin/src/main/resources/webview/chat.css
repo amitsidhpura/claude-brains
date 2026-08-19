@@ -1055,7 +1055,11 @@ blockquote > *:last-child { margin-bottom: 0; }
    apply here; they are kept as the fallback for any context outside #inputbar (design/mockup.html
    renders the same markup). Measured in the real panel 2026-08-17: pre-fix 14 + 18 + 8 = 40,
    4px adrift; now 0, with the icon axis matching .pi-ic's. Pinned by fixture 51. */
-.ef-label { display: flex; align-items: center; gap: 10px; }
+/* nowrap: JCEF sizes the <b>'s flex base a hair under its max-content ("Very High" got 53px
+   needing 55), so the two-word label wrapped even with the footer half empty — desktop Chrome
+   on the same markup+CSS does not. Measured live over CDP 2026-08-19: 37px tall → 19px with
+   nowrap. Levels are one or two short words; the footer never gets narrow enough to overflow. */
+.ef-label { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .ef-label svg { width: 15px; height: 15px; flex: 0 0 20px; }
 .ef-label b { color: var(--fg); font-weight: 600; }
 .effort { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0; }
