@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.7.2"
+version = "0.8.0"
 
 repositories {
     mavenCentral()
@@ -100,6 +100,21 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.8.0</b>
+            <ul>
+              <li>Typed aliases now work: /review, /reset, /new and /peers reach the commands they
+                  stand for, the / menu finds a command by its alias, and aliases ride the row
+                  muted beside the name — a typed /review used to be refused as not available</li>
+              <li>Unsaved editor changes are what Claude sees: a modified file is saved just
+                  before Claude reads or edits it, the same way the VS Code extension does</li>
+              <li>Commands added while a session is running stay in the / menu even after the
+                  panel reloads — they used to vanish until the next conversation</li>
+              <li>Closing a review closes only that review's diff tab — it used to close every
+                  open diff tab at once</li>
+              <li>The Very High effort level no longer wraps to two lines in the mode menu</li>
+              <li>Crashed or killed IDE sessions no longer leave stale lock files behind for the
+                  CLI to trip over — dead locks are swept automatically</li>
+            </ul>
             <b>0.7.2</b>
             <ul>
               <li>Picking a command from the / menu no longer runs it before you have said what

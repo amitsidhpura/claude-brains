@@ -29,10 +29,13 @@
               rules are managed the way the CLI already documents. The plugin has no settings page
               of its own; the <code>claude</code> binary is resolved from PATH (or the
               <code>-Dclaude.executable</code> JVM option).</li>
-          <li><b>Only verified slash commands are enabled</b> (<code>/compact</code>,
-              <code>/clear</code>) — a headless stream has no interactive terminal, so commands
-              that need one are hidden rather than half-working. Model, mode and effort have
-              dedicated composer controls instead.</li>
+          <li><b>Only verified slash commands are enabled</b> — sixteen built-ins
+              (<code>/compact</code>, <code>/clear</code>, <code>/context</code>,
+              <code>/code-review</code>, <code>/init</code> and more), plus your project and user
+              commands, skills and MCP prompts, auto-enabled with a source badge. A headless
+              stream has no interactive terminal, so commands that need one are hidden rather
+              than half-working. Model, mode and effort have dedicated composer controls
+              instead.</li>
         </ul>
 
         <h3>Not there yet</h3>
