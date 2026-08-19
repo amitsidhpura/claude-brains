@@ -24,19 +24,43 @@ import java.io.File
  */
 class RenderLimitsTest {
 
-    private val html: String =
-        javaClass.getResourceAsStream("/webview/chat.html")!!.use { it.readBytes() }.decodeToString()
+    // The ASSEMBLED page — markup plus the JS spliced from webview/js/ — never the raw chat.html,
+    // which has been markup-only since the 2026-08-19 split. Asserting over the raw file would
+    // make every content check below vacuous (130 lines of markup contain no hardcoded cap and
+    // no LIM.* use, so both directions would pass on an empty page).
+    private val html: String = io.github.amitsidhpura.claudebrains.ui.WebviewAssets.page()
+
+    /**
+     * The manifest IS what ships: a .js file on disk but missing from WebviewAssets.JS_FILES
+     * would load nowhere and be asserted on by nothing — dark in the panel AND dark in this
+     * suite. Compared set-equal against the resources directory (a directory on the test
+     * classpath, so listable; in the shipped jar it is not, which is why the manifest exists).
+     */
+    @Test
+    fun `every webview js file is in the manifest, and nothing else`() {
+        val dir = File(javaClass.getResource("/webview/js")!!.toURI())
+        val onDisk = dir.listFiles()!!.map { it.name }.sorted()
+        val manifest = io.github.amitsidhpura.claudebrains.ui.WebviewAssets.JS_FILES
+        assertEquals(
+            onDisk, manifest.sorted(),
+            "webview/js/ and WebviewAssets.JS_FILES disagree — a file missing from the manifest " +
+                "ships dark (never spliced, never tested); a manifest entry with no file kills " +
+                "page assembly outright",
+        )
+        assertEquals(manifest, manifest.distinct(), "duplicate entry in WebviewAssets.JS_FILES")
+    }
 
     @Test
     fun `chat html carries the splice point exactly once`() {
         val marker = "<!" + "--LIMITS-->"   // split so this test file is not itself a second copy
         assertEquals(
             1, html.split(marker).size - 1,
-            "the marker must appear EXACTLY once: ChatPanel replaces every occurrence, and the " +
-                "replacement carries a </script>, so a second one (even inside a JS comment) ends " +
-                "the script block early and silently kills the whole webview",
+            "the marker must appear EXACTLY once in the assembled page (chat.html + webview/js/*): " +
+                "ChatPanel replaces every occurrence, and the replacement carries a </script>, so " +
+                "a second one (even inside a JS comment) ends the script block early and silently " +
+                "kills the whole webview",
         )
-        assertTrue(html.contains("window.LIMITS"), "chat.html no longer reads the spliced limits")
+        assertTrue(html.contains("window.LIMITS"), "the webview JS no longer reads the spliced limits")
     }
 
     /**
@@ -49,8 +73,9 @@ class RenderLimitsTest {
         val close = "</" + "script>"
         assertEquals(
             html.split("<script").size - 1, html.split(close).size - 1,
-            "unbalanced script tags in chat.html — a stray `$close` (even inside a comment or a " +
-                "string) truncates the block and kills the webview",
+            "unbalanced script tags in the assembled page — a stray `$close` in chat.html OR any " +
+                "webview/js/ file (even inside a comment or a string) truncates the block and " +
+                "kills the webview",
         )
     }
 
@@ -63,11 +88,11 @@ class RenderLimitsTest {
             "slice(0, ${RenderLimits.CMD_MAX})",
             "slice(0, ${RenderLimits.OUT_MAX})",
         ).forEach {
-            assertTrue(!html.contains(it), "chat.html hardcodes `$it` — read it from LIM instead")
+            assertTrue(!html.contains(it), "the webview JS hardcodes `$it` — read it from LIM instead")
         }
         listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.descKeys", "LIM.pathKeys",
             "LIM.resultSkip", "LIM.plumbingTags").forEach {
-            assertTrue(html.contains(it), "chat.html no longer uses $it")
+            assertTrue(html.contains(it), "the webview JS no longer uses $it")
         }
     }
 
@@ -75,7 +100,7 @@ class RenderLimitsTest {
     fun `description keys are not hardcoded as a chain in the webview`() {
         assertTrue(
             !html.contains("inp.description || inp.file_path"),
-            "chat.html rebuilt the description chain by hand — walk LIM.descKeys instead",
+            "the webview JS rebuilt the description chain by hand — walk LIM.descKeys instead",
         )
     }
 

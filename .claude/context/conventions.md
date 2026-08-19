@@ -72,6 +72,13 @@
   run the fixture against the build that actually LACKS the fix — `git checkout <fix-commit>~1 --
   <file>`, NOT `HEAD:`/"current minus my commits", which still contains anything fixed in an
   earlier session (that mistake made fixture 49 read as vacuous, 2026-08-17). Confirm it fails.
+- **Control builds of the webview restore the whole directory, not one file.** Since the
+  2026-08-19 split, "the webview" is `chat.html` (markup) + `webview/js/*.js` (spliced back into
+  one script by `WebviewAssets`, manifest-checked by `RenderLimitsTest`) + `chat.css`. A control
+  via stash/checkout must target `plugin/src/main/resources/webview/` — a single-file restore
+  builds a half-old page (or, pre/post-split across the boundary, an empty script). For fixes
+  older than the split, check out the pre-split single-file chat.html and the OLD ChatPanel
+  together, or prefer asserting a wrong value instead.
 - **When two defects can mask each other, a fixture that replays them in sequence pins only the
   first.** Fixture 44 went green against the PRE-FIX build on its second defect, because the first
   one left `busy` already true and the assertion read as satisfied. Reset the state explicitly

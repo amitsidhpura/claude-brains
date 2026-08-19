@@ -531,10 +531,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         }
 
     private fun loadUi() {
-        // loadHTML has no base URL, so a <link> can't resolve — splice the shared
-        // stylesheet (webview/chat.css, also linked by design/mockup.html) at the marker.
-        val html = javaClass.getResourceAsStream("/webview/chat.html")!!
-            .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
+        // loadHTML has no base URL, so neither a <link> nor a <script src> can resolve — the
+        // page's JS (webview/js/*.js) is spliced by WebviewAssets.page(), and the shared
+        // stylesheet (webview/chat.css, also linked by design/mockup.html) at the marker below.
+        val html = WebviewAssets.page()
         val css = javaClass.getResourceAsStream("/webview/chat.css")!!
             .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
         browser.loadHTML(
