@@ -10,6 +10,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import io.github.amitsidhpura.claudebrains.findVFile
+import io.github.amitsidhpura.claudebrains.findVFileOnDisk
 import io.github.amitsidhpura.claudebrains.readLocked
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -74,7 +75,10 @@ class IdeTools(private val project: Project) {
 
     private fun openFile(rawPath: String): String {
         if (rawPath.isBlank()) return "error: missing filePath"
-        val vf = findVFile(rawPath)
+        // Disk-consulting lookup: the CLI routinely asks to open a file it created moments ago,
+        // which the VFS snapshot has not seen yet (Vfs.kt). Runs on the WebSocket thread, no
+        // read lock held — unlike checkDocumentDirty/getDiagnostics below, which must not refresh.
+        val vf = findVFileOnDisk(rawPath)
             ?: return "error: file not found: $rawPath"
         ApplicationManager.getApplication().invokeLater {
             OpenFileDescriptor(project, vf).navigate(true)

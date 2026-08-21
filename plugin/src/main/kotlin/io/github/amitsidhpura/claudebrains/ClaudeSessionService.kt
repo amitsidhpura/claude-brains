@@ -178,8 +178,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun openFile(rawPath: String, line: Int? = null, endLine: Int? = null): Boolean {
         val p = rawPath.trim().replace('\\', '/')
         if (p.isEmpty()) return false
-        val vf = findVFile(p)
-            ?: project.basePath?.let { findVFile("$it/${p.trimStart('/')}") }
+        // findVFileOnDisk, not findVFile: the click is a user action on a path the transcript
+        // just showed, and the VFS snapshot lags files written behind the IDE's back — a
+        // screenshot dropped into an unindexed scratch folder reported "File not found" while
+        // sitting on disk (2026-08-21). See Vfs.kt for the measurement and the threading rule.
+        val vf = findVFileOnDisk(p)
+            ?: project.basePath?.let { findVFileOnDisk("$it/${p.trimStart('/')}") }
             ?: return false
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
             // OpenFileDescriptor takes a 0-BASED line; the wire carries 1-based, so convert once here

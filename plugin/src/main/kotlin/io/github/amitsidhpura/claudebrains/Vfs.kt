@@ -12,6 +12,34 @@ fun findVFile(path: String): VirtualFile? =
     LocalFileSystem.getInstance().findFileByPath(path.replace('\\', '/'))
 
 /**
+ * Same lookup, but allowed to consult DISK when the snapshot has never heard of [path].
+ *
+ * [findVFile] reads the VFS snapshot only, and the snapshot is not the disk: a file written
+ * behind the IDE's back — by the CLI, by a screenshot tool, by a shell — is invisible to it
+ * until something refreshes the parent (the ADD case [refreshFromDisk] describes below).
+ * Measured 2026-08-21 against a running PhpStorm: a file created at the project root resolved
+ * as "not found" for about two minutes, then started resolving once the watcher caught up. A
+ * directory the IDE never indexes — an excluded scratch folder like `_local/` — need never
+ * catch up at all. That window is what made clicking a `Read` path in the panel report
+ * "File not found" for a file plainly sitting on disk.
+ *
+ * The snapshot hit comes first, so the refresh is only paid when the answer would otherwise be
+ * a wrong "no". A miss here means the path really is absent.
+ *
+ * THREADING: `refreshAndFindFileByPath` refreshes SYNCHRONOUSLY, so this must not be called
+ * while holding a read lock (it deadlocks against the refresh session) — which is why the
+ * read-locked callers ([io.github.amitsidhpura.claudebrains.bridge.IdeTools]'s
+ * `checkDocumentDirty` and `getDiagnostics`) keep using [findVFile]. Only the two "open this
+ * path" callers use this one, and both were driven end to end in a live sandbox on 2026-08-21
+ * (panel click over CDP, MCP `openFile` over the bridge) — neither holds a read lock.
+ */
+fun findVFileOnDisk(path: String): VirtualFile? {
+    val norm = path.replace('\\', '/')
+    val fs = LocalFileSystem.getInstance()
+    return fs.findFileByPath(norm) ?: fs.refreshAndFindFileByPath(norm)
+}
+
+/**
  * Make the IDE's picture of [path] match what is on disk, after the CLI wrote it out of band.
  *
  * The plugin never writes files itself — the CLI does, behind the IDE's back — and nothing was
