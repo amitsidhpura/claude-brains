@@ -3,6 +3,29 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-21 (second) — the /compact bubble finds its place, and the trick gets a name
+- User screenshots (live vs resumed): replay drew "Conversation compacted" ABOVE the /compact
+  bubble that caused it. Measured on a real shopify transcript: the CLI writes boundary + summary
+  at compaction END, physically BEFORE the command records, which keep typed-at timestamps
+  (boundary 13:20:19 @ file pos 295; its /compact 13:18:11 @ 298). File order lies; live was right.
+- Fixed in SessionStore, then — user asked for a common solution — generalized: `DisplacedAnchor`
+  (arm index+ts, insert-before when a later record's ts proves it earlier, shift/forget on
+  eviction). The 2026-08-09 retry-storm reorder refactored onto the same class. Global timestamp
+  sort rejected: ts-less records, per-block same-ts messages, the streaming eviction window, and
+  "timestamps always win" is an unmeasured premise (decisions.md).
+- Proof chain: probe on the real session pre/post fix (inversion → corrected); refactor
+  byte-identical (`probe --json` + cmp); +2 order tests (compact, late-flushed retries — the old
+  retry test pinned SPELLINGS only, the reorder was previously unpinned); negative control by
+  neutering the shared guard → exactly the 2 order tests fail. gradle test 107 → 109.
+- User confirmed in their real IDE ("Showing perfect now"), then asked about the leftover
+  "Distilled for 41s" footer: decided to KEEP both divergences (footer live-only, summary box
+  resume-only) — recorded as deliberate in docs/renderer-parity.md Audit 2.
+- jb.gg/teamcity config-time "Connection timed out" struck again mid-session; `-PskipVerifierIdes`
+  cleared it (the 2026-08-12 gotcha, working as documented). Host answered fine minutes later.
+- Trap relearned: `2>&1 > file` splits gradle's streams (stderr keeps the terminal); use
+  `> file 2>&1`. And background Bash tasks start in the repo root, not the shell's cwd.
+- Next: unchanged backlog; both 2026-08-21 fixes committed together, still unreleased.
+
 ## 2026-08-21 — "File not found" on a path that was right there
 - User report (Windows, PhpStorm, project `D:\sites\metrobuildsuppliers`): clicking the path on a
   `Read` line raised the plugin's "File not found" balloon for a screenshot in `_local/`.

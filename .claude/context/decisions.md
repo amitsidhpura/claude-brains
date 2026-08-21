@@ -3,6 +3,25 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-21 — Displaced transcript records reorder by ANCHOR, never by a global sort
+Replay corrects file-order lies with `DisplacedAnchor` (SessionStore.kt): arm an index+timestamp
+where a measured lie begins; a record that follows in file order but provably precedes in time
+inserts at the anchor; eviction shifts/forgets it. Two instances: `apiErrAnchor` (retry storms,
+mechanism since 2026-08-09, refactored onto the class) and `compactAnchor` (new — the CLI writes
+a manual compaction's boundary + summary BEFORE the /compact command records, so replay drew the
+marker above the bubble that caused it; `clearOnAppend` disarms once a bubble at/past the
+boundary's instant appends). Pinned by two order tests; the refactor proved byte-identical on a
+real session via `probe --json` + cmp.
+**Why:** file order is the backbone of the single-pass parser and is usually chronology; the CLI
+breaks it only in measured places. The anchor makes each correction local and provable.
+**Rejected:** a global stable sort by timestamp (records with NO timestamp; one API message
+persists as several same-ts records whose only order IS file order; the streaming eviction window
+would need whole-file buffering — the exact architecture the 4,000-block truncation rewrite
+removed; and "timestamps always outrank file order" is an unmeasured premise — new anchors must
+each be earned by a real transcript); suppressing the live compaction footer or reconstructing it
+on resume (the marker is the compaction's receipt; a rebuilt footer couldn't keep its verb — both
+divergences recorded as deliberate in docs/renderer-parity.md Audit 2 instead).
+
 ## 2026-08-21 — "Open this path" resolves against DISK; locked readers stay on the snapshot
 `Vfs.kt` gains `findVFileOnDisk`: snapshot hit first, then `refreshAndFindFileByPath`. It is wired
 into exactly two callers — `ClaudeSessionService.openFile` (the panel's path click) and `IdeTools`
