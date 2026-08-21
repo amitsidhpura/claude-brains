@@ -3,6 +3,34 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-21 — "File not found" on a path that was right there
+- User report (Windows, PhpStorm, project `D:\sites\metrobuildsuppliers`): clicking the path on a
+  `Read` line raised the plugin's "File not found" balloon for a screenshot in `_local/`.
+- The balloon itself cleared the wire: `notifyMissing` prints the RAW path it received, and it
+  showed the full correct absolute path — so the click, the `dataset.path` round-trip and the
+  bridge were all fine, and only the lookup had failed. Diagnosing from the error text saved
+  chasing the webview.
+- Root cause: `findVFile` → `LocalFileSystem.findFileByPath` reads the VFS snapshot, not the disk.
+  Not Windows-specific at all; the user just hit the window there.
+- **Reproduced on Linux against the USER'S LIVE PhpStorm** by talking to its own MCP bridge
+  (lock file → WebSocket → `tools/call`), using read-only `checkDocumentDirty` so nothing opened
+  in their IDE: a file created at the project root seconds earlier answered "not found" while
+  pre-existing `index.php` resolved. Re-probed ~2 min later: both resolved — a staleness window.
+- Fix: `findVFileOnDisk` (snapshot → `refreshAndFindFileByPath`) on the two "open this path"
+  callers only; read-locked callers must not refresh (deadlock). See decisions + gotchas.
+- Verified in a sandbox (`runIde --args=<testRepo>`, which skips all GUI clicking) with a
+  three-call discriminating run at one instant: snapshot lookup "not found" / fixed lookup
+  "opened" / absent path still "not found". Then drove the user's ACTUAL path — `__bridge`
+  `{kind:'open'}` over CDP — and `getOpenEditors` confirmed the file opened; ghost path opened
+  nothing. gradle test 107, compile clean.
+- Cross-checked by a second model (Fable) at the user's request: threading triage re-derived from
+  the code (`Threads.kt` `readLocked` = `runReadAction`; the `open` branch takes no lock), full
+  caller sweep, verdict ship. It also noted the failure path now attempts two refreshes on a
+  missing absolute path (harmless, pre-existing fallback shape) — left alone.
+- Sandbox CDP port gotcha AGAIN: `-PjcefDebugPort=9223` on the command line, CDP served on 9222.
+  Identify the panel by content (`/json/list` title), never by the port you asked for.
+- Next: unchanged backlog; the fix is uncommitted-then-committed this session and NOT released.
+
 ## 2026-08-19 (second) — 0.8.0 goes out
 - **Released 0.8.0** (`dce3600`, tag `v0.8.0`): aliases (7.7), autosave hook (2.10), roster
   across reload (7.10), per-review close_tab (2.4), lock sweep (2.11), effort-label fix — plus

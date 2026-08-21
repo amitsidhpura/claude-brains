@@ -3,6 +3,23 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-21 — "Open this path" resolves against DISK; locked readers stay on the snapshot
+`Vfs.kt` gains `findVFileOnDisk`: snapshot hit first, then `refreshAndFindFileByPath`. It is wired
+into exactly two callers — `ClaudeSessionService.openFile` (the panel's path click) and `IdeTools`
+`openFile` (the CLI asking the IDE to open a file). Every other `findVFile` caller is unchanged.
+**Why:** the snapshot is not the disk, so a file written behind the IDE's back reported
+"File not found" on a click (user, Windows, 2026-08-21; reproduced on Linux — see gotchas). The
+snapshot-first order means the refresh is only paid when the answer would otherwise be a wrong
+"no", and a miss still means genuinely absent (negative control held).
+**Rejected:** changing `findVFile` itself (a synchronous refresh under `readLocked` deadlocks —
+`checkDocumentDirty`, `getDiagnostics`, `readFileText` all call it inside a read action);
+refreshing in `Autosave`/`saveDocument` too (a file the VFS never saw has no unsaved document, so
+the refresh cannot change the answer); an async refresh with a callback (`openFile` returns the
+Boolean that decides the "File not found" balloon, so the answer has to be synchronous);
+`DiffReview.open` (same latent staleness, but a stale miss only mis-renders the left pane as a new
+file, and the end-of-turn `refreshFromDisk` sweep already covers the paths it receives — parked in
+backlog).
+
 ## 2026-08-19 — The webview JS lives in webview/js/, spliced back into one script scope
 `chat.html` is markup only; the panel's JS is 14 numbered files under `webview/js/`
 (prefix = load order), concatenated in `WebviewAssets.JS_FILES` order into the page's single

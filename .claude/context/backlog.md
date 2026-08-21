@@ -36,6 +36,12 @@
   list hover-gutter idiom). Found 2026-08-12 while fixing the busy-state defects; the CLI has no
   host-side control request for this today, so check the protocol first.
 
+- **`DiffReview.open` VFS staleness** (parked 2026-08-21): its left pane resolves `oldPath`
+  through snapshot-only `findVFile`, so a file the VFS has not caught up on renders as NEW. Fix is
+  `findVFileOnDisk` (it holds no read lock at that point — the `readLocked` block is inside the
+  later `invokeLater`), but the failure is cosmetic and `refreshFromDisk` covers its paths, so it
+  was left out of the 2026-08-21 open-path fix rather than widening that change's blast radius.
+
 ## Roadmap (rough order)
 - Editor accept/reject v2, remaining half: tweak-travel (pane edits ride updatedInput on
   accept). The buttons half SHIPPED 2026-08-09: Accept ✓ / Reject ✕ text buttons on a plain

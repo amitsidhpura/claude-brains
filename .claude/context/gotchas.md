@@ -212,6 +212,28 @@ trusting memory here.
   CLI with the panel's flags, write one `{"type":"control_request","request":{"subtype":
   "initialize"}}` line, read until the `control_response`. No user turn, nothing persisted.
 
+## IDE platform / VFS
+- **`LocalFileSystem.findFileByPath` reads the VFS SNAPSHOT, never the disk.** A file written
+  behind the IDE's back — the CLI, a shell, a screenshot tool — does not resolve until something
+  refreshes its PARENT, so a path that plainly exists answers "not found". Measured 2026-08-21
+  against a running PhpStorm: a file created at the project root stayed unresolvable for about two
+  minutes, then healed once the watcher caught up; a directory the IDE never indexes (an excluded
+  scratch folder like `_local/`) need never heal at all. This is what made clicking a `Read` path
+  in the panel report "File not found" (user, Windows, 2026-08-21) — NOT a Windows bug, and not a
+  path-spelling bug. Use `findVFileOnDisk` (Vfs.kt) on any "open this path" entry point.
+- **But `refreshAndFindFileByPath` refreshes SYNCHRONOUSLY — never call it under a read lock**
+  (it deadlocks against the refresh session). That splits the callers permanently: "open this
+  path" callers (ChatPanel's `open` bridge verb → `ClaudeSessionService.openFile`, IdeTools
+  `openFile`) hold no lock and may refresh; everything inside `readLocked` (IdeTools
+  `checkDocumentDirty` / `getDiagnostics`, ChatPanel `readFileText`) must keep plain `findVFile`.
+  Dirty-document callers (`Autosave`, IdeTools `saveDocument`) keep it too for a second reason: a
+  file the VFS has never seen cannot have an unsaved document, so a refresh could not change the
+  answer.
+- **The two lookups make each other a free control.** Probing `checkDocumentDirty` (snapshot-only)
+  and `openFile` (disk-consulting) on the SAME path in the SAME run proves the VFS was genuinely
+  stale at that instant — no need to race the self-heal window. Order matters: the snapshot call
+  must go FIRST, since the refreshing one populates the VFS.
+
 ## Build / toolchain
 - **Kotlin block comments NEST.** A literal `/*` inside a KDoc — e.g. writing the glob
   `js/*.js` in a doc sentence — opens a nested comment that never closes, and the compiler
@@ -678,6 +700,15 @@ trusting memory here.
   tail of the log, which truncates the per-IDE list.
 
 ## Session tooling (probes, sandboxes, background shells)
+- **The running IDE's own MCP bridge is a remote debugger for platform-API questions.** Read the
+  port + `authToken` from `~/.claude/ide/<port>.lock`, connect a WebSocket (subprotocol `mcp`,
+  header `x-claude-code-ide-authorization`), `initialize`, then `tools/call`. That reaches
+  `IdeTools` inside a LIVE IDE with no GUI automation and no rebuild — how the VFS staleness above
+  was reproduced (2026-08-21). Prefer the read-only tools (`checkDocumentDirty`, `getOpenEditors`)
+  when probing the USER's IDE: `openFile` opens tabs in it. `getOpenEditors` doubles as the
+  observable for whether a panel click actually opened anything.
+- **`./gradlew runIde --args="<projectPath>"` opens the sandbox straight onto a project** — it is
+  a plain JavaExec task, so no GUI clicking to get a project (and therefore a bridge + a panel).
 - **A sandbox launched BEFORE a CSS/resource edit is a free pre-fix build** — chat.css/JS are
   spliced at page load, so the running panel still serves the old bytes. Run a new fixture's
   negative control against it BEFORE asking for the restart that picks up the fix (done for
