@@ -558,6 +558,56 @@ object SessionStore {
     }
 
     /**
+     * An anchor into the block list marking where records the file wrote OUT OF ORDER insert
+     * back in. Transcript file order is chronological except where measured otherwise — a
+     * late-flushed retry lands after the error that ended its storm, a manual compaction's
+     * command records land after the boundary they triggered — and in those spots a record
+     * that FOLLOWS the anchor in file order but PRECEDES its timestamp is inserted at the
+     * anchor instead of appended, so replay shows live's order. One mechanism, per-case
+     * activation: an anchor is only ever [arm]ed where a real transcript proved the file
+     * lies, never on the assumption that timestamps outrank file order in general.
+     */
+    private class DisplacedAnchor {
+        private var idx = -1
+        private var ts: java.time.Instant? = null
+
+        /** Track [at] — the slot the anchor item is about to occupy — with that record's timestamp. */
+        fun arm(at: Int, recTs: java.time.Instant?) { idx = at; ts = recTs }
+
+        fun clear() { idx = -1; ts = null }
+
+        /**
+         * Insert [item] at the anchor when [recTs] proves it predates the anchor record;
+         * append otherwise. The range guard degrades to append if a removal shifted the
+         * tracked index. [clearOnAppend] is for anchors whose displaced records form one
+         * contiguous run: an appended record at or past the anchor's instant means the run
+         * is behind us, so tracking stops and nothing later can insert into a turn that has
+         * moved on. A retry anchor instead stays armed — the next storm re-arms it and
+         * eviction forgets it.
+         */
+        fun addOrInsert(
+            out: ArrayList<Item>, item: Item, recTs: java.time.Instant?,
+            clearOnAppend: Boolean = false,
+        ) {
+            val a = ts
+            if (idx in 0..out.size && a != null && recTs != null && recTs.isBefore(a)) {
+                out.add(idx, item)
+                idx++
+            } else {
+                out.add(item)
+                if (clearOnAppend) clear()
+            }
+        }
+
+        /** Eviction dropped [k] items off the head: shift the index, forget an evicted anchor. */
+        fun onEvict(k: Int) {
+            if (idx < 0) return
+            idx -= k
+            if (idx < 0) clear()
+        }
+    }
+
+    /**
      * Parse a session's JSONL into renderable blocks: user text/images, thinking, assistant
      * markdown, tool lines (description, Bash IN/OUT, failure), Edit/Write diffs, and answered
      * AskUserQuestion cards. Tool results arrive in later records, so tool items are indexed by
@@ -617,8 +667,7 @@ object SessionStore {
         // that error is inserted there instead of appended, and replay shows live's order —
         // the retries, then the failure that ended them. The timestamp guard keeps a LATER
         // request's retries (which are younger than the error) out of the old turn.
-        var apiErrIdx = -1
-        var apiErrTs: java.time.Instant? = null
+        val apiErrAnchor = DisplacedAnchor()
         var reqSeed: String? = null            // first assistant uuid of the request (verb seed)
         val reqMsgIds = HashSet<String>()      // message.ids already counted — see the "assistant" branch
         // A compaction boundary awaiting its summary. The CLI writes the marker and the summary as
@@ -626,6 +675,16 @@ object SessionStore {
         // instead of becoming a message the user never sent.
         var openCompact: Item? = null
         var openCompactUuid: String? = null
+        // The marker's slot in `out`. The CLI writes the boundary + summary records when
+        // compaction FINISHES, physically BEFORE the /compact command records that triggered it —
+        // which keep their typed-at timestamps (measured 2026-08-21: boundary 13:20:19 at file
+        // position 295, its /compact command 13:18:11 at 298). A user bubble that follows the
+        // marker in FILE order but precedes it in TIME is inserted back in front of the marker,
+        // so replay shows live's order: the /compact bubble, then the marker. Same trick as
+        // apiErrAnchor above. Also catches a prompt queued DURING compaction, which live echoes
+        // before the boundary arrives. Auto-trigger boundaries have no command record; the
+        // timestamp guard simply never fires for them.
+        val compactAnchor = DisplacedAnchor()
         // Reconstructed task list. The on-disk store ([tasks]) holds only the CURRENT state, so the
         // only way to show what the list looked like at each point in a resumed turn is to replay
         // the increments the transcript already records: TaskCreate's RESULT carries the id the CLI
@@ -703,12 +762,10 @@ object SessionStore {
             if (k >= out.size) k = plain
             out.subList(0, k).clear()
             droppedCount += k
-            // apiErrIdx indexes `out`; shift it, and forget it entirely once its turn is gone —
-            // a stale index would insert a late-flushed retry into an unrelated turn.
-            if (apiErrIdx >= 0) {
-                apiErrIdx = if (apiErrIdx >= k) apiErrIdx - k else -1
-                if (apiErrIdx < 0) apiErrTs = null
-            }
+            // The anchors index `out`; shift them, and forget one entirely once its turn is
+            // gone — a stale index would insert a displaced record into an unrelated turn.
+            apiErrAnchor.onEvict(k)
+            compactAnchor.onEvict(k)
         }
 
         runCatching {
@@ -832,7 +889,14 @@ object SessionStore {
                             // replay may never even ship — starve the images actually on screen.
                             atts.forEach { att -> if (att["data"] != null) item.images.add(att) }
                             flushSummary() // close the previous request before the next turn opens
-                            out.add(item)
+                            // Displaced by a compaction: file order put this bubble after the
+                            // boundary marker, but its timestamp proves it was typed before the
+                            // compaction finished (the /compact command itself, or a prompt queued
+                            // while compacting). Insert it ahead of the marker so replay shows
+                            // live's order. clearOnAppend: a bubble at or past the boundary's
+                            // instant means the displaced records are behind us — stop tracking.
+                            // See compactAnchor's declaration.
+                            compactAnchor.addOrInsert(out, item, ts, clearOnAppend = true)
                             reqStart = ts
                         }
                         "assistant" -> {
@@ -869,11 +933,10 @@ object SessionStore {
                             // text exists once. Emitted BEFORE the error item, matching live order
                             // (status at the assistant frame, error block at the `result`).
                             if (isApiError) {
-                                // Captured BEFORE the status item so late-flushed retries insert
+                                // Armed BEFORE the status item so late-flushed retries insert
                                 // ahead of the whole error tail (status line included), not
-                                // between its halves. See apiErrIdx's declaration.
-                                apiErrIdx = out.size
-                                apiErrTs = ts
+                                // between its halves. See apiErrAnchor's declaration.
+                                apiErrAnchor.arm(out.size, ts)
                                 obj["error"]?.jsonPrimitive?.contentOrNull
                                     ?.takeIf { it in RenderLimits.AUTH_BLOCKED_CODES }
                                     ?.let { code ->
@@ -1020,17 +1083,8 @@ object SessionStore {
                                 }
                                 // Late-flushed retry: file order puts it after the error that ended
                                 // the storm, but its timestamp proves it happened before. Insert it
-                                // ahead of that error (see apiErrIdx's declaration); the range guard
-                                // degrades to append if a removal shifted the tracked index.
-                                val errTs = apiErrTs
-                                if (apiErrIdx in 0..out.size && errTs != null && ts != null &&
-                                    ts.isBefore(errTs)
-                                ) {
-                                    out.add(apiErrIdx, item)
-                                    apiErrIdx++
-                                } else {
-                                    out.add(item)
-                                }
+                                // ahead of that error (see apiErrAnchor's declaration).
+                                apiErrAnchor.addOrInsert(out, item, ts)
                                 continue
                             }
                             // A safety classifier flagged the exchange: the CLI retried on another
@@ -1144,6 +1198,9 @@ object SessionStore {
                                 trigger = (meta?.get("trigger") as? JsonPrimitive)?.contentOrNull
                                 tokens = (meta?.get("preTokens") as? JsonPrimitive)?.longOrNull
                             }
+                            // Armed BEFORE the add: the tracked slot IS the marker, so a
+                            // displaced /compact bubble inserts in front of it.
+                            compactAnchor.arm(out.size, ts)
                             out.add(item)
                             openCompact = item
                             openCompactUuid = obj["uuid"]?.jsonPrimitive?.contentOrNull

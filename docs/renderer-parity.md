@@ -170,6 +170,18 @@ Mostly deliberate; listed so nothing is silently forgotten.
       strips CLI bookkeeping (matches live, which never renders those frames).
 - [~] Windowing: newest ~250 blocks at a turn boundary; earlier chunks stream on scroll; 4 MB image
       budget → name-only chips.
+- [~] Compaction turn, both directions (decided 2026-08-21). The **summary box is resume-only**:
+      the live `compact_boundary` wire event carries only metadata, the summary body exists only as
+      the transcript's `isCompactSummary` record (matches the TUI, which doesn't inline it live
+      either). The **turn footer ("✻ Distilled for 41s") is live-only**: it renders the CLI's
+      `result` event, while replay's empty-turn rule (no assistant records → no summary) correctly
+      skips it — the marker IS the compaction's receipt, and a reconstructed footer couldn't even
+      keep its verb (no assistant uuid to seed from). `compactMetadata.durationMs` is on disk if a
+      duration display is ever wanted. NOT deliberate and fixed the same day: replay drew the marker
+      ABOVE the `/compact` bubble that caused it — the CLI writes boundary + summary at compaction
+      END, physically before the command records, which keep their typed-at timestamps. Fixed via
+      `DisplacedAnchor` in `SessionStore.kt` (same mechanism as the retry-storm reorder), pinned by
+      two order tests.
 
 ### Lossy — gone on resume, worth knowing
 - [~] ~~Undo buttons and "↩ Reverted file changes" status lines~~ — MOOT 2026-07-30: the revert

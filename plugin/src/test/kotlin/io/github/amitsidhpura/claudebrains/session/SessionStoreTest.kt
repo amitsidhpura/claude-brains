@@ -330,6 +330,54 @@ class SessionStoreTest {
     }
 
     /**
+     * The CLI writes the boundary + summary when compaction FINISHES, physically BEFORE the
+     * /compact command records that triggered it — which keep their typed-at timestamps (real
+     * shopify session, 2026-08-21: boundary 13:20:19 at file position 295, its command 13:18:11
+     * at 298). Replaying file order drew "conversation compacted" above the /compact that asked
+     * for it; the bubble must be inserted back in front of the marker, matching live.
+     */
+    @Test
+    fun `a manual compact's command bubble replays before the marker, as live drew it`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-08-21T13:17:00.000Z","message":{"role":"user","content":[{"type":"text","text":"earlier question"}]}}""",
+            // compaction end: boundary + summary land first, the command records after —
+            // with timestamps from when they were typed, two minutes earlier
+            """{"type":"system","subtype":"compact_boundary","uuid":"b1","timestamp":"2026-08-21T13:20:19.000Z","content":"Conversation compacted","compactMetadata":{"trigger":"manual","preTokens":80952,"durationMs":128004}}""",
+            """{"type":"user","uuid":"s1","parentUuid":"b1","isCompactSummary":true,"timestamp":"2026-08-21T13:20:19.500Z","message":{"role":"user","content":[{"type":"text","text":"SUMMARY-BODY"}]}}""",
+            """{"type":"user","isMeta":true,"timestamp":"2026-08-21T13:18:11.000Z","message":{"role":"user","content":[{"type":"text","text":"<local-command-caveat>Caveat: local commands.</local-command-caveat>"}]}}""",
+            """{"type":"user","timestamp":"2026-08-21T13:18:11.000Z","message":{"role":"user","content":[{"type":"text","text":"<command-name>/compact</command-name>\n<command-message>compact</command-message>"}]}}""",
+            """{"type":"user","timestamp":"2026-08-21T13:20:20.000Z","message":{"role":"user","content":[{"type":"text","text":"<local-command-stdout>Compacted</local-command-stdout>"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-compact-order", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "compact-order.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "compact-order")
+            fun at(role: String, text: String) = out.indexOfFirst {
+                it["role"]?.jsonPrimitive?.content == role &&
+                    it["text"]?.jsonPrimitive?.content == text
+            }.also { assertTrue(it >= 0, "no $role block with text \"$text\"") }
+            val bubble = at("user", "/compact")
+            val marker = out.indexOfFirst { it["role"]?.jsonPrimitive?.content == "compact" }
+            val stdout = at("assistant", "Compacted")
+
+            assertTrue(bubble < marker,
+                "the /compact bubble must replay BEFORE the marker it caused (live's order)")
+            assertTrue(marker < stdout, "the command's stdout still follows the marker")
+            assertEquals("SUMMARY-BODY", out[marker]["text"]?.jsonPrimitive?.content,
+                "the summary still folds into the displaced marker by parentUuid")
+            assertEquals("manual", out[marker]["trigger"]?.jsonPrimitive?.content)
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * A resumed session must not re-seed the context gauge with the size the compaction just
      * removed. Scanning the tail backwards, the boundary is met BEFORE the request that preceded
      * it — and that request's usage is the pre-compact figure. Observed in `runIde`: compacting at
@@ -647,6 +695,50 @@ class SessionStoreTest {
             assertEquals("401 authentication_failed — retrying (1/10)",
                 status[1]["text"]?.jsonPrimitive?.contentOrNull,
                 "the wire spelling used to render NOTHING — a string error and snake_case counters")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
+     * The file order of a retry storm lies (measured 2026-08-09 on a real network-off session):
+     * the CLI buffers `api_error` records and flushes them AFTER the error record that concluded
+     * the storm, with EARLIER timestamps. Replay must insert them back ahead of the error —
+     * retries, then the failure that ended them, live's order. Pins the apiErrAnchor mechanics
+     * (see DisplacedAnchor), including that a YOUNGER record still appends after the error.
+     */
+    @Test
+    fun `late-flushed retries replay before the error that ended their storm`() {
+        val jsonl = listOf(
+            // the error record that concluded the storm — file position FIRST, timestamp LAST
+            """{"type":"assistant","uuid":"e1","isApiErrorMessage":true,"timestamp":"2026-08-09T09:47:24.000Z","message":{"role":"assistant","content":[{"type":"text","text":"API Error: connection refused"}]}}""",
+            // the buffered retries, flushed after it with earlier timestamps
+            """{"type":"system","subtype":"api_error","uuid":"r1","timestamp":"2026-08-09T09:44:20.000Z","retryAttempt":1,"maxRetries":10,"error":{"message":"refused","formatted":"ECONNREFUSED"}}""",
+            """{"type":"system","subtype":"api_error","uuid":"r2","timestamp":"2026-08-09T09:45:30.000Z","retryAttempt":2,"maxRetries":10,"error":{"message":"refused","formatted":"ECONNREFUSED"}}""",
+            // a LATER request's retry — younger than the error, must NOT enter the old turn
+            """{"type":"system","subtype":"api_error","uuid":"r9","timestamp":"2026-08-09T09:50:00.000Z","retryAttempt":1,"maxRetries":10,"error":{"message":"late","formatted":"LATER-STORM"}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-retry-order", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "retry-order.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val out = SessionStore.readTranscript(CWD, "retry-order")
+            val roles = out.map { it["role"]?.jsonPrimitive?.contentOrNull }
+            val texts = out.map { it["text"]?.jsonPrimitive?.contentOrNull }
+            val err = roles.indexOf("error").also { assertTrue(it >= 0, "no error block") }
+            val r1 = texts.indexOf("ECONNREFUSED — retrying (1/10)")
+            val r2 = texts.indexOf("ECONNREFUSED — retrying (2/10)")
+            val r9 = texts.indexOf("LATER-STORM — retrying (1/10)")
+
+            assertTrue(r1 in 0..<r2 && r2 < err,
+                "late-flushed retries must insert back ahead of the error, in their own order " +
+                    "(got retries at $r1,$r2 vs error at $err)")
+            assertTrue(r9 > err, "a younger retry belongs after the old storm's error, not inside it")
         } finally {
             SessionStore.claudeHome = home
             tmpHome.deleteRecursively()
