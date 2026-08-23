@@ -1,0 +1,243 @@
+{
+ "item": "checklist 5.6",
+ "branch": "plan comments: select → pill → anchored row; comments ride the deny message in the reference client's format, or the approve notes; rows survive as the decided card's record",
+ "provenance": "permission_request is ChatPanel's synthetic shape, copied from fixture 48. The deny wire format (prefix + 'Comments on the plan:' + [Re: \"…\"] lines) is the VS CODE CLIENT'S OWN, measured byte-for-byte off its transcript 2026-08-23 (~/.claude/projects/-home-syncroze-Sites-claude-vscode/4327de3b…); RenderLimitsTest pins the same strings in window.LIMITS. The selection→pill→composer flow and the full-decision-surface-with-comments behaviour are this feature's own (user's call 2026-08-23, diverging from the reference client's forced keep-planning) — self-consistency evidence. __bridge is taped (sandbox-only run). Negative control: run against a build lacking the 5.6 commit — the DISCRIMINATING rows fail null-safe.",
+ "steps": [
+  {
+   "note": "plan card arrives; select text in the body → the comment pill appears",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []); if (!window.__realBridge53) { window.__realBridge53 = window.__bridge; } window.__tape53 = []; window.__bridge = function(j){ window.__tape53.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pc1",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Wrap network calls in a retry helper\\n2. Backfill `tests`\"}",
+     "suggestions": "[]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.card.warn.plan').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the plan card wears the .plan hook for the pill"
+    },
+    {
+     "js": "(function(){ var blk=document.querySelector('.card.plan .blk'); if(!blk) return 'no plan-hook card'; var tn=blk.querySelector('li').firstChild; var r=document.createRange(); r.setStart(tn,5); r.setEnd(tn,18); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return sel.toString(); })()",
+     "equals": "network calls",
+     "why": "programmatic selection inside one text run (chars 8-21 of the li)"
+    },
+    {
+     "js": "new Promise(function(res){ setTimeout(function(){ res(document.querySelectorAll('.card.plan .plan-add').length); }, 50); })",
+     "equals": 1,
+     "why": "DISCRIMINATING: the floating Comment pill appears after mouseup settles"
+    },
+    {
+     "js": "(function(){ var p=document.querySelector('.plan-add'), c=document.querySelector('.card.plan'); if(!p||!c) return 'missing'; return p.offsetParent===c; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (fix 2026-08-23b): the card is the pill's containing block — without .card.plan{position:relative} the pill drifted to the top of the log (user report, real IDE)"
+    },
+    {
+     "js": "(function(){ var p=document.querySelector('.plan-add'), c=document.querySelector('.card.plan'); if(!p||!c) return 'missing'; var pr=p.getBoundingClientRect(), cr=c.getBoundingClientRect(); return pr.top>=cr.top && pr.top<=cr.bottom+4; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (fix 2026-08-23b): the pill renders near the selection, inside the card's box"
+    }
+   ]
+  },
+  {
+   "note": "pill click opens the composer; Enter commits the anchored row; the anchor wears a mark",
+   "setup": "",
+   "frames": [],
+   "expect": [
+    {
+     "js": "(function(){ var p=document.querySelector('.plan-add'); if(!p) return 'no pill'; p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); return ci ? ci.placeholder : 'no composer'; })()",
+     "equals": "Comment on this part of the plan",
+     "why": "DISCRIMINATING: composer row opens with its own placeholder"
+    },
+    {
+     "js": "(function(){ var cs=document.querySelector('.plan-cs'); if(!cs) return 'no cs'; var p=cs.previousElementSibling, n=cs.nextElementSibling; return (p?p.className:'-')+'|'+(n?n.className:'-'); })()",
+     "equals": "plan-sep|plan-fb",
+     "why": "DISCRIMINATING (polish 2026-08-23c): comment rows sit below the separator, above the feedback input (user pick)"
+    },
+    {
+     "js": "(function(){ var c=document.querySelector('.plan-c.compose'); if(!c) return 'no composer'; var a=c.querySelector('.c-a'), i=c.querySelector('.c-row input'), b=c.querySelector('.c-ok'); if(!a||!i||!b) return 'missing parts'; return (i.offsetTop>a.offsetTop) && b.offsetParent!==null; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (polish 2026-08-23c): anchor quote on its own full-width line, input + Enter button on the row below"
+    },
+    {
+     "js": "document.querySelectorAll('.card.plan mark.plan-anchor').length",
+     "equals": 1,
+     "why": "the single-text-run selection gets its highlight mark"
+    },
+    {
+     "js": "(function(){ var m=document.querySelector('mark.plan-anchor'); if(!m) return 'no mark'; var bg=getComputedStyle(m).backgroundColor; var a=/\\/\\s*([\\d.]+)\\)$/.exec(bg) || /rgba\\([^)]*,\\s*([\\d.]+)\\)$/.exec(bg); if(!a) return 'unparsed: '+bg; return parseFloat(a[1])>=0.5; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (round 5): the anchor highlight is prominent — mix ≥ 50% (was 40%, too faint per user)"
+    },
+    {
+     "js": "(function(){ var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return 'no composer'; ci.value='Reuse the existing HttpRetry util'; var b=document.querySelector('.plan-c.compose .c-ok'); if(!b) return 'no enter button'; b.click(); return document.querySelectorAll('.plan-cs .plan-c:not(.compose)').length; })()",
+     "equals": 1,
+     "why": "DISCRIMINATING (polish 2026-08-23c): the Enter BUTTON commits the comment — click parity with the Enter key"
+    },
+    {
+     "js": "(document.querySelector('.plan-c .c-a')||{textContent:''}).textContent",
+     "contains": "network calls",
+     "why": "the row quotes the anchor text"
+    },
+    {
+     "js": "document.querySelectorAll('.plan-c .c-x').length",
+     "equals": 1,
+     "why": "a live row carries its hover remove"
+    },
+    {
+     "js": "(function(){ var r=document.querySelector('.plan-c:not(.compose)'); if(!r) return 'no row'; var a=r.querySelector('.c-a'), t=r.querySelector('.c-t'); if(!a||!t) return 'missing'; return t.offsetTop>a.offsetTop; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (polish 2026-08-23d): a committed row is two lines like the composer — anchor above, comment below (user pick)"
+    },
+    {
+     "js": "(function(){ var r=document.querySelector('.plan-c'), f=document.querySelector('.plan-fb'); if(!r||!f) return 'missing'; var rs=getComputedStyle(r), fs=getComputedStyle(f); return rs.fontSize===fs.fontSize && rs.paddingTop===fs.paddingTop; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (polish 2026-08-23d): comment rows wear the same size as the 'Tell Claude what to change' field"
+    },
+    {
+     "js": "(function(){ var cs=document.querySelector('.plan-cs'), fb=document.querySelector('.plan-fb'); if(!cs||!fb) return 'missing'; return getComputedStyle(cs).marginTop+'='+getComputedStyle(fb).marginTop; })()",
+     "equals": "10px=10px",
+     "why": "DISCRIMINATING (round 6): the rows follow the decision surface's 10px rhythm — same top gap as the feedback field and the Approve row"
+    },
+    {
+     "js": "(function(){ var m=document.querySelector('mark.plan-anchor'), c=document.querySelector('.card.plan .blk code'); if(!m||!c) return 'missing'; var sm=getComputedStyle(m), sc=getComputedStyle(c); return (sm.padding===sc.padding && sm.borderRadius===sc.borderRadius) || sm.padding+'/'+sm.borderRadius+' vs '+sc.padding+'/'+sc.borderRadius; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (round 7): the anchor mark wears the inline-code chip's geometry — same padding and radius on one surface"
+    }
+   ]
+  },
+  {
+   "note": "round-4 bug: deleting a committed row mid-compose must keep the composer + its text; composer gains its own ✕; both composer buttons wear the row-✕ dress",
+   "setup": "",
+   "frames": [],
+   "expect": [
+    {
+     "js": "(function(){ var blks=document.querySelectorAll('.card.plan .blk'); var blk=blks[0]; var tn=blk.querySelectorAll('li')[1].firstChild; var r=document.createRange(); r.setStart(tn,0); r.setEnd(tn,8); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ var p=document.querySelector('.plan-add'); if(!p) return res('no pill'); p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return res('no composer'); ci.value='temp text'; res('composer 2 open'); }, 50); }); })()",
+     "equals": "composer 2 open",
+     "why": "a second composer opens over the existing committed row"
+    },
+    {
+     "js": "(function(){ var ok=document.querySelector('.compose .c-ok'), x=document.querySelector('.plan-c:not(.compose) .c-x'); if(!ok||!x) return 'missing'; var so=getComputedStyle(ok), sx=getComputedStyle(x); return so.backgroundColor===sx.backgroundColor && so.borderTopWidth===sx.borderTopWidth; })()",
+     "equals": true,
+     "why": "the Enter button keeps the delete button's dress — borderless, bare icon"
+    },
+    {
+     "js": "(function(){ var c=document.querySelector('.plan-c.compose'); if(!c) return 'no composer'; var b=c.querySelector('.c-btns'); if(!b) return 'no c-btns'; var s=getComputedStyle(b); if(s.position!=='absolute') return 'not absolute'; var br=b.getBoundingClientRect(), cr=c.getBoundingClientRect(); return Math.abs((br.top+br.height/2)-(cr.top+cr.height/2))<2; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (round 5): ✕/⏎ are one stack, vertically centered on the composer row (user pick)"
+    },
+    {
+     "js": "document.querySelectorAll('.compose .c-x').length",
+     "equals": 1,
+     "why": "DISCRIMINATING (round 4): the active composer has its own delete (cancel) button"
+    },
+    {
+     "js": "(function(){ var x=document.querySelector('.plan-c:not(.compose) .c-x'); if(!x) return 'no row x'; x.click(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return 'composer destroyed'; return document.querySelectorAll('.plan-c:not(.compose)').length + '|' + ci.value; })()",
+     "equals": "0|temp text",
+     "why": "DISCRIMINATING (round 4, BUG): deleting the committed row keeps the composer alive with its typed text — it used to destroy both"
+    },
+    {
+     "js": "(function(){ var cx=document.querySelector('.compose .c-x'); if(!cx) return 'no composer x'; cx.click(); return document.querySelectorAll('.plan-c').length + '|' + document.querySelectorAll('mark.plan-anchor').length; })()",
+     "equals": "0|0",
+     "why": "the composer's ✕ cancels: row gone, pending mark unwrapped"
+    },
+    {
+     "js": "(function(){ var blk=document.querySelector('.card.plan .blk'); var li=blk.querySelector('li'); li.normalize(); var tn=li.firstChild; if(tn.length<18) return 'text still split: '+tn.length; var r=document.createRange(); r.setStart(tn,5); r.setEnd(tn,18); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ res(document.querySelectorAll('.plan-add').length); }, 50); }); })()",
+     "equals": 1,
+     "why": "DISCRIMINATING (round 4, BUG): commenting still works afterwards — `composing` is not stranded, the pill returns"
+    },
+    {
+     "js": "(function(){ var p=document.querySelector('.plan-add'); if(!p) return 'no pill'; p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return 'no composer'; ci.value='Reuse the existing HttpRetry util'; var b=document.querySelector('.plan-c.compose .c-ok'); if(!b) return 'no enter button'; b.click(); return document.querySelectorAll('.plan-cs .plan-c:not(.compose)').length; })()",
+     "equals": 1,
+     "why": "the original comment is recommitted so the deny step's payload stays byte-identical"
+    }
+   ]
+  },
+  {
+   "note": "Keep planning with a comment + free text → the deny message is the reference client's exact shape; rows stay read-only; footer counts",
+   "setup": "document.querySelector('.plan-fb').value = 'also check the timeout';",
+   "frames": [],
+   "expect": [
+    {
+     "js": "(function(){ document.querySelector('.card-b .no').onclick(); var t=window.__tape53.filter(function(m){return m.kind==='perm'}).pop(); return t ? t.text : 'no perm msg'; })()",
+     "equals": "User chose to stay in plan mode and continue planning\n\nalso check the timeout\n\nComments on the plan:\n[Re: \"network calls\"] Reuse the existing HttpRetry util",
+     "why": "DISCRIMINATING: prefix + free text + header + [Re:…] line — the format the model already knows from the reference client"
+    },
+    {
+     "js": "(window.__tape53.filter(function(m){return m.kind==='perm'}).pop()||{}).allow",
+     "equals": "false",
+     "why": "Keep planning denies"
+    },
+    {
+     "js": "document.querySelectorAll('.card.plan .plan-cs .plan-c').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the decided card keeps the row as the record"
+    },
+    {
+     "js": "document.querySelectorAll('.card.plan .plan-c .c-x').length",
+     "equals": 0,
+     "why": "…but read-only: the remove affordance leaves with the decision"
+    },
+    {
+     "js": "(document.querySelector('.card.plan .card-b .no-t')||{textContent:''}).textContent",
+     "contains": "sent 1 plan comment",
+     "why": "DISCRIMINATING: the footer names the count"
+    },
+    {
+     "js": "document.querySelectorAll('.card.plan mark.plan-anchor').length",
+     "equals": 0,
+     "why": "marks unwrap on decide — replay cannot rebuild them, so live must not keep them"
+    },
+    {
+     "js": "document.querySelectorAll('.card.plan .plan-add').length",
+     "equals": 0,
+     "why": "no pill on a decided card"
+    }
+   ]
+  },
+  {
+   "note": "approve path: a comment rides the notes marker (no deny prefix); footer counts on the ok side",
+   "setup": "",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pc2",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Ship the adapter layer\"}",
+     "suggestions": "[]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var blk=document.querySelectorAll('.card.plan .blk')[1]; if(!blk) return 'no plan-hook card'; var tn=blk.querySelector('li').firstChild; var r=document.createRange(); r.setStart(tn,9); r.setEnd(tn,16); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ var p=document.querySelector('.plan-add'); if(!p) return res('no pill'); p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return res('no composer'); ci.value='call it gateway'; ci.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); var cards=document.querySelectorAll('.card.plan'); res(cards[cards.length-1].querySelectorAll('.plan-cs .plan-c:not(.compose)').length); }, 50); }); })()",
+     "equals": 1,
+     "why": "second card: the Enter KEY still commits (first of two comments)"
+    },
+    {
+     "js": "(function(){ var blks=document.querySelectorAll('.card.plan .blk'); var blk=blks[blks.length-1]; if(!blk) return 'no card'; var tn=blk.querySelector('li').firstChild; var r=document.createRange(); r.setStart(tn,0); r.setEnd(tn,4); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ var p=document.querySelector('.plan-add'); if(!p) return res('no pill'); p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return res('no composer'); ci.value='and rename tests'; res('typed, not entered'); }, 50); }); })()",
+     "equals": "typed, not entered",
+     "why": "a SECOND composer is filled but never Entered — the decision click must commit it (user report 2026-08-23)"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var c=cards[cards.length-1]; if(!c) return 'no plan-hook card'; c.querySelector('.card-b .ok').onclick(); var t=window.__tape53.filter(function(m){return m.kind==='perm'}).pop(); return t ? t.allow + '|' + t.text : 'no perm msg'; })()",
+     "equals": "true|Comments on the plan:\n[Re: \"adapter\"] call it gateway\n[Re: \"Ship\"] and rename tests",
+     "why": "DISCRIMINATING: approve commits the filled composer and sends header + BOTH [Re:…] lines, no deny prefix"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); if(!cards.length) return 'no plan-hook card'; return (cards[cards.length-1].querySelector('.ok-t')||{textContent:''}).textContent; })()",
+     "contains": "sent 2 plan comments",
+     "why": "the approved footer counts both comments"
+    },
+    {
+     "js": "(function(){ window.__bridge = window.__realBridge53 || window.__bridge; return true; })()",
+     "equals": true,
+     "why": "GUARD: bridge untaped for later fixtures"
+    }
+   ]
+  }
+ ]
+}

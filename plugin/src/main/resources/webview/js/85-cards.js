@@ -263,7 +263,7 @@
     }).join('');
     const card = document.createElement('div');
     if (isPlan) {
-      card.className = 'card warn'; // same feedback surface as permission / ask cards
+      card.className = 'card warn plan'; // .plan anchors the floating comment pill (5.6)
       // The terminal's plan dialog, translated: a feedback line that rides WHICHEVER button
       // answers, and the Yes variants folded behind the Approve caret (the flat suggestion
       // button used to sit between the primaries). bypassPermissions is not offered — the CLI
@@ -297,6 +297,143 @@
     (curTurn || log).appendChild(card); maybeScroll();
     foldBlock(card.querySelector('.cmd'));   // whole scripts land here
     foldBlock(card.querySelector('.diff'));  // long edits fold too (was a 240px scroll box)
+    // ---- Plan comments (checklist 5.6) ----------------------------------------------------
+    // Select text in the plan body → a floating pill → an anchored note row. The anchor is
+    // highlighted with a <mark> where the selection sits in one text run (a cross-element
+    // selection still records the anchor text — the row is the contract, the mark is sugar).
+    // Rows re-render through the shared planCommentRows builder so a decided card and a
+    // replayed one draw identically. Enter adds / Esc cancels are the composer input's own
+    // semantics — NOT the deferred plan-card decision shortcuts (user, 2026-08-16).
+    const comments = [];                     // [{a, t, mark}]
+    const blkEl = isPlan ? card.querySelector('.blk') : null;
+    let csEl = null, pillEl = null, pendMark = null, pendAnchor = '', selRange = null, composing = false;
+    function unwrapMark(m) {
+      if (!m || !m.parentNode) return;
+      const par = m.parentNode;
+      while (m.firstChild) par.insertBefore(m.firstChild, m);
+      m.remove();
+      par.normalize();   // surroundContents split the text node; heal it or a later selection over the same text can't be marked
+    }
+    function hidePill() { if (pillEl) { pillEl.remove(); pillEl = null; } }
+    function renderComments(withComposer, anchorText) {
+      // A rebuild must never lose a live composer's typed text (delete-while-composing bug,
+      // user report 2026-08-23): capture before teardown, restore into the rebuilt input.
+      const prevIn = csEl && csEl.querySelector('.compose input');
+      const keepVal = prevIn ? prevIn.value : '';
+      if (csEl) { csEl.remove(); csEl = null; }
+      if (!comments.length && !withComposer) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'plan-cs';
+      // Composer is two lines (user pick 2026-08-23): the anchor quote full-width on top,
+      // input + Enter button below. Both composer buttons wear the committed-row ✕'s dress —
+      // ✕ (cancel) on the anchor line, ⏎ (commit) on the input line (user pick, round 4).
+      wrap.innerHTML = planCommentRows(comments, true) +
+        (withComposer ? '<div class="plan-c compose"><span class="c-a" title="' + escA(anchorText) + '">“' + esc(anchorText) + '”</span>' +
+          '<div class="c-btns"><button class="c-x" title="Cancel comment">' + SVG_X + '</button>' +
+          '<button class="c-ok" title="Add comment (Enter)">' + SVG_ENTER + '</button></div>' +
+          '<div class="c-row"><input placeholder="Comment on this part of the plan"></div></div>' : '');
+      // Rows live BELOW the separator, above the feedback input (user pick 2026-08-23); once the
+      // card is decided the separator is gone and the rows re-anchor after the plan body — which
+      // is exactly the replayed card's order.
+      const sepHere = card.querySelector('.plan-sep');
+      (sepHere || blkEl).insertAdjacentElement('afterend', wrap);
+      csEl = wrap;
+      // Committed-row ✕ only — the composer's own ✕ is CANCEL, and this loop's dataset.i
+      // would be NaN for it (splice(NaN, 1) eats element 0: the round-4 bug's second head).
+      Array.prototype.forEach.call(wrap.querySelectorAll('.plan-c:not(.compose) .c-x'), function (x) {
+        x.onclick = function () {
+          const i = +x.parentNode.dataset.i;
+          unwrapMark(comments[i] && comments[i].mark);
+          comments.splice(i, 1);
+          // keep a live composer (and its draft) across the rebuild — dropping it here both
+          // destroyed the draft and stranded `composing`, locking the pill out (user report)
+          renderComments(composing, pendAnchor);
+        };
+      });
+      const ci = wrap.querySelector('.compose input');
+      if (ci) {
+        if (keepVal) ci.value = keepVal;
+        const commit = function () {
+          if (!ci.value.trim()) return;
+          comments.push({ a: anchorText, t: ci.value.trim(), mark: pendMark });
+          pendMark = null; composing = false;
+          renderComments(false);
+        };
+        const cancel = function () {
+          unwrapMark(pendMark); pendMark = null; composing = false;
+          renderComments(false);
+        };
+        ci.focus();
+        ci.addEventListener('keydown', function (e) {
+          e.stopPropagation();               // same contract as .plan-fb: no document handlers
+          if (e.key === 'Enter') commit();
+          else if (e.key === 'Escape') cancel();
+        });
+        const ok = wrap.querySelector('.compose .c-ok');
+        if (ok) ok.onclick = commit;
+        const cx = wrap.querySelector('.compose .c-x');
+        if (cx) cx.onclick = cancel;
+      }
+      maybeScroll();
+    }
+    function showPill(range) {
+      hidePill();
+      selRange = range.cloneRange();
+      const rect = range.getBoundingClientRect(), crect = card.getBoundingClientRect();
+      pillEl = document.createElement('div');
+      pillEl.className = 'plan-add';
+      pillEl.innerHTML = SVG_COMMENT + 'Comment';
+      pillEl.style.left = Math.max(0, Math.min(rect.right - crect.left + 4, card.clientWidth - 110)) + 'px';
+      pillEl.style.top = Math.max(0, rect.bottom - crect.top + 4) + 'px';
+      pillEl.onclick = function () {
+        hidePill();
+        // one-line anchor: the [Re: "…"] wire line is line-shaped, so a multi-line selection
+        // flattens to spaces — the row and the model still see the full anchor text
+        const a = selRange.toString().replace(/\s+/g, ' ').trim();
+        if (!a) return;
+        pendAnchor = a;
+        try { const m = document.createElement('mark'); m.className = 'plan-anchor'; selRange.surroundContents(m); pendMark = m; }
+        catch (err) { pendMark = null; }     // selection crossed element boundaries
+        const sel = window.getSelection(); if (sel) sel.removeAllRanges();
+        composing = true;
+        renderComments(true, a);
+      };
+      card.appendChild(pillEl);
+    }
+    if (isPlan) {
+      blkEl.addEventListener('mouseup', function () {
+        setTimeout(function () {             // selection is finalized after mouseup returns
+          if (composing) return;
+          const sel = window.getSelection();
+          if (!sel || sel.isCollapsed || !sel.rangeCount) { hidePill(); return; }
+          const r = sel.getRangeAt(0);
+          if (!blkEl.contains(r.commonAncestorContainer) || !r.toString().trim()) { hidePill(); return; }
+          showPill(r);
+        }, 0);
+      });
+      card.addEventListener('mousedown', function (e) {
+        if (pillEl && e.target !== pillEl && !pillEl.contains(e.target)) hidePill();
+      });
+    }
+    function finishComments() {
+      hidePill();
+      // A FILLED composer that was never Entered still counts: clicking a decision button is as
+      // deliberate as Enter, and silently dropping typed text loses user input (user report,
+      // real-IDE pass 2026-08-23).
+      const ci = csEl && csEl.querySelector('.compose input');
+      if (ci && ci.value.trim()) {
+        comments.push({ a: pendAnchor, t: ci.value.trim(), mark: pendMark });
+        pendMark = null;
+      }
+      unwrapMark(pendMark); pendMark = null; composing = false;
+      comments.forEach(function (c) { unwrapMark(c.mark); c.mark = null; });
+      renderComments(false);
+      // decided card keeps the rows read-only — they are the record, and replay rebuilds the
+      // same rows from the transcript (planCommentRows both times)
+      if (csEl) Array.prototype.forEach.call(csEl.querySelectorAll('.c-x'), function (x) { x.remove(); });
+      return comments.slice();
+    }
+    // ---------------------------------------------------------------------------------------
     const done = function (allow, sugg, viaEditor) {
       delete permCards[ev.id];
       // The typed reason rides every decision (terminal parity: its allow branches all carry
@@ -304,21 +441,33 @@
       const fbEl = card.querySelector('.plan-fb');
       const fb = fbEl ? fbEl.value.trim() : '';
       if (fbEl) fbEl.remove();
+      // Plan comments ride whichever answer leaves. Deny wears the reference client's exact
+      // shape (prefix + blank line + optional free text + header + [Re: "…"] lines — measured
+      // off its transcript 2026-08-23); approve sends the same header + lines through the
+      // PLAN_NOTES_MARKER append in Kotlin. SessionStore parses the lines back for replay.
+      const cs = isPlan ? finishComments() : [];
+      let wireFb = fb;
+      if (cs.length) {
+        const lines = cs.map(function (c) { return '[Re: "' + c.a + '"] ' + c.t; }).join('\n');
+        const block = LIM.planCommentsHeader + '\n' + lines;
+        wireFb = allow ? (fb ? fb + '\n\n' : '') + block
+                       : LIM.planDenyPrefix + '\n\n' + (fb ? fb + '\n\n' : '') + block;
+      }
       // The separator marks the live decision surface — a decided card has none (replayCard
       // draws plan + footer only, and the two paths must not disagree).
       const sepEl = card.querySelector('.plan-sep');
       if (sepEl) sepEl.remove();
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + (viaEditor ? ' in the editor' : '') +
-            (fb ? fbQuote(fb) : '') +
+            (fb ? fbQuote(fb) : '') + planCmtNote(cs.length, !!fb) +
             (sugg ? ' · ' + esc(sugg.doneText) : '') +
             (sugg && sugg.rules ? ' ' + sugg.rules.map(ruleChip).join('') : '') + '</span>'
         : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + (viaEditor ? ' in the editor' : '') +
-            (fb ? fbQuote(fb) : '') + '</span>';
+            (fb ? fbQuote(fb) : '') + planCmtNote(cs.length, !!fb) + '</span>';
       awaitingUser = false;
       // The editor path already answered the CLI through Kotlin's arbiter — sending again from
       // here would be a duplicate (and would be dropped, but why knock).
-      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, fb);
+      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, wireFb);
       // Approve-with-notes rides the approved plan itself (Kotlin appends it to updatedInput.plan
       // — no user message exists), so the quoted footer is the note's whole visible record here,
       // exactly as it is on replay.

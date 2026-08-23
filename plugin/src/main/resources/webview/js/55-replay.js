@@ -37,10 +37,15 @@
     // ExitPlanMode replays as the plan card, same surface and wording as the live one
     if (it.plan) {
       const plan = el('card warn', '');
+      // Anchored comments (5.6) replay as the same read-only rows the live card keeps after its
+      // decision — planCommentRows is the one builder for both. The footer names the count.
+      const pcs = it.planComments || [];
+      const note = planCmtNote(pcs.length, !!it.planFeedback);
       plan.innerHTML = planCardHtml(it.plan) +
+        (pcs.length ? '<div class="plan-cs">' + planCommentRows(pcs, false) + '</div>' : '') +
         '<div class="card-b">' + (it.denied
-          ? '<span class="no-t">✗ Kept planning' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + '</span>'
-          : '<span class="ok-t">✓ Approved' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + '</span>') + '</div>';
+          ? '<span class="no-t">✗ Kept planning' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + note + '</span>'
+          : '<span class="ok-t">✓ Approved' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + note + '</span>') + '</div>';
       return;
     }
     const card = el('card warn', '');

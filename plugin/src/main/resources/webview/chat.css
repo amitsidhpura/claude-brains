@@ -668,6 +668,69 @@ blockquote > *:last-child { margin-bottom: 0; }
   background: var(--warn-field); color: var(--fg); border: 1px solid var(--warn-border);
   border-radius: var(--radius); font: inherit; font-size: 13px; outline: none; }
 .plan-fb::placeholder { color: var(--dot); }
+
+/* Plan comments (checklist 5.6): select text in the plan body, anchor a note to it. Comment
+   rows sit between the plan body and the decision surface. The FULL decision surface stays —
+   the user's call 2026-08-23, diverging from the reference client's forced keep-planning:
+   deny carries the comments as [Re: "anchor"] lines, approve rides them under the notes
+   marker. Warn-family dress throughout: the rows are part of the card's feedback surface, so
+   they wear the same well as the plan-fb input. */
+/* geometry mirrors the inline-code chip (.blk code: 1px 5px / 3px) so highlights and code
+   chips read as one family on the plan surface — change one, change both */
+mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transparent);
+  color: inherit; border-radius: 3px; padding: 1px 5px; }
+/* the pill positions against the CARD — without this it resolved against a distant positioned
+   ancestor and floated to the top of the log (user report, real IDE, 2026-08-23) */
+.card.plan { position: relative; }
+.plan-add { position: absolute; display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; font-size: 12px; color: var(--fg); background: var(--panel);
+  border: 1px solid var(--warn-border); border-radius: 999px; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4); white-space: nowrap; z-index: 30; }
+.plan-add svg { width: 12px; height: 12px; }
+.plan-add:hover { background: var(--warn-bg); }
+/* 10px, not --attach-gap: since the rows moved below the separator (round 3) they are part of
+   the DECISION SURFACE, whose rhythm is 10px throughout (sep / rows / fb / buttons) — they no
+   longer hang off the plan body. */
+.plan-cs { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+/* Every row — committed and composer alike — is two lines (anchor quote above, text below)
+   and wears the SAME size as the .plan-fb field beside it (13px / 7px 10px): the feedback
+   surface reads as one control family (user picks 2026-08-23). Committed rows keep 28px on
+   the right for the hover-✕ gutter. */
+.plan-c { position: relative; display: block; font-size: 13px;
+  padding: 7px 28px 7px 10px; background: var(--warn-field); border: 1px solid var(--warn-border);
+  border-radius: var(--radius); }
+.plan-c .c-a { display: block; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: var(--muted); font-style: italic; }
+.plan-c .c-t { display: block; min-width: 0; color: var(--fg); }
+/* hover-only remove, conversations-list gutter idiom: the row's width never changes */
+.plan-c .c-x { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  visibility: hidden; border: 0; background: none; color: var(--muted); cursor: pointer;
+  padding: 2px; line-height: 0; }
+.plan-c:hover .c-x { visibility: visible; }
+.plan-c .c-x:hover { color: var(--fg); }
+.plan-c .c-x svg { width: 12px; height: 12px; }
+/* The composer: same dress, two lines — the anchor quote full-width on top (single line,
+   ellipsis), input + an explicit Enter button below (user picks 2026-08-23). The input inherits
+   the well (no double frame); focus rings the CONTAINER, not the field — same move as
+   .ask-opt:has(input:focus-visible) above, and the inner suppression needs the 3-class
+   specificity to beat the global .turn :focus-visible. */
+.plan-c.compose .c-row { display: flex; gap: 6px; align-items: center; }
+.plan-c.compose:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+.plan-c.compose input:focus-visible { outline: none; }
+/* Both composer buttons wear the committed-row ✕'s dress — borderless muted icons, ALWAYS
+   visible (it is the active row) — and sit as ONE vertically-centered stack on the row's right
+   edge (user pick, round 5): ✕ cancels above, ⏎ commits below. */
+.plan-c.compose .c-btns { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.plan-c.compose .c-btns .c-x { position: static; visibility: visible; transform: none; }
+.plan-c .c-ok { border: 0; background: none; color: var(--muted); cursor: pointer;
+  padding: 2px; line-height: 0; }
+.plan-c .c-ok:hover { color: var(--fg); }
+.plan-c .c-ok svg { width: 12px; height: 12px; }
+.plan-c input { flex: 1 1 auto; min-width: 0; background: none; border: 0; outline: none;
+  color: var(--fg); font: inherit; font-size: 13px; padding: 0; }
+.plan-c input::placeholder { color: var(--dot); }
+
 .card-menu .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }

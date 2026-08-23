@@ -23,6 +23,37 @@ object RenderLimits {
      *  replay footer. One copy, or the parser drifts from the producer. */
     const val PLAN_NOTES_MARKER = "\n\n## User notes on approval\n"
 
+    /** Plan comments (checklist 5.6): a note anchored to selected plan text serializes as one
+     *  line — `[Re: "anchor"] text` — byte-compatible with the VS Code client's own deny format
+     *  (measured off its transcript, 2026-08-23). On deny the block is
+     *  PLAN_DENY_PREFIX + blank line + optional free text + blank line + PLAN_COMMENTS_HEADER +
+     *  the lines (the reference client's exact shape); on approve the same header + lines ride
+     *  under PLAN_NOTES_MARKER. The webview BUILDS the lines live (via window.LIMITS);
+     *  [parsePlanComments] reads them back for replay. One copy of each string, or the replay
+     *  parser drifts from the live producer. */
+    const val PLAN_DENY_PREFIX = "User chose to stay in plan mode and continue planning"
+    const val PLAN_COMMENTS_HEADER = "Comments on the plan:"
+    private val PLAN_COMMENT_LINE = Regex("^\\[Re: \"(.+?)\"] (.*)$")
+
+    /** Splits plan feedback text — a deny message, or the post-marker approval note — into the
+     *  free-text remainder (null when nothing but machinery is left) and the anchored comments,
+     *  in file order. The deny prefix and the comments header are machinery, not user text, so
+     *  they never reach the quoted footer. */
+    fun parsePlanComments(text: String): Pair<String?, List<Pair<String, String>>> {
+        val comments = mutableListOf<Pair<String, String>>()
+        val rest = StringBuilder()
+        for (line in text.lines()) {
+            val m = PLAN_COMMENT_LINE.matchEntire(line)
+            when {
+                m != null -> comments += m.groupValues[1] to m.groupValues[2]
+                line.trim() == PLAN_COMMENTS_HEADER || line.trim() == PLAN_DENY_PREFIX -> {}
+                else -> rest.appendLine(line)
+            }
+        }
+        val free = rest.toString().trim().takeIf { it.isNotBlank() }
+        return free to comments
+    }
+
     const val DESC_MAX = 140
 
     /**
@@ -408,6 +439,7 @@ object RenderLimits {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
         return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX,pathTailMax:$PATH_TAIL_MAX," +
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
-            "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}}"
+            "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}," +
+            "planDenyPrefix:\"$PLAN_DENY_PREFIX\",planCommentsHeader:\"$PLAN_COMMENTS_HEADER\"}"
     }
 }

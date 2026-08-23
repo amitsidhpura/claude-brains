@@ -159,9 +159,23 @@ auto-include selection, voice.
       `toolUseResult.plan`
 - **5.5** 🚫 Keyboard shortcuts on the card (Enter = keep planning, Shift+Tab = approve) — deferred
       by the user 2026-08-16; backlog § Next up
-- **5.6** 🟧 [LG] **Plan preview with inline comments** (VS Code `open_markdown_preview` +
-      `plan_comment` / `get_plan_comments` / `remove_plan_comment`). Take: the feedback field
-      covers the decision loop; revisit only if plan-heavy workflows demand threaded comments
+- **5.6** ✅ **Anchored plan comments** (SHIPPED 2026-08-23; unreleased). Select text in the plan
+      card's body → floating Comment pill → a note row quoting the anchor; rows sit between the
+      plan and the decision surface, decided cards keep them as the record, and replay parses
+      them back into the same rows (`planCommentRows`, one builder both sides). Deny sends the
+      VS Code client's exact wire shape — `PLAN_DENY_PREFIX` + free text + `PLAN_COMMENTS_HEADER`
+      + `[Re: "<anchor>"] <note>` lines (measured off its transcript 2026-08-23; strings in
+      `RenderLimits`) — so the model reads a format it already knows. TWO deliberate divergences
+      from the reference: the FULL approve surface stays available with comments pending (its
+      dialog collapses to keep-planning-only; user's call), and approve-with-comments rides the
+      `PLAN_NOTES_MARKER` append. Proof: gradle test 113 (parser + replay fixtures incl. the
+      byte-for-byte VS Code deny message, negative control RUN), harness 398 (fixture 53, 37
+      asserts, eight control runs: 14 fail pre-feature, then 3 / 4 / 2 / 9 / 2 / 1 / 1 fail
+      before each polish round — pill containing block + commit-on-click, composer rework, row size/layout
+      parity, composer ✕/⏎ buttons + the delete-while-composing bug — pill containing block, commit-on-click, then the two-line composer with its Enter
+      button and rows-below-separator, all user picks from real-IDE passes), `probe` on the real
+      VS Code transcript replays the comment row. VS Code's plan-file PREVIEW TAB (`open_markdown_preview`) is deliberately not
+      replicated — the card body is our preview
 - **5.7** ➖ `/ultraplan` (cloud-drafted plan) — a cloud product surface, not a panel feature
 
 ## 6. Context input
@@ -356,9 +370,9 @@ auto-include selection, voice.
       configuration; ➖
 
 ## 16. Quality gates (not features, but part of "what we have")
-- **16.1** ✅ `./gradlew test` (109, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
+- **16.1** ✅ `./gradlew test` (113, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
       control RUN
-- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 52, **361** assertions, real captured
+- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 53, **398** assertions, real captured
       wire frames replayed into the live webview over CDP
 - **16.3** ✅ `./gradlew probe` (replay without the IDE); `tools/cdp.py`; `window.__gallery()`;
       DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins — gotchas)

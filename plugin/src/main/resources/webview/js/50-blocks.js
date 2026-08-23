@@ -543,6 +543,23 @@
     return '<div class="card-h"><b>Ready to code?</b> Here is my plan:</div>' +
       '<div class="blk">' + renderMd(planMd) + '</div>';
   }
+  // Plan-comment rows (checklist 5.6): the SAME rows on a live card (removable ✕) and on a
+  // decided or replayed one (read-only) — one builder so the two surfaces cannot drift.
+  // cs: [{a, t}] — anchor text and note, in the order they were added / parsed.
+  function planCommentRows(cs, removable) {
+    return (cs || []).map(function (c, i) {
+      return '<div class="plan-c" data-i="' + i + '"><span class="c-a" title="' + escA(c.a) + '">“' +
+        esc(c.a) + '”</span><span class="c-t">' + esc(c.t) + '</span>' +
+        (removable ? '<button class="c-x" title="Remove comment">' + SVG_X + '</button>' : '') +
+        '</div>';
+    }).join('');
+  }
+  // The decided-card footer suffix when comments were sent — live and replay must word it
+  // identically. hasFb: a quoted free-text reason already sits before it (fbQuote), so the
+  // separator steps down from an em dash to a middot.
+  function planCmtNote(n, hasFb) {
+    return n ? (hasFb ? ' · ' : ' — ') + 'sent ' + n + ' plan comment' + (n > 1 ? 's' : '') : '';
+  }
   // Write preview: whole file as additions, capped like every other diff
   function writeDiffHtml(content, startLine) {
     const lines = String(content).split('\n');

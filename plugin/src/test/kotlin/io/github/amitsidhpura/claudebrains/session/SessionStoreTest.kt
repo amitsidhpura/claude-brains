@@ -107,11 +107,36 @@ class SessionStoreTest {
         val deniedPlans = role("tool").filter {
             it["plan"] != null && it["denied"]?.jsonPrimitive?.boolean == true
         }
-        assertEquals(2, deniedPlans.size, "fixture carries one typed-reason and one stock denial")
+        assertEquals(3, deniedPlans.size,
+            "fixture carries a typed-reason, a stock, and a commented denial")
         val typed = deniedPlans.first { it["planFeedback"] != null }
         assertEquals("Use fillPath on the card too", typed["planFeedback"]?.jsonPrimitive?.content)
         assertTrue(deniedPlans.any { it["planFeedback"] == null },
             "the stock '${RenderLimits.REJECT_MESSAGE}' denial must stay unquoted")
+    }
+
+    @Test
+    fun `plan comments parse out of the deny message, machinery stays off the card`() {
+        // The deny message is the VS Code client's own, copied byte-for-byte from its transcript
+        // (2026-08-23): prefix line + "Comments on the plan:" + one [Re: "…"] line. The comments
+        // must become structured rows and NEITHER machinery line may be quoted as free text.
+        val card = role("tool").first { it["planComments"] != null && it["denied"] != null }
+        val cs = card["planComments"]!!.jsonArray
+        assertEquals(1, cs.size)
+        assertEquals("one", cs[0].jsonObject["a"]?.jsonPrimitive?.content)
+        assertEquals("Not one but two", cs[0].jsonObject["t"]?.jsonPrimitive?.content)
+        assertNull(card["planFeedback"], "the deny prefix/header are machinery, not user text")
+    }
+
+    @Test
+    fun `approve-with-comments splits free text from the anchored lines under the marker`() {
+        val card = role("tool").first { it["planComments"] != null && it["denied"] == null }
+        val cs = card["planComments"]!!.jsonArray
+        assertEquals(1, cs.size)
+        assertEquals("Retry helper", cs[0].jsonObject["a"]?.jsonPrimitive?.content)
+        assertEquals("Reuse the existing HttpRetry util", cs[0].jsonObject["t"]?.jsonPrimitive?.content)
+        assertEquals("ship it this week", card["planFeedback"]?.jsonPrimitive?.content,
+            "free text before the comments block still reaches the quoted footer")
     }
 
     @Test

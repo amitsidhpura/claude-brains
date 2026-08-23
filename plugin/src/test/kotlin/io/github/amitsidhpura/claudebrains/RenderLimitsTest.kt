@@ -115,9 +115,37 @@ class RenderLimitsTest {
                 "resultSkip:[\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\",\"ExitPlanMode\"," +
                 "\"AskUserQuestion\",\"TaskCreate\",\"TaskUpdate\",\"TodoWrite\",\"TaskList\"]," +
                 "inKeys:[\"command\",\"prompt\",\"function\"]," +
-                "plumbingTags:[\"tool_use_error\",\"system-reminder\"]}",
+                "plumbingTags:[\"tool_use_error\",\"system-reminder\"]," +
+                "planDenyPrefix:\"User chose to stay in plan mode and continue planning\"," +
+                "planCommentsHeader:\"Comments on the plan:\"}",
             RenderLimits.asJs(),
         )
+    }
+
+    @Test
+    fun `parsePlanComments reads the reference client's deny message verbatim`() {
+        // Byte-for-byte the message the VS Code client sent (its transcript, 2026-08-23) —
+        // provenance: CLI-adjacent, not our own producer.
+        val (free, cs) = RenderLimits.parsePlanComments(
+            "User chose to stay in plan mode and continue planning\n\n" +
+                "Comments on the plan:\n[Re: \"one\"] Not one but two",
+        )
+        assertEquals(null, free, "prefix and header are machinery, never quoted free text")
+        assertEquals(listOf("one" to "Not one but two"), cs)
+    }
+
+    @Test
+    fun `parsePlanComments keeps free text and order, and passes plain feedback through`() {
+        val (free, cs) = RenderLimits.parsePlanComments(
+            "User chose to stay in plan mode and continue planning\n\nuse the audit log\n\n" +
+                "Comments on the plan:\n[Re: \"one\"] Not one but two\n[Re: \"retry\"] use HttpRetry",
+        )
+        assertEquals("use the audit log", free)
+        assertEquals(listOf("one" to "Not one but two", "retry" to "use HttpRetry"), cs)
+        // a plain typed reason (today's cards) must come back untouched with no comments
+        val (plain, none) = RenderLimits.parsePlanComments("Use fillPath on the card too")
+        assertEquals("Use fillPath on the card too", plain)
+        assertEquals(emptyList<Pair<String, String>>(), none)
     }
 
     @Test

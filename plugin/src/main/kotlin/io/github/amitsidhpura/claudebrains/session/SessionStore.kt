@@ -505,6 +505,7 @@ object SessionStore {
         var answers: JsonElement? = null   // chosen answers (from toolUseResult)
         var plan: String? = null           // ExitPlanMode plan markdown
         var planFeedback: String? = null   // the typed reason a plan was refused (deny message)
+        var planComments: List<Pair<String, String>>? = null // anchored plan comments (5.6): anchor to text
         var denied: Boolean = false        // permission was refused — card reads ✗, not ✓
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
@@ -521,6 +522,11 @@ object SessionStore {
             put("text", text)
             plan?.let { put("plan", it) }
             planFeedback?.let { put("planFeedback", it) }
+            planComments?.let { cs ->
+                put("planComments", buildJsonArray {
+                    cs.forEach { (a, t) -> add(buildJsonObject { put("a", a); put("t", t) }) }
+                })
+            }
             if (denied) put("denied", true)
             icon?.let { put("icon", it) }
             durMs?.let { put("durMs", it) }
@@ -1328,7 +1334,14 @@ object SessionStore {
         if (denied && item.plan != null) {
             resultText(block["content"])
                 ?.takeIf { it.isNotBlank() && it != RenderLimits.REJECT_MESSAGE }
-                ?.let { item.planFeedback = it }
+                ?.let {
+                    // Anchored comments (5.6) travel inside the deny message as [Re: "…"] lines
+                    // (the reference client's format, which the live card also produces). The
+                    // machinery prefix/header never reaches the quoted footer.
+                    val (free, cs) = RenderLimits.parsePlanComments(it)
+                    item.planFeedback = free
+                    if (cs.isNotEmpty()) item.planComments = cs
+                }
         }
         // An APPROVED plan's notes ride the approved plan itself (updatedInput append, see
         // ClaudeCli): toolUseResult.plan carries the marker section; the original tool_use input
@@ -1337,7 +1350,12 @@ object SessionStore {
             (toolUseResult as? JsonObject)?.get("plan")?.jsonPrimitive?.contentOrNull
                 ?.substringAfter(RenderLimits.PLAN_NOTES_MARKER, "")
                 ?.trim()?.takeIf { it.isNotBlank() }
-                ?.let { item.planFeedback = it }
+                ?.let {
+                    // Approve-with-comments: the same [Re: "…"] lines ride under the marker.
+                    val (free, cs) = RenderLimits.parsePlanComments(it)
+                    item.planFeedback = free
+                    if (cs.isNotEmpty()) item.planComments = cs
+                }
         }
 
         val res = toolUseResult as? JsonObject
