@@ -18,6 +18,12 @@ object RenderLimits {
      *  user typed it. One copy, or the filter drifts from the producer. */
     const val REJECT_MESSAGE = "User rejected the change in the IDE"
 
+    /** The CLI's own auto-deny when it dies with a permission still pending — written to the
+     *  transcript within ms of its stdio closing (measured 2026-08-23 on a killed ExitPlanMode:
+     *  "Tool permission request failed: AbortError: Tool permission stream closed…"). Machinery,
+     *  never user text: SessionStore filters it from planFeedback the way REJECT_MESSAGE is. */
+    const val PERMISSION_ABORT_PREFIX = "Tool permission request failed:"
+
     /** Heading under which approve-with-notes feedback is appended to `updatedInput.plan` —
      *  written by ClaudeCli, parsed back out of `toolUseResult.plan` by SessionStore for the
      *  replay footer. One copy, or the parser drifts from the producer. */

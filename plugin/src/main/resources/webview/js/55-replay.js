@@ -41,9 +41,15 @@
       // decision — planCommentRows is the one builder for both. The footer names the count.
       const pcs = it.planComments || [];
       const note = planCmtNote(pcs.length, !!it.planFeedback);
+      // Three outcomes, not two: a plan whose tool_use never got a result (the session died or
+      // was reloaded with the card pending) was never decided — claiming "Approved" for it was
+      // a lie the user caught 2026-08-23. The undecided flag is the parser's, from the absence
+      // of a tool_result on disk.
       plan.innerHTML = planCardHtml(it.plan) +
         (pcs.length ? '<div class="plan-cs">' + planCommentRows(pcs, false) + '</div>' : '') +
-        '<div class="card-b">' + (it.denied
+        '<div class="card-b">' + (it.undecided
+          ? '<span class="und-t">◌ Interrupted — no decision recorded</span>'
+          : it.denied
           ? '<span class="no-t">✗ Kept planning' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + note + '</span>'
           : '<span class="ok-t">✓ Approved' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + note + '</span>') + '</div>';
       highlightAnchors(plan.querySelector('.blk'), pcs);   // same highlighter as the live decide

@@ -48,8 +48,11 @@ import os
 # sandbox while a real IDE (with a hand-set Registry value) holds the default 9222.
 PORT = int(os.environ.get("CLAUDE_BRAINS_CDP_PORT", "9222"))
 # JBCefBrowser.loadHTML serves the panel from a synthetic file URL — the panel has no real
-# address, so this prefix, not the title, is what identifies it among DevTools' own windows.
+# address, so this prefix identifies it among DevTools' own windows. The prefix alone is NOT
+# unique: every JCEF page in the IDE shares it (a fresh sandbox's "What's new" tab hijacked
+# first-match on 2026-08-23), so the title — ours, from chat.html — picks the panel among them.
 PANEL_URL_PREFIX = "file:///jbcefbrowser/"
+PANEL_TITLE = "Claude Brains — chat panel"
 
 
 def targets():
@@ -59,9 +62,15 @@ def targets():
 
 def panel_target():
     found = targets()
-    for t in found:
-        if t.get("type") == "page" and t.get("url", "").startswith(PANEL_URL_PREFIX):
+    jcef = [t for t in found
+            if t.get("type") == "page" and t.get("url", "").startswith(PANEL_URL_PREFIX)]
+    # Exact title first; fall back to any JCEF page so a future title tweak degrades to the
+    # old behaviour instead of failing outright.
+    for t in jcef:
+        if t.get("title") == PANEL_TITLE:
             return t
+    if jcef:
+        return jcef[0]
     listed = "\n".join(f"  [{t.get('type')}] {t.get('url', '')[:70]}" for t in found) or "  (none)"
     raise SystemExit(
         f"No chat-panel target among {len(found)}:\n{listed}\n"

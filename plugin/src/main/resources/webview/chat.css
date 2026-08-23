@@ -938,6 +938,8 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .compact .compact-sum.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
 .ok-t { color: var(--green); font-size: 13px; }
 .no-t { color: var(--red); font-size: 13px; }
+/* a replayed plan card that was never decided — neutral, neither verdict color */
+.und-t { color: var(--muted); font-size: 13px; }
 /* granted rules on a resolved card: one chip per rule, so compound-command rules stay separable */
 .ok-t code { display: inline-block; margin: 1px 2px; padding: 0 6px; border-radius: 3px;
   background: color-mix(in srgb, var(--green) 12%, transparent);

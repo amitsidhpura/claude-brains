@@ -207,8 +207,12 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 transcriptItems = emptyList(); transcriptFrom = 0  // "more" must not serve the old session
                 clearLog(); session.newConversation(); pushTitle(null)
             }
+            // stopForReplay BEFORE pushTranscript, here and in "refresh": a dying CLI flushes a
+            // pending permission's auto-deny to the transcript within ms, so reading first showed
+            // that record one reload LATE (a pending plan card replayed "Approved", then flipped
+            // to the recorded denial on the next reload — user report 2026-08-23).
             "resume" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
-                clearLog(); pushTranscript(id); session.resumeSession(id); pushTitle(id)
+                clearLog(); session.stopForReplay(); pushTranscript(id); session.resumeSession(id); pushTitle(id)
             }
             // Reload the current conversation from disk — same path as picking it in history, so
             // out-of-band edits (and a CLI that died) come back as a clean replay. An id with no
@@ -217,7 +221,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val id = session.currentSessionId()?.takeIf { session.sessionExists(it) }
                 transcriptItems = emptyList(); transcriptFrom = 0
                 clearLog()
-                if (id != null) { pushTranscript(id); session.resumeSession(id) }
+                if (id != null) { session.stopForReplay(); pushTranscript(id); session.resumeSession(id) }
                 else session.newConversation()
                 pushTitle(id)
             }

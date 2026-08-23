@@ -153,6 +153,21 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         selectedModel()?.takeIf { it.isNotBlank() && it != "default" }?.let { cli?.setModel(it) }
     }
 
+    /**
+     * Stop the CLI so the caller can re-read the transcript, waiting (bounded) for it to actually
+     * die ONLY when a permission is still pending: a CLI killed mid-permission appends its
+     * auto-deny tool_result within ms (measured 2026-08-23), and a replay read before that write
+     * showed a pending plan as decided one reload later than it happened. With nothing pending
+     * there is no such record to wait for, and an unconditional wait made every ordinary reload
+     * visibly slower (user, 2026-08-23). Idempotent with the stop() inside startCli.
+     */
+    fun stopForReplay() {
+        cli?.let {
+            it.stop()
+            if (pendingPermissions.isNotEmpty()) it.awaitExit(1_500)
+        }
+    }
+
     /** Restart with a fresh conversation. */
     fun newConversation() = startCli(resumeSessionId = null)
 

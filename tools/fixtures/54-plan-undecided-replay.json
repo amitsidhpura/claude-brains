@@ -1,0 +1,69 @@
+{
+ "item": "user report 2026-08-23 (pending plan replayed as Approved)",
+ "branch": "__transcript plan cards: undecided (dangling tool_use) vs denied vs approved footers",
+ "provenance": "The undecided flag is SessionStore's, from a tool_use with NO tool_result on disk — measured on the user's real session c61704f2 (claude-brains-testing, 2026-08-23): a CLI killed with the plan card pending leaves a dangling tool_use, and the dying CLI's auto-deny ('Tool permission request failed: AbortError…', toolDenialKind permission-rule) lands ms later, so one reload replayed 'Approved' and the next 'Kept planning' quoting machinery. Parser half pinned by SessionStoreTest `plan whose tool_use never got a result replays undecided, not approved` and the denied-plan machinery filter; THIS fixture pins the renderer half: the three-way footer in replayCard (55-replay.js), neutral .und-t wording, and no verdict color on an undecided card. NEGATIVE CONTROL RUN 2026-08-23 against the pre-fix webview: 5 failed / 406 passed. The control ran with a since-fixed selector slip (.card.plan for what replayCard actually emits, .card.warn) — immaterial to what it proved: .und-t did not EXIST in the pre-fix bundle (assert 1 read 0), so all five asserts fail there under either selector; assert 4's pre-fix join is 'no-t,ok-t,ok-t' with the correct one.",
+ "steps": [
+  {
+   "note": "three replayed plan cards: never decided / denied without feedback / approved",
+   "frames": [
+    {
+     "type": "__clear"
+    },
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "user",
+       "text": "plan something"
+      },
+      {
+       "role": "tool",
+       "text": "ExitPlanMode",
+       "plan": "# Plan A\nnever decided",
+       "undecided": true
+      },
+      {
+       "role": "tool",
+       "text": "ExitPlanMode",
+       "plan": "# Plan B\ndenied plain",
+       "denied": true
+      },
+      {
+       "role": "tool",
+       "text": "ExitPlanMode",
+       "plan": "# Plan C\napproved plain"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn .card-b .und-t').length",
+     "equals": 1,
+     "why": "exactly the dangling plan wears the neutral undecided footer"
+    },
+    {
+     "js": "(document.querySelector('#log .card.warn .card-b .und-t')||{textContent:''}).textContent",
+     "contains": "Interrupted — no decision recorded",
+     "why": "the footer says what the transcript says: no verdict exists"
+    },
+    {
+     "js": "(function(){var u=document.querySelector('#log .card.warn .card-b .und-t');if(!u)return true;var c=u.closest('.card');return !!(c.querySelector('.ok-t')||c.querySelector('.no-t'));})()",
+     "equals": false,
+     "why": "an undecided card claims NEITHER verdict — 'Approved' here was the reported lie"
+    },
+    {
+     "js": "Array.prototype.map.call(document.querySelectorAll('#log .card.warn .card-b > span'), function(s){return s.className;}).join(',')",
+     "equals": "und-t,no-t,ok-t",
+     "why": "denied and approved cards keep their exact footers beside the new state"
+    },
+    {
+     "js": "(function(){var u=document.querySelector('#log .und-t'),n=document.querySelector('#log .no-t');if(!u||!n)return false;return getComputedStyle(u).color!==getComputedStyle(n).color;})()",
+     "equals": true,
+     "why": "neutral means neutral: .und-t must not render in the denial red"
+    }
+   ]
+  }
+ ]
+}

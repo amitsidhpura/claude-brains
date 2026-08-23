@@ -507,6 +507,7 @@ object SessionStore {
         var planFeedback: String? = null   // the typed reason a plan was refused (deny message)
         var planComments: List<io.github.amitsidhpura.claudebrains.RenderLimits.PlanComment>? = null // anchored plan comments (5.6)
         var denied: Boolean = false        // permission was refused — card reads ✗, not ✓
+        var resolved: Boolean = false      // a tool_result arrived — without one a plan card is UNDECIDED
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
         var tokens: Long? = null           // output tokens for the request summary
@@ -533,6 +534,11 @@ object SessionStore {
                 })
             }
             if (denied) put("denied", true)
+            // A plan whose tool_use never got a tool_result was neither approved nor refused —
+            // the session died (or was reloaded) with the card still pending. Without this flag
+            // replay's approved/denied branch showed "✓ Approved" for a decision never made
+            // (user report 2026-08-23).
+            if (plan != null && !resolved) put("undecided", true)
             icon?.let { put("icon", it) }
             durMs?.let { put("durMs", it) }
             tokens?.let { put("tokens", it) }
@@ -1330,6 +1336,7 @@ object SessionStore {
     ) {
         val id = block["tool_use_id"]?.jsonPrimitive?.content ?: return
         val item = byToolId[id] ?: return
+        item.resolved = true
         if (block["is_error"]?.jsonPrimitive?.content == "true") item.isError = true
         // a refused permission isn't a tool failure: the card must read ✗ Rejected, not ✓ Applied
         if (denied) { item.denied = true; item.isError = false }
@@ -1338,7 +1345,11 @@ object SessionStore {
         // card, so old transcripts keep their plain "✗ Kept planning".
         if (denied && item.plan != null) {
             resultText(block["content"])
-                ?.takeIf { it.isNotBlank() && it != RenderLimits.REJECT_MESSAGE }
+                ?.takeIf {
+                    it.isNotBlank() && it != RenderLimits.REJECT_MESSAGE &&
+                        // the CLI's own abort-on-death deny (see the constant) — machinery too
+                        !it.startsWith(RenderLimits.PERMISSION_ABORT_PREFIX)
+                }
                 ?.let {
                     // Anchored comments (5.6) travel inside the deny message as [Re: "…"] lines
                     // (the reference client's format, which the live card also produces). The

@@ -107,12 +107,28 @@ class SessionStoreTest {
         val deniedPlans = role("tool").filter {
             it["plan"] != null && it["denied"]?.jsonPrimitive?.boolean == true
         }
-        assertEquals(3, deniedPlans.size,
-            "fixture carries a typed-reason, a stock, and a commented denial")
+        assertEquals(4, deniedPlans.size,
+            "fixture carries a typed-reason, a stock, a commented, and a CLI-abort denial")
         val typed = deniedPlans.first { it["planFeedback"] != null }
         assertEquals("Use fillPath on the card too", typed["planFeedback"]?.jsonPrimitive?.content)
-        assertTrue(deniedPlans.any { it["planFeedback"] == null },
-            "the stock '${RenderLimits.REJECT_MESSAGE}' denial must stay unquoted")
+        assertEquals(3, deniedPlans.count { it["planFeedback"] == null },
+            "the stock '${RenderLimits.REJECT_MESSAGE}', the comments-only denial, and the CLI's " +
+                "'${RenderLimits.PERMISSION_ABORT_PREFIX}…' machinery must all stay unquoted")
+    }
+
+    @Test
+    fun `plan whose tool_use never got a result replays undecided, not approved`() {
+        // A CLI killed with the plan card pending leaves a dangling tool_use on disk (measured
+        // 2026-08-23: refresh with a pending ExitPlanMode). No verdict exists — replay claiming
+        // "Approved" was the reported lie. Only the dangling plan wears the flag; every decided
+        // plan (approved or denied) must not.
+        val plans = role("tool").filter { it["plan"] != null }
+        val undecided = plans.filter { it["undecided"]?.jsonPrimitive?.boolean == true }
+        assertEquals(1, undecided.size, "exactly the dangling fixture plan is undecided")
+        assertTrue(undecided[0]["plan"]?.jsonPrimitive?.content!!.contains("Never decided"))
+        assertNull(undecided[0]["denied"], "undecided is neither approved nor denied")
+        val aborted = plans.first { it["plan"]?.jsonPrimitive?.content!!.contains("Abort me") }
+        assertNull(aborted["undecided"], "a recorded denial — even the CLI's abort — is decided")
     }
 
     @Test
