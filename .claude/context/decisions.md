@@ -1,884 +1,429 @@
 # Decisions
 
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
-Never delete entries; mark superseded ones.
+Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
+key rejection, one entry each. Never delete; mark superseded.
+
+## 2026-08-24 — The context skill stays lean: rules only, and it is shared via the gist
+The skill (`.claude/skills/context/SKILL.md`) is general-purpose — the user includes it in other
+projects from gist `b2d033439ba4ca5bcd018f4fe5eef773` — so it carries no project-specific numbers,
+and after the tiered-load change it was compressed 141 → 96 lines at the user's direction: dedupe
+(the CLAUDE.md check stated once, in the policy section), no rationale paragraphs (a rule keeps at
+most a one-line why), `decisions.md` prepend not append, gotchas under topic sections not dated
+ones, Retention model as two budgets. **Stop point agreed:** compression ends when only normative
+text remains — further cuts drop the why-half-clauses that make rules self-enforcing, which is
+deferred information loss.
+**Rejected:** keeping the measured 41k/29k load figures in the skill (project evidence belongs in
+this file, not a shared skill); compressing below ~96 lines (nothing left but rules and the table).
+
+## 2026-08-24 — `/context load` reads a briefing TIER, not the whole folder
+The skill's load step now reads `state.md`, `overview.md`, `conventions.md` in full plus the
+NEWEST journal entry, and explicitly does NOT read `decisions.md`, `gotchas.md`, `backlog.md`,
+`glossary.md` or `runbook.md` — those are reference, consulted by `grep` when the work touches
+them. `save` gained the matching obligation: `state.md` must carry forward the few traps and
+backlog items that bear on the next steps, one line each, pointing at the file with the detail.
+**Why:** a full-folder load measured **~41k tokens, of which ~29k was read and discarded** — the
+user reported `/context load` alone filling 7% of the window. `decisions.md` (8.4k), `glossary.md`
+and `runbook.md` contributed literally nothing to the briefing, and `gotchas.md` contributed two
+lines out of 497. The tier costs ~8k, an 80% cut, with nothing deleted: the reference files are
+unchanged and one grep away. Consolidation alone could never have fixed this — the waste was in
+eager reading, not in file size.
+**Rejected:** cutting the reference files further (the user had already declined fact loss, and
+even a 100-line `gotchas.md` would still be read-and-discarded); splitting them into
+load/reference directories (same outcome, but moves files and breaks every path already recorded);
+summarising them into `state.md` at save time (a second copy that drifts — the thing this whole
+memory design exists to avoid).
 
 ## 2026-08-24 — A replayed card may not claim a decision the transcript does not hold
-Replay gained a THIRD plan-card state: `undecided` (SessionStore emits it when a plan tool_use
-has no tool_result), drawn as neutral "◌ Interrupted — no decision recorded" (`.und-t`).
-The CLI's own auto-deny text (`RenderLimits.PERMISSION_ABORT_PREFIX`) joins REJECT_MESSAGE as
-machinery filtered out of `planFeedback`. And `refresh`/`resume` now call
-`ClaudeSessionService.stopForReplay()` before reading the transcript.
-**Why:** a two-way `denied ? kept : approved` branch treats "no record" as approval. Measured
-2026-08-23/24 on the user's own session: a CLI killed with a permission pending flushes its
-auto-deny within ms, so a replay read too early saw nothing and rendered "✓ Approved" for a
-decision the user never made; the next reload rendered the denial and quoted the CLI's error as
-if the user had typed it. Absence of evidence must render as absence, never as consent.
-**Rejected:** inferring approval/denial from surrounding records (the transcript genuinely does
-not say); suppressing the card entirely when undecided (it is the record that Claude asked);
-waiting unconditionally for the CLI to die (see below).
+Replay gained a THIRD plan-card state: `undecided` (SessionStore emits it when a plan tool_use has no
+tool_result), drawn as neutral "◌ Interrupted — no decision recorded" (`.und-t`). The CLI's own
+auto-deny text (`RenderLimits.PERMISSION_ABORT_PREFIX`) joins REJECT_MESSAGE as machinery filtered out
+of `planFeedback`. `refresh`/`resume` call `ClaudeSessionService.stopForReplay()` before reading.
+**Why:** a two-way `denied ? kept : approved` branch treats "no record" as approval. Measured on the
+user's own session: a CLI killed with a permission pending flushes its auto-deny within ms, so a replay
+read too early rendered "✓ Approved" for a decision never made, and the next reload quoted the CLI's
+error as if the user had typed it. Absence of evidence must render as absence, never as consent.
+**Rejected:** inferring from surrounding records (the transcript genuinely does not say); suppressing
+the card when undecided (it is the record that Claude asked); waiting unconditionally (see below).
 
 ## 2026-08-24 — A correctness wait is scoped to the state that needs it
 `stopForReplay()` waits (`awaitExit(1_500)`) only when `pendingPermissions.isNotEmpty()`.
 **Why:** the wait exists for ONE measured record — a pending permission's auto-deny flush. Made
-unconditional it charged every ordinary reload a few hundred ms for nothing, which the user
-noticed immediately ("since your last update it takes more time to reload a conversation").
-The service already tracks the state cheaply, so the guard is free.
-**Rejected:** dropping the wait (reintroduces the one-reload-late bug); a shorter blanket
-timeout (still pays on the common path, still races on the rare one); doing the read
-asynchronously and patching the card afterwards (a second render path for one edge case).
+unconditional it charged every ordinary reload a few hundred ms for nothing, which the user noticed
+within a day. The service already tracks the state, so the guard is free.
+**Rejected:** dropping the wait (reintroduces the one-reload-late bug); a shorter blanket timeout
+(still pays on the common path, still races on the rare one); reading asynchronously and patching the
+card afterwards (a second render path for one edge case).
 
 ## 2026-08-24 — The sandbox tracks a PATCHED IDE build, not the .0 of its line
-`plugin/build.gradle.kts` pins `phpstorm("2024.2.6")`, not `"2024.2"`.
-**Why:** 2024.2.0's JCEF fabricates key-event storms in OSR on Linux (IJPL-161111, fixed in
-2024.2.2+). Pinning the .0 of a line means developing against every bug that line ever had —
-and it cost three speculative guards, a full revert, and a day of investigation chasing a defect
-no user could hit. `sinceBuild = "242"` is unaffected; users were never exposed.
-**Rejected:** 2024.3 (bigger jump, would re-open the documented sandbox quirks); staying on
-2024.2.0 and guarding in-panel (guarding the dev environment inside shipped code).
+`plugin/build.gradle.kts` pins `phpstorm("2024.2.6")`.
+**Why:** 2024.2.0's JCEF fabricates key-event storms in OSR on Linux (IJPL-161111, fixed in 2024.2.2+).
+Pinning the .0 of a line means developing against every bug that line ever had — it cost three
+speculative guards, a full revert, and a day chasing a defect no user could hit. `sinceBuild = "242"`
+is unaffected; users were never exposed. The verifier ladder's own floor is 2024.2.6, so the dev
+environment now matches the lowest build we have a compatibility guarantee for.
+**Rejected:** 2024.3 (bigger jump, re-opens documented sandbox quirks); staying on 2024.2.0 and
+guarding in-panel (guarding the dev environment inside shipped code); raising `sinceBuild` past the
+buggy builds (locks out users over an intermittent glitch on one surface).
+
+## 2026-08-24 — `verifyPlugin` runs on every release, and the docs say so once
+`docs/release.md` step 3b makes it mandatory; the contradicting "not a per-release ritual" language in
+gotchas and the Marketplace section is gone.
+**Why:** the two docs disagreed, which licensed skipping it on 0.9.0 — that passed, but only by luck
+confirmed after the version number was already spent. The Marketplace runs its own verifier on upload,
+but that verdict lands too late to gate anything. The judgement "did this diff touch platform API?" is
+exactly the one not to trust.
+**Rejected:** keeping it discretionary for non-platform changes (the reasoning that failed).
 
 ## 2026-08-24 — The confirm-card path stays one-line-ellipsised (user call)
-The permission card's header path continues to wrap to a second line AND middle-ellipsise at
-narrow widths. A CSS-only plan to let it wrap and show the path whole was written and
-**rejected by the user**; do not re-propose unprompted.
+The permission card's header path continues to wrap to a second line AND middle-ellipsise at narrow
+widths. A CSS-only plan to let it wrap and show the path whole was written and **rejected by the
+user**; do not re-propose unprompted.
 
 ## 2026-08-23 — Plan comments live ON the plan card, and approval stays open with comments
-Checklist 5.6 shipped (`c0df900`): select text in the plan card's body → anchored comment rows.
+Checklist 5.6 (`c0df900`): select text in the plan card's body → anchored comment rows.
 **Why in-panel, not an editor tab:** VS Code renders the plan in a markdown preview tab
-(`open_markdown_preview` + `plan_comment`/`get_plan_comments` webview↔extension internals with
-NO stdio counterpart); our panel already renders the plan through `planCardHtml`, so the card IS
-the preview and the whole build cost was the selection/comment UI. **Why the full decision
-surface stays** (diverges from the reference, which collapses to "Send feedback and keep
-planning" once a comment exists): the user's explicit call — "Allow all approve options please,
-that is a good feature we have." Approve-with-comments rides the existing `PLAN_NOTES_MARKER`
-append; deny wears the VS Code client's byte-exact message (`PLAN_DENY_PREFIX` + free text +
-`PLAN_COMMENTS_HEADER` + `[Re: "anchor"] note` lines — measured off its transcript), so the
-model reads a format it already knows. Format strings live once in `RenderLimits`
-(`window.LIMITS` for the live producer, `parsePlanComments` for the replay parser); rows render
-through one shared builder (`planCommentRows`) both live and replayed; decided cards keep the
-rows as the record.
+(`open_markdown_preview` + `plan_comment` webview↔extension internals with NO stdio counterpart); our
+panel already renders the plan through `planCardHtml`, so the card IS the preview and the whole build
+cost was the selection/comment UI. **Why the full decision surface stays** (the reference collapses to
+keep-planning once a comment exists): the user's explicit call. Approve-with-comments rides the
+existing `PLAN_NOTES_MARKER`; deny wears the VS Code client's byte-exact message (`PLAN_DENY_PREFIX` +
+free text + `PLAN_COMMENTS_HEADER` + `[Re: "anchor"] note`, measured off its transcript), so the model
+reads a format it already knows. Format strings live once in `RenderLimits`; rows render through one
+shared builder (`planCommentRows`) live and replayed; decided cards keep the rows as the record.
 **Rejected:** an IDE markdown-preview surface (second host for one feature; the plan file in
-`~/.claude/plans/` + `get_plan` make it possible later if wanted); comments forcing
-keep-planning (reference behaviour, overruled by the user); inventing our own wire format
-(byte-compatibility with the reference costs nothing and is already model-tested).
+`~/.claude/plans/` + `get_plan` make it possible later); comments forcing keep-planning (reference
+behaviour, overruled); inventing our own wire format (byte-compatibility costs nothing).
 
 ## 2026-08-21 — Displaced transcript records reorder by ANCHOR, never by a global sort
-Replay corrects file-order lies with `DisplacedAnchor` (SessionStore.kt): arm an index+timestamp
-where a measured lie begins; a record that follows in file order but provably precedes in time
-inserts at the anchor; eviction shifts/forgets it. Two instances: `apiErrAnchor` (retry storms,
-mechanism since 2026-08-09, refactored onto the class) and `compactAnchor` (new — the CLI writes
-a manual compaction's boundary + summary BEFORE the /compact command records, so replay drew the
-marker above the bubble that caused it; `clearOnAppend` disarms once a bubble at/past the
-boundary's instant appends). Pinned by two order tests; the refactor proved byte-identical on a
-real session via `probe --json` + cmp.
-**Why:** file order is the backbone of the single-pass parser and is usually chronology; the CLI
-breaks it only in measured places. The anchor makes each correction local and provable.
-**Rejected:** a global stable sort by timestamp (records with NO timestamp; one API message
-persists as several same-ts records whose only order IS file order; the streaming eviction window
-would need whole-file buffering — the exact architecture the 4,000-block truncation rewrite
-removed; and "timestamps always outrank file order" is an unmeasured premise — new anchors must
-each be earned by a real transcript); suppressing the live compaction footer or reconstructing it
-on resume (the marker is the compaction's receipt; a rebuilt footer couldn't keep its verb — both
-divergences recorded as deliberate in docs/renderer-parity.md Audit 2 instead).
+`DisplacedAnchor` (SessionStore.kt): arm an index+timestamp where a measured lie begins; a record that
+follows in file order but provably precedes in time inserts at the anchor; eviction shifts/forgets it.
+Two instances: `apiErrAnchor` (retry storms) and `compactAnchor` (the CLI writes a manual compaction's
+boundary + summary BEFORE the /compact command records, so replay drew the marker above the bubble
+that caused it). Pinned by two order tests; the refactor proved byte-identical via `probe --json` + cmp.
+**Why:** file order is the backbone of the single-pass parser and is usually chronology; the CLI breaks
+it only in measured places. The anchor makes each correction local and provable.
+**Rejected:** a global stable sort by timestamp — records with NO timestamp; one API message persists as
+several same-ts records whose only order IS file order; the streaming eviction window would need
+whole-file buffering (the exact architecture the truncation rewrite removed); and "timestamps always
+outrank file order" is an unmeasured premise, so new anchors must each be earned by a real transcript.
+Also rejected: suppressing or reconstructing the live compaction footer (the marker is the compaction's
+receipt; both divergences recorded as deliberate in docs/renderer-parity.md Audit 2 instead).
 
 ## 2026-08-21 — "Open this path" resolves against DISK; locked readers stay on the snapshot
-`Vfs.kt` gains `findVFileOnDisk`: snapshot hit first, then `refreshAndFindFileByPath`. It is wired
-into exactly two callers — `ClaudeSessionService.openFile` (the panel's path click) and `IdeTools`
-`openFile` (the CLI asking the IDE to open a file). Every other `findVFile` caller is unchanged.
-**Why:** the snapshot is not the disk, so a file written behind the IDE's back reported
-"File not found" on a click (user, Windows, 2026-08-21; reproduced on Linux — see gotchas). The
-snapshot-first order means the refresh is only paid when the answer would otherwise be a wrong
-"no", and a miss still means genuinely absent (negative control held).
-**Rejected:** changing `findVFile` itself (a synchronous refresh under `readLocked` deadlocks —
-`checkDocumentDirty`, `getDiagnostics`, `readFileText` all call it inside a read action);
-refreshing in `Autosave`/`saveDocument` too (a file the VFS never saw has no unsaved document, so
-the refresh cannot change the answer); an async refresh with a callback (`openFile` returns the
-Boolean that decides the "File not found" balloon, so the answer has to be synchronous);
-`DiffReview.open` (same latent staleness, but a stale miss only mis-renders the left pane as a new
-file, and the end-of-turn `refreshFromDisk` sweep already covers the paths it receives — parked in
-backlog).
+`Vfs.kt` gains `findVFileOnDisk` (snapshot hit first, then `refreshAndFindFileByPath`), wired into
+exactly two callers: `ClaudeSessionService.openFile` and `IdeTools.openFile`.
+**Why:** the snapshot is not the disk, so a file written behind the IDE's back reported "File not
+found" on a click. Snapshot-first means the refresh is only paid when the answer would otherwise be a
+wrong "no", and a miss still means genuinely absent.
+**Rejected:** changing `findVFile` itself (a synchronous refresh under `readLocked` deadlocks);
+refreshing in `Autosave`/`saveDocument` (a file the VFS never saw has no unsaved document); an async
+refresh with a callback (`openFile` returns the Boolean that decides the balloon, so it must be
+synchronous); `DiffReview.open` (same latent staleness, but a stale miss only mis-renders the left pane
+and the end-of-turn sweep covers it — parked in backlog).
 
 ## 2026-08-19 — The webview JS lives in webview/js/, spliced back into one script scope
-`chat.html` is markup only; the panel's JS is 14 numbered files under `webview/js/`
-(prefix = load order), concatenated in `WebviewAssets.JS_FILES` order into the page's single
-`<script>` block at the `<!--JS-->` marker, each behind a `/* ===== file: … ===== */` banner.
-The manifest is the ONLY copy of the order; `RenderLimitsTest` asserts over the assembled page
-and pins manifest ⇄ directory equality.
-**Why:** 4542 lines was unreadable and unreviewable; the concat splice reuses the seam already
-proven for chat.css and window.LIMITS (loadHTML has no base URL), keeps ONE shared script scope
-so semantics are provably unchanged (assembled page byte-identical to the pre-split file, banners
-aside), and the banners give DevTools line numbers a way back to a source file.
-**Rejected:** real ES modules via a CefResourceHandler or file:// base (per-file scope, but adds
-a resource-serving layer and deferred-load timing — `window.onClaudeEvent` would need explicit
-global wiring before Kotlin's first push; the concat split is the stepping stone if ever wanted);
-leaving the file whole (the status quo this replaces); splitting the markup too (131 lines does
-not need it, and the mockup-mirroring convention favours one markup file).
-
-## 2026-08-17 — Low-priority rows are ⬜, not 🟨 yellow
-`docs/feature-checklist.md` marks open-low with ⬜; the rest of the set is unchanged
-(✅ / 🟡 partial / 🟥 high / 🟧 medium / ➖ / 🚫).
-**Why:** the user could not tell 🟨 from 🟧 at a glance — adjacent hues on the same square glyph,
-which defeats the point of a colour tier. ⬜ is the user's pick: unmistakable against the three
-warm tiers, and "low" and "not started" are close enough in practice that the old reason for
-banning ⬜ (2026-08-17 register entry) no longer costs anything.
-**Rejected:** 🟦 blue (tried first this session, the user preferred ⬜); 🟩 (too close to ✅ done);
-reordering the tiers (ids and marks are meant to be stable).
-Amends the 2026-08-17 "numbered, colour-tiered register" entry below, which had declared "no ⬜" —
-that ban is lifted for the low tier only.
+`chat.html` is markup only; the JS is 14 numbered files under `webview/js/` (prefix = load order),
+concatenated in `WebviewAssets.JS_FILES` order into the page's single `<script>` block at `<!--JS-->`.
+The manifest is the ONLY copy of the order; `RenderLimitsTest` asserts over the assembled page and pins
+manifest ⇄ directory equality.
+**Why:** 4542 lines was unreviewable; the concat splice reuses the seam already proven for chat.css and
+window.LIMITS (loadHTML has no base URL), keeps ONE shared script scope so semantics are provably
+unchanged (assembled page byte-identical, banners aside), and the banners give DevTools a way back to a
+source file.
+**Rejected:** real ES modules via a CefResourceHandler or file:// base (per-file scope, but adds a
+resource-serving layer and deferred-load timing — `window.onClaudeEvent` would need explicit global
+wiring before Kotlin's first push); leaving the file whole; splitting the markup too.
 
 ## 2026-08-17 — A slash alias IS its command: filter, row, gate and wire all resolve it
-`canonicalCmd()` maps any roster alias to its command; the menu ranks aliases like names, rows show
-them muted, `cmdKind()` and `submit()` see the canonical name, and the turn is sent under it.
+`canonicalCmd()` maps any roster alias to its command; the menu ranks aliases like names, rows show them
+muted, `cmdKind()`/`submit()` see the canonical name, and the turn is sent under it.
 **Why:** the CLI advertises the aliases (`/review`, `/peers`, `/reset`, `/new`) so users type them;
-refusing a typed alias as "not available" was the plugin contradicting the roster it displays.
-Sending the canonical name removes any dependence on the CLI's own alias expansion.
-**Rejected:** display-only aliases (the previous state — a known non-feature that failed the first
-person to type `/review`); adding aliases to the allowlist by hand (drifts with every CLI update;
-the roster already carries them).
+refusing one as "not available" was the plugin contradicting the roster it displays. Sending the
+canonical name removes any dependence on the CLI's own alias expansion.
+**Rejected:** display-only aliases (the previous state, which failed the first person to type
+`/review`); hand-maintaining an alias allowlist (drifts with every CLI update).
 
 ## 2026-08-17 — Autosave rides the SDK hook lane, always on, four tools only
-The plugin declares ONE host hook on `initialize` — `PreToolUse Edit|Write|MultiEdit|Read →
-autosave` — and answers `hook_callback` after saving a dirty document. No toggle.
-**Why:** it is the reference's exact mechanism (`saveFileIfNeeded`), the only pre-tool moment
-that fires under acceptEdits/auto/saved rules and for Read (no `can_use_tool` there), and the
-plugin has no settings page by design; the IDE already saves on frame deactivation, so an explicit
-save is the norm, not a surprise. MultiEdit added because it takes the same `file_path`.
-**Rejected:** saving from the permission card (misses pre-approved tools and Read); a Bash matcher
-(a command names no file the host can save — the reference does not try either); a settings toggle
-(would need the settings page the philosophy declines).
+ONE host hook declared on `initialize` — `PreToolUse Edit|Write|MultiEdit|Read → autosave` — answered
+after saving a dirty document. No toggle.
+**Why:** it is the reference's exact mechanism (`saveFileIfNeeded`), the only pre-tool moment that
+fires under acceptEdits/auto/saved rules AND for Read (no `can_use_tool` there), and the plugin has no
+settings page by design; the IDE already saves on frame deactivation.
+**Rejected:** saving from the permission card (misses pre-approved tools and Read); a Bash matcher (a
+command names no file the host can save — the reference does not try either); a settings toggle.
 
 ## 2026-08-17 — Stale IDE locks are swept on every lock write, dead pid only
-`IdeLockFile.write` first deletes every `~/.claude/ide/*.lock` whose `pid` is not running (never
-its own, never an unreadable one).
-**Why:** `delete()` only runs on an orderly dispose; killed sandboxes and crashes left 15 corpses.
-The CLI has the same rule but only applies it while enumerating IDEs, which our `--mcp-config`
-route never asks for — so we are the only sweeper on this path. Dead-pid is the CLI's own test.
-**Rejected:** matching `ideName` (a dead pid is dead whoever wrote it); a port probe (the CLI's WSL
-nuance — not needed here); leaving unreadable locks (the CLI deletes those; we stay in our lane).
+`IdeLockFile.write` first deletes every `~/.claude/ide/*.lock` whose `pid` is not running (never its
+own, never an unreadable one).
+**Why:** `delete()` only runs on an orderly dispose, so killed sandboxes left 15 corpses. The CLI has
+the same rule but only applies it while enumerating IDEs, which our `--mcp-config` route never asks for
+— so we are the only sweeper on this path. Dead-pid is the CLI's own test.
+**Rejected:** matching `ideName` (a dead pid is dead whoever wrote it); a port probe; deleting
+unreadable locks (the CLI does that; we stay in our lane).
 
 ## 2026-08-17 — The feature checklist is a numbered, colour-tiered register with stable ids
-`docs/feature-checklist.md` rows are `- **N.n** <mark> [effort] …`: ids are `section.row` and
-STABLE (retire by striking, never delete or renumber); marks are ✅ / 🟥 high / 🟧 medium / 🟨 low
-/ ➖ by design / 🚫 declined (no ⬜, no `[x]` checkboxes — the emoji carries the state); effort
-`[XS|SM|MD|LG]` on open rows only; **[NEW]** / **[DECIDE]** tags; all meta in the header, no
-bottom sections. Measured against BOTH reference clients on one version (2.1.233).
-**Why:** the user wants to refer to rows by id ("what is 2.4?"), see importance at a glance, and
-know cost before choosing — and the old file duplicated state (checkbox + emoji) and buried the
-key at the bottom. Two clients on one version because the TUI has commands VS Code lacks (and
-vice versa) and the philosophy sorts them differently.
-**Rejected:** a separate "open decisions" list (duplicated rows — folded into **[DECIDE]** tags);
-priority as a column table (rows are prose-length; a table would wrap badly).
+`docs/feature-checklist.md` rows are `- **N.n** <mark> [effort] …`: ids are `section.row` and STABLE
+(retire by striking, never renumber); marks ✅ / 🟥 high / 🟧 medium / ⬜ low / ➖ by design / 🚫
+declined; effort `[XS|SM|MD|LG]` on open rows; **[NEW]** / **[DECIDE]** tags; all meta in the header.
+Measured against BOTH reference clients on one version.
+**Why:** the user refers to rows by id, wants importance at a glance and cost before choosing; the old
+file duplicated state (checkbox + emoji) and buried the key. Two clients on one version because the TUI
+has commands VS Code lacks and the philosophy sorts them differently.
+**Rejected:** a separate "open decisions" list (duplicated rows — folded into **[DECIDE]**); a priority
+table (rows are prose-length and would wrap badly); 🟨 for low (indistinguishable from 🟧 at a glance —
+the user picked ⬜ over 🟦/🟩, amending this entry's original "no ⬜" ban for the low tier only).
 
 ## 2026-08-17 — `close_tab` closes one review by name; both close tools reply reference-exact
 `DiffReview.completeTabClosed(tabName)` resolves only the review opened under that `tab_name`;
 `close_tab` replies `TAB_CLOSED` whether or not it found one; `closeAllDiffTabs` replies
 `CLOSED_<n>_DIFF_TABS`.
-**Why:** the reference (extension.js 2.1.233) closes the single tab whose label equals
-`tab_name` and always answers TAB_CLOSED; ours swept every diff — with two proposals open, closing
-one resolved both. Matching the reply strings costs nothing and keeps the CLI's consumer on the
-path it was written for.
-**Rejected:** erroring on an unknown name (the reference does not; every name the CLI can send is
-a diff we opened, so a miss is a benign no-op).
+**Why:** the reference closes the single tab whose label equals `tab_name` and always answers
+TAB_CLOSED; ours swept every diff, so with two proposals open, closing one resolved both. Matching the
+reply strings keeps the CLI's consumer on the path it was written for.
+**Rejected:** erroring on an unknown name (the reference does not; a miss is a benign no-op).
 
 ## 2026-08-16 — A menu click asks "does it TAKE an argument", not "does it REQUIRE one"
-`cmdTakesArg(c)` in chat.html is now `!!(c.argumentHint||'').trim()`: any non-empty hint —
-`<required>` and `[optional]` alike — inserts `/name ` into the composer and waits; only a
-hint-less command runs on click. Replaces `cmdNeedsArg`, which ran optional-arg commands
-immediately (`data-needsarg` → `data-takesarg`).
-**Why:** the user picked `/context` from the menu to run `/context save` and it fired the bare
-form instead. A hint like `[init | load | save]` is a MENU OF SUB-MODES — "optional" is
-technically true and practically wrong, because a command that advertises choices is one you
-clicked in order to choose. Matches the terminal, where picking a command completes it into the
-prompt and you decide when to send. Measured blast radius on CLI 2.1.233 (`strings`): of the 16
-allowlisted built-ins only `/compact`, `/context` and `/goal` change behaviour; bundled
-skill-commands' hints were NOT resolvable by the probe (see backlog watch-item). Bonus fix —
-hints with neither bracket nor angle (`key=value`, `consent | revoke`) used to fire bare.
-**Rejected:** changing the skill's own `argument-hint` to `<…>` (makes the roster lie — bare
-`/context` is valid, it briefs); a click/Shift-click split (a new idiom the panel does not have).
-**Cost accepted by the user:** `/compact` and friends now need one extra Ctrl+Enter.
-
-## 2026-08-16 — Card text fields share one dress: `--warn-field` + the ask-input style
-`.plan-fb` and `.ask-other input` both render transparent-frame-on-warn-card style with
-`background: var(--warn-field)` (#201c1a, a sunken step below `--warn-bg`), and the plan card
-gains `.plan-sep` — a full-bleed hairline (`margin: 10px -12px 0; border-top: 1px solid
-var(--border)`, the composer `#inputbar` idiom) between plan body and decision surface. The
-separator is a div of its own (inputs cannot carry pseudo-elements) and `done()` removes it with
-the input so a decided card matches the replayed one (plan + footer only).
-**Why:** the panel's two type-your-answer-on-a-card surfaces must read as one control (the same
-argument `fillPath` made for paths), and the user reported the plan/field boundary was hard to
-see. Final colour user-picked over three mockup iterations, per the mockup-first convention.
-**Rejected en route:** `#1b1b1b` on `--panel` styling (first draft), fully transparent field
-(matched ask exactly but the user wanted the well back) — both superseded the same day.
+`cmdTakesArg(c)` is `!!(c.argumentHint||'').trim()`: any non-empty hint — `<required>` and `[optional]`
+alike — inserts `/name ` into the composer and waits; only a hint-less command runs on click.
+**Why:** the user picked `/context` from the menu to run `/context save` and it fired the bare form. A
+hint like `[init | load | save]` is a MENU OF SUB-MODES — "optional" is technically true and
+practically wrong, because a command that advertises choices is one you clicked in order to choose.
+Matches the terminal, where picking completes into the prompt. Blast radius measured on 2.1.233: of 16
+allowlisted built-ins only `/compact`, `/context`, `/goal` change behaviour. Bonus: hints with neither
+bracket nor angle (`key=value`) used to fire bare.
+**Rejected:** changing the skill's own hint to `<…>` (makes the roster lie — bare `/context` is valid);
+a click/Shift-click split (a new idiom the panel does not have). **Cost accepted by the user:**
+`/compact` and friends need one extra Ctrl+Enter.
 
 ## 2026-08-16 — Approve-with-notes rides `updatedInput.plan`, not a steered message
 The plan card's typed note, on ANY approve path, is appended to the approved plan under
-`RenderLimits.PLAN_NOTES_MARKER` and sent via `updatedInput`; SessionStore parses it back out of
-`toolUseResult.plan` for the replay footer.
-**Why:** the ExitPlanMode tool_result echoes the approved plan, so the model reads the note in
-the SAME message as the approval — before its first implementation call, deterministically. This
-is timing-equivalent to the terminal's shift+tab (which pushes acceptFeedback as an extra text
-block on that same tool_result — an internal path the control-response schema does not expose).
-Bonus: the note is recorded durably in the plan file, which the terminal's version is not.
-**Rejected:** a `feedback` field on the allow response (probed: schema-whitelisted away,
-silently); stdin steering (probed working ONCE, then observed racing the model call cycle in the
-user's manual test — the note arrived after implementation started); a queued user turn
-(delivered only after the whole implementation turn — the original design error).
+`PLAN_NOTES_MARKER` and sent via `updatedInput`; SessionStore parses it back out of `toolUseResult.plan`.
+**Why:** the ExitPlanMode tool_result echoes the approved plan, so the model reads the note in the SAME
+message as the approval — before its first implementation call, deterministically. Timing-equivalent to
+the terminal's shift+tab (which pushes acceptFeedback as an extra text block on that same tool_result,
+an internal path the schema does not expose). Bonus: the note is recorded durably in the plan file.
+**Rejected:** a `feedback` field on the allow response (probed: schema-whitelisted away, silently);
+stdin steering (worked ONCE, then raced the model call cycle in a real run — the note arrived after
+implementation started); a queued user turn (delivered only after the whole turn).
 
 ## 2026-08-16 — Plan-card mode rows park their switch until the CLI's restore broadcast
-Picking "Approve, auto-edit"/"Approve, auto mode" does not bridge `set_permission_mode`
-immediately; the wish parks in `pendingPlanMode` and is sent when the post-approval
-`permissionMode` broadcast arrives (cleared on sendTurn/clearLogUI).
-**Why:** the CLI restores `prePlanMode` when the approved ExitPlanMode EXECUTES — always after
-our immediate request is processed, so the restore overwrote the user's pick every time
-(measured live: chip ended Auto after choosing auto-edit). Plan→X is always a change, so the
-broadcast always fires and the parked switch always releases — after the restore, before the
+"Approve, auto-edit"/"auto mode" parks the wish in `pendingPlanMode` and sends it when the
+post-approval `permissionMode` broadcast arrives (cleared on sendTurn/clearLogUI).
+**Why:** the CLI restores `prePlanMode` when the approved ExitPlanMode EXECUTES — always after our
+immediate request is processed — so the restore overwrote the user's pick every time. Plan→X is always
+a change, so the broadcast always fires and the parked switch releases after the restore, before the
 first implementation edit.
-**Rejected:** immediate bridge (deterministic loss, not a race); sending at turn end (too late —
-the implementation itself is what the user wanted covered).
+**Rejected:** immediate bridge (deterministic loss, not a race); sending at turn end (too late — the
+implementation is what the user wanted covered).
 
-## 2026-08-16 — The chip reads the broadcast `default` as Manual
-`applyCliMode` aliases `default` → `manual` before the unknown-mode guard.
-**Why:** measured — restoring a `manual` pre-plan mode broadcasts the LITERAL `default` (the
-CLI's internal name; `manual` merely replaced it as the advertised one). The guard dropped it
-and the chip stayed on Plan while the real mode was manual — the user's report, and the exact
-lie the guard exists to prevent.
+## 2026-08-16 — Card text fields share one dress, and the plan card gains a separator
+`.plan-fb` and `.ask-other input` both render `background: var(--warn-field)` on the warn card, and the
+plan card gains `.plan-sep`, a full-bleed hairline between plan body and decision surface. `done()`
+removes it with the input so a decided card matches the replayed one.
+**Why:** the panel's two type-your-answer-on-a-card surfaces must read as one control (the same
+argument `fillPath` made for paths), and the plan/field boundary was hard to see. Final colour
+user-picked over three mockup iterations.
+**Rejected en route:** `#1b1b1b` on `--panel`, and a fully transparent field (matched ask exactly but
+the user wanted the well back).
 
-## 2026-08-16 — Mid-turn steered messages replay as user bubbles, deduped by text
-SessionStore maps `attachment` records ({type:"queued_command", commandMode:"prompt"}) to user
-blocks unless a plain user record in the same file carries the same text.
-**Why:** measured across local transcripts — a message the CLI consumed MID-TURN persists ONLY
-as the attachment record (3 cases), while one queued to the next turn persists as attachment AND
-user record (2 cases). Without the mapping, replay silently lost text the model demonstrably
-acted on; without the dedupe, queued messages would render twice. task-notification-mode
-attachments are machinery and never render.
+## 2026-08-16 — The chip reads the broadcast `default` as Manual; steered messages replay as bubbles
+`applyCliMode` aliases `default` → `manual` before the unknown-mode guard. Separately, SessionStore maps
+`attachment` records (`{type:"queued_command", commandMode:"prompt"}`) to user blocks unless a plain
+user record carries the same text.
+**Why:** restoring a `manual` pre-plan mode broadcasts the LITERAL `default` (the CLI's internal name),
+the guard dropped it, and the chip stayed on Plan while the real mode was manual. And measured across
+transcripts: a message consumed MID-TURN persists ONLY as the attachment record, while one queued to
+the next turn persists as both — so without the mapping replay lost text the model demonstrably acted
+on, and without the dedupe queued messages rendered twice.
 
 ## 2026-08-15 — One path renderer for every surface, cards included
-Both permission-card headers (live `renderPermission`, replay `fillAppliedCard`) now fill their
-`<code>` through `fillPath()`, the same helper the tool line uses: project-relative, split into an
-ellipsised `.p-head` and a fixed `.p-tail`, with the ABSOLUTE path on `dataset.path` + `title`.
+Both permission-card headers (live `renderPermission`, replay `fillAppliedCard`) fill their `<code>`
+through `fillPath()`, the same helper the tool line uses: project-relative, split into an ellipsised
+`.p-head` and a fixed `.p-tail`, with the ABSOLUTE path on `dataset.path` + `title`.
 **Why:** the decision surface and the timeline sat one above the other naming the same file two
-different ways — the card spelled out `/home/syncroze/Sites/claude-brains/plugin/src/…` while the
-tool line showed `plugin/src/…`. A second renderer is also a second thing to drift.
-**Supersedes** the backlog note that card paths were deliberately unclamped "since that surface asks
-you to approve a write to a specific file". That concern is met without the full string: the click
-handler already reads `dataset.path` first, and `title` still reveals the whole path on hover —
-so what you approve is unchanged, only what you read is shorter.
-**Rejected:** a card-only shortener (the drift this is meant to remove), and clamping via CSS alone
-(measured on the tool line already — flex shrinks proportionally, so any factor that saves the
-filename on a long path nibbles the parent folder on a short one).
+different ways. A second renderer is also a second thing to drift.
+**Supersedes** the backlog note that card paths were deliberately unclamped ("that surface asks you to
+approve a write to a specific file") — the concern is met without the full string, since the click
+handler reads `dataset.path` and `title` reveals the whole path on hover. What you approve is
+unchanged; only what you read is shorter.
+**Rejected:** a card-only shortener (the drift this removes); clamping via CSS alone (flex shrinks
+proportionally, so any factor that saves the filename on a long path nibbles the parent on a short one).
 
 ## 2026-08-15 — `msgStreamed` is a TURN-level fact, never cleared mid-turn
-Set at `message_start`, cleared only at `result` / `sendTurn` / `clearLogUI`. The whole-message
-`assistant` handler reads it and never writes it.
-**Why:** the CLI emits an `assistant` frame per CONTENT BLOCK, not per message (taped live). A
-message that thinks first therefore sends two, and clearing the flag on the first let the second
-re-draw text the deltas had already rendered — every message after the first appeared twice in a
-`/security-review` run, both copies carrying one uuid because `stampMessage` stamps all pending
-blocks. A local command's turn never streams at all, which is exactly what leaves the flag false
-and lets its whole message draw itself.
-**Rejected:** clearing at `message_stop` (tried and reverted the same hour — assistant frames
-straddle the stop in BOTH directions, so fixture 47's step-2 guard immediately caught it
-double-rendering the other way); and a rendered-uuid set, which cannot help because the duplicate
-carries the uuid of the frame that drew it.
+Set at `message_start`, cleared only at `result` / `sendTurn` / `clearLogUI`.
+**Why:** the CLI emits an `assistant` frame per CONTENT BLOCK, so a message that thinks first sends
+two, and clearing the flag on the first let the second re-draw text the deltas had already rendered —
+every message after the first appeared twice in a `/security-review` run. A local command's turn never
+streams at all, which is what leaves the flag false and lets its whole message draw itself.
+**Rejected:** clearing at `message_stop` (tried and reverted the same hour — assistant frames straddle
+the stop in BOTH directions, so the fixture immediately caught it double-rendering the other way); a
+rendered-uuid set (the duplicate carries the uuid of the frame that drew it).
 
 ## 2026-08-15 — A failed local command is surfaced, not swallowed
 `onUserEvent` handles a STRING `content`: `<local-command-stderr>` → error block,
-`<local-command-stdout>` → answer block, every other wrapper still invisible. Replay routes the
-same two shapes on a `user` record through the same mapping.
-**Why:** measured — `/security-review` in a repo with no `origin/HEAD` reports only through a
-`user` frame whose content is a string, which the `!Array.isArray(content)` guard dropped before
-any rendering logic ran. The panel showed a completed turn with nothing in it, and the CLI's own
-reason ("fatal: ambiguous argument 'origin/HEAD...'") was lost.
-**Rejected:** extending `cleanInjected`'s drop list, which was already wrong in both directions —
-it swallowed the stdout spelling outright and let stderr through as raw XML in a blue user box.
-Dropping an error blob violates the project's own no-silent-drops rule.
+`<local-command-stdout>` → answer block. Replay routes the same two shapes through the same mapping.
+**Why:** `/security-review` in a repo with no `origin/HEAD` reports only through a `user` frame whose
+content is a string, which the `!Array.isArray(content)` guard dropped before any rendering ran — a
+completed turn with nothing in it, and the CLI's own reason lost.
+**Rejected:** extending `cleanInjected`'s drop list, already wrong in both directions (it swallowed the
+stdout spelling and let stderr through as raw XML). Dropping an error blob violates the no-silent-drops
+rule.
 
 ## 2026-08-15 — Custom commands are detected by the description SUFFIX, not a disk scan
-`markCustom()` in chat.html parses `^([\s\S]*) \((project|user)\)$` off every roster entry's
-description (initialize AND commands_changed), strips it for display, and records the source on
-the entry + in the `customCmds` map; `cmdKind` returns 'text' for map hits and `mcp__`-prefixed
-names, after the native/allowlist checks so a custom `clear.md` cannot shadow the IDE's /clear.
-**Why:** the entry schema has no type field, but the suffix is a measured wire marker — present
-for every `.claude/commands/**.md` and `.claude/skills/*/SKILL.md` entry in either base, absent
-from all 107 built-ins across two captures (CLI 2.1.228). It makes the whole feature webview-only
-and covers plugin-sourced commands for free.
-**Rejected:** the PLAN-APPROVED Kotlin disk scan (`CustomCommands.scan` + a `rescanCommands`
-bridge verb) — more moving parts, a rescan round-trip on every `commands_changed`, blind to
-sources not on the two scanned paths, and it duplicates knowledge the CLI already sends. The
-user approved the pivot mid-plan after the Phase-0 probes. Accepted risk: a future CLI respelling
-of the suffix hides custom commands (fail-closed, one-line fix).
-
-## 2026-08-15 — cleanInjected matches command name and args INDEPENDENTLY
-`CMD_NAME_RE` + `CMD_ARGS_RE` replace the single name-then-args `CMD_RE` in SessionStore.
-**Why:** two wrapper shapes exist on disk (both measured, 2.1.228): built-ins write
-name→message→args, but an arg-less CUSTOM command writes message→name with NO `<command-args>`
-tag — the one-pattern regex missed it and a session titled by such a turn showed raw XML. Found
-by the verification screenshot the same day custom commands became sendable.
-**Rejected:** ordering variants in one regex (there are already two orders; independent matching
-is immune to a third).
+`markCustom()` parses `^([\s\S]*) \((project|user)\)$` off every roster entry's description, strips it
+for display, and records the source; `cmdKind` returns 'text' for map hits and `mcp__` names, after the
+native/allowlist checks so a custom `clear.md` cannot shadow the IDE's /clear.
+**Why:** the entry schema has no type field, but the suffix is a measured wire marker — present for
+every custom entry, absent from all 107 built-ins across two captures. It makes the feature
+webview-only and covers plugin-sourced commands for free.
+**Rejected:** the PLAN-APPROVED Kotlin disk scan — more moving parts, a rescan round-trip on every
+`commands_changed`, blind to sources off the two scanned paths, and it duplicates what the CLI already
+sends. The user approved the pivot mid-plan after the Phase-0 probes. Accepted risk: a future respelling
+hides custom commands (fail-closed, one-line fix).
 
 ## 2026-08-14 — The IDE is kept in step with the CLI's writes, per file and per turn
-`CliFileSync` sits on the session's event stream (`ClaudeSessionService.startCli`, before the UI
-callback) and does two things: pairs a write tool's `tool_use` with its `tool_result` and refreshes
-that one path, then sweeps the project root once at every `result`. `refreshFromDisk` (Vfs.kt) does
-an ASYNC refresh; when the path is unknown to the VFS — a newly CREATED file — it walks up to the
-nearest directory the VFS does know, recursively if it had to climb past directories the CLI also
-created, because the VFS only discovers a new child when its parent is refreshed.
-**Why:** the plugin never writes files itself; the CLI does, out of band, and nothing refreshed
-afterwards — an accepted edit needed "Reload from disk" and a created file never appeared in the
-tree.
-**Why two mechanisms, and this is the part that was measured rather than designed:** the per-file
-half covers Write/Edit/MultiEdit/NotebookEdit, which is what the backlog scoped. Driving a real turn
-showed the CLI answering "create one file and overwrite another" with a SINGLE `Bash` call — no
-Write, no Edit — so the scoped fix caught nothing at all. Bash's input names no file, so there is
-nothing to refresh from; the turn-end sweep is what covers it, at roughly the cost IntelliJ already
-pays whenever the window regains focus.
-**Rejected:** deriving paths from the Bash command (guesswork over an open-ended shell string);
-sweeping per Bash call rather than per turn (same cost, many more times); refreshing at `tool_use`
-(the file is not written yet, so it would read the file as it was); and keying off the permission
-card, which a pre-approved tool never produces.
-**Verified end to end in the sandbox, not just by unit test:** the plugin's own MCP bridge answers
-`openFile`, which uses `findVFile` with no refresh, so it reports exactly what the VFS knows. A file
-created behind the IDE's back reads `error: file not found`; after a real CLI turn the same probe
-reads `opened:`. The edit half was proven with `getDiagnostics` on a JSON file open in the editor —
-clean while valid, reporting the syntax errors after the CLI made it invalid out of band, i.e. the
-open document really did reload.
+`CliFileSync` sits on the event stream before the UI callback: it pairs a write tool's `tool_use` with
+its `tool_result` and refreshes that one path, then sweeps the project root at every `result`.
+`refreshFromDisk` refreshes ASYNC and, for a newly CREATED file the VFS does not know, walks up to the
+nearest known directory — recursively if it must climb past directories the CLI also created, since the
+VFS only discovers a new child when its parent is refreshed.
+**Why two mechanisms, and this is the part measured rather than designed:** the per-file half covers
+Write/Edit/MultiEdit/NotebookEdit, which is what the backlog scoped — but driving a real turn showed the
+CLI answering "create one file and overwrite another" with a SINGLE `Bash` call, so the scoped fix caught
+nothing at all. Bash's input names no file, so the turn-end sweep is what covers it, at roughly the cost
+IntelliJ already pays on window focus.
+**Rejected:** deriving paths from the Bash command (guesswork over an open-ended string); sweeping per
+Bash call (same cost, many more times); refreshing at `tool_use` (the file is not written yet); keying
+off the permission card (a pre-approved tool never produces one).
 
-## 2026-08-13 — A running tool's dot is white and breathing; the colour IS the verdict
-`.tool-line.run { --dot-c: var(--fg) }` (declared before `.fail`), plus
-`.tool-line.run::before, .think-live::before { animation: var(--pulse-name) var(--pulse-period) ease-in-out infinite }`
-with `--pulse-name: bg-pulse`. `.run` is set at the LIVE tool_use site only — replay and `__gallery`
-draw finished tools through the same `toolLine()` helper — cleared at the result, in
-`serverToolResult`, and swept in `setBusy(false)`.
-**Why:** a two-minute `Bash` and one that had already returned rendered identically, and the dot went
-green from its first frame, asserting success before anything came back. White says "no verdict yet".
-`bg-pulse` was picked by the user from `design/dot-pulse-probe.html` (four motions, each column
-driving the real rule); it is what the background-task chip already wears, so the panel says "still
-going" one way throughout. Opacity only, deliberately — see the superseded entry below for what
-geometry costs.
-**Rejected:** a new `:root` token for the running colour (`--fg` is already the panel's near-white);
-capping the pulse to the newest in-flight line (during a fan-out several tools genuinely ARE running,
-and showing one misreports state — the sweep bounds it instead).
+---
 
-## 2026-08-13 — A sub-agent settles when its TASK ends, not when it was launched
-`onUserEvent` clears `.run` only when `b.is_error || !isInternalResult(resultRaw)`; `taskLine` stashes
-`st.tool` and clears it on any `done` frame, and `task_updated` clears it through that stash.
-**Why:** measured — an `Agent` tool_use got its tool_result 1.8s later reading "Async agent launched
-successfully … working in the background", then ran for minutes. "The result arrived" is not "the work
-finished" for this tool. `isInternalResult` already recognised that ack (it is why no OUT box is
-drawn for it), so both uses now share one rule instead of a second heuristic.
-**Rejected:** keying on the tool NAME — the task lifecycle is explicitly not sub-agent-only, and a
-name list drifts. Also rejected: leaving it to the end-of-turn sweep, which is correct but far too
-coarse (every agent's dot would stay white until the last one finished). The sweep remains as the
-safety net for a `task_notification` that never arrives.
+## Digest — decisions before 2026-08-14
+Outcome · why · key rejection. Full prose is in git history; these are the parts that still steer work.
 
-## 2026-08-13 — A sub-agent goes red on a failed/killed TASK, never on failed WORK
-`taskLine`'s done branch and `task_updated` add `.fail` for status `failed` or `killed` only.
-The panel says nothing about whether the agent's work succeeded.
-**Why:** the status vocabulary is `<status>completed|failed|killed</status>`, read verbatim from CLI
-2.1.228 — and a sub-agent's tool_result is only ever the launch ack, so without this an agent that
-genuinely died settled GREEN. Named states only, not "anything ≠ completed": the binary also carries
-`running`/`pending`, and painting a live line red is worse than leaving an unknown state green.
-**Why not the work outcome — this was built, then removed the same day.** An agent asked to run a
-failing command is reported `completed`; the failure is one level down. Reading it needs the
-sub-agent's own transcript, and whether that transcript records the failure AT ALL depends on how the
-agent ran the command (gotchas: foreground → errored tool_result, `run_in_background` → nothing). The
-same task rendered red one run and green the next, which is worse than either consistent answer.
-**Rejected:** colouring from the summary PROSE — the only signal surviving both paths, and the one
-the CLI hands the model, but a text heuristic over an open-ended sentence. Offered; user chose removal.
-
-## 2026-08-13 — The gutter dot's colour is a `--dot-c` property on the element
-The four byte-identical `::before` rules (`.blk`, `.think`, `.think-live`, `.tool-line`) collapse to
-one geometry rule reading `background: var(--dot-c)`, each element declaring its own colour. `:root`
-also gains `--pulse-period: 1.6s`, replacing four hand-written copies.
-**Why:** it is what lets a STATE recolour the dot in a single declaration — `.run`'s white and
-`.fail`'s red are one custom-property line each instead of another copy of the geometry. Same
-argument `--block-gap`/`--attach-gap` already make in that file: values used in more than one place
-drift apart when nothing names them, and these four had no way to stay identical. (It arrived with
-the halo, which needed a colour-agnostic rule; it earned its place independently and stayed.)
-
-## 2026-08-13 — The panel honours prefers-reduced-motion on every animated surface at once
-One `@media (prefers-reduced-motion: reduce)` block covers the in-flight dot, `.bg::before`,
-`.think-live .shimmer` and `.generating .verb`.
-**Why:** the panel had no such block while four surfaces animated infinitely; covering only the newest
-would have been incoherent. `.shimmer`/`.verb` also get `color: var(--muted)` back — they set
-`color: transparent` and rely on a MOVING gradient to be legible, so stopping the animation alone
-leaves invisible text rather than still text. The in-flight dot keeps its WHITE (colour, not
-animation), so a running tool is still distinguishable with motion off.
-**Verified, and its limit:** under `Emulation.setEmulatedMedia` the block fires in real JCEF and
-reverts cleanly. Whether the Linux desktop's own setting reaches an offscreen-rendered CEF is
-untested — in backlog.
-
-## 2026-08-13 — [SUPERSEDED, all removed the same day] Three things built and withdrawn
-Kept as a record of what was tried, because each looks obviously right until measured. Details of the
-deleted code are not worth the reload budget; the lessons live in gotchas.md.
-1. **An outward halo** (`@keyframes dot-ping` on a `::after` ring). Shipped, seen in the panel, pulled:
-   `.turn-body`'s paint containment shaved it into a "cut half-rectangle" — the exact shape the
-   focus-ring comment in chat.css already warned about. Measured: ring left edge x=8 against a turn
-   box starting at x=14.
-2. **Lifting `content-visibility` for a turn with work in flight**, the fix for (1). Reverted with it:
-   it cost the live turn a real rendering property for decoration, and a leaked `.run` would have left
-   an old turn uncontained AND painting. A fade changes no geometry, so nothing needs lifting.
-3. **A status dot on the sub-task (`.t-prog`) line, red when the agent's work failed** — with an
-   `agent_outcome` bridge verb, `SessionStore.agentWorkFailed`, and an `__agent_outcome` frame. Removed
-   with all of it (Kotlin reverted byte-exact) once the work outcome proved unknowable; `.t-prog`'s
-   colour-only `run` class predates this and stays. A `<tool_use_error>` exclusion was added on the way
-   out and is worth remembering on its own — see gotchas.
-
-## 2026-08-13 — One gap for every block that hangs off the line above it
-`:root` gains `--block-gap: 18px` (independent blocks) and `--attach-gap: 8px` (a line and what
-belongs to it). One rule covers the five tool-line followers —
-`.io, .t-prog, .t-note, .tool-imgs, .todos { margin: calc(var(--attach-gap) - var(--block-gap)) 0 0 22px }`
-— and `.compact-sum`, `.card-h` (+ `.card .blk`) and `.think .body` name `--attach-gap` directly.
-**Why:** the five had drifted to −6/−2/+2/+2/+2px, which against `.turn-body`'s 18px flex gap is
-12/16/20/20/20px — so `.tool-imgs`, `.todos` and `.t-note` sat FARTHER from their own tool line than
-an unrelated block, reading as detached exactly where they should read as attached. Writing
-`calc(target - block)` rather than the nudge is what makes the intent legible and stops the family
-drifting again. 8px was picked by the user from `design/tool-gap-probe.html` (12/8/6/4 side by side,
-each column driven by the real rule) because it is what `.card-h` already put between a card's
-header and its body — so the panel's two "this belongs to that" idioms agree rather than compete.
-**Rejected:** matching `.io`'s old 12px (only 6px tighter than an unrelated block — too weak a
-signal), and 4px/`.compact-sum`'s value (crowds the todo list and image chips). Also rejected:
-putting `.compact-sum` in the shared selector list — its parent `.compact` is an ordinary block, so
-there is no flex gap to cancel and the subtraction would pull it 10px INTO the status line; it takes
-the token directly instead. Left alone deliberately, as a different relationship: action rows
-(`→ .card-b`, `.ask-b → .ask-foot`) at 10px, list rhythm (`.io-row` 0, `.ask-opt` 2, `.todo` 3,
-`.ti` 6) and label→sub-line at 1px.
-
-## 2026-08-13 — An unnamed thread re-reads its name once per turn, at `message_start`
-`ChatPanel`'s onEvent keeps its per-`result` `pushTitle`, and adds: while `lastTitle` is blank and
-this turn has not probed yet, a line containing `"message_start"` triggers one more read (guarded by
-`titleProbed`, reset at `result`).
-**Why:** `pushTitle` had exactly ONE live-turn caller — the `result` line — while the history list
-calls the same `titleOf` off disk every time it opens. So a new conversation showed "New
-conversation" beside a titled `current` row for the length of its first turn. Measured, not
-inferred: a user's transcript (`D--sites-accesshealth/ccafeb52-…`) has its first prompt at
-04:39:10Z and its next at 05:40:30Z, and no ai-title/custom-title/summary at all — an hour of
-disagreement, with the first-user-message fallback as the final answer the whole time. `message_start`
-is the EARLIEST frame that can work: measured against CLI 2.1.229 (`_local/title_timing.py`), the
-transcript is MISSING at `system/init` and 15 KB by `message_start`. Once per turn matters because
-`titleOf` scans the whole file and its `(mtime,size)` cache misses on every append of a live session.
-**Rejected:** an `onSessionId` callback out of `ClaudeCli` — the most precise-sounding trigger, and
-the measurement shows it fires before the file exists, on top of needing new plumbing through two
-classes. Also rejected: deriving a provisional title in JS from the rendered first message — a
-second derivation of a value that conventions.md requires to have one source.
-
-## 2026-08-13 — The webview is seeded on EVERY load, and the title cache is cleared when it is
-`startSession()` split: the `session.start(...)` wiring stays once (`started`), while a new
-`seedUi()` — `__mode`, `__project`, the stored init payload, the title, the file list — runs at every
-main-frame `onLoadEnd`. `lastTitle` is nulled first. `ClaudeSessionService.start` also rebinds its
-callbacks BEFORE the `server != null` guard.
-**Why:** `onLoadEnd` always fired on every load; everything it seeded sat behind `started`, so a
-reloaded page kept a live CLI with a DOM back at its markup defaults. Proved on the pre-fix build:
-after `location.reload()`, `slashCommands` 0 and `projectRoot` "" — an empty slash menu and absolute
-paths, permanently. The title was the one that could never heal, because `pushTitle` only pushes on
-a CHANGE and the name had not changed: a change-detector on the push side records what was last
-SENT, and `pushEvent` is a fire-and-forget `executeJavaScript` that guarantees nothing about
-delivery. The callback rebind is the same failure family — a ChatPanel recreated against a live
-service returned before wiring itself to the CLI.
-**Rejected:** replaying the conversation into a reloaded page. A reload empties the log too, but
-recovering it means pushing the transcript WITHOUT restarting the CLI (unlike `refresh`, which does)
-and reconciling a replay against frames still arriving mid-turn — and no reload has ever been
-observed in the wild. Parked in backlog.md; this change makes the chrome honest, not the log.
-
-## 2026-08-12 — One contract for every foldable block, stated in chat.css
-Two rules, written above the `.fold` rules so they cannot drift: (1) `8px 10px` padding, and
-whichever element carries it is ALSO the one that scrolls; (2) foldable AND scrollable ⇒ the
-scrollbar appears only when EXPANDED. Holders: `.diff`, `.card .cmd`, `.codeblock pre`, `.io-row`,
-`.compact-sum` (not scrollable — it wraps).
-**Why:** rule 2 is not extra work, it falls out of rule 1 — a scrollbar is painted at the bottom of
-its container's padding box, and `.fold:not(.open)`'s `overflow: hidden` crops the element it lands
-on. One element for both and the behaviour is free; split across two and you get a bar floating
-mid-box that survives collapsing, which is exactly what `.io` did. `.io-row` was the only surface
-that deviated (6px vertical, and the fold on `.io-v` while the row scrolled). `foldBlock` is now
-given the ROW.
-**Rejected:** `:has()` to reach the row from the folded value — one line, but it makes the
-behaviour depend on a selector feature we cannot test outside real JCEF, and it would have left
-the two surfaces structurally different for no gain. Also rejected: keeping `.io-row` at 6px
-because it is denser — the point of the change was that these read as one family.
-**Exception, deliberate:** `.io-row`'s left 10px lives on its sticky `.io-k`, not on the row.
-Sticky clamps to the containing block, so padding on the row makes the label unable to reach the
-padding edge; it gets pushed right and eats the column gap. The 10px is still there, just owned by
-the label — recorded at both sites.
-
-## 2026-08-12 — Busy is a fact about the STREAM, not about who sent the turn
-`message_start` sets busy when it is false, resetting the request-scoped counters (`turnTokens`,
-`reqTokens`, `reqSeed`, `retrySeen`) exactly as `sendTurn` does. Separately, `pendingBgTasks`
-counts only tasks whose `task_type` is NOT `local_bash`.
-**Why:** `setBusy(true)` had exactly one call site — inside `sendTurn` — so a turn the CLI started
-on its own streamed with the button on Send, and Stop (the only interrupt control) was unreachable.
-That happens on every background-shell completion: the CLI injects its notification prompt and
-starts a turn. **Measured, not inferred** — a real stream-json capture (CLI 2.1.228, kept at
-`_local/wire-short.jsonl`) shows the notification turn arriving with NO user frame on the wire,
-which is what makes `message_start` the only possible hook; the transcript persists a `user`
-record, the live stream does not. The counter reset is required because it IS a new request (the
-CLI brackets it with `system/init` + `status:"requesting"`); without it the done line billed the
-previous request's tokens (142 vs its own 12, measured). The shell half is the same premise from
-the other side: the CLI's own busy set excludes `local_bash`, so a shell's `result` is the true end
-and counting it parked busy for the life of the process.
-**Rejected:** the CLI's allow-list form for the filter — an unknown `task_type` must count as
-SUSPENDING, because finalizing a live request early corrupts its accounting and drains the queue
-into it, while failing to un-suspend is a visible spinner that heals when the roster empties.
-Also rejected: hooking `system/status:"requesting"` (fires ~3x per ordinary turn) or a `user` frame
-(does not exist on the wire). `ClaudeCli.route` gained `if (!stopped) onEvent(line)` as a
-consequence — a stale buffered `message_start` after a restart would now set busy with no result
-coming.
-
-## 2026-08-12 — A value that IS the work goes in the IN box, not the description
-`"function"` moved from `RenderLimits.DESC_KEYS` to `IN_KEYS`, so `mcp__playwright__browser_evaluate`
-renders like Bash: blank tool line, JS body in the IN box. `.t-desc` also gained a one-line clamp
-(`nowrap` + ellipsis) with the SHOWN text mirrored onto `title`.
-**Why:** `function` joined DESC_KEYS on 2026-08-05 to close 15 blank lines, assuming its value reads
-like prose. Measured across the nine real calls in local transcripts it is 230-2965 characters of
-multi-line JS — `DESC_MAX` produced a mid-token slice, wrapped across the line. IN_KEYS' own rule
-already covered it: "whose value is the instruction ITSELF". The IN box is `white-space: pre`,
-scrolls sideways, folds to three lines and caps at `CMD_MAX`, which no real call reaches. Neither
-reference client puts code on the line either. The tooltip carries the post-`DESC_MAX` string
-deliberately: it reveals what the CLAMP hid, never what the CAP dropped.
-**Rejected:** keeping it in both lists (the duplicate-description bug fixed the day before), and
-clamping the description without moving it (the code stays unreachable). `toolLabel()` left alone —
-changing `PlaywrightBrowserEvaluate` to VS Code's `Playwright [browser_evaluate]` would reopen a
-settled 2026-07-30 decision and add the first MCP branch to a deliberately universal rule.
-
-## 2026-08-12 — The rename editor dismisses on CAPTURE, the one place the popup idiom does not fit
-An outside click discards the rename (like Escape and ✕, never commits), via a document listener
-registered with `capture: true` — unlike every other dismissal in chat.html, which bubbles.
-**Why:** built first in the existing bubbling handler, per plan, and it failed on exactly the
-clicks most likely to follow: `#histBtn`, the model/mode chips and the effort dots all
-`stopPropagation` in their own handlers, so their clicks never reach a bubbling document listener.
-Capture runs before any target handler. Discard rather than commit because a stray click would
-append a `custom-title` record with no undo. Excluding `#convTitle` as well as `#convEdit` keeps
-the opening click from closing the editor it just opened.
-**Rejected:** a `blur`/focus-loss dismissal — there is ZERO `blur` handling in the webview, and
-every popup stays open when the panel loses focus; rename must not become the only surface that
-does otherwise. Also rejected: adding blur to every surface (wider blast radius, no request).
-
-## 2026-08-12 — The replay window keeps the NEWEST blocks, and says so at its top edge
-`readTranscript` reads the whole file and evicts from the FRONT once it holds more than
-`MAX_BLOCKS` (20,000, was 4,000). The cut is the first `user` block at or after the minimum that
-must go — unbounded forward scan — and eviction triggers at `max + chunk` so each cut removes at
-least a chunk. When anything is dropped the parser prepends a `truncated` block carrying the COUNT,
-which chat.html draws as a `.status` line ("12,400 earlier blocks not loaded").
-**Why:** the old cap `break`ed out of the read, keeping the OLDEST blocks — a session resumed on
-2026-08-12 replayed as though it had ended on 2026-08-06 (user screenshot; 6,034 blocks against a
-4,000 cap). The tail is what is on screen, so the tail is what must survive. The count rides at the
-HEAD of the list rather than on a wire field because `more` reaching 0 is already exactly the moment
-it should appear — no new frame, no ChatPanel change. Wording lives in chat.html, the same split
-`auth` uses. 20,000 is affordable because per-block cost is bounded by `RenderLimits` and
-`IMAGE_BUDGET`; it is a runaway guard, not a paging window.
-**Rejected:** a bidirectional paging window that re-parses on scroll (the user's first proposal) —
-a mid-file range cannot be parsed in isolation (results patch earlier blocks by `tool_use_id`, tasks
-rebuild from increments, compact summaries link by `parentUuid`), so every page-up would cost a full
-file scan to save memory that `RenderLimits` already bounds. Also rejected: a BOUNDED forward scan
-for the turn boundary — shipped, and it failed on the first real transcript (below).
-
-## 2026-08-12 — A cap that trims history must not do it silently, at EITHER end
-Two edges, same rule. The window announces what it dropped (above), and `#fade-top` now switches
-off at `scrollTop <= 1` so the first block is legible.
-**Why:** the fade exists to dissolve content scrolling under the header, but at the true top there
-is nothing under it — it was describing content that does not exist while washing out the marker.
-Sticky `.msg-user` (z 6) rides above the fade, which is why this never showed in five months of
-use; ordinary content at z-auto does not.
-**Rejected:** raising the marker's z-index instead — it would leave one crisp line hanging over
-content that is correctly fading beneath it. Also rejected: padding the marker clear of the 48px
-band, which trades an unreadable line for a hole at the top of every windowed conversation.
-
-## 2026-08-12 — The task-progress line dedupes against the IN box, not just the tool line
-`taskLine` suppresses a `task_started`/`task_progress` description that exactly matches EITHER the
-tool line's `.t-desc` OR its IN box row.
-**Why:** the `.t-desc` half shipped earlier from a user screenshot, but Bash's `.t-desc` is blank
-BY DESIGN — `command` is in `IN_KEYS`, not `DESC_KEYS` — so a Bash called without a `description`
-had nothing to compare against, the CLI's frame fell back to the command itself, and the command
-printed twice: in full in the box and again beneath it cut to `descMax`. Exact-match only, both
-surfaces, so a real sub-agent's running commentary still draws.
-**Rejected:** a prefix or fuzzy match (would eat commentary that legitimately quotes the command),
-and locating the IN row by position (a box can hold OUT alone — it is found by its `IN` key).
-
-## 2026-08-12 — Release notes are enforced by the build, not by the checklist
-`buildPlugin` fails when `changeNotesHtml` (`plugin/build.gradle.kts`) carries no `<b>X.Y.Z</b>`
-entry for the version being built, with a message pointing at `docs/release.md` step 1b. Older
-versions stay listed in the notes — they are what users are updating FROM.
-**Why:** the checklist line added earlier the same day was the same class of guard that had already
-failed twice (0.4.0 and 0.5.0 both published 0.3.3's notes), and automating the upload removed the
-last human who might have noticed. This fires at step 2, before the tag and before a version number
-can be spent on a bad upload. The user asked for it after reading the checklist-only version.
-**Rejected:** a configuration-time check (would fail `runIde` mid-feature, which teaches people to
-ignore it) and validating the built plugin.xml instead of the source string (more machinery, same
-answer). Trap hit on the way: with `org.gradle.configuration-cache=true`, a task action that reads a
-script-level `val` captures the script object and the cache refuses to serialize it — evaluate into
-locals in the configuration block. See gotchas.md.
-
-## 2026-08-12 — The Marketplace upload is automated, but only the UPLOAD
-`.github/workflows/marketplace-upload.yml` (the repo's first workflow) fires on `release: published`,
-downloads the zip `gh release create` just attached, and POSTs it to
-`https://plugins.jetbrains.com/api/updates/upload` with `xmlId` + `file` and a bearer token from the
-`JETBRAINS_MARKETPLACE_TOKEN` repo secret. Steps 1-9 of `docs/release.md` stay manual and local.
-**Why:** the web-form upload was the one release step with nothing enforcing it, and the step that
-decides whether Marketplace users see the release at all. Re-posting the PUBLISHED asset rather than
-building in CI keeps "the zip users get is the zip that was smoke-tested on this machine" — the
-guarantee step 9's `cmp` check already establishes. It also needs no Gradle and no 1.5 GB IDE
-download in CI, so the run is seconds. Signing is unaffected: the zip goes up unsigned exactly as the
-web form sent it (`signPlugin` is `onlyIf`-guarded on a key this project doesn't configure, and five
-releases were accepted this way).
-**Rejected:** `./gradlew publishPlugin` — it works (IPGP 2.1.0 falls back to `buildPlugin`'s archive
-when signing is unconfigured), but it is still a command to remember, which IS the problem. Also
-rejected: building the zip in CI on a tag push (publishes an artifact nobody ran, and moves the
-release-notes approval gate somewhere worse); and a `channel` field (Stable is what the web form did).
-**Consequence, handled:** stale `changeNotes` used to be caught by the human doing the upload —
-0.4.0 and 0.5.0 both shipped 0.3.3's notes. It is now step 1b of the checklist.
-
-## 2026-08-12 — A conversation's title is derived from the WHOLE transcript, not a window
-`computeTitle` reads every line: the first `TITLE_HEAD_LINES` (400) are parsed in full for the
-derived title (first user message, legacy `summary`), and past that a line is rejected on a substring
-unless it holds `custom-title` or `ai-title`.
-**Why:** those two records are appended WHERE THEY HAPPEN, so on a long thread they are thousands of
-records in — a rename on a real 10,458-line transcript sat on lines 10455-10458 and the 400-line head
-scan never saw it, so the panel showed the derived title forever and the rename looked broken. The
-cost is the scan `tokensOf` already pays for every session in `list()` (measured on the same 35 MB
-file: 521 ms cold, 0 ms cached), so this adds no new class of work.
-**Rejected:** a tail window (`tailLines`, as `lastActivityOf` uses) — 256 KB is ~75 records on a
-transcript with large tool results, so the name would evaporate after ~10 more turns, which is worse
-than a consistent bug; and caching the name in our own state — a second source of truth is exactly
-what the byte-identical `custom-title` record exists to avoid.
-
-## 2026-08-12 — Rename writes the CLI's own `custom-title` record, from the header title
-`SessionStore.rename` appends `{type:"custom-title", customTitle: title.trim(), sessionId}` + "\n"
-with O_APPEND — the CLI's writer, read verbatim from the 2.1.226 binary, three fields, no uuid or
-timestamp. UI is the header title: hover pencil, click the title OR the pencil, header becomes the
-editor, Enter saves / Esc cancels. Safe on the LIVE session, unlike delete.
-**Why:** byte-identical writes mean a rename here and a `/rename` in the terminal are one act, so
-neither client sees a name the other cannot explain. The header (not the history row) was the
-user's explicit choice. Appending is safe live because the CLI opens O_APPEND per write.
-**Rejected:** the `rename_session` control subtype — it answers "onRenameSession callback not
-registered", dispatching to an SDK embedder's callback, unreachable over stream-json. Also
-rejected: a `/rename` slash command, and rename in the conversations list (user picked the header).
-
-## 2026-08-12 — Tool-line paths: project-relative, one line, and a CHARACTER budget for the tail
-Display drops the project root (segment-boundary match only) and splits into a shrinking `.p-head`
-and a never-shrinking `.p-tail`. The tail carries the filename plus its parent when the two fit
-`RenderLimits.PATH_TAIL_MAX` (40 chars), else the filename alone. The absolute path rides
-`dataset.path`; the click handler prefers it over `textContent`.
-**Why:** a character budget needs no layout measurement — the alternative forces a synchronous
-layout per tool line during a replay that renders hundreds. CSS alone cannot express "shrink the
-parent only once the prefix is gone": flex distributes shrink proportionally, so any factor big
-enough to save the filename also nibbles the parent on a path that had room (both regimes measured
-on real JCEF). Storing the absolute separately also fixed a path past DESC_MAX being *clicked*
-truncated.
-**Rejected:** filename-only tail (loses the disambiguating folder); parent always in the tail
-(a narrow panel then clips the FILENAME); three spans with shrink ordering (proportional shrink
-cost the parent a character it didn't need to lose); `direction: rtl` for a left-side ellipsis
-(`unicode-bidi: plaintext` cancels it, and without it the leading `/` reorders).
-
-## 2026-08-12 — The context gauge is an SVG arc, drawn with the composer's Lucide geometry
-A ring in front of the percentage: `pathLength="100"` so `stroke-dasharray` IS the percentage,
-both strokes `currentColor`, `--ctx-pct` set beside the digits in `renderContext`.
-**Why:** `currentColor` makes the ring cross the 50% warn threshold with the number for free, with
-no second rule to keep in step. `pathLength` removes the 2*pi*r constant. Lucide geometry (24
-viewBox, r=9, stroke 2, 19px box, 3-unit inset) makes it measure identically to the square-slash
-beside it — 13.5x13.5, confirmed in DevTools.
-**Rejected:** a conic-gradient pie behind a radial mask — a third of the code and no markup, but
-Chromium anti-aliases neither the sweep edge nor the mask, so it rendered visibly stepped.
-
-## 2026-08-09 — Deleting the LIVE conversation = leave it first, then delete
-Every history row now offers delete, the current one included. The live path routes through
-`ClaudeSessionService.deleteCurrentSession`: restart on a fresh conversation, `awaitExit(5s)`
-on the OLD process off-EDT, then delete the transcript, then re-push the sessions list.
-**Why:** the CLI reopens the transcript per write, so a live delete truncates rather than
-removes (the original refusal reason) — and `stop()` only sends the signal, so a dying CLI
-can still flush one resurrecting write; the bounded wait closes that window. Deleting the
-thread you're looking at was a standing user annoyance; "make it not exist" implies leaving
-it. Mid-turn delete stops the turn — identical to mid-turn "New conversation", deliberately.
-**Rejected:** delete-in-place (truncates, the refusal stays as backstop); hiding delete on the
-current row (the previous design — solved the corruption, not the user's need); unbounded wait
-(a hung CLI would leak the pooled thread and the file).
-
-## 2026-08-09 — Editor verdict UI is a bar UNDER the diff, card-identical, combined grant only
-Accept / Accept-all / Reject live on a `FileEditorManager.addBottomComponent` bar beneath the
-diff editor: centered, no prose, no tint, the panel card's exact colours (chat.css .ok/.no,
-mirrored constants) and exact Lucide glyphs (bundled /icons/accept.svg, accept-all.svg,
-reject.svg). The suggestion button is COMBINED: one click grants every allow-suggestion whole
-("Always allow" when rules are among them, else "Accept all edits"), via the new
-FILE_SAVED_ALL verdict — a permission-flow-only extension; bridge verdicts stay the reference
-three. No split/partial-grant dropdown in the editor — the panel card keeps that.
-**Why:** the two surfaces answer the SAME question, so they must read as one control; the
-user reviewed each iteration in runIde and specified bottom placement, no text, no tint, and
-"combined, not the dropdown". Partial grants are a deliberate act that belongs on the card.
-**Rejected:** toolbar CONTEXT_ACTIONS icons (invisible among diff icons); toolbar text
-buttons (no warning-free API across 242→262); NOTIFICATION_PROVIDERS banner (top-only, loud);
-platform icons (don't match the card's glyphs); split dropdown in the bar (user's explicit
-spec). Mechanics and traps in gotchas.md.
-
-## 2026-08-09 — Edit permissions are dual-surface, first answer wins; editor close is NOT a grant
-A can_use_tool for Edit/Write/MultiEdit opens the panel card AND a real editor diff (read-only,
-balloon Accept/Reject); `ClaudeSessionService.respondPermission`'s pending map is the arbiter —
-first remove() sends, the loser no-ops. Closing the diff without deciding leaves the card as the
-sole surface.
-**Why:** keyboard users keep the card (and the always-allow rules, which stay card-only); the
-editor gets the reference-style surface the roadmap wanted. TAB_CLOSED deliberately DIVERGES
-from the bridge flow's accept-as-proposed here: a permission must never be granted by a window
-being tidied away. Read-only panes because accept answers with the ORIGINAL input — an editable
-pane would silently discard typing (tweak-travel is a possible v2).
-**Rejected:** editor-only surface (breaks panel-only workflows); editor-title buttons for v1
-(balloon ships now, buttons can follow); TAB_CLOSED→allow parity (unsafe for permissions).
-
-## 2026-08-09 — openDiff never writes; every review's diff tab closes by a HELD handle
-DiffReview implements the reference verdict contract (FILE_SAVED + final pane text /
-DIFF_REJECTED / TAB_CLOSED — the CALLER does the disk write) and opens its diff as its own
-`ChainDiffVirtualFile`, holding the file reference from creation; resolution closes exactly
-that tab.
-**Why:** measured against both halves of the reference — the VS Code extension builds both
-panes as temp documents and never touches the real file; the CLI maps the verdict to
-{oldContent, newContent} and writes itself. And `FileEditorManager.openFiles` does NOT report
-diff editors (measured live: visible diff tab, empty openFiles), so any find-then-close closes
-nothing — the old closeAllDiffTabs filter had never worked.
-**Rejected:** writing the file on accept (double-write that fights the CLI — 10.5's original
-premise, corrected); find-by-name/class tab closing (provably a no-op).
-
-## 2026-08-09 — 10.1/10.3 re-scoped: the model-facing IDE-tool allowlist is upstream policy
-The CLI drops every `mcp__ide__*` tool from the model's roster except getDiagnostics +
-executeCode — a filter byte-identical across 2.1.222/223/226. Items now mean their bridge
-halves (verified over MCP-over-WS).
-**Why:** three identical versions = deliberate policy, not a regression to wait out; VS Code
-models get the same two tools, so parity is preserved by accepting it.
-**Rejected:** registering the bridge under a non-"ide" server name to dodge the prefix filter —
-the CLI finds its IDE client BY the literal name `"ide"` for its own IDE features (TUI
-diff-in-IDE among them); the dodge breaks more than it restores.
-
-## 2026-08-09 — Retry-line wording is a chat.html table; replay reorders late-flushed retries (9.1)
-The wire's api_retry `error` is a five-code enum (network failures = literal "unknown") —
-`RETRY_REASONS` translates it, unfamiliar codes degrade to the raw code, twins dedupe by
-consecutive attempt/max key. Replay-side, SessionStore inserts an api_error record whose
-timestamp precedes the last emitted error item BEFORE that error.
-**Why:** the rich reason never rides the stream (TUI-in-process only), so translation is the
-ceiling live; and the CLI flushes buffered api_error records AFTER the concluding error record —
-file order lies, timestamps and the parent chain don't.
-**Rejected:** surfacing "the" error reason live (doesn't exist on the wire); a Set for dedupe
-(would swallow a second same-turn storm's restart at 1/10); general timestamp re-sort of replay
-(risky for every other record family — the insertion is scoped to this measured pattern).
-
-## 2026-08-09 — Model-facing tool results are suppressed by CONTENT, not tool name (7.4)
-`RenderLimits.isInternalResult()` drops the OUT box for a result whose FIRST line closes with
-the CLI's own "(This tool result is internal metadata …)" declaration; `stripPlumbing()` also
-strips a position-0 `[harness: …]` envelope.
-**Why:** the async sub-agent launch is model-facing bookkeeping end to end, but the SAME tool's
-completed result is the sub-agent's report — the one thing on that line worth reading — so
-RESULT_SKIP's name-keying cannot express the split; only the text can. Position-0-only for the
-envelope is structural safety: the CLI escapes line-initial forgeries to `[\harness:` before
-prepending its own, so an unescaped one in first position can only be real.
-**Rejected:** adding Task/Agent to RESULT_SKIP (kills the completed report); stripping
-`[harness:` anywhere in the text (a sub-agent quoting the marker — this project's own notes
-do — would lose it).
-
-## 2026-08-09 — Replay error parity: the CODE travels, the WORDING lives once in chat.html (8.2)
-SessionStore emits `status` items carrying the raw auth error code (`icon:"auth"`); replay
-resolves it through the same AUTH_BLOCKED map the live path reads. `AUTH_BLOCKED_CODES` (the
-membership set) lives in RenderLimits but is deliberately NOT spliced into LIMITS.
-**Why:** the per-code text is UI wording only chat.html needs; Kotlin needs only membership.
-A spliced set the JS never reads is dead weight — the alignment is pinned by a test instead
-(every code must appear in chat.html), and an unknown code degrades to showing the raw code
-rather than nothing. The phantom-summary suppression (`reqError`) is last-record-wins, not
-sticky, so a request that recovers after an error record keeps its summary.
-**Rejected:** duplicating the wording into Kotlin (drift); keying suppression on the presence
-of any error record (a recovered request would lose its summary).
-
-## 2026-08-09 — Live edit diffs render OPTIMISTICALLY from tool input, superseded by the card
-Edit/Write/MultiEdit now draw replay's "Applied" card live, built from the tool_use INPUT at
-`tool_result` time, and a `permission_request` for the same edit marks the pending record
-superseded so manual mode never double-renders.
-**Why:** the live wire carries no diff data at all (no `toolUseResult`/`structuredPatch` — probed
-2026-08-05), and in acceptEdits / under a saved rule / in a pre-authorized path the CLI never
-sends `can_use_tool`, so the permission card — the only live diff producer — never fires. Keying
-off `currentMode` instead would have missed rule-grant and scratchpad approvals; keying off the
-card's absence is not knowable at `content_block_stop` (the card, if any, arrives later). Hence
-optimistic-plus-supersede rather than wait-and-see.
-**Rejected:** asking the CLI for the patch (nothing to ask); a bespoke live diff widget (replay's
-card already exists, is mode-agnostic by design, and sidesteps the bare-`.diff` float problem).
-Cost of the choice: the gutter line must be fetched PRE-apply (see gotchas) and degrades to no
-line numbers when it can't be found.
-
-## 2026-08-09 — All keyboard chords removed; the plugin binds NO shortcuts
-The three webview JS keydown chords are deleted, not re-homed as IDE actions: Ctrl/Cmd+N (new
-conversation), Ctrl+Alt+G (gallery), F12 (DevTools). The `"devtools"` bridge branch in
-`ChatPanel.kt` went with them — nothing sends it now. Every capability keeps a route: the New
-button and `/clear` both send `kind:'new'`, the gallery stays exposed as `window.__gallery()`,
-and DevTools keeps the shortcut-less `ClaudeBrains.OpenDevTools` action (Find Action).
-**Why:** all three were dead on this setup — Ctrl+N was swallowed by the IDE's "Go to Class",
-and the Ctrl+Alt+G / F12 handlers never fired at all inside JCEF. A shortcut that silently does
-nothing is worse than none.
-**Rejected:** re-registering them as IDE-level actions with `<keyboard-shortcut>` (the fix
-previously queued in state.md) — that trades a dead chord for a keymap collision to hunt on
-every IDE and OS, for a panel whose buttons are already one click away. Closes manual-test
-1.5 / 11.1 / 11.2, dropping the open-issue count from 19 to 17.
-
-## 2026-08-08 — Manual-test pass conventions; two behaviours accepted, not fixed
-The 92-item pass closed with a "tick + inline ISSUE note" convention: a box is ticked when the
-behaviour was OBSERVED, with defects recorded under it rather than leaving boxes open. Two
-verification methods were admitted for unforceable events, each with provenance stated in the
-tick: CDP fixture injection through `onClaudeEvent` (rate-limit: recorded fixture; refusal
-fallback: the VS-Code-bundle shape the handler was built from), and direct MCP-over-WS calls to
-the bridge (openFile / selection / openDiff) when CLI 2.1.226 stopped exposing those tools to
-the model. **Accepted, not bugs:** untitled sessions deriving "/model <x>" as their title (CLI
-audit record, same family as /effort turns); replayed image chips as "file.jpg <smaller>" (the
-transcript persists the bare API image block — no filename exists to show).
-**Rejected:** styling the issue notes as GitHub alerts (tried, reverted — plain text wanted);
-logging the name-loss as a defect (retracted after measuring the records).
-
-## 2026-08-07 — Light theme declined; colour groundwork removed
-`docs/colors.md`, `design/colors.html`, and `design/light.css` (the theming groundwork —
-light.css was the draft palette, unwired from mockup.html's `<link>` + devbar theme toggle)
-deleted, along with the completed `docs/port-plan.md` and the one-off comparison pages
-`design/btn-variants.html` / `design/model-icon-variants.html`. The
-colours-through-`:root`-tokens rule they carried moved to conventions.md; the token inventory
-itself had already drifted (28 documented vs 35 in chat.css).
-**Why:** the user doesn't want a light theme, and the doc duplicated what `chat.css` answers.
-**Rejected:** keeping the doc trimmed to theming notes — groundwork for work that won't happen
-is reload-budget spent on nothing; git history keeps it recoverable.
-
-## 2026-08-07 — Project context lives in `.claude/context/`; CLAUDE.md abolished
-The `/context` skill's file set replaces the 427-line root `CLAUDE.md` (last committed copy at
-`ee7e9fc`) and the global auto-memory directory for this project. `.gitignore` un-ignores
-`.claude/context/` so the memory travels with the repo.
-**Why:** one portable, structured location instead of a monolithic file that competes for the
-whole reload budget every session. **Rejected:** keeping CLAUDE.md alongside (two sources that
-drift — the same reason the plugin doesn't rebuild terminal config). `runbook.md` deliberately
-not created: release steps already live in `docs/release.md`.
-
-## 2026-08-06 — Declined (not deferred): cost display, token/usage panel, per-record metadata
-Client-parity items 17, 18, 26 declined outright, joining the already-deliberate non-features:
-hidden bookkeeping records (25), stripped IDE context (27), off-window history as a consequence
-of windowed replay (28), silent `/effort` turns replaying as an honest audit trail (30).
-**Why:** decision, not queue position — usage display moved OUT of deferred. Keeps the panel
-focused on the many-times-an-hour loop.
-
-## 2026-08-03 — Mode switcher sends the CLI's own four modes; bypass machinery removed
-`manual` / `acceptEdits` / `plan` / `auto`, all switching live via one control request.
-**Why:** `auto` is a safety-checked mode; the old plugin sent `bypassPermissions` under the
-label "Auto" and had to relaunch the CLI to enter it (only bypass is refused at runtime).
-**Rejected:** keeping bypass + relaunch-with-resume (`__modeRestarted` is gone). A stored
-`default`/`bypassPermissions` migrates in `selectedMode()`.
-
-## 2026-07-31 — Renamed to "Claude Brains"; distribution is Path B
-Plugin id `io.github.amitsidhpura.claude-brains`, packages `io.github.amitsidhpura.claudebrains.*`,
-no syncroze references. Custom plugin repo on `github.com/amitsidhpura/claude-brains`, NOT the
-JetBrains Marketplace (process in docs/release.md).
-*Partially superseded same day:* the plugin WAS also submitted to the Marketplace on 2026-07-31
-(vendor `amitsidhpura`) — both channels ship the same id; IDEs take the higher version
-(docs/release.md § Marketplace listing).
-
-## 2026-07-30 — Slash menu is an allowlist; /model and /effort deliberately hidden
-Over `--input-format stream-json` there's no interactive terminal, so only turn-producing
-commands work; unconfirmed ones are hidden and refused. Enabled: `/compact` (→ CLI), `/clear`
-(native, = New button). `/model`/`/effort` hidden because the composer has the model chip and
-effort slider. Effort rides a muted `/effort` turn (no control request exists); it reappearing
-on resume is ACCEPTED as an honest audit trail — no filter planned (closed renderer-parity's
-last open item).
-
-## 2026-07-30 — Per-turn file rewind removed
-Not worth the cost: needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` (which also bloats
-every transcript with file-history snapshots), a git repo, and client-supplied uuids.
-Revival notes in gotchas.md.
-
-## Founding — "Develop in the IDE. Configure in the Terminal."
-The scope rule. Settings page and non-terminal login are the terminal's half and will NOT be
-built — they are "By design" absences, never gaps or backlog. Rationale: rebuilding `~/.claude`
-config in the IDE is a second implementation that can only drift.
+**2026-08-13 — Sub-agent and in-flight state.** A running tool's dot is white and breathing and the
+colour IS the verdict (`--dot-c` per element, one geometry rule for all four `::before` dots) — green
+from the first frame asserted success before anything returned. A sub-agent settles when its TASK ends,
+not when its launch ack arrives (`isInternalResult` recognises the ack), and goes red only on a
+`failed`/`killed` TASK, never on failed WORK — the work outcome is unknowable across sandbox guards, so
+a sub-task status dot was built and removed the same day. *Rejected:* keying on tool NAME (drifts);
+colouring from summary prose (a text heuristic over an open-ended sentence).
+**2026-08-13 — Three things built and withdrawn**, kept because each looks obviously right until
+measured: an outward halo (`.turn-body` containment shaved it into a cut half-rectangle), lifting
+`content-visibility` to save it (costs the live turn a real rendering property for decoration), and the
+sub-task outcome dot above. Lessons live in gotchas.
+**2026-08-13 — One gap for every block that hangs off the line above it.** `--block-gap: 18px` /
+`--attach-gap: 8px`; followers use `calc(attach - block)` so the intent is legible and the family cannot
+drift again (five had drifted to −6/−2/+2/+2/+2px, putting attached content FARTHER from its tool line
+than an unrelated block). 8px user-picked from a probe because `.card-h` already used it. *Rejected:*
+putting `.compact-sum` in the shared selector (its parent is an ordinary block — no flex gap to cancel).
+**2026-08-13 — An unnamed thread re-reads its name once per turn, at `message_start`.** `pushTitle` had
+one live-turn caller (`result`), so a new conversation showed "New conversation" beside a titled row for
+its whole first turn — an hour in a real transcript. `message_start` is the earliest frame that can work
+(the file does not exist at `system/init`). *Rejected:* an `onSessionId` callback (fires before the file
+exists); deriving a provisional title in JS (a second derivation of a one-source value).
+**2026-08-13 — The webview is seeded on EVERY load** (`seedUi()` at each `onLoadEnd`, `lastTitle` nulled
+first) — everything used to sit behind a `started` guard, so a reload left the DOM at markup defaults
+with a live CLI attached. *Rejected:* replaying the conversation into a reloaded page (needs the
+transcript pushed without restarting the CLI, reconciled against frames still arriving; no reload has
+ever been observed in the wild — parked as 8.14).
+**2026-08-12 — One contract for every foldable block:** `8px 10px` padding, and whichever element
+carries it ALSO scrolls; foldable AND scrollable ⇒ the scrollbar appears only when expanded (rule 2
+falls out of rule 1). *Exception, deliberate:* `.io-row`'s left padding lives on its sticky `.io-k`,
+since sticky clamps to the containing block. *Rejected:* `:has()` to reach the row (untestable outside
+real JCEF).
+**2026-08-12 — Busy is a fact about the STREAM, not about who sent the turn.** `message_start` sets busy
+and resets the request-scoped counters, because `setBusy(true)` had one call site inside `sendTurn` — so
+a turn the CLI started on its own streamed with the button on Send and Stop was unreachable. Measured: a
+notification turn arrives with NO user frame on the wire. `pendingBgTasks` excludes `local_bash`, since
+the CLI's own busy set does. *Rejected:* an allow-list filter (an unknown `task_type` must count as
+suspending); hooking `system/status` (fires ~3x a turn).
+**2026-08-12 — The replay window keeps the NEWEST blocks and says so at its top edge.** The old cap kept
+the OLDEST, so a session resumed on the 12th replayed as though it had ended on the 6th. Cap 20,000,
+eviction from the front at a `user` boundary, and a `truncated` head block carrying the COUNT. *Rejected:*
+a bidirectional paging window (a mid-file range cannot be parsed in isolation — results patch earlier
+blocks by id, tasks rebuild from increments, summaries link by parentUuid). Paired rule: a cap that trims
+history must not do it silently at EITHER end (`#fade-top` off at `scrollTop <= 1`).
+**2026-08-12 — A value that IS the work goes in the IN box, not the description.** `"function"` moved
+from `DESC_KEYS` to `IN_KEYS` — measured at 230-2965 chars of multi-line JS, so `DESC_MAX` produced a
+mid-token slice. The tooltip carries the post-`DESC_MAX` string deliberately: it reveals what the CLAMP
+hid, never what the CAP dropped.
+**2026-08-12 — Tool-line paths: project-relative, one line, a CHARACTER budget for the tail.** A budget
+needs no layout measurement (the alternative forces a synchronous layout per tool line during a replay
+that renders hundreds), and CSS alone cannot express "shrink the parent only once the prefix is gone".
+*Rejected:* filename-only tail (loses the disambiguating folder); `direction: rtl` (`unicode-bidi`
+cancels it).
+**2026-08-12 — The rename editor dismisses on CAPTURE**, the one place the popup idiom does not fit:
+every control beside the title `stopPropagation`s, so a bubbling listener never sees those clicks.
+Discard rather than commit, since a stray click would append a `custom-title` record with no undo.
+*Rejected:* a `blur` dismissal (there is zero blur handling in the webview).
+**2026-08-12 — A conversation's title is derived from the WHOLE transcript**, since `custom-title` and
+`ai-title` are appended where they happen — a rename on a 10,458-line file sat on the last four lines.
+*Rejected:* a tail window (moves the blind spot); caching the name ourselves (a second source of truth).
+**2026-08-12 — Rename writes the CLI's own `custom-title` record**, read verbatim from the binary, so a
+rename here and a `/rename` in the terminal are one act. Safe on the LIVE session because the CLI opens
+O_APPEND per write — unlike delete. *Rejected:* the `rename_session` control subtype (unreachable over
+stream-json).
+**2026-08-12 — Release notes are enforced by the build, not the checklist** (`buildPlugin` fails without
+a `<b>X.Y.Z</b>` entry) and **the Marketplace upload is automated, but only the UPLOAD** — the workflow
+re-posts the PUBLISHED asset so the zip users get is the zip that was smoke-tested. *Rejected:* a
+configuration-time check (would fail `runIde` mid-feature); building the zip in CI (publishes an
+artifact nobody ran).
+**2026-08-12 — The context gauge is an SVG arc** with `pathLength="100"` and `currentColor`, drawn on
+the composer's Lucide geometry so it measures identically to the glyph beside it. *Rejected:* a
+conic-gradient pie (Chromium anti-aliases neither the sweep edge nor the mask).
+**2026-08-09 — Deleting the LIVE conversation = leave it first, then delete** (restart on a fresh
+conversation, bounded `awaitExit`, then remove the file) — the CLI reopens the transcript per write, so
+a live delete truncates rather than removes, and a dying CLI can still flush a resurrecting write.
+**2026-08-09 — Edit permissions are dual-surface, first answer wins; editor close is NOT a grant.** The
+card and a real editor diff both open; `respondPermission`'s pending map is the arbiter. TAB_CLOSED
+deliberately diverges from the bridge flow's accept-as-proposed: a permission must never be granted by a
+window being tidied away. Panes are read-only because accept answers with the ORIGINAL input.
+**2026-08-09 — openDiff never writes; every review's diff tab closes by a HELD handle.** The CALLER does
+the disk write (measured on both halves of the reference), and `FileEditorManager.openFiles` does not
+report diff editors, so any find-then-close closes nothing. Verdict UI is a bar UNDER the diff,
+card-identical, combined grant only — partial grants stay on the card. *Rejected:* toolbar icons
+(unidentifiable), text buttons (no warning-free API 242→262), a top banner.
+**2026-08-09 — The model-facing IDE-tool allowlist is upstream policy** (getDiagnostics + executeCode),
+byte-identical across three versions. *Rejected:* renaming the bridge server to dodge the prefix filter
+— the CLI finds its IDE client BY the literal name `"ide"`.
+**2026-08-09 — Wording lives once, codes travel.** Retry reasons and auth errors are chat.html tables;
+Kotlin emits the raw CODE and only membership sets live in RenderLimits. An unknown code degrades to
+showing itself. *Rejected:* duplicating wording into Kotlin.
+**2026-08-09 — Model-facing tool results are suppressed by CONTENT, not tool name** — the same tool's
+launch ack is bookkeeping while its completed result is the report, so name-keying cannot express the
+split. The `[harness: …]` envelope is stripped at position 0 only, since the CLI escapes line-initial
+forgeries.
+**2026-08-09 — Live edit diffs render OPTIMISTICALLY from tool input, superseded by the card**, because
+the live wire carries no diff data and pre-approved paths never send `can_use_tool`. Cost accepted: the
+gutter line must be fetched PRE-apply and degrades to no line numbers.
+**2026-08-09 — All keyboard chords removed; the plugin binds NO shortcuts.** All three were dead on this
+setup (Ctrl+N swallowed by the IDE, the others never fired inside JCEF), and a shortcut that silently
+does nothing is worse than none. Every capability keeps a route. *Rejected:* re-registering as IDE
+actions (trades a dead chord for keymap collisions to hunt on every IDE and OS).
+**2026-08-08 — Manual-test pass conventions:** tick when the behaviour was OBSERVED, with defects
+recorded inline; unforceable events may be verified by CDP fixture injection or direct MCP-over-WS, with
+provenance stated in the tick. Accepted, not bugs: `/model <x>` audit records becoming untitled-session
+titles; replayed image chips reading "file.jpg <smaller>".
+**2026-08-07 — Light theme declined; colour groundwork removed** (the docs duplicated what chat.css
+answers, and groundwork for work that won't happen is reload budget spent on nothing).
+**2026-08-07 — Project context lives in `.claude/context/`; CLAUDE.md abolished** — one portable
+structured location instead of a monolith competing for the whole reload budget. *Rejected:* keeping
+CLAUDE.md alongside (two sources that drift).
+**2026-08-06 — Declined, not deferred:** cost display, token/usage panel, per-record metadata. A
+decision, not a queue position — it keeps the panel on the many-times-an-hour loop.
+**2026-08-03 — The mode switcher sends the CLI's own four modes** (`manual`/`acceptEdits`/`plan`/`auto`)
+and the bypass machinery is gone: `auto` is safety-checked, while the old "Auto" was
+`bypassPermissions` and needed a CLI relaunch.
+**2026-07-31 — Renamed to "Claude Brains"; distribution is Path B** (custom repo), *partially superseded
+the same day* — the plugin was also submitted to the Marketplace, so both channels ship the same id and
+IDEs take the higher version.
+**2026-07-30 — The slash menu is an allowlist**, since over stream-json only turn-producing commands
+work; `/model` and `/effort` stay hidden because the composer has the chip and the slider. Effort rides
+a muted `/effort` turn, and its reappearance on resume is ACCEPTED as an honest audit trail.
+**2026-07-30 — Per-turn file rewind removed** — needs a checkpointing env var that bloats every
+transcript, plus a git repo and client-supplied uuids. Revival notes in gotchas.
+**Founding — "Develop in the IDE. Configure in the Terminal."** The scope rule. A settings page and
+non-terminal login are the terminal's half and will NOT be built — "By design" absences, never gaps.
+Rebuilding `~/.claude` config in the IDE is a second implementation that can only drift.

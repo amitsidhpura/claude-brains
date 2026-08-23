@@ -32,6 +32,30 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Relearned the hard way (twice in two days): `pkill -f runIde` kills gradle, not the sandbox
   IDE; the orphan then swallows relaunches silently.
 - Declined by the user: wrapping the confirm-card path to show it whole at narrow widths.
+- **Consolidation pass, finally done** (open since 2026-08-17): `gotchas.md` 878 → 497 and
+  `decisions.md` 885 → 399, with zero facts dropped — the cut came from real duplication (the
+  `pkill`/`pgrep` self-match trap appeared in FIVE places, negative-control lessons in four),
+  narrative retelling, and pre-2026-08-14 decisions compressed to an outcome/why/rejection digest.
+  Spot-checked ~20 distinctive facts survive. Journal digested to its ~10-entry window.
+- **Then the real finding: consolidation was treating the wrong cause.** The user ran
+  `/context load` and it still filled 7% of the window. Measured: a full-folder load is **~41k
+  tokens and ~29k of it is read then discarded** — `decisions.md`, `glossary.md` and `runbook.md`
+  contributed NOTHING to the briefing and `gotchas.md` contributed two lines out of 497. The
+  skill's load step now reads a briefing TIER (state + overview + conventions + the newest
+  journal entry, ~8k, an 80% cut) and greps the reference files on demand; `save` must carry the
+  few traps that bear on next steps into `state.md`. Lesson: file size was never the constraint —
+  eager reading was.
+- **The skill itself was then generalized for the gist and compressed at the user's direction**
+  (121 → 141 with my rationale bloat → 96 lines): project-specific numbers demoted to a labelled
+  illustration then removed entirely, the CLAUDE.md check deduped to the policy section alone,
+  `decisions.md` "append" corrected to prepend (the file is newest-first), gotchas entries now go
+  under TOPIC sections not dated ones, and the Retention model rewritten as two budgets (briefing
+  tier = line caps; reference tier = density, no duplication). User's standing aim: rules only, no
+  rationale paragraphs — stop compressing when only normative text remains. Gist push is the
+  user's (`gh gist edit b2d033439ba4ca5bcd018f4fe5eef773 -f SKILL.md .claude/skills/context/SKILL.md`).
+- **SKILL.md's frontmatter line 1 was mangled TWICE by something outside the session** (`` ``--- ``
+  then `-``--`) — each time silently killing the YAML block, the skill's description and its
+  auto-triggers. Repaired both times; culprit unknown (editor plugin / sync suspected).
 - **Released 0.9.0** at the end of the session (tag `v0.9.0`, commit `f53a10c`): plan comments,
   the pending-plan replay honesty, the VFS open-path fix and the compaction replay-order fix.
   GitHub release, custom feed and the automatic Marketplace upload all green; the published
@@ -273,61 +297,16 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   (its command line carries the pattern) — read the pid's cmd before concluding "still running".
 - Next: the eight [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥.
 
-## 2026-08-17 (fifth) — 2.10 and 2.11: the hook lane opens, and the locks get swept
-- **Autosave-before-read/write shipped as a host-registered SDK hook.** Read out of extension.js
-  2.1.233 first: VS Code's `claudeCode.autosave` (default on) is `saveFileIfNeeded`, a `PreToolUse
-  Edit|Write|Read` callback that saves a dirty document. Our stream-json CLI takes the same thing:
-  `initialize` accepts `hooks:{Event:[{matcher,hookCallbackIds}]}` (schema pulled from the CLI
-  binary; validated strictly) and then sends `control_request{subtype:hook_callback}` per matching
-  call. Until now that arm fell into the generic empty-`{}` ack. New `Autosave.kt`; the reply goes
-  out from the EDT after `saveDocument`, `{continue:true}` on every path.
-- **Measured before believing, twice.** Headless probe (`probe_hook.py`, scratchpad): initialize
-  with hooks → success; `hook_callback id=autosave event=PreToolUse tool=Read path=…` arrived
-  before the Read ran. Then live in `runIde`: unsaved `ZEBRA-43` buffer, `Read` returned ZEBRA-43,
-  `idea.log` shows `autosaved before Read` at 22:01:07.320, file mtime 22:01:07.313.
-- **Two contaminated runs before the clean one, both instructive:** (1) PhpStorm's own
-  "save on frame deactivation" wrote the buffer the moment the user alt-tabbed to report back, so
-  disk and buffer agreed before any tool ran — the test must stay inside the sandbox until the
-  answer lands; (2) the model chose `Bash cat` over the `Read` tool, which no PreToolUse
-  file-matcher can see — pin the tool in the prompt ("Use the Read tool — not Bash"). Neither is a
-  defect; both are in gotchas.
-- **Stale-lock sweep** (`IdeLockFile.sweepStale`, on every write): the CLI's own rule (dead pid →
-  unlink) exists in the binary but only runs when it ENUMERATES IDEs, which `--mcp-config` never
-  triggers — so nothing had ever cleaned up. 17 locks → 2 on the first sandbox start.
-- `runIde` hit the known `teamcity.jetbrains.com` config-cache eviction (2m20s "Connection timed
-  out") — `-PskipVerifierIdes` cleared it, exactly as gotchas § Build says.
-- Next: the eight remaining [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥.
-
-## 2026-08-17 (fourth) — the checklist re-audited, and 2.4 finished
-- **`docs/feature-checklist.md` rewritten** against VS Code 2.1.233 + CLI 2.1.233 (installed here;
-  the file had been on 2.1.220/222). Sources: `package.json` contributions, the `case"…"` host-
-  message vocabulary grepped out of `extension.js`, the `name:"…",description:"…"` command records
-  out of the CLI binary, and our own docs/context. Stale rows found: editor accept/reject listed ⬜
-  (shipped 2026-08-09), bypass-by-relaunch (removed 2026-08-03), no plan-feedback/split-approve, no
-  effort slider / gauge / rename / delete; whole families we built (queue, bg roster, todo,
-  compaction, retries, hooks, CliFileSync, ShellEnv…) absent. IDE-MCP tool set unchanged at 12.
-- New in 2.1.233 worth a row: `side_question`, session groups + a sessions sidebar view,
-  `set_thinking_level`, `set_focus_view`, `primaryEditor.open`, `open_file_diffs`, git host actions,
-  `ask_debugger_help`, `get_terminal_contents`, speech-to-text. Each carries **[NEW]** and a take.
-- The user iterated the FORMAT six times, each a one-line ask: no `[x]` beside the emoji (redundant);
-  fold the two summary lists into rows as tags; move the key to the top; uncluttered header (two
-  small tables); ⬜ → 🟥🟧🟨 by importance; `[XS/SM/MD/LG]` effort after the mark; `section.row`
-  numbers. Ended at 124 rows, header-only meta, ids declared stable.
-- **2.4 `close_tab` finished**: it had swept every diff tab (`closeAllDiffTabs()` under the hood).
-  Now per-review by the `tab_name` given at open; both close tools reply with the reference's
-  exact strings (read from extension.js: `tab.label === tab_name` → `TAB_CLOSED`;
-  ``CLOSED_${n}_DIFF_TABS``). Verified live in `runIde` over MCP-over-WS (websockets, subprotocol
-  `mcp`, auth header from the LIVE lock — 16 stale locks were sitting in `~/.claude/ide/`, picked
-  by `os.kill(pid,0)` + workspaceFolders): close_tab ALPHA left BETA pending until Accept;
-  closeAllDiffTabs resolved both + `CLOSED_2_DIFF_TABS`. Probe recipe: two `tools/call openDiff`
-  with distinct `tab_name`, sleep, one close call, print verdicts as they land.
-- Tooling notes: `./gradlew runIde` returned "BUILD SUCCESSFUL in 7s" while the sandbox JVM kept
-  running (verify by `pgrep` + jar contents, not by the Gradle exit); a heredoc python one-liner
-  over the 15KB `package.json` timed out at 120s once for no reason found — writing the script to
-  the scratchpad and running it under `timeout` worked first time.
-- Next: the ten **[DECIDE]** rows; then backlog order.
-
 ## Digest
+- **2026-08-17 (fifth)** — checklist 2.10/2.11: autosave moved onto the SDK hook lane
+  (`PreToolUse Edit|Write|MultiEdit|Read`, the reference's own mechanism, no toggle) and stale
+  `~/.claude/ide/*.lock` files are swept on every lock write, dead pid only — 15 corpses had
+  accumulated because `delete()` only runs on an orderly dispose. Traps: `hook_callback` is a
+  BLOCKING control request so every path must answer; PhpStorm saves on frame deactivation, which
+  silently invalidates any "before Claude reads" test run by alt-tabbing out (both in gotchas).
+- **2026-08-17 (fourth)** — the checklist re-audited against both reference clients on one version
+  and 2.4 finished (`close_tab` closes ONE review by name, both close tools reply reference-exact).
+  Ours had swept every diff, so with two proposals open, closing one resolved both.
 - **2026-08-17 (third)** — **Released 0.7.2** (`40bc060`): / menu insert-vs-send rule + Effort
   label rail; patch bump, gate held at step 6, Approved same day.
 - **2026-08-17 (second)** — the "7px that was never 7px": the probe page lacked the `#inputbar`

@@ -21,6 +21,9 @@ then a real replay bug found and fixed — a pending plan card claiming verdicts
   ordinary reloads, still correct for the pending-card case. User confirmed reload "perfect".
 - **Proof:** gradle test **115** · live harness **411** (new fixture 54; control run 406/5 —
   every new assert seen failing first) · `probe` on the user's real session parses honestly.
+- **Memory infrastructure overhauled (post-release):** `gotchas.md` 878→~510 and `decisions.md`
+  885→~420 with zero facts dropped; `/context load` now reads a briefing TIER (~8k tokens, was
+  ~41k) — see decisions 2026-08-24. The skill was generalized + compressed to 96 lines for reuse.
 
 ## Released — 0.9.0 (2026-08-23)
 **0.9.0 is the shipped version** (tag `v0.9.0`, commit `f53a10c`). GitHub release + custom feed
@@ -30,6 +33,9 @@ compaction replay-order fix.
 Nothing is unreleased on `main` right now. Next release is a fresh bump when work lands.
 
 ## Post-release follow-ups (open)
+- **User to push the updated context skill to the gist:** `gh gist edit
+  b2d033439ba4ca5bcd018f4fe5eef773 -f SKILL.md .claude/skills/context/SKILL.md` — and check the
+  uploaded file's line 1 is exactly `---` (mangled twice by an unknown writer; gotchas).
 - `docs/slash-commands.md` still documents CLI 2.1.233 — never synced after the 2.1.241 audit.
 - Marketplace **web description** is hand-edited and uploads do not refresh it.
 - 0.9.0 verified **Compatible on all seven IDEs** (242.26775.23 → 262.10315.32) — that ladder's
@@ -67,8 +73,6 @@ Nothing is unreleased on `main` right now. Next release is a fresh bump when wor
 - [ ] Sync the **Marketplace web description** (hand-edited; uploads don't refresh it).
 - [ ] **Windows errand:** `./gradlew test` once (CRLF splice path never run there) + click a
       `Read` path for a fresh file to confirm the VFS fix on the box that reported it.
-- [ ] Consolidation pass: `decisions.md` (~845) and `gotchas.md` (~860) far over the ~100-line
-      target — promote, then cut. Flagged 2026-08-17, still pending and growing.
 
 ## Known gaps (deliberately left)
 - 5.6: keyboard-only selection can't open the comment pill; interrupted-plan boilerplate quote
