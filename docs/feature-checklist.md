@@ -3,9 +3,9 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.233, last full re-audit 2026-08-17)
-- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.233-linux-x64/`
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.233`; headless roster in `docs/slash-commands.md`
+**References** (both on 2.1.241, last full re-audit 2026-08-23)
+- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.241-linux-x64/`
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.241`; headless roster in `docs/slash-commands.md`
 - Data-level parity (every CLI event we drop or render) lives in `docs/client-parity.md`, not here
 
 **Status marks**
@@ -32,11 +32,21 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in the 2.1.222 → 2.1.233 re-audit |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no → re-mark ➖/🚫) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
+
+**Re-audit 2026-08-23 (2.1.233 → 2.1.241)** — no new feature surfaces on either side: the
+extension's contributions and IDE-MCP tool set are byte-for-byte the same roster, and the CLI's
+typed control vocabulary added only an @internal device-hooks call. What DID move is measured
+wire fact, folded into the rows below: the stdio host accepts `stop_task` (11.3, new at 2.1.238),
+`side_question` (8.11), `apply_flag_settings` incl. `effortLevel`/`fastMode` (9.2/9.4),
+`set_max_thinking_tokens` (9.5), `rename_session` (8.4), `get_settings`/`list_models`/
+`get_context_usage` (9.6) — every one probed live 2026-08-23. `initialize` now also reports
+`current_permission_mode`, `session_state` and `fast_mode_disabled_reason`; `/clear` grew an
+optional `[name]` hint (7.6). Probe transcripts in the 2026-08-23 session scratchpad.
 
 **Work order** (from `.claude/context/backlog.md`): plan-card shortcuts (if un-deferred) →
 reloaded-webview log replay → kill-background-process → editor accept/reject v2 tweak-travel →
@@ -85,7 +95,7 @@ auto-include selection, voice.
 - **1.23** ⬜ [SM] `permission_denied` reason / `decision_reason` on the permission card — P3 polish
 - **1.24** ⬜ [SM] `result.terminal_reason` (19 values) surfaced when a turn ends oddly — P3 polish
 
-## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged in 2.1.233)
+## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged in 2.1.241)
 - **2.1** ✅ `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`, `getLatestSelection`,
       `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ `openDiff` — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -132,7 +142,9 @@ auto-include selection, voice.
       requests surface as error blocks
 - **4.4** ✅ **"Don't ask again" buttons** from `permission_suggestions` (compound `addRules` merged
       into one button — VS Code does not); hidden on `blocked_path` prompts
-- **4.5** ✅ Mode persists across restarts and New/Refresh/resume; launched with the persisted mode
+- **4.5** ✅ Mode persists across restarts and New/Refresh/resume; launched with the persisted mode.
+      Since 2.1.241 `initialize` also reports `current_permission_mode` — a reconciliation source if
+      the persisted value ever drifts
 - **4.6** ➖ `allowDangerouslySkipPermissions` / `initialPermissionMode` settings — the flag turns
       every mode into a bypass (probed); persistence covers the initial-mode need
 
@@ -164,7 +176,8 @@ auto-include selection, voice.
       binds no shortcuts today, but an unbound action the user can map is compatible with that
 - **6.6** 🚫 Auto-include current **selection** on ask — deferred by the user (do last)
 - **6.7** ⬜ [SM] VS Code `list_files_request` **[NEW]** / `respectGitIgnore` in the picker — our picker is
-      IDE-indexed; ➖ unless a real gap shows
+      IDE-indexed; ➖ unless a real gap shows. (The CLI also answers `file_suggestions {query}`
+      over stdio with the TUI's own fuzzy ranking — an alternative source if one ever does)
 - **6.8** ➖ `@terminal` (`get_terminal_contents`) **[NEW]** — the panel does not own a terminal
 
 ## 7. Slash commands (`docs/slash-commands.md` is the source of truth)
@@ -176,7 +189,10 @@ auto-include selection, voice.
 - **7.4** ✅ **16 built-ins enabled**, each driven through the live panel; the rest Hidden by group
 - **7.5** ✅ Pick rule: a command with ANY `argumentHint` inserts `/name ` and waits; hint-less runs
       (2026-08-16; the roster carries no `immediate` flag)
-- **7.6** ✅ `/clear` native (→ new conversation)
+- **7.6** ✅ `/clear` native (→ new conversation). 2.1.241 gave it an optional `[name]` hint (the
+      TUI names the fresh session), so a menu pick now INSERTS `/clear ` instead of running
+      (`cmdTakesArg` keys on the hint) and the native branch drops any typed name — decide whether
+      to pass it through as the new conversation's title or pin the old pick-runs behavior
 - **7.7** ✅ `aliases` are first-class: the menu filter scores them like names, rows show them
       muted (`.pi-alias`), and a typed alias resolves to its command before the allowlist gate
       (`canonicalCmd`; `/review` → `/code-review`, `/new` → `/clear`). Fixture 52, 2026-08-17
@@ -200,7 +216,9 @@ auto-include selection, voice.
       (newest rename wins) → summary → first user message
 - **8.3** ✅ Header shows the title as soon as the transcript can name it (probe at `message_start`,
       re-read at every `result`; `seedUi()` on every load)
-- **8.4** ✅ **Rename** in place (header pencil → the CLI's own `custom-title` record = `/rename`)
+- **8.4** ✅ **Rename** in place (header pencil → the CLI's own `custom-title` record = `/rename`).
+      A `rename_session {title}` control request also exists and is accepted over stdio (probed
+      2026-08-23) — a cleaner path if the record-write ever grows warts
 - **8.5** ✅ **Delete** any conversation, the live one via leave-first (`awaitExit`)
 - **8.6** ✅ Replay through the same block builders as live (`docs/renderer-parity.md`); windowed
       with an aligned turn-boundary cut, "N earlier blocks not loaded" marker and **load-earlier
@@ -209,7 +227,10 @@ auto-include selection, voice.
       vs both clients (VS Code `rewind_code` / `fork_conversation`; TUI `/rewind`, `/branch`,
       `/fork`). Per-turn file rewind was REMOVED 2026-07-30; revival notes in gotchas § Protocol
       (`CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, git repo, client uuids via `stampMessage`,
-      dry_run first). **Status: still UNDECIDED — needs an explicit yes / later / no**
+      dry_run first). The wire shape is a typed control now: `rewind_files {user_message_id,
+      dry_run}` → `{canRewind, filesChanged, insertions, deletions}`, plus a `file_snapshot` /
+      `files_persisted` record family (2026-08-23; unchanged since 2.1.233, not probed live — it
+      mutates files). **Status: still UNDECIDED — needs an explicit yes / later / no**
 - **8.8** ⬜ [MD] Reopen closed session (Ctrl+Shift+T) — ➖ while the plugin binds no shortcuts and has
       no tabs
 - **8.9** 🚫 Multiple conversation **tabs** — deferred by the user (do last)
@@ -218,7 +239,9 @@ auto-include selection, voice.
       history popup already lists per-project sessions; grouping is only worth it once tabs or
       worktrees exist. Watch
 - **8.11** 🟥 [MD] **Side question** **[NEW · DECIDE]** (`side_question` host message; TUI `/btw`) — ask without disturbing
-      the main thread. Take: hourly-plausible; needs a probe of the wire shape first. Candidate
+      the main thread. Take: hourly-plausible. Probe DONE 2026-08-23: a stdio control request
+      `{subtype:"side_question", question, history?}` answered `{response, synthetic}` with a real
+      model reply, no turn on the main thread. Ready to build on a yes. Candidate
 - **8.12** ➖ **Remote sessions / teleport / remote control** (`list_remote_sessions`,
       `teleport_session`, `toggle_remote_control`; TUI `/teleport`, `/rc`, `/session`) — session
       SOURCES beyond the local disk lean infrastructure; recorded as a judgment call
@@ -231,16 +254,26 @@ auto-include selection, voice.
       and re-applied on every restart
 - **9.2** ✅ **Effort slider** (low / medium / high / xhigh / max) — sends a muted `/effort` turn
       because no `set_effort` control exists; the resumed transcript shows the turn (accepted
-      audit trail). Watch-item: `apply_flag_settings{effortLevel}` could retire the hack
+      audit trail). Watch-item RESOLVED 2026-08-23: `apply_flag_settings {settings:{effortLevel}}`
+      is accepted over stdio and takes effect (`get_settings` shows the flag layer winning) — the
+      turn hack can be retired as a small change when wanted. The CLI's `/effort` hint also grew
+      `ultracode|auto` beyond the slider's five stops
 - **9.3** ✅ **Context gauge** ring on the composer — `modelUsage[].contextWindow` (a map, side
       models included), reset on compaction
-- **9.4** 🟥 [SM] **Fast mode toggle** **[DECIDE]** (`fastMode` on `initialize` + `result.fast_mode_state`, both already
-      received; TUI `/fast`, Opus only). Take: cheap, sibling of the model chip — candidate
-- **9.5** 🟧 [SM] **Thinking level** **[NEW · DECIDE]** — host message `set_thinking_level`. Take: probe
-      whether it is a control request we can send; likely redundant beside the effort slider
+- **9.4** 🟥 [SM] **Fast mode toggle** **[DECIDE]** (`fast_mode_state` + `fast_mode_disabled_reason` on `initialize`,
+      `result.fast_mode_state`; TUI `/fast [on|off]`, Opus only). Mechanism measured 2026-08-23: a
+      headless client starts gated (`sdk_opt_in_required`) and `apply_flag_settings
+      {settings:{fastMode:true}}` clears the gate (state then reflects the account, e.g.
+      `extra_usage_disabled`); `list_models` reports `supportsFastMode` per model. Take: cheap,
+      sibling of the model chip — candidate
+- **9.5** 🟧 [SM] **Thinking level** **[NEW · DECIDE]** — VS Code's `set_thinking_level` host message; the stdio
+      spelling is `set_max_thinking_tokens {max_thinking_tokens, thinking_display}`, accepted over
+      stdio (probed 2026-08-23). Take: likely redundant beside the effort slider
 - **9.6** ➖ Cost / token breakdown / usage panel (`get_usage`, `get_context_usage`,
       `request_usage_update` **[NEW]**; TUI `/usage`, `/cost`, `/context`) — declined 2026-08-06; the
-      built-in `/context` is enabled as a turn for the rare look
+      built-in `/context` is enabled as a turn for the rare look. (`get_context_usage` and
+      `get_settings` both answer over stdio — probed 2026-08-23 — so the data is there if this is
+      ever revived)
 - **9.7** ⬜ [MD] Fable overage / `model_consent_fallback` gate — no `supportedDialogKinds` declared, so
       the CLI stays silent; the model chip could lie if the gate fires. Probe by exercising it
 - **9.8** ➖ Subagent model (`CLAUDE_CODE_SUBAGENT_MODEL`), Bedrock / Vertex / Foundry setup — env
@@ -259,9 +292,13 @@ auto-include selection, voice.
       (`mcp_servers[].status`), MCP prompts in the / menu, skills in the / menu, hook output,
       **sub-agent progress line + prompt + final report**, **background task roster** (`bg` chip,
       reset at the CLI boundary), Todo/Task checklist (`TodoWrite` + the Kotlin task store)
-- **11.3** 🟥 [MD] **Kill a background process from the panel** — roster rows are display-only; the CLI
-      has no host-side control request for it (only the model's `TaskStop`). Backlog § Next up;
-      protocol check first
+- **11.3** 🟥 [MD] **Kill a background process from the panel** — roster rows are display-only. The
+      protocol check is DONE (2026-08-23): `stop_task {task_id}` is a control request the stdio
+      host accepts (typed schema since ≤2.1.233, added to the remote-relay whitelist at 2.1.238;
+      probed live — success, unknown ids answer without error, so verify against a real task id
+      when building). A sibling `background_tasks {tool_use_id?}` backgrounds foreground tasks
+      (Ctrl+B semantics). Needs only the roster-row action (conversations-list hover-gutter
+      idiom). Backlog § Next up
 - **11.4** 🟧 [MD] Sub-agent WORK outcome (the dot was built and withdrawn 2026-08-13) — known gap
 - **11.5** ⬜ [SM] Elicitation (`elicitation` control request) — our empty ack answers it with neither
       decline nor an answer; no local MCP server elicits today. Probe if one ever does
@@ -300,6 +337,10 @@ auto-include selection, voice.
       `update_skipped_branch`. Take: read the webview flow before deciding; probably belongs
       with worktrees
 - **14.3** 🟧 [LG] Git-aware diff/context — roadmap
+- **14.4** ⬜ [SM] Workspace diff over the wire **[NEW]** (`get_workspace_diff` control — the engine behind the
+      TUI's thin-client `/diff`: one base ref, 5s git timeout, 50 files, 1MB/file caps). Newly
+      noticed 2026-08-23 (present since ≤2.1.233). The IDE has native git diff, so this leans ➖
+      unless 14.3 wants the CLI's view of the diff
 
 ## 15. Onboarding & misc
 - **15.1** ➖ Walkthrough / onboarding checklist / upsell and terminal banners (`dismiss_review_upsell_banner` **[NEW]**) / `update` /
@@ -315,12 +356,12 @@ auto-include selection, voice.
       configuration; ➖
 
 ## 16. Quality gates (not features, but part of "what we have")
-- **16.1** ✅ `./gradlew test` (106, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
+- **16.1** ✅ `./gradlew test` (109, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
       control RUN
-- **16.2** ✅ Live harness `tools/live_harness.py` — 21 fixtures (numbered to 51), **344** assertions, real captured
+- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 52, **361** assertions, real captured
       wire frames replayed into the live webview over CDP
 - **16.3** ✅ `./gradlew probe` (replay without the IDE); `tools/cdp.py`; `window.__gallery()`;
       DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins — gotchas)
 - **16.4** ✅ Plugin Verifier 0 warnings on PhpStorm 242→262; Marketplace upload automated on
-      `release: published`; releases 0.4.0 → 0.7.2 all Approved
+      `release: published`; releases 0.4.0 → 0.8.0 all Approved
 - **16.5** ✅ Standing manual-test checklist (`docs/manual-test.md`, 92 items, register 0 open)
