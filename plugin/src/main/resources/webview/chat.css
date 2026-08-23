@@ -703,9 +703,12 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
   white-space: nowrap; color: var(--muted); font-style: italic; }
 .plan-c .c-t { display: block; min-width: 0; color: var(--fg); }
 /* hover-only remove, conversations-list gutter idiom: the row's width never changes */
+/* the .rm plate in the warn family (--warn-bg sits one step above the row's --warn-field
+   well, as --user-raised does on its own rows) — matched metrics: 3px padding, 3px radius */
 .plan-c .c-x { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-  visibility: hidden; border: 0; background: none; color: var(--muted); cursor: pointer;
-  padding: 2px; line-height: 0; }
+  visibility: hidden; border: 0; border-radius: 3px;
+  background: color-mix(in srgb, var(--warn-border) 15%, var(--warn-bg));
+  color: var(--muted); cursor: pointer; padding: 3px; line-height: 0; }
 .plan-c:hover .c-x { visibility: visible; }
 .plan-c .c-x:hover { color: var(--fg); }
 .plan-c .c-x svg { width: 12px; height: 12px; }
@@ -723,8 +726,9 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .plan-c.compose .c-btns { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .plan-c.compose .c-btns .c-x { position: static; visibility: visible; transform: none; }
-.plan-c .c-ok { border: 0; background: none; color: var(--muted); cursor: pointer;
-  padding: 2px; line-height: 0; }
+.plan-c .c-ok { border: 0; border-radius: 3px;
+  background: color-mix(in srgb, var(--warn-border) 15%, var(--warn-bg));
+  color: var(--muted); cursor: pointer; padding: 3px; line-height: 0; }
 .plan-c .c-ok:hover { color: var(--fg); }
 .plan-c .c-ok svg { width: 12px; height: 12px; }
 .plan-c input { flex: 1 1 auto; min-width: 0; background: none; border: 0; outline: none;
@@ -848,11 +852,12 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--user-raised);
   border: 1px solid var(--user-border); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
 /* Remove control, shared by the attachment chip and the queue row (.q-row) so the two cannot
-   drift: hidden until its row is hovered, then absolutely placed over the text end with a fade
-   so revealing it never reflows the row. Reserving space for it instead was rejected. */
+   drift: hidden until its row is hovered, then absolutely placed over the text end as a SOLID
+   plate (the left-edge fade was dropped 2026-08-23, user pick) so revealing it never reflows
+   the row. Reserving space for it instead was rejected. The plan-comment ✕/⏎ wear the same
+   plate in the warn family — change one, check the other. */
 .rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
-  background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 3px;
-  box-shadow: -6px 0 6px var(--user-raised); }
+  background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 3px; }
 .rm:hover { color: var(--fg); }
 .rm svg { width: 12px; height: 12px; display: block; }
 .att:hover .rm, .q-row:hover .rm { display: inline-flex; }

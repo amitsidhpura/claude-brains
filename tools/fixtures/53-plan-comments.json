@@ -40,6 +40,11 @@
      "js": "(function(){ var p=document.querySelector('.plan-add'), c=document.querySelector('.card.plan'); if(!p||!c) return 'missing'; var pr=p.getBoundingClientRect(), cr=c.getBoundingClientRect(); return pr.top>=cr.top && pr.top<=cr.bottom+4; })()",
      "equals": true,
      "why": "DISCRIMINATING (fix 2026-08-23b): the pill renders near the selection, inside the card's box"
+    },
+    {
+     "js": "(function(){ var r=document.createElement('button'); r.className='rm'; document.body.appendChild(r); var v=getComputedStyle(r).boxShadow; r.remove(); return v; })()",
+     "equals": "none",
+     "why": "DISCRIMINATING (round 8): the .rm remove control (chips + queue rows) lost its left-edge fade — flat plate now (stylesheet-level assert; this fixture renders no chips)"
     }
    ]
   },
@@ -62,6 +67,11 @@
      "js": "(function(){ var c=document.querySelector('.plan-c.compose'); if(!c) return 'no composer'; var a=c.querySelector('.c-a'), i=c.querySelector('.c-row input'), b=c.querySelector('.c-ok'); if(!a||!i||!b) return 'missing parts'; return (i.offsetTop>a.offsetTop) && b.offsetParent!==null; })()",
      "equals": true,
      "why": "DISCRIMINATING (polish 2026-08-23c): anchor quote on its own full-width line, input + Enter button on the row below"
+    },
+    {
+     "js": "(function(){ var x=document.querySelector('.compose .c-x'), k=document.querySelector('.compose .c-ok'); if(!x||!k) return 'missing'; var sx=getComputedStyle(x), sk=getComputedStyle(k); var flat=function(s){return s.backgroundColor!=='rgba(0, 0, 0, 0)' && s.borderRadius==='3px';}; return (flat(sx)&&flat(sk)) || sx.backgroundColor+'/'+sx.borderRadius; })()",
+     "equals": true,
+     "why": "DISCRIMINATING (round 8): ✕ and ⏎ wear the .rm plate — a visible background and 3px radius, not bare icons"
     },
     {
      "js": "document.querySelectorAll('.card.plan mark.plan-anchor').length",
@@ -188,9 +198,9 @@
      "why": "DISCRIMINATING: the footer names the count"
     },
     {
-     "js": "document.querySelectorAll('.card.plan mark.plan-anchor').length",
-     "equals": 0,
-     "why": "marks unwrap on decide — replay cannot rebuild them, so live must not keep them"
+     "js": "(function(){ var ms=document.querySelectorAll('.card.plan mark.plan-anchor'); return ms.length + '|' + (ms[0]?ms[0].textContent:''); })()",
+     "equals": "1|network calls",
+     "why": "DISCRIMINATING (round 9): the decided card re-highlights the anchor by TEXT SEARCH (shared highlightAnchors) — the precise selection marks are unwrapped and rebuilt exactly as replay will rebuild them"
     },
     {
      "js": "document.querySelectorAll('.card.plan .plan-add').length",
@@ -231,6 +241,83 @@
      "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); if(!cards.length) return 'no plan-hook card'; return (cards[cards.length-1].querySelector('.ok-t')||{textContent:''}).textContent; })()",
      "contains": "sent 2 plan comments",
      "why": "the approved footer counts both comments"
+    }
+   ]
+  },
+  {
+   "note": "round 10: an ambiguous anchor records WHICH occurrence — wire gains an occurrence marker only then; the decided card highlights the occurrence the user actually selected",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan again', []); window.__tape53b = []; window.__bridge = function(j){ window.__tape53b.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pc3",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Wrap network calls in a retry helper\\n2. Backfill tests\\n3. Log network calls\"}",
+     "suggestions": "[]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var blks=document.querySelectorAll('.card.plan .blk'); var blk=blks[blks.length-1]; var tn=blk.querySelectorAll('li')[2].firstChild; var r=document.createRange(); r.setStart(tn,4); r.setEnd(tn,17); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ var p=document.querySelector('.plan-add'); if(!p) return res('no pill'); p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return res('no composer'); ci.value='the second one'; ci.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); res(document.querySelectorAll('.plan-cs .plan-c:not(.compose)').length); }, 50); }); })()",
+     "equals": 1,
+     "why": "the SECOND 'network calls' (li 3) is selected and committed"
+    },
+    {
+     "js": "(function(){ document.querySelector('.card-b .no').onclick(); var t=window.__tape53b.filter(function(m){return m.kind==='perm'}).pop(); return t ? t.text : 'no perm msg'; })()",
+     "equals": "User chose to stay in plan mode and continue planning\n\nComments on the plan:\n[Re: \"network calls\" (2nd occurrence)] the second one",
+     "why": "DISCRIMINATING (round 10): an ambiguous anchor carries its occurrence marker on the wire — unambiguous ones stay byte-identical to the reference format"
+    },
+    {
+     "js": "(function(){ var lis=document.querySelectorAll('.card.plan .blk li'); var m2=lis[2]&&lis[2].querySelector('mark.plan-anchor'); var m0=lis[0]&&lis[0].querySelector('mark.plan-anchor'); return (m2?'li3':'-')+'|'+(m0?'li1':'-')+'|'+document.querySelectorAll('.card.plan mark.plan-anchor').length; })()",
+     "equals": "li3|-|1",
+     "why": "DISCRIMINATING (round 10): the decided card highlights the occurrence the user selected — the third li, NOT the first"
+    }
+   ]
+  },
+  {
+   "note": "round 9: a REPLAYED plan card rebuilds the same highlight from planComments — one shared highlighter with the live decide path",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "__transcript",
+     "items": [
+      {
+       "role": "user",
+       "text": "plan it again"
+      },
+      {
+       "role": "tool",
+       "text": "ExitPlanMode",
+       "plan": "## Steps\n1. Wrap network calls in a retry helper\n2. Backfill `tests`\n3. Log network calls",
+       "planComments": [
+        {
+         "a": "network calls",
+         "t": "Reuse the existing HttpRetry util",
+         "n": 1
+        }
+       ],
+       "denied": true,
+       "planFeedback": "also check the timeout"
+      }
+     ],
+     "more": 0
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var lis=document.querySelectorAll('.card.warn .blk li'); var m2=lis[2]&&lis[2].querySelector('mark.plan-anchor'); return (m2?'li3':'-')+'|'+document.querySelectorAll('.card.warn mark.plan-anchor').length+'|'+(document.querySelector('.card.warn mark.plan-anchor')||{textContent:''}).textContent; })()",
+     "equals": "li3|1|network calls",
+     "why": "DISCRIMINATING (round 10): replay honours the occurrence index from planComments — same highlighter, same pick as the live decide"
+    },
+    {
+     "js": "document.querySelectorAll('.card.warn .plan-cs .plan-c').length",
+     "equals": 1,
+     "why": "the replayed card carries the comment row (item shape mirrors SessionStore.toJson, pinned by SessionStoreTest on real records)"
+    },
+    {
+     "js": "(document.querySelector('.card.warn .card-b .no-t')||{textContent:''}).textContent",
+     "contains": "sent 1 plan comment",
+     "why": "replayed footer counts, same wording as live (planCmtNote)"
     },
     {
      "js": "(function(){ window.__bridge = window.__realBridge53 || window.__bridge; return true; })()",

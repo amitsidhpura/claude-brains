@@ -46,6 +46,7 @@
         '<div class="card-b">' + (it.denied
           ? '<span class="no-t">✗ Kept planning' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + note + '</span>'
           : '<span class="ok-t">✓ Approved' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + note + '</span>') + '</div>';
+      highlightAnchors(plan.querySelector('.blk'), pcs);   // same highlighter as the live decide
       return;
     }
     const card = el('card warn', '');

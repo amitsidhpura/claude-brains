@@ -560,6 +560,73 @@
   function planCmtNote(n, hasFb) {
     return n ? (hasFb ? ' · ' : ' — ') + 'sent ' + n + ' plan comment' + (n > 1 ? 's' : '') : '';
   }
+  // Flat view of a plan body (concatenated text + per-node segments) and every match of an
+  // anchor in it. ONE matcher serves the capture side (WHICH occurrence did the user select)
+  // and the highlight side (live decide + replay), so the occurrence counts cannot drift —
+  // substring hits (e.g. "one" inside "standalone") are counted identically on both ends
+  // (round 10, user report: replay picked the first occurrence).
+  function planFlat(blk) {
+    const segs = []; let text = '';
+    const walker = document.createTreeWalker(blk, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      segs.push({ node: n, start: text.length });
+      text += n.nodeValue;
+    }
+    return { segs: segs, text: text };
+  }
+  function anchorMatches(flat, anchor) {
+    const a = (anchor || '').trim();
+    if (!a) return [];
+    const pat = new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+'), 'g');
+    const out = []; let m;
+    while ((m = pat.exec(flat.text))) {
+      out.push({ start: m.index, end: m.index + m[0].length });
+      if (pat.lastIndex === m.index) pat.lastIndex++;   // zero-width safety
+    }
+    return out;
+  }
+  function flatPos(flat, node, off) {   // flat offset of (node, off), or -1 when node is foreign
+    for (let i = 0; i < flat.segs.length; i++) if (flat.segs[i].node === node) return flat.segs[i].start + off;
+    return -1;
+  }
+  function segAt(flat, pos) {
+    for (let i = flat.segs.length - 1; i >= 0; i--) if (flat.segs[i].start <= pos) return flat.segs[i];
+    return null;
+  }
+  // " (2nd occurrence)" for n=1, '' for n=0 — the wire marker an AMBIGUOUS anchor carries so
+  // replay can land on the same occurrence. Kotlin's parsePlanComments reads it back; the two
+  // spellings are pinned against each other by fixture 53 (JS) and RenderLimitsTest (Kotlin).
+  function planOrd(n) {
+    if (!n) return '';
+    const k = n + 1;
+    const s = (k % 10 === 1 && k % 100 !== 11) ? 'st'
+      : (k % 10 === 2 && k % 100 !== 12) ? 'nd'
+      : (k % 10 === 3 && k % 100 !== 13) ? 'rd' : 'th';
+    return ' (' + k + s + ' occurrence)';
+  }
+  // Re-highlights comment anchors in a DECIDED plan body — the ONE function both surfaces run
+  // (live decide after unwrapping its precise selection marks, and replay), so a decided card
+  // and its replay cannot drift. Each comment's occurrence index (c.n, default 0) picks the
+  // match; an anchor spanning element boundaries is skipped on BOTH surfaces alike.
+  function highlightAnchors(blk, cs) {
+    if (!blk || !cs || !cs.length) return;
+    cs.forEach(function (c) {
+      const flat = planFlat(blk);       // re-scan per comment: earlier wraps re-shaped the nodes
+      const ms = anchorMatches(flat, c.a);
+      if (!ms.length) return;
+      const m = ms[Math.min(c.n || 0, ms.length - 1)];
+      const sSeg = segAt(flat, m.start), eSeg = segAt(flat, m.end - 1);
+      if (!sSeg || sSeg !== eSeg) return;                       // crossed a boundary — skip
+      if (sSeg.node.parentNode && sSeg.node.parentNode.closest('mark.plan-anchor')) return;
+      const r = document.createRange();
+      r.setStart(sSeg.node, m.start - sSeg.start); r.setEnd(sSeg.node, m.end - sSeg.start);
+      try {
+        const mk = document.createElement('mark');
+        mk.className = 'plan-anchor';
+        r.surroundContents(mk);
+      } catch (e) { /* boundary after all — skip, same on both surfaces */ }
+    });
+  }
   // Write preview: whole file as additions, capped like every other diff
   function writeDiffHtml(content, startLine) {
     const lines = String(content).split('\n');

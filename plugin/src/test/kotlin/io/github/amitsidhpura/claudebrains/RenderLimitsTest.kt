@@ -131,7 +131,17 @@ class RenderLimitsTest {
                 "Comments on the plan:\n[Re: \"one\"] Not one but two",
         )
         assertEquals(null, free, "prefix and header are machinery, never quoted free text")
-        assertEquals(listOf("one" to "Not one but two"), cs)
+        assertEquals(listOf(RenderLimits.PlanComment("one", "Not one but two", 0)), cs)
+    }
+
+    @Test
+    fun `parsePlanComments reads the occurrence marker an ambiguous anchor carries`() {
+        // Producer is planOrd() in webview/js/50-blocks.js — this literal and fixture 53's must
+        // stay the same bytes, or live and replay disagree on which occurrence to highlight.
+        val (_, cs) = RenderLimits.parsePlanComments(
+            "Comments on the plan:\n[Re: \"network calls\" (2nd occurrence)] the second one",
+        )
+        assertEquals(listOf(RenderLimits.PlanComment("network calls", "the second one", 1)), cs)
     }
 
     @Test
@@ -141,11 +151,17 @@ class RenderLimitsTest {
                 "Comments on the plan:\n[Re: \"one\"] Not one but two\n[Re: \"retry\"] use HttpRetry",
         )
         assertEquals("use the audit log", free)
-        assertEquals(listOf("one" to "Not one but two", "retry" to "use HttpRetry"), cs)
+        assertEquals(
+            listOf(
+                RenderLimits.PlanComment("one", "Not one but two", 0),
+                RenderLimits.PlanComment("retry", "use HttpRetry", 0),
+            ),
+            cs,
+        )
         // a plain typed reason (today's cards) must come back untouched with no comments
         val (plain, none) = RenderLimits.parsePlanComments("Use fillPath on the card too")
         assertEquals("Use fillPath on the card too", plain)
-        assertEquals(emptyList<Pair<String, String>>(), none)
+        assertEquals(emptyList<RenderLimits.PlanComment>(), none)
     }
 
     @Test

@@ -33,19 +33,32 @@ object RenderLimits {
      *  parser drifts from the live producer. */
     const val PLAN_DENY_PREFIX = "User chose to stay in plan mode and continue planning"
     const val PLAN_COMMENTS_HEADER = "Comments on the plan:"
-    private val PLAN_COMMENT_LINE = Regex("^\\[Re: \"(.+?)\"] (.*)$")
+    /** An AMBIGUOUS anchor's line carries " (2nd occurrence)" etc. so replay can highlight the
+     *  occurrence the user actually selected (round 10); unambiguous lines stay byte-identical
+     *  to the reference client's format. The JS producer (planOrd, 50-blocks.js) and this
+     *  parser are pinned against each other by fixture 53 and RenderLimitsTest. */
+    private val PLAN_COMMENT_LINE =
+        Regex("^\\[Re: \"(.+?)\"(?: \\((\\d+)(?:st|nd|rd|th) occurrence\\))?] (.*)$")
 
     /** Splits plan feedback text — a deny message, or the post-marker approval note — into the
      *  free-text remainder (null when nothing but machinery is left) and the anchored comments,
      *  in file order. The deny prefix and the comments header are machinery, not user text, so
      *  they never reach the quoted footer. */
-    fun parsePlanComments(text: String): Pair<String?, List<Pair<String, String>>> {
-        val comments = mutableListOf<Pair<String, String>>()
+    /** One parsed plan comment: anchor text, note, and the 0-based occurrence index of the
+     *  anchor within the plan (0 unless the line carried an occurrence marker). */
+    data class PlanComment(val anchor: String, val note: String, val occurrence: Int)
+
+    fun parsePlanComments(text: String): Pair<String?, List<PlanComment>> {
+        val comments = mutableListOf<PlanComment>()
         val rest = StringBuilder()
         for (line in text.lines()) {
             val m = PLAN_COMMENT_LINE.matchEntire(line)
             when {
-                m != null -> comments += m.groupValues[1] to m.groupValues[2]
+                m != null -> comments += PlanComment(
+                    m.groupValues[1],
+                    m.groupValues[3],
+                    (m.groupValues[2].toIntOrNull()?.minus(1) ?: 0).coerceAtLeast(0),
+                )
                 line.trim() == PLAN_COMMENTS_HEADER || line.trim() == PLAN_DENY_PREFIX -> {}
                 else -> rest.appendLine(line)
             }

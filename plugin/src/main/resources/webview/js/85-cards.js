@@ -306,7 +306,7 @@
     // semantics — NOT the deferred plan-card decision shortcuts (user, 2026-08-16).
     const comments = [];                     // [{a, t, mark}]
     const blkEl = isPlan ? card.querySelector('.blk') : null;
-    let csEl = null, pillEl = null, pendMark = null, pendAnchor = '', selRange = null, composing = false;
+    let csEl = null, pillEl = null, pendMark = null, pendAnchor = '', pendOcc = 0, selRange = null, composing = false;
     function unwrapMark(m) {
       if (!m || !m.parentNode) return;
       const par = m.parentNode;
@@ -355,7 +355,7 @@
         if (keepVal) ci.value = keepVal;
         const commit = function () {
           if (!ci.value.trim()) return;
-          comments.push({ a: anchorText, t: ci.value.trim(), mark: pendMark });
+          comments.push({ a: anchorText, t: ci.value.trim(), n: pendOcc, mark: pendMark });
           pendMark = null; composing = false;
           renderComments(false);
         };
@@ -392,6 +392,13 @@
         const a = selRange.toString().replace(/\s+/g, ' ').trim();
         if (!a) return;
         pendAnchor = a;
+        // WHICH occurrence: count matches starting before the selection, with the SAME matcher
+        // the highlighter uses — so decide/replay land exactly where the user selected
+        pendOcc = 0;
+        const flat = planFlat(blkEl);
+        const ms = anchorMatches(flat, a);
+        const sp = flatPos(flat, selRange.startContainer, selRange.startOffset);
+        if (sp >= 0) for (let i = 0; i < ms.length; i++) { if (ms[i].start < sp) pendOcc = i + 1; else break; }
         try { const m = document.createElement('mark'); m.className = 'plan-anchor'; selRange.surroundContents(m); pendMark = m; }
         catch (err) { pendMark = null; }     // selection crossed element boundaries
         const sel = window.getSelection(); if (sel) sel.removeAllRanges();
@@ -422,11 +429,15 @@
       // real-IDE pass 2026-08-23).
       const ci = csEl && csEl.querySelector('.compose input');
       if (ci && ci.value.trim()) {
-        comments.push({ a: pendAnchor, t: ci.value.trim(), mark: pendMark });
+        comments.push({ a: pendAnchor, t: ci.value.trim(), n: pendOcc, mark: pendMark });
         pendMark = null;
       }
       unwrapMark(pendMark); pendMark = null; composing = false;
+      // The precise selection marks are unwrapped and the anchors RE-highlighted by the shared
+      // text-search highlighter — the same function replay runs on planComments — so the decided
+      // card and its replay are produced by one code path and cannot drift (round 9).
       comments.forEach(function (c) { unwrapMark(c.mark); c.mark = null; });
+      highlightAnchors(blkEl, comments);
       renderComments(false);
       // decided card keeps the rows read-only — they are the record, and replay rebuilds the
       // same rows from the transcript (planCommentRows both times)
@@ -448,7 +459,7 @@
       const cs = isPlan ? finishComments() : [];
       let wireFb = fb;
       if (cs.length) {
-        const lines = cs.map(function (c) { return '[Re: "' + c.a + '"] ' + c.t; }).join('\n');
+        const lines = cs.map(function (c) { return '[Re: "' + c.a + '"' + planOrd(c.n) + '] ' + c.t; }).join('\n');
         const block = LIM.planCommentsHeader + '\n' + lines;
         wireFb = allow ? (fb ? fb + '\n\n' : '') + block
                        : LIM.planDenyPrefix + '\n\n' + (fb ? fb + '\n\n' : '') + block;

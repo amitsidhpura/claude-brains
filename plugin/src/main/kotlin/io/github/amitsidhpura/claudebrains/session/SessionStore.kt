@@ -505,7 +505,7 @@ object SessionStore {
         var answers: JsonElement? = null   // chosen answers (from toolUseResult)
         var plan: String? = null           // ExitPlanMode plan markdown
         var planFeedback: String? = null   // the typed reason a plan was refused (deny message)
-        var planComments: List<Pair<String, String>>? = null // anchored plan comments (5.6): anchor to text
+        var planComments: List<io.github.amitsidhpura.claudebrains.RenderLimits.PlanComment>? = null // anchored plan comments (5.6)
         var denied: Boolean = false        // permission was refused — card reads ✗, not ✓
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
@@ -524,7 +524,12 @@ object SessionStore {
             planFeedback?.let { put("planFeedback", it) }
             planComments?.let { cs ->
                 put("planComments", buildJsonArray {
-                    cs.forEach { (a, t) -> add(buildJsonObject { put("a", a); put("t", t) }) }
+                    cs.forEach { c ->
+                        add(buildJsonObject {
+                            put("a", c.anchor); put("t", c.note)
+                            if (c.occurrence > 0) put("n", c.occurrence)
+                        })
+                    }
                 })
             }
             if (denied) put("denied", true)
