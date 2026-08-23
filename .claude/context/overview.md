@@ -69,7 +69,7 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   in `RenderLimits.kt`, spliced into chat.html as `window.LIMITS` — see gotchas.md.
 
 ## Build / run
-`cd plugin && ./gradlew runIde` (sandbox PhpStorm 2024.2). `./gradlew compileKotlin` for a fast
+`cd plugin && ./gradlew runIde` (sandbox PhpStorm 2024.2.6 — bumped from 2024.2.0 on 2026-08-23 for the IJPL-161111 JCEF keyboard fix). `./gradlew compileKotlin` for a fast
 type-check; `buildPlugin` → installable zip in `build/distributions/`; `./gradlew test` (plain
 JUnit 5 over SessionStore/RenderLimits); `./gradlew probe --args="<projectPath> <sessionId>"`
 dumps replay blocks without the IDE. Resource-only changes (chat.html, webview/js/, chat.css) need only a `runIde`
@@ -89,7 +89,7 @@ Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bea
 | Kotlin logic: bridge, permissions, parsing | `./gradlew runIde --debug-jvm` (suspends, port 5005) + Remote JVM Debug |
 | CSS / layout iteration | `design/mockup.html` + headless Chrome (compositor traps — gotchas.md) |
 | Won't load in a REAL IDE | install the zip in the real PhpStorm — the sandbox cannot catch this class |
-| Reproduces ONLY in the sandbox | suspect the sandbox (2024.2, stock keymap) — it invents symptoms too |
+| Reproduces ONLY in the sandbox | suspect the sandbox (2024.2.6, stock keymap) — it invents symptoms too |
 | Poking around by hand | DevTools window (Find Action → "Claude Brains: Open DevTools") |
 
 **Start at the top row** — cheapest and most skipped. Check by KEY, not substring. The live

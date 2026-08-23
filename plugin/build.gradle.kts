@@ -19,7 +19,9 @@ dependencies {
     intellijPlatform {
         // Build/run against PhpStorm. Swap the version for one you have installed,
         // or use `local("C:/Program Files/JetBrains/PhpStorm 2024.2")` to point at your install.
-        phpstorm("2024.2")
+        // 2024.2.6, not 2024.2: 2024.2.0's JCEF fabricates key-event storms in OSR on Linux
+        // (IJPL-161111, fixed in 2024.2.2+) — the phantom-Enter bug of 2026-08-23 was this.
+        phpstorm("2024.2.6")
 
         // JCEF + platform APIs come with the platform; nothing extra needed for the sidebar.
         instrumentationTools()
