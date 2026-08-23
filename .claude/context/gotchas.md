@@ -820,3 +820,26 @@ trusting memory here.
 - **An absolutely-positioned child needs ITS card as containing block** — `.plan-add` drifted to
   the top of the log because `.card.plan { position: relative }` was missing; the mockup hid it
   behind an inline style. Positioning bugs need the real panel, not the mockup.
+
+## Sandbox / JCEF (added 2026-08-23, the phantom-Enter investigation)
+- **`pkill -f 'runIde'` kills GRADLE, never the sandbox IDE.** The orphaned IDE then swallows
+  every relaunch through single-instance forwarding: `runIde` prints BUILD SUCCESSFUL in ~700ms
+  and no window appears (idea.log shows the OLD instance still running). Kill it by pid —
+  `pgrep -f 'idea.system.pat[h]'` — and bracket-escape the pattern or the Bash tool matches its
+  OWN command line and dies with exit 144.
+- **JCEF-OSR on Linux fabricates key events, and can loop them.** Taped via a webview→Kotlin
+  diag verb (2026-08-23, sandbox PhpStorm 2024.2): `{key:'Enter', code:'', keyCode:13}` repeating
+  every 1-3ms for seconds with no keyups, and ordinary characters wearing wrong physical codes
+  (`t` with `code:'ArrowDown'`, `w` with `code:'Delete'`). The plugin registers NO key listeners,
+  so this is JBR's AWT→CEF translation (JBR-5348 / JBR-5115 family, same defect class as the
+  Delete→0x7F insertion already worked around in 65-slash.js). **Three defences were tried and
+  all removed** (e.code guard: phantom has `code:''`; <30ms cadence guard: killed real Enter
+  outright; commit-on-keyup: a later report showed keyups too). If a single-key-commit surface
+  is ever built again, expect this and prefer a BUTTON as the primary commit path.
+- **A trace that must survive the window needs a bridge verb to `idea.log`** — an in-page ring
+  buffer (`window.__cmtKeys`) died with the sandbox twice before anyone could read it. The verb
+  is 1 line in ChatPanel's `handleFromWeb` when. (Removed with the rest of the guards; recover
+  from git history at 2026-08-23 if a webview trace is ever needed again.)
+- **Live-harness asserts that mutate state must be their own STEP.** Adding a commit-and-cancel
+  assert in the middle of an existing step consumed the composer that later asserts needed and
+  produced 11 unrelated failures. A step is the isolation unit; `setup` can `__clear` first.

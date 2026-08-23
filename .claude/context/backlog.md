@@ -45,6 +45,10 @@
   later `invokeLater`), but the failure is cosmetic and `refreshFromDisk` covers its paths, so it
   was left out of the 2026-08-21 open-path fix rather than widening that change's blast radius.
 
+- **Phantom single-character comment commit** (JCEF Enter storm, gotchas 2026-08-23): parked
+  UNFIXED after three failed guards and a full revert at the user's request. Options if it
+  resurfaces: re-test on the real IDE's newer JBR (all sightings were sandbox 2024.2), file a
+  JBR YouTrack issue (evidence shape is in gotchas), or make ⏎ the only commit path.
 - **5.6 leftovers** (feature shipped 2026-08-23): keyboard-only selection cannot trigger the
   comment pill (mouse-up only); an INTERRUPTED ExitPlanMode's footer quotes the CLI's stock
   "The user doesn't want to proceed…" boilerplate via fbQuote (pre-existing, seen in probe) —

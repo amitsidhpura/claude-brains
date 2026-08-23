@@ -3,6 +3,35 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-23 (third) — plan comments finish, and a phantom Enter that beat us
+- Four more polish rounds on 5.6, all committed (`92363ac`): the ✕/⏎ buttons wear the `.rm`
+  plate (`--warn-border` 15% over `--warn-bg`) and `.rm` itself LOST its left-edge fade on the
+  attachment chips + queue rows; decided cards now KEEP their anchor highlights.
+- **Live/replay highlight parity** (user ask): `highlightAnchors` in 50-blocks.js re-highlights
+  by text search and is run by BOTH the live decide (after unwrapping its precise selection
+  marks) and `replayCard` — one function, so the two cannot drift. Then the user caught it
+  picking the FIRST occurrence: capture now records WHICH match (shared `planFlat`/
+  `anchorMatches`), the wire carries `[Re: "x" (2nd occurrence)]` only when ambiguous, and
+  `RenderLimits.PlanComment` gained an `occurrence` field. Substring hits ("one" inside
+  "standalone") count identically on both ends, which is what makes it land right.
+- **The phantom-Enter saga, and its retreat.** User: typing a second comment sometimes commits
+  after one character. Three fixes, three failures: an `e.code` guard (phantom passes with
+  `code:''`), a <30ms cadence guard (killed REAL Enter — "Enter completely not working"), and
+  moving the commit to keyup (user's screenshot showed a 1-char commit anyway, so that variant
+  delivers keyups too). **The user called it and asked for a full revert; all three guards, the
+  key tape and the Kotlin `diag` bridge verb are gone.** The composer is back to plain
+  Enter-commits/Escape-cancels.
+- What the investigation DID establish (kept in gotchas): a webview `diag` verb writing to
+  `idea.log` is the only way to keep evidence past a window close, and it taped a genuine
+  JCEF-OSR defect — keydown-only Enter loops at ~1-3ms for seconds, plus physical codes
+  scrambled wholesale (a 't' arriving with `code:'ArrowDown'`). Ours registers no key listeners,
+  so the fault is in JBR's AWT→CEF translation (JBR-5348/5115 family). Not our bug to fix.
+- Lesson the hard way: **three speculative fixes shipped on an unreproduced bug** — exactly what
+  conventions.md warns against. The trusted-CDP repro attempt failed early and that should have
+  stopped the fixing, not licensed guessing.
+- Also relearned: `pkill -f runIde` kills gradle but NOT the sandbox IDE, whose orphan then
+  swallows every relaunch via single-instance forwarding (runIde exits ~700ms "successfully").
+
 ## 2026-08-23 (second) — plan comments: from VS Code screenshots to a shipped feature
 - The user walked VS Code's plan-preview commenting live (screenshots) and we measured the whole
   mechanism: plans are files in `~/.claude/plans/<slug>.md` written by an ordinary Write;

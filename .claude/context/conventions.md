@@ -21,6 +21,13 @@
   different code paths produced the reported symptom and none had been ruled out, and the
   reproduction disproved the stated mechanism (see gotchas: transcript vs live wire). If it will
   not reproduce, the right outcome may be no change at all, just diagnostics for next time.
+- **A failed reproduction is a STOP sign, not a licence to guess** (learned expensively
+  2026-08-23). A user-reported phantom commit would not reproduce under trusted CDP keystrokes;
+  three speculative guards shipped anyway, the second BROKE the feature for the user ("Enter
+  completely not working"), and the user ordered a full revert. When the repro fails, the right
+  outputs are diagnostics and a plainly-labelled hypothesis — never a fix. And a guard on an
+  input path must be proven to still pass the GOOD case in the real environment, not just in
+  the harness.
 - **A third-party report describes a SYMPTOM, not a diagnosis, and often not even accurately.**
   "Submit button not disabled" was literally a non-bug (the button is a Send/Stop toggle and is
   never disabled) while pointing at two real defects. Ask what was on screen at the moment of the
