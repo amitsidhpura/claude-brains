@@ -32,6 +32,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Relearned the hard way (twice in two days): `pkill -f runIde` kills gradle, not the sandbox
   IDE; the orphan then swallows relaunches silently.
 - Declined by the user: wrapping the confirm-card path to show it whole at narrow widths.
+- **Released 0.9.0** at the end of the session (tag `v0.9.0`, commit `f53a10c`): plan comments,
+  the pending-plan replay honesty, the VFS open-path fix and the compaction replay-order fix.
+  GitHub release, custom feed and the automatic Marketplace upload all green; the published
+  asset `cmp`s identical to the local zip.
 
 ## 2026-08-23 (third) — plan comments finish, and a phantom Enter that beat us
 - Four more polish rounds on 5.6, all committed (`92363ac`): the ✕/⏎ buttons wear the `.rm`

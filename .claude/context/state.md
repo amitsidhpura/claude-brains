@@ -3,7 +3,7 @@
 ## Current focus
 **2026-08-24 (twelfth session): phantom Enter traced to a FIXED upstream bug (sandbox bumped),
 then a real replay bug found and fixed — a pending plan card claiming verdicts it never had.
-NOT released.**
+**Released as 0.9.0** at the end of the session.**
 - **Phantom Enter CLOSED.** Root cause is **IJPL-161111** "JCEF: the keyboard on linux is
   broken" (dups JBR-7536/7547), fixed upstream in **2024.2.2 / 2024.3**; the sandbox pinned
   2024.2.0 — pre-fix. Bumped `plugin/build.gradle.kts` to `phpstorm("2024.2.6")` (build
@@ -22,13 +22,12 @@ NOT released.**
 - **Proof:** gradle test **115** · live harness **411** (new fixture 54; control run 406/5 —
   every new assert seen failing first) · `probe` on the user's real session parses honestly.
 
-## Unreleased on `main` (a release starts only when the user asks)
-0.8.0 (`dce3600`) remains shipped. Since: VFS open-path fix · compaction replay-order fix ·
-2.1.241 checklist re-audit · anchored plan comments (5.6) · pending-plan replay honesty.
-**Next release is a MINOR bump (feature 5.6).** Release blockers, in order:
-`version = "0.8.0"` → 0.9.0 in `plugin/build.gradle.kts`; add a **0.9.0 `changeNotesHtml`
-entry** (the `buildPlugin` gate hard-fails without it); flip `docs/feature-checklist.md:162`
-5.6 off "unreleased"; then follow `docs/release.md`.
+## Released — 0.9.0 (2026-08-23)
+**0.9.0 is the shipped version** (tag `v0.9.0`, commit `f53a10c`). GitHub release + custom feed
+(`updatePlugins.xml`) + Marketplace upload all green; asset verified byte-identical to the local
+zip. Contents: anchored plan comments (5.6) · pending-plan replay honesty · VFS open-path fix ·
+compaction replay-order fix.
+Nothing is unreleased on `main` right now. Next release is a fresh bump when work lands.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG] · **8.11** side
@@ -51,7 +50,6 @@ entry** (the `buildPlugin` gate hard-fails without it); flip `docs/feature-check
 - Headless CLI probes run in `~/Sites/claude-brains-testing`.
 
 ## Next steps
-- [ ] Release 0.9.0 when asked — blockers listed above under "Unreleased".
 - [ ] Get the user's yes / later / no on the **nine [DECIDE]** rows in
       `docs/feature-checklist.md`.
 - [ ] Decide `/clear [name]`: pass the name through as the new conversation's title, or pin
