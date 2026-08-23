@@ -7,8 +7,8 @@
      Release process: docs/release.md -->
 <plugins>
     <plugin id="io.github.amitsidhpura.claude-brains"
-            version="0.8.0"
-            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.8.0/claude-brains-0.8.0.zip">
+            version="0.9.0"
+            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.9.0/claude-brains-0.9.0.zip">
         <idea-version since-build="242"/>
         <name>Claude Brains</name>
         <description>Develop in the IDE. Configure in the Terminal. Claude Code for JetBrains

@@ -159,7 +159,7 @@ auto-include selection, voice.
       `toolUseResult.plan`
 - **5.5** 🚫 Keyboard shortcuts on the card (Enter = keep planning, Shift+Tab = approve) — deferred
       by the user 2026-08-16; backlog § Next up
-- **5.6** ✅ **Anchored plan comments** (SHIPPED 2026-08-23; unreleased). Select text in the plan
+- **5.6** ✅ **Anchored plan comments** (SHIPPED 2026-08-23, RELEASED in 0.9.0). Select text in the plan
       card's body → floating Comment pill → a note row quoting the anchor; rows sit between the
       plan and the decision surface, decided cards keep them as the record WITH the
       anchor highlights (re-built by text search — `highlightAnchors`, one function for the live

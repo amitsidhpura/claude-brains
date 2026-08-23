@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.8.0"
+version = "0.9.0"
 
 repositories {
     mavenCentral()
@@ -102,6 +102,22 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.9.0</b>
+            <ul>
+              <li>Comment on a plan before you answer it. Select any text in the plan card and a
+                  Comment button appears: your note is anchored to that exact passage, shown
+                  beside it, and travels with whichever answer you send — keep planning, or
+                  approve. The comments stay on the card afterwards as the record, and come
+                  back when the conversation is resumed</li>
+              <li>A plan card left undecided no longer invents an answer. Reloading a
+                  conversation while a plan was waiting used to show it as approved, then as
+                  refused quoting an internal error — it now says the decision was never
+                  recorded</li>
+              <li>Clicking a file path opens files written since the IDE last looked at that
+                  folder — they used to report "File not found"</li>
+              <li>A resumed conversation shows a manual /compact in the order it happened: the
+                  command first, then the summary it produced</li>
+            </ul>
             <b>0.8.0</b>
             <ul>
               <li>Typed aliases now work: /review, /reset, /new and /peers reach the commands they
