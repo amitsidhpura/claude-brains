@@ -28,3 +28,18 @@ from release notes. Gotchas § "Auditing the reference clients" has the traps.
 8. **Fold results into rows** — ids stable, re-derive ids from the file (never paraphrase from
    memory, conventions.md); update the header References/date, §2's "unchanged in <ver>", and
    the [NEW] legend. Stale-count sweep of §16 while there.
+
+## Iterate a webview change against the live harness (the 5.6 polish loop, 2026-08-23)
+Eight rounds ran this loop; each takes ~3 minutes:
+1. **Fixture first**: add the new DISCRIMINATING asserts to the fixture while the sandbox still
+   runs the PRE-change build — running them now is a free negative control ("sequence a fix so
+   its control is free", conventions.md). Every new assert must be SEEN failing.
+2. Apply the CSS/JS change; `cat plugin/src/main/resources/webview/js/*.js > /tmp/all.js &&
+   node --check /tmp/all.js`.
+3. Restart the sandbox (resource-only changes need only a runIde restart):
+   `pkill -f 'run[I]de'` in its OWN Bash call (self-match trap, gotchas), then background
+   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222 --args="$HOME/Sites/claude-brains-testing"`.
+4. Wait for CDP on 9222 and **verify the build BY CONTENT** (eval a changed token — a computed
+   style, `typeof newFunction`) before trusting any run; the port alone proves nothing.
+5. `python3 tools/live_harness.py 53` → green, then the FULL harness for regressions.
+6. Update the checklist §16 counts; leave the sandbox up for the user's hands-on pass.

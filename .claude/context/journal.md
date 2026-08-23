@@ -3,6 +3,38 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-23 (second) — plan comments: from VS Code screenshots to a shipped feature
+- The user walked VS Code's plan-preview commenting live (screenshots) and we measured the whole
+  mechanism: plans are files in `~/.claude/plans/<slug>.md` written by an ordinary Write;
+  `get_plan` returns `{exists, content, path}`; comments force keep-planning THERE; the wire is
+  plain text on the deny tool_result — `[Re: "anchor"] note` lines under "Comments on the plan:"
+  (grepped byte-for-byte from the claude-vscode transcript). Checklist 5.6 [LG]→[MD] on that.
+- Then "Lets implement it" — built IN THE PANEL (`c0df900`): select text on the plan card →
+  floating pill → anchored comment rows between the separator and the feedback input. Deny sends
+  the reference client's exact format; approve rides `PLAN_NOTES_MARKER`; SessionStore parses
+  both back (`parsePlanComments` in RenderLimits, format strings in `window.LIMITS`); replay
+  draws the same rows via one shared builder (`planCommentRows`). Kotlin untouched on the wire.
+- **User's design call, diverging from the reference:** the FULL approve surface stays available
+  with comments pending (VS Code collapses to keep-planning-only). Mockup-first with candidates;
+  seven polish rounds followed, each from a real-IDE or mockup pass: pill containing block
+  (`.card.plan{position:relative}` was missing), commit-on-decision-click, two-line composer with
+  ✕/⏎ (later one centered `.c-btns` stack), rows below the separator at the decision surface's
+  10px rhythm, size parity with `.plan-fb`, container `:focus-within` ring, mark geometry matched
+  to `.blk code`, mark mix 40→60%.
+- **The round-4 bug had two heads**: deleting a row mid-compose dropped the composer AND stranded
+  `composing` (pill locked out); plus the generic ✕ loop's `splice(NaN,1)` ate element 0 once the
+  composer got its own ✕. Both pinned in fixture 53's bug-repro step.
+- Proof discipline held all day: fixture 53 grew to 37 asserts across EIGHT control runs (14 fail
+  pre-feature, then 3/4/2/9/2/1/1 per round — every new assert seen failing first); full harness
+  361 → **398**; gradle test 109 → **113** (parser + replay fixtures incl. the byte-exact VS Code
+  deny message); `probe` on the real VS Code transcript replays the comment row.
+- Traps for gotchas: `pkill -f` self-matching the Bash cmdline (twice), `color-mix` computing to
+  `color(srgb …/a)` making an rgba-regex assert VACUOUS (caught because the control run passed
+  when it should fail), `surroundContents` leaving split text nodes (unwrap now `normalize()`s),
+  the global `.turn :focus-visible` out-specifying an element `outline:none`.
+- Not done: keyboard-only selection can't trigger the pill (backlog); still NO release — 0.8.0
+  ships, `main` now carries VFS fix + compaction fix + 2.1.241 audit + this feature.
+
 ## 2026-08-23 — the checklist meets 2.1.241, and the wire answers back
 - `docs/feature-checklist.md` re-audited 2.1.233 → 2.1.241 (user ask; both sides installed at
   241). Same method as 2026-08-17 — package.json contributions, `case"…"` vocab, typed control
@@ -222,45 +254,17 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   the scratchpad and running it under `timeout` worked first time.
 - Next: the ten **[DECIDE]** rows; then backlog order.
 
-## 2026-08-17 (third) — 0.7.2 goes out
-- **Released 0.7.2** (`40bc060`, tag `v0.7.2`): the / menu insert-vs-send rule and the Effort
-  label rail. Patch bump — two fixes, no features. Full `docs/release.md` run with the gate held
-  at step 6 until the user had read the complete notes.
-- 106 tests, verifier Compatible ×7 (242→262, no warning files), zip clean, notes baked into the
-  shipped plugin.xml, jar resources confirmed to carry both fixes. Asset 200 + `cmp`-identical,
-  feed serving 0.7.2, upload run 31967154720 success, **Approved the same day**.
-- The Marketplace API lag showed again: `updates?size=3` still named 0.7.1 as newest-approved
-  minutes after a successful upload, while the plugin page already showed 0.7.2 Approved. Third
-  time this has been observed (recorded 2026-08-14) — check the page, not the API.
-- Notes followed the UPDATE-release shape (theme line, two punchy lines, one paragraph, 🐛 Fixes /
-  📥 Install / ⚠️ Notes). Ctrl+Enter is mentioned explicitly because the insert leaves the caret in
-  the composer and the change only reads end-to-end with the send key named.
-- Tooling note: `./gradlew verifyPlugin` needs a Bash timeout above the 120s default — the first
-  attempt was cut off mid-run at exactly 2 minutes.
-- Next: backlog order — plan-card keyboard shortcuts, reloaded-webview log replay,
-  kill-background-process from the panel.
-
-## 2026-08-17 (second) — the alignment fixture, and the 7px that was never 7px
-- **Fixture 51 `mode-menu-effort-rail`** (7 assertions) closes the last uncovered thing: the
-  Effort label's rail. Opens the menu by CLICKING THE CHIP (a force-shown popup skips tg()'s
-  positioning) and closes it in the same setup. Harness **344/344**.
-- **Its control corrected the fix's own story.** The real pre-fix misalignment was **4px**, not
-  the 7px reported on 2026-08-16: `#inputbar svg { width:18px; height:18px }` is an ID rule that
-  beats `.ef-label svg {15px}` AND `.pi-ic svg {17px}`, so composer icons are all 18px and the
-  headless probe — a page without the `#inputbar` ancestor — measured a cascade that does not
-  exist in the panel. The fix is still right, and works for a reason worth knowing: `flex-basis`
-  is the one sizing property that ID rule does not set. Promoted to gotchas; chat.css comment and
-  state.md corrected.
-- **The slash-hint watch-item is closed by measurement.** A bare `initialize` control request to
-  CLI 2.1.233 returns 51 entries keyed exactly `{name, description, argumentHint, aliases?}` —
-  no `immediate` flag on the wire though the binary carries one. Of the 15 enabled commands six
-  insert (`/compact` `/context` `/code-review` `/simplify` `/loop` `/batch`), nine act on click.
-  This overturned the earlier `strings` reading: /goal has TWO records in the binary and the wire
-  sends the hintless one. Table now in docs/slash-commands.md; fixture 50 re-cited to the wire
-  probe and its control re-run after the edit.
-- Release still not cut, by the user's call: 0.7.1 remains what users have.
-
 ## Digest
+- **2026-08-17 (third)** — **Released 0.7.2** (`40bc060`): / menu insert-vs-send rule + Effort
+  label rail; patch bump, gate held at step 6, Approved same day.
+- **2026-08-17 (second)** — the "7px that was never 7px": the probe page lacked the `#inputbar`
+  ancestor so headless numbers were real for the probe page and wrong for the panel — align a
+  probe page's ancestor chain with the real DOM (gotchas). Fixture 51 pins the ef-label rail.
+- **2026-08-17** — slash-hint watch-item closed by measurement: bare `initialize` → 51 entries,
+  keys `{name, description, argumentHint, aliases?}`, no `immediate` flag on the wire (the binary
+  carries one — /goal has TWO records there, the wire sends the hintless one). state.md's 🟥 ids
+  re-derived from the register after paraphrase drift (conventions).
+
 - **2026-08-17** — fixtures 49+50 green (harness 337): all three findings came from RUNNING the
   negative controls (`3c86aa2~1` not HEAD-minus-session; assertions re-expressed through
   `data-takesarg` after a ReferenceError aborted the pre-fix run; per-step state reset after

@@ -45,6 +45,11 @@
   later `invokeLater`), but the failure is cosmetic and `refreshFromDisk` covers its paths, so it
   was left out of the 2026-08-21 open-path fix rather than widening that change's blast radius.
 
+- **5.6 leftovers** (feature shipped 2026-08-23): keyboard-only selection cannot trigger the
+  comment pill (mouse-up only); an INTERRUPTED ExitPlanMode's footer quotes the CLI's stock
+  "The user doesn't want to proceed…" boilerplate via fbQuote (pre-existing, seen in probe) —
+  filter it like REJECT_MESSAGE if it ever grates.
+
 ## Roadmap (rough order)
 - Editor accept/reject v2, remaining half: tweak-travel (pane edits ride updatedInput on
   accept). The buttons half SHIPPED 2026-08-09: Accept ✓ / Reject ✕ text buttons on a plain

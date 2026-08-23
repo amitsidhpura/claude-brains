@@ -3,6 +3,26 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-23 — Plan comments live ON the plan card, and approval stays open with comments
+Checklist 5.6 shipped (`c0df900`): select text in the plan card's body → anchored comment rows.
+**Why in-panel, not an editor tab:** VS Code renders the plan in a markdown preview tab
+(`open_markdown_preview` + `plan_comment`/`get_plan_comments` webview↔extension internals with
+NO stdio counterpart); our panel already renders the plan through `planCardHtml`, so the card IS
+the preview and the whole build cost was the selection/comment UI. **Why the full decision
+surface stays** (diverges from the reference, which collapses to "Send feedback and keep
+planning" once a comment exists): the user's explicit call — "Allow all approve options please,
+that is a good feature we have." Approve-with-comments rides the existing `PLAN_NOTES_MARKER`
+append; deny wears the VS Code client's byte-exact message (`PLAN_DENY_PREFIX` + free text +
+`PLAN_COMMENTS_HEADER` + `[Re: "anchor"] note` lines — measured off its transcript), so the
+model reads a format it already knows. Format strings live once in `RenderLimits`
+(`window.LIMITS` for the live producer, `parsePlanComments` for the replay parser); rows render
+through one shared builder (`planCommentRows`) both live and replayed; decided cards keep the
+rows as the record.
+**Rejected:** an IDE markdown-preview surface (second host for one feature; the plan file in
+`~/.claude/plans/` + `get_plan` make it possible later if wanted); comments forcing
+keep-planning (reference behaviour, overruled by the user); inventing our own wire format
+(byte-compatibility with the reference costs nothing and is already model-tested).
+
 ## 2026-08-21 — Displaced transcript records reorder by ANCHOR, never by a global sort
 Replay corrects file-order lies with `DisplacedAnchor` (SessionStore.kt): arm an index+timestamp
 where a measured lie begins; a record that follows in file order but provably precedes in time

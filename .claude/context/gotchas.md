@@ -795,3 +795,28 @@ trusting memory here.
   vsix carries `resources/native-binary/claude` — a true CLI binary baseline for that version.
 - **Never probe `rewind_files` on a live CLI** — it mutates workspace files. Schema-read only,
   or dry_run in a throwaway checkout if it must be exercised.
+
+## Webview / CSS (added 2026-08-23, plan-comments build)
+- **`pkill -f <pattern>` kills the Bash tool's OWN shell** when the pattern appears anywhere in
+  the command line you are typing — including in a later `&&` branch ("pkill -f runIde; …
+  gradlew runIde …" died with exit 144 twice). Use a self-escaping pattern (`pkill -f
+  'run[I]de'`) AND never combine the kill and the relaunch that names the same string in one
+  Bash call.
+- **`color-mix(…)` computes to `color(srgb r g b / a)`, not `rgba(…)`** — an alpha-parsing
+  assertion built on an rgba regex matched nothing, defaulted its fallback, and PASSED on the
+  build it was meant to fail on. The control run caught it (it passed pre-fix → vacuous).
+  Parse both forms, and on no-match return the raw string so the assert fails loudly.
+- **`Range.surroundContents` splits the text node, and unwrapping leaves it split** — a second
+  selection over the same text then spans multiple nodes: offsets misfire and `surroundContents`
+  throws. Unwrap must call `parent.normalize()`.
+- **The global `.turn :focus-visible { outline: … }` out-specifies an element-level
+  `outline: none`** (two classes beat class+element) — suppressing a focus ring inside the turn
+  area needs ≥3-class specificity, and the container takes the ring via `:focus-within` (the
+  `.ask-opt:has(input:focus-visible)` idiom).
+- **`splice(NaN, 1)` deletes element 0.** A shared `.c-x` click handler read
+  `+parentNode.dataset.i`; the composer's ✕ has no `data-i`, so "cancel" silently deleted the
+  first committed comment. Scope collection-row handlers to `:not(.compose)` (or check the
+  dataset) whenever one class serves two roles.
+- **An absolutely-positioned child needs ITS card as containing block** — `.plan-add` drifted to
+  the top of the log because `.card.plan { position: relative }` was missing; the mockup hid it
+  behind an inline style. Positioning bugs need the real panel, not the mockup.
