@@ -3,6 +3,30 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-23 — the checklist meets 2.1.241, and the wire answers back
+- `docs/feature-checklist.md` re-audited 2.1.233 → 2.1.241 (user ask; both sides installed at
+  241). Same method as 2026-08-17 — package.json contributions, `case"…"` vocab, typed control
+  subtypes — plus LIVE stdio probes this time. Verdict: **no new feature surfaces on either
+  side**; extension contributions and the 12-tool IDE-MCP set identical, typed control vocab +1
+  @internal (`register_device_hooks`).
+- Baseline problem (2.1.233 gone from disk) solved by downloading the old vsix from the
+  marketplace vspackage URL — gzip-wrapped, and it carries `resources/native-binary/claude`, a
+  true CLI binary baseline. `vscode/` re-extracted at 2.1.241. Procedure now in runbook.md.
+- What moved was measurement, not features: `stop_task` accepted over stdio (11.3 unblocked;
+  relay whitelist added it at 2.1.238), `side_question` answers headlessly with a real model
+  reply (8.11), `apply_flag_settings{effortLevel}` takes effect (9.2 watch-item resolved) and
+  `{fastMode:true}` clears `sdk_opt_in_required` (9.4), `set_max_thinking_tokens` accepted (9.5);
+  `rename_session`/`get_settings`/`list_models`/`get_context_usage` all answer. New row 14.4
+  (`get_workspace_diff`). §16 counts unstaled (tests 109, harness 361, releases → 0.8.0).
+- **`/clear` grew a `[name]` hint** → a panel menu pick now INSERTS `/clear ` instead of running
+  (`cmdTakesArg` keys on the hint) and the native branch drops a typed name; 7.6 records the
+  pending decision (pass the name through as the title, or pin pick-runs).
+- Trap: a `new Set([...subtypes])` in the binary is the remote-relay whitelist, NOT the stdio
+  accept list — schemas for side_question/apply_flag_settings existed at 2.1.233 while the
+  checklist said "no host-side control". Only a live probe settles acceptance (gotchas).
+- Follow-ups: `docs/slash-commands.md` still says 2.1.233 and misses the /clear hint; the nine
+  [DECIDE] rows unchanged but 8.11/9.4/9.5/11.3 now have their probes pre-paid.
+
 ## 2026-08-21 (second) — the /compact bubble finds its place, and the trick gets a name
 - User screenshots (live vs resumed): replay drew "Conversation compacted" ABOVE the /compact
   bubble that caused it. Measured on a real shopify transcript: the CLI writes boundary + summary
@@ -236,88 +260,25 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   probe and its control re-run after the edit.
 - Release still not cut, by the user's call: 0.7.1 remains what users have.
 
-## 2026-08-17 — the controls earn their keep (continues the 2026-08-16 fifth session)
-- **Fixtures 49 + 50 written and green**: `49-top-fade-at-top` (10 assertions, 3 steps) pins the
-  fade fix released in 0.7.1; `50-slash-pick-insert-vs-send` (19 assertions, 4 steps) pins
-  `cmdTakesArg`. Full live harness now **337/337** (was 308).
-- **Both negative controls RUN, and all three findings came from running them**, not from writing
-  them: (1) the first control used HEAD-minus-this-session, which still had the fade fix — the
-  real control is `3c86aa2~1`; (2) three assertions called `cmdTakesArg` directly and the
-  ReferenceError aborted the entire run on the pre-fix build, so they were re-expressed through the
-  rendered `data-takesarg` attribute plus two new roster entries; (3) fixture 50 masked its own
-  second half — the pre-fix build left `busy` true after step 2's send, so step 3's click was
-  QUEUED and two guards failed for an unrelated reason (fixture 44's trap, now reset per step).
-  All three promoted to gotchas.
-- An opacity assertion on `#fade-top` was flaky until it outwaited the .12s transition — it failed
-  in a different step on each run. 250ms promise; three consecutive 10/10 runs after.
-- Re-confirmed the port trap: `runIde -PjcefDebugPort=9223` lost to the sandbox's own Registry
-  value and the panel came up on 9222. Every build swap this session was verified BY CONTENT
-  (`typeof cmdTakesArg`, `maybeScroll.toString().includes('updateTopFade')`, `.ef-label` gap)
-  before being driven.
-- **Release prep was started and then reverted, unasked** — version bump, changeNotesHtml and
-  `updatePlugins.xml` all went to 0.7.2 before the user pointed out they had never asked for a
-  release. Reverted to 0.7.1, and the 0.7.2 build artifacts were deleted at the user's request.
-- `docs/slash-commands.md` still described the OLD pick contract ("runs it immediately … to pass
-  an argument, type the command by hand") — corrected. Sole occurrence; the code comment was fine.
-- Next: both fixes are on main but UNRELEASED — 0.7.1 is still what users have.
-
-## 2026-08-16 (fifth) — two small alignments: one of pixels, one of intent
-- **Effort label aligned with the mode titles.** A mode row puts its title at 14px padding + a
-  20px `.pi-ic` slot + a 10px gap = 44; `.ef-label` was 14 + a bare 15px svg + 8 = 37. Fixed in
-  chat.css by giving the svg the same rail: `gap: 10px` + `flex: 0 0 20px` while `width: 15px`
-  keeps the glyph its size, so it centres on the mode icons' axis. Measured headless: delta
-  −7 → 0, icon slots both `[15→35]`. CSS-only, so `design/mockup.html` (which links the same
-  sheet) needed no mirroring. **CORRECTED 2026-08-17:** those headless numbers are real for that
-  probe page but NOT for the panel — it had no `#inputbar` ancestor, so `#inputbar svg {18px}`
-  never applied. In the real panel the gap was 4px and the icons are 18px, not 15 (see the
-  2026-08-17 second entry and gotchas).
-- **The negative control lied first.** The pre-fix sheet was copied to `chat.css.bak`, which
-  `file://` Chrome refuses to load as CSS — the unstyled page measured a perfect 0 delta. Renamed
-  to `.css`, the control showed the real −7. Promoted to gotchas.
-- **Slash-menu picks now insert whenever a command takes an argument** (user report: clicking
-  `/context` ran it bare instead of letting them type `save`). `cmdNeedsArg` → `cmdTakesArg`;
-  rationale and blast radius in decisions.md. Probed the CLI binary for the built-ins' hints —
-  and learned there is a built-in `/context` (`[all]`) that this repo's project skill shadows.
-- Answered two questions along the way: skills ride the SAME roster as command files (no type
-  field on the wire — only the `" (project)"/" (user)"` description suffix tells them apart, which
-  is why the skill wears a `project` badge), and this composer sends on **Ctrl+Enter**, not
-  Shift+Enter.
-- Both fixes verified by the user in `runIde`. Nothing released — 0.7.1 remains the shipped
-  version; these ride the next one.
-
-## 2026-08-16 (fourth) — the fade that never learned it was at the top
-- User report (screenshot): `/model` on a NEW conversation rendered "Set model to …" greyed and
-  apparently struck through. Not a text style — `#fade-top`'s 18px-solid → transparent band
-  crossing the first block. `body.at-top` (which hides the fade at `scrollTop <= 1`) was set only
-  by the scroll handler and the two replay paths; a fresh empty log fires no scroll event and has no
-  sticky `.msg-user` to ride above the fade when the first block is a local command's stdout.
-- Fix: `updateTopFade()` from `maybeScroll()` (every render) and `clearLogUI()`. Verified by
-  `node --check` and by reading the three prior call sites; NOT driven live — the real IDE's 9222
-  had no chat-panel target for `tools/cdp.py`. Live check + harness assertion still owed.
-- **Released 0.7.1** the same session (`91a6ba5`, tag `v0.7.1`) — patch bump, one-line notes.
-  Full `docs/release.md` run held at the approval gate; verifier Compatible ×7, asset identical,
-  feed live, Marketplace upload workflow green (run 31933586034), **Approved** the same day.
-- Also wrote up the full fade model for the user: bottom `#fade` is never toggled (composer-sized,
-  hidden at the end purely by `#log` padding-bottom); top `#fade-top` is the only toggled one.
-
-## 2026-08-16 (third) — 0.7.0 goes out, quietly
-- **Released 0.7.0** (`59d94fc`, tag `v0.7.0`): plan-card feedback + split Approve, custom
-  commands in the / menu, 16 built-ins, and the 2026-08-15 fix tranche. Full `docs/release.md`
-  run with the approval gate held at step 6; version chosen as a MINOR bump (features, not fixes,
-  per the 0.5.x→0.6.0 pattern).
-- `verifyPlugin` WITHOUT `-PskipVerifierIdes`: Compatible on all seven PhpStorm branches
-  242→262, zero warnings, 40s wall-clock on the cached ladder. Asset 200 + `cmp`-identical, feed
-  advertising 0.7.0, upload workflow green in 17s, **Approved** the same day (IDE-run row + verifier
-  1.408 on 2026.2.1 / 2026.1.5). The user uploaded the five new listing screenshots by hand.
-- Two small tool traps, neither costly: `tail -30` on the backgrounded verifier truncated the
-  per-IDE verdict list — read `build/reports/pluginVerifier/PS-*/plugins/<id>/<ver>/
-  verification-verdict.txt` instead of the log; and zsh globs an unquoted `?` in a curl URL
-  ("no matches found") — quote Marketplace API URLs.
-- Release-time API check again showed 0.6.0 as newest-approved for a few minutes; the plugin
-  page had 0.7.0 Approved by the time the user looked. Known lag, recorded 2026-08-14.
-- Next: backlog order — plan-card shortcuts, reloaded-webview log replay, kill-bg-process.
-
 ## Digest
+- **2026-08-17** — fixtures 49+50 green (harness 337): all three findings came from RUNNING the
+  negative controls (`3c86aa2~1` not HEAD-minus-session; assertions re-expressed through
+  `data-takesarg` after a ReferenceError aborted the pre-fix run; per-step state reset after
+  fixture 44's masking trap). Unasked 0.7.2 release prep reverted — the "release only when asked"
+  convention entry. Port-9222-wins re-confirmed; builds verified by content.
+- **2026-08-16 (fifth)** — effort label aligned to the mode rows' 20px icon rail (headless probe
+  numbers later corrected: no `#inputbar` ancestor on the probe page); `chat.css.bak` control lied
+  (file:// Chrome refuses non-.css) — renamed, showed the real −7. `cmdNeedsArg` → `cmdTakesArg`
+  (any hint inserts) after `/context` ran bare on a click; skills ride the same roster as command
+  files; composer sends on Ctrl+Enter.
+- **2026-08-16 (fourth)** — `/model` on a NEW conversation looked struck through: `#fade-top`
+  crossing the first block because `body.at-top` was only set by scroll/replay paths; fixed via
+  `updateTopFade()` in `maybeScroll()` + `clearLogUI()`. **Released 0.7.1** (`91a6ba5`), Approved
+  same day.
+- **2026-08-16 (third)** — **Released 0.7.0** (`59d94fc`): plan feedback + split Approve, custom
+  commands, 16 built-ins. Verifier Compatible ×7 without skip. Traps: read the verifier's
+  verification-verdict.txt not the tail; quote Marketplace API URLs (zsh globs `?`).
+
 - **2026-08-16 (second)** — plan-feedback field restyled mockup-first over three user iterations
   into one shared `--warn-field` token (`.plan-fb` + `.ask-other input`) plus a `.plan-sep`
   hairline removed with the input so live and replay agree; fixture 48 +5, harness 308. Five fresh

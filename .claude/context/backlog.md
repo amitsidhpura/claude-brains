@@ -20,6 +20,9 @@
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
   keep planning with text, Shift+Tab = approve with text — both slot into the existing `done()`
   paths in chat.html.
+- Effort slider: switch from the muted `/effort` turn to `apply_flag_settings
+  {settings:{effortLevel}}` — measured working over stdio 2026-08-23 (checklist 9.2); small
+  change, removes the audit-trail turn from transcripts.
 - Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.
@@ -31,10 +34,10 @@
   arriving mid-turn. Deliberately deferred: no reload has ever been observed in the wild, and the
   chrome was the part that could never heal.
 - **11.3** Kill a background process from the panel: the roster rows (`renderBgTasks`) are display-only and
-  `interrupt()` only stops the in-flight response — the CLI kills shells via the `TaskStop` tool,
-  which only the model can call. Needs a bridge verb + an action on the roster row (conversations-
-  list hover-gutter idiom). Found 2026-08-12 while fixing the busy-state defects; the CLI has no
-  host-side control request for this today, so check the protocol first.
+  `interrupt()` only stops the in-flight response. Protocol check DONE 2026-08-23: `stop_task
+  {task_id}` is accepted over stdio (probed; unknown ids answer success too, so verify against a
+  real task id when building). Needs a bridge verb + an action on the roster row (conversations-
+  list hover-gutter idiom).
 
 - **`DiffReview.open` VFS staleness** (parked 2026-08-21): its left pane resolves `oldPath`
   through snapshot-only `findVFile`, so a file the VFS has not caught up on renders as NEW. Fix is

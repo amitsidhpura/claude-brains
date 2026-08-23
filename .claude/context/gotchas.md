@@ -778,3 +778,20 @@ trusting memory here.
   character), so `str.replace` silently
   misses the file's literal backslash-u text — two patch rounds "applied" cleanly while changing
   nothing (2026-08-16). The Edit tool passes the text through undecoded.
+
+## Auditing the reference clients (added 2026-08-23)
+- **A `new Set([...control subtypes])` in the CLI binary is a ROUTING WHITELIST, not the stdio
+  accept list.** The set beside the remote-relay code gained `stop_task` only at 2.1.238, yet the
+  stdio host accepted `side_question`/`apply_flag_settings`/`set_max_thinking_tokens` at least
+  since 2.1.233 — while the checklist said "no host-side control exists" for task-kill. Typed
+  schemas (`subtype:<helper>("…")`) prove the VOCABULARY, never acceptance; only sending the
+  control request headlessly and reading the response settles it. And the schema helper's
+  minified name changes per build (`Tt` in 2.1.233, `Ht` in 2.1.241) — detect it by matching
+  `subtype:<ident>("initialize")` first, or a version diff silently returns zero matches for one
+  side (it did: "233: 0, 241: 90" looked like 90 new subtypes when the real delta was 1).
+- **Old reference versions are one URL away** even after `~/.local/share/claude/versions/` and
+  `~/.vscode/extensions/` have dropped them: the marketplace vspackage endpoint (URL pattern in
+  runbook.md) serves any extension version as a gzip-WRAPPED vsix (gunzip before unzip), and the
+  vsix carries `resources/native-binary/claude` — a true CLI binary baseline for that version.
+- **Never probe `rewind_files` on a live CLI** — it mutates workspace files. Schema-read only,
+  or dry_run in a throwaway checkout if it must be exercised.
