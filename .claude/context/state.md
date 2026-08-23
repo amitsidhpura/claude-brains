@@ -29,6 +29,12 @@ zip. Contents: anchored plan comments (5.6) · pending-plan replay honesty · VF
 compaction replay-order fix.
 Nothing is unreleased on `main` right now. Next release is a fresh bump when work lands.
 
+## Post-release follow-ups (open)
+- `docs/slash-commands.md` still documents CLI 2.1.233 — never synced after the 2.1.241 audit.
+- Marketplace **web description** is hand-edited and uploads do not refresh it.
+- 0.9.0 verified **Compatible on all seven IDEs** (242.26775.23 → 262.10315.32) — that ladder's
+  floor is now exactly the sandbox build. `verifyPlugin` is mandatory from here (release.md 3b).
+
 ## Open work — ids verified against `docs/feature-checklist.md`
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG] · **8.11** side
   question [MD, probe pre-paid] · **8.14** reloaded-webview log replay [LG] · **9.4** fast-mode

@@ -71,6 +71,18 @@ success.
 2. `cd plugin && ./gradlew test buildPlugin` → `build/distributions/claude-brains-X.Y.Z.zip`.
 3. Sanity: `unzip -l` the zip — must contain ONLY our jar + open-source deps
    (never any Anthropic assets).
+3b. **`./gradlew verifyPlugin` — MANDATORY on every release, no exceptions** (user's standing
+   instruction, 2026-08-23). It runs the same engine and IDE ladder JetBrains runs, so it is the
+   last chance to learn about a binary incompatibility BEFORE the version number is spent. Do not
+   reason about whether the diff "touched platform API" and skip on that basis — the judgement is
+   exactly what you cannot make reliably, and skipping it on 0.9.0 (which did pass, by luck
+   confirmed afterwards) is why this step is numbered now.
+   Read the VERDICT FILES, never the log tail (gotchas):
+   `plugin/build/reports/pluginVerifier/PS-*/plugins/<pluginId>/X.Y.Z/verification-verdict.txt`
+   — one line each, every IDE must read `Compatible`. It takes ~30s of verification inside a
+   ~6min task on a warm cache, so run it in the background and wait. "Compatible with warnings"
+   does not block a release, but read the warnings and record them. Never under
+   `-PskipVerifierIdes` (see above — it refuses anyway).
 4. Update `updatePlugins.xml`: `version` and the `url`
    (`https://github.com/amitsidhpura/claude-brains/releases/download/vX.Y.Z/claude-brains-X.Y.Z.zip`).
 5. Keep the README's **Install** section true: before the first release it says "no release is
@@ -192,8 +204,10 @@ hard way:
   bearer token in the `JETBRAINS_MARKETPLACE_TOKEN` repo secret, no `channel` field = Stable). The
   zip goes up UNSIGNED exactly as the web form sent it — JetBrains signs Marketplace builds
   themselves, and this project configures no signing key, so nothing about the artifact changed.
-  Still run `./gradlew verifyPlugin` locally first (needs the `pluginVerifier()` dependency; IDE
-  downloads are cached after the first run) — CI does not verify, it only ships.
+  **CI does not verify, it only ships** — which is why step 3b runs `./gradlew verifyPlugin`
+  locally on every release (needs the `pluginVerifier()` dependency; IDE downloads are cached
+  after the first run). The Marketplace also runs its own verifier on upload, but that verdict
+  lands AFTER the version number is spent, so it is a confirmation, never the gate.
 - All verifier warnings from the 0.2.0 run were resolved after submission (rides the next
   release): `DaemonCodeAnalyzerImpl.getHighlights` → `DocumentMarkupModel` +
   `HighlightInfo.fromRangeHighlighter` (public API, same data); the 8 `ReadAction.compute`

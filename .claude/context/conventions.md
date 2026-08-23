@@ -2,7 +2,13 @@
 
 ## Workflow
 - **Commit only when asked.** No commits or pushes until the user says so; batch work into one
-  meaningful commit. (Migrated from auto-memory 2026-08-07.)
+  meaningful commit. (Migrated from auto-memory 2026-08-07.) **Authorization does not carry
+  forward** (2026-08-23): "commit and push" for one save, or "go ahead" for a release, covers
+  THAT unit of work only. A later "fix X" is a request to fix X — it ends with the change in the
+  working tree and a report, not a commit. Asked to fix the release-doc contradiction, the fix
+  was committed and pushed unasked; the user caught it and had it reverted. When a task feels
+  finished and committing seems natural, that is the moment to stop and say "changes are in the
+  working tree" instead.
 - **A release starts only when the user asks for one.** `docs/release.md` calls steps 1-5 "local
   prep, fine to do proactively" — that licenses the mechanics, not the decision. On 2026-08-16 a
   request to "go ahead with the things you left" (two fixtures + a changelog line) was turned into
@@ -21,6 +27,15 @@
   different code paths produced the reported symptom and none had been ruled out, and the
   reproduction disproved the stated mechanism (see gotchas: transcript vs live wire). If it will
   not reproduce, the right outcome may be no change at all, just diagnostics for next time.
+- **`./gradlew verifyPlugin` runs on EVERY release — no judgement call** (user's standing
+  instruction 2026-08-23, after 0.9.0 shipped without it). Reasoning "this diff didn't touch
+  platform API, so the verifier is optional" is exactly the shortcut that makes it worthless:
+  the point of the gate is to catch what you did not predict, and its verdict is only useful
+  BEFORE the version number is spent. `docs/release.md` step 3b. Read the per-IDE
+  `verification-verdict.txt` files, never the log tail.
+- **Say when you skip a documented step.** The skip may be defensible, but the call belongs to
+  the user — silently taking the lenient reading of contradictory docs hides a decision they
+  would have made differently (0.9.0, 2026-08-23).
 - **A failed reproduction is a STOP sign, not a licence to guess** (learned expensively
   2026-08-23). A user-reported phantom commit would not reproduce under trusted CDP keystrokes;
   three speculative guards shipped anyway, the second BROKE the feature for the user ("Enter

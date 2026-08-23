@@ -314,10 +314,13 @@ trusting memory here.
   green. Also: an unquoted `?` in a curl URL is a zsh glob ("no matches found") — quote the
   Marketplace API URLs.
 - The Marketplace runs the Plugin Verifier on every upload itself (0.5.1: Compatible on 2024.2.6 →
-  2026.2.1, verifier 1.408, visible on the plugin's Versions page). So a local `./gradlew
-  verifyPlugin` earns its keep only when a change touches platform API and you want the answer
-  BEFORE spending a version number — it is not a per-release ritual. Worth knowing before paying for
-  seven IDE downloads on a fresh machine.
+  2026.2.1, verifier 1.408, visible on the plugin's Versions page) — but its verdict arrives AFTER
+  the version number is spent, so it confirms, it does not gate. **`./gradlew verifyPlugin` is
+  MANDATORY on every release** (user's standing instruction 2026-08-23; `docs/release.md` step 3b).
+  An earlier version of this entry called it "not a per-release ritual, only when a change touches
+  platform API" — that licensed skipping it on 0.9.0, which passed only by luck confirmed
+  afterwards, and it contradicted release.md. The judgement "does this diff touch platform API?"
+  is precisely the one not to trust. Budget seven IDE downloads on a fresh machine, cached after.
 - GitHub Actions: a `workflow_dispatch` trigger only appears once the workflow file is on the
   DEFAULT branch — `gh workflow run` on an unpushed workflow just says it doesn't exist. So the
   first dry run of `.github/workflows/marketplace-upload.yml` can only happen after a push to main,
