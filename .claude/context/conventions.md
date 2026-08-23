@@ -27,7 +27,9 @@
   completely not working"), and the user ordered a full revert. When the repro fails, the right
   outputs are diagnostics and a plainly-labelled hypothesis — never a fix. And a guard on an
   input path must be proven to still pass the GOOD case in the real environment, not just in
-  the harness.
+  the harness. **Epilogue 2026-08-24:** the bug was a FIXED upstream IDE defect (IJPL-161111)
+  that only existed because the sandbox pinned a pre-fix build — so before guarding anything
+  environmental, check whether the environment is simply out of date.
 - **A third-party report describes a SYMPTOM, not a diagnosis, and often not even accurately.**
   "Submit button not disabled" was literally a non-bug (the button is a Send/Stop toggle and is
   never disabled) while pointing at two real defects. Ask what was on screen at the moment of the

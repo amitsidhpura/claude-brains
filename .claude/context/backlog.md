@@ -45,10 +45,17 @@
   later `invokeLater`), but the failure is cosmetic and `refreshFromDisk` covers its paths, so it
   was left out of the 2026-08-21 open-path fix rather than widening that change's blast radius.
 
-- **Phantom single-character comment commit** (JCEF Enter storm, gotchas 2026-08-23): parked
-  UNFIXED after three failed guards and a full revert at the user's request. Options if it
-  resurfaces: re-test on the real IDE's newer JBR (all sightings were sandbox 2024.2), file a
-  JBR YouTrack issue (evidence shape is in gotchas), or make ⏎ the only commit path.
+- **Phantom single-character comment commit** — ROOT CAUSE FOUND 2026-08-23 (second pass):
+  IJPL-161111, a JCEF-OSR Linux keyboard bug fixed upstream in 2024.2.2+; every sighting was
+  on the pre-fix sandbox 2024.2.0, since bumped to 2024.2.6 (build.gradle.kts). No YouTrack
+  filing needed (already fixed). Watch-item only: if a phantom EVER appears on the new sandbox
+  or a real IDE, re-instrument WITH modifier flags — the phantom fabricates Control events, so
+  a phantom Ctrl+Enter submit of a half-typed draft was never ruled out (tape in
+  `_local/phantom-enter-tape-2026-08-23/`).
+- **Confirm-card path at narrow widths** — the permission card header's path wraps to a second
+  line AND middle-ellipsises, so two lines are spent and the middle is still hidden. A CSS-only
+  fix (wrap, show whole) was planned and DECLINED by the user 2026-08-24; parked, do not
+  re-propose unprompted.
 - **5.6 leftovers** (feature shipped 2026-08-23): keyboard-only selection cannot trigger the
   comment pill (mouse-up only); an INTERRUPTED ExitPlanMode's footer quotes the CLI's stock
   "The user doesn't want to proceed…" boilerplate via fbQuote (pre-existing, seen in probe) —

@@ -3,6 +3,36 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-24 — the phantom was PhpStorm's, and a plan card that lied twice
+- **Phantom Enter closed by attribution, not by code.** A fresh check found the real ticket:
+  **IJPL-161111** "JCEF: the keyboard on linux is broken" (dups JBR-7536/7547) — Linux+OSR,
+  repeated key events on the JS side, wrong codes — **fixed upstream in 2024.2.2 / 2024.3**.
+  The sandbox pinned 2024.2.0. The old JBR-5348/5115 attribution was stale (2023 fixes, already
+  in our JBR). Bumped to `phpstorm("2024.2.6")`; user re-tested many times, never reproduced:
+  "it was not plugin but PHPStorm". Three reverted guards had been defending a dev-only bug.
+- Guard archaeology found **nothing in git** — the guards were never committed, so gotchas'
+  "recover from git history" was false. The only evidence was the sandbox idea.log; preserved
+  to `_local/phantom-enter-tape-2026-08-23/` before the bump created a new sandbox dir. That log
+  also held 52 platform-only `invalid keyCode` stacks in `JBCefEventUtils.convertCefKeyEvent`.
+- **Then the real bug**, from user screenshots: a plan card pending at reload replayed
+  "✓ Approved", and on the next reload "✗ Kept planning" quoting the CLI's own AbortError.
+  Probes (headless, killing the CLI mid-permission) measured the mechanism: a dying CLI flushes
+  its auto-deny tool_result within ms, so the panel read the transcript BEFORE that write — the
+  record arrived one reload late, and the two-way footer branch invented "Approved" from its
+  absence. The user's own session file grew 18→22 records mid-investigation, on camera.
+- Fixed in three places: `undecided` flag (no tool_result → "◌ Interrupted — no decision
+  recorded", neutral `.und-t`), `PERMISSION_ABORT_PREFIX` filtered from planFeedback, and
+  `stopForReplay()` killing the CLI before reading. Fixture 54 + a parser test; control run
+  406/5 before applying.
+- **The user caught the regression I shipped with it**: the unconditional `awaitExit(1_500)`
+  made every reload slow. Now gated on `pendingPermissions.isNotEmpty()`. Lesson: a correctness
+  wait that fires on the common path is a performance bug — scope it to the state it exists for.
+- Also fixed: `tools/cdp.py` picked the first `jbcefbrowser` page, and the fresh 2024.2.6
+  sandbox opened a "What's new" tab that hijacked it — now matches the panel's `<title>` first.
+- Relearned the hard way (twice in two days): `pkill -f runIde` kills gradle, not the sandbox
+  IDE; the orphan then swallows relaunches silently.
+- Declined by the user: wrapping the confirm-card path to show it whole at narrow widths.
+
 ## 2026-08-23 (third) — plan comments finish, and a phantom Enter that beat us
 - Four more polish rounds on 5.6, all committed (`92363ac`): the ✕/⏎ buttons wear the `.rm`
   plate (`--warn-border` 15% over `--warn-bg`) and `.rm` itself LOST its left-edge fade on the

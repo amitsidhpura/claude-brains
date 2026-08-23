@@ -3,6 +3,45 @@
 Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternatives rejected*.
 Never delete entries; mark superseded ones.
 
+## 2026-08-24 — A replayed card may not claim a decision the transcript does not hold
+Replay gained a THIRD plan-card state: `undecided` (SessionStore emits it when a plan tool_use
+has no tool_result), drawn as neutral "◌ Interrupted — no decision recorded" (`.und-t`).
+The CLI's own auto-deny text (`RenderLimits.PERMISSION_ABORT_PREFIX`) joins REJECT_MESSAGE as
+machinery filtered out of `planFeedback`. And `refresh`/`resume` now call
+`ClaudeSessionService.stopForReplay()` before reading the transcript.
+**Why:** a two-way `denied ? kept : approved` branch treats "no record" as approval. Measured
+2026-08-23/24 on the user's own session: a CLI killed with a permission pending flushes its
+auto-deny within ms, so a replay read too early saw nothing and rendered "✓ Approved" for a
+decision the user never made; the next reload rendered the denial and quoted the CLI's error as
+if the user had typed it. Absence of evidence must render as absence, never as consent.
+**Rejected:** inferring approval/denial from surrounding records (the transcript genuinely does
+not say); suppressing the card entirely when undecided (it is the record that Claude asked);
+waiting unconditionally for the CLI to die (see below).
+
+## 2026-08-24 — A correctness wait is scoped to the state that needs it
+`stopForReplay()` waits (`awaitExit(1_500)`) only when `pendingPermissions.isNotEmpty()`.
+**Why:** the wait exists for ONE measured record — a pending permission's auto-deny flush. Made
+unconditional it charged every ordinary reload a few hundred ms for nothing, which the user
+noticed immediately ("since your last update it takes more time to reload a conversation").
+The service already tracks the state cheaply, so the guard is free.
+**Rejected:** dropping the wait (reintroduces the one-reload-late bug); a shorter blanket
+timeout (still pays on the common path, still races on the rare one); doing the read
+asynchronously and patching the card afterwards (a second render path for one edge case).
+
+## 2026-08-24 — The sandbox tracks a PATCHED IDE build, not the .0 of its line
+`plugin/build.gradle.kts` pins `phpstorm("2024.2.6")`, not `"2024.2"`.
+**Why:** 2024.2.0's JCEF fabricates key-event storms in OSR on Linux (IJPL-161111, fixed in
+2024.2.2+). Pinning the .0 of a line means developing against every bug that line ever had —
+and it cost three speculative guards, a full revert, and a day of investigation chasing a defect
+no user could hit. `sinceBuild = "242"` is unaffected; users were never exposed.
+**Rejected:** 2024.3 (bigger jump, would re-open the documented sandbox quirks); staying on
+2024.2.0 and guarding in-panel (guarding the dev environment inside shipped code).
+
+## 2026-08-24 — The confirm-card path stays one-line-ellipsised (user call)
+The permission card's header path continues to wrap to a second line AND middle-ellipsise at
+narrow widths. A CSS-only plan to let it wrap and show the path whole was written and
+**rejected by the user**; do not re-propose unprompted.
+
 ## 2026-08-23 — Plan comments live ON the plan card, and approval stays open with comments
 Checklist 5.6 shipped (`c0df900`): select text in the plan card's body → anchored comment rows.
 **Why in-panel, not an editor tab:** VS Code renders the plan in a markdown preview tab

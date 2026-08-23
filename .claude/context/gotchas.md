@@ -299,7 +299,7 @@ trusting memory here.
   bundled JBR is JDK 25. On the current Windows machine `java` IS on PATH and `JAVA_HOME` is set
   (`~/.jdks/ms-21.0.12`), so `./gradlew` just works — on a machine where it isn't, prefix
   `JAVA_HOME=<jdk-21>`. Run every `./gradlew` from `plugin/`, not the repo root. `runIde` itself runs on the JBR inside the
-  downloaded `phpstorm("2024.2")` dependency (JBR 21 `-jcef` with `libcef.so`) — that's what
+  downloaded `phpstorm("2024.2.6")` dependency (JBR 21 `-jcef` with `libcef.so`) — that's what
   makes the webview work. First run downloads ~1 GB.
   (`instrumentCode`/`buildSearchableOptions` being off is explained in build.gradle.kts itself.)
 - `org.gradle.configuration-cache=true` is ON (plugin/gradle.properties): a task action (`doFirst`,
@@ -405,7 +405,7 @@ trusting memory here.
   plugin code in the stack, fires once at EVERY runIde launch (idea.log shows it at each start
   since long before any plugin change). Ignore it; nothing to fix on our side.
 - The runIde sandbox INVENTS UI symptoms, it doesn't only hide them (learned on manual-test 1.7).
-  It runs PhpStorm 2024.2 on a fresh config with the stock keymap, so IDE-level key handling
+  It runs PhpStorm 2024.2.6 on a fresh config with the stock keymap, so IDE-level key handling
   differs from a real install: a defect that reproduces ONLY there is suspect — reproduce any
   interaction bug against the installed IDE before chasing it in the renderer. Matching CDP
   limit: synthetic events go straight into the page and NEVER pass through IntelliJ's key
@@ -720,7 +720,7 @@ trusting memory here.
   require-restart, all EPs dynamic), and unloading live JCEF + the WS server + the claude process
   would rarely pass the GC check anyway. User accepted this 2026-08-19 — do not engineer around it.
 - **`pgrep -f <pattern>` matches the shell that runs it** when the pattern appears in that shell's
-  own command line (the Bash tool's `zsh -c "... pgrep -f 'PhpStorm-2024.2/jbr/bin/java' ..."`).
+  own command line (the Bash tool's `zsh -c "... pgrep -f 'PhpStorm-2024.2.6/jbr/bin/java' ..."`).
   "Still running" three times in a row on 2026-08-17 was the probe seeing itself. Read `ps -o cmd
   -p <pid>` before believing it, or anchor on the lock file / a `ps` filter that excludes `pgrep`.
 - **A negative control can pass for the wrong reason: a "discriminator" that is a substring of the
@@ -742,8 +742,8 @@ trusting memory here.
   skip already in backlog.
 - **`./gradlew runIde` can return "BUILD SUCCESSFUL" in seconds while the sandbox keeps
   running** (2026-08-17: 7s, IDE alive for the whole session). Do not read the Gradle exit as
-  "the IDE quit" — `pgrep -fa PhpStorm-2024.2/jbr/bin/java` + check the sandbox jar
-  (`build/idea-sandbox/PS-2024.2/plugins/claude-brains/lib/*.jar`) carries the new symbols.
+  "the IDE quit" — `pgrep -fa PhpStorm-2024.2.6/jbr/bin/java` + check the sandbox jar
+  (`build/idea-sandbox/PS-<version>/plugins/claude-brains/lib/*.jar`) carries the new symbols.
 - **`pkill -f <pattern>` from a harness background shell kills ITSELF when the pattern appears
   in the shell's own eval'd command line** (exit 144, and whatever came after the pkill never
   runs — a runIde relaunch silently didn't happen twice on 2026-08-16). Run the kill and the
@@ -827,19 +827,49 @@ trusting memory here.
   and no window appears (idea.log shows the OLD instance still running). Kill it by pid —
   `pgrep -f 'idea.system.pat[h]'` — and bracket-escape the pattern or the Bash tool matches its
   OWN command line and dies with exit 144.
-- **JCEF-OSR on Linux fabricates key events, and can loop them.** Taped via a webview→Kotlin
-  diag verb (2026-08-23, sandbox PhpStorm 2024.2): `{key:'Enter', code:'', keyCode:13}` repeating
-  every 1-3ms for seconds with no keyups, and ordinary characters wearing wrong physical codes
-  (`t` with `code:'ArrowDown'`, `w` with `code:'Delete'`). The plugin registers NO key listeners,
-  so this is JBR's AWT→CEF translation (JBR-5348 / JBR-5115 family, same defect class as the
-  Delete→0x7F insertion already worked around in 65-slash.js). **Three defences were tried and
-  all removed** (e.code guard: phantom has `code:''`; <30ms cadence guard: killed real Enter
-  outright; commit-on-keyup: a later report showed keyups too). If a single-key-commit surface
-  is ever built again, expect this and prefer a BUTTON as the primary commit path.
+- **JCEF-OSR on Linux fabricates key events, and can loop them — but ONLY on pre-2024.2.2
+  IDE builds.** Root cause found 2026-08-23 (second pass): **IJPL-161111 "JCEF: the keyboard
+  on linux is broken"** (dups JBR-7536/JBR-7547), fixed upstream in 2024.2.2 / 2024.3. Every
+  sighting was on sandbox 2024.2.0 (JBR 21.0.3-b509.4, CEF 122); the sandbox pin was bumped
+  to **2024.2.6** the same day, and real user IDEs (2024.2.2+/2025.x) carry the fix. The tape
+  shows TWO waveforms: keydown-only `{key:'Enter', code:'', keyCode:13}` at 1-3ms for minutes,
+  and a keyup-storm of Ctrl/Enter cycles at ~2,000 events/s — plus characters wearing wrong
+  physical codes (`t` with `code:'ArrowDown'`). The same idea.log carries 52 platform-only
+  `IllegalArgumentException: invalid keyCode` stacks in `JBCefEventUtils.convertCefKeyEvent` —
+  IDE-side proof it was the AWT↔CEF translation. **Three defences were tried and all removed**
+  (e.code guard: a REAL sandbox Enter also has `code:''`; <30ms cadence guard: killed real
+  Enter outright; commit-on-keyup: the second waveform delivers keyups). If it EVER resurfaces
+  on a post-fix build: re-instrument recording MODIFIER FLAGS (the one gap in the tape — the
+  phantom fabricates `Control` events, so a phantom Ctrl+Enter submit was never ruled out),
+  and prefer a BUTTON as the primary commit path on any single-key-commit surface.
 - **A trace that must survive the window needs a bridge verb to `idea.log`** — an in-page ring
   buffer (`window.__cmtKeys`) died with the sandbox twice before anyone could read it. The verb
-  is 1 line in ChatPanel's `handleFromWeb` when. (Removed with the rest of the guards; recover
-  from git history at 2026-08-23 if a webview trace is ever needed again.)
+  is 1 line in ChatPanel's `handleFromWeb` when. (The guards were never committed — nothing is
+  in git history. The surviving evidence is `_local/phantom-enter-tape-2026-08-23/`: the 3,329
+  diag lines, the 52 exception stacks, and the full idea.log gzipped.)
 - **Live-harness asserts that mutate state must be their own STEP.** Adding a commit-and-cancel
   assert in the middle of an existing step consumed the composer that later asserts needed and
   produced 11 unrelated failures. A step is the isolation unit; `setup` can `__clear` first.
+
+## Replay / transcript timing (added 2026-08-24)
+- **A dying CLI writes one more record, and replay races it.** Killed with a permission still
+  pending, the CLI appends its auto-deny tool_result ("Tool permission request failed:
+  AbortError: Tool permission stream closed…", `toolDenialKind: "permission-rule"`) within ms
+  of stdio closing — measured headless, and watched happen on a user session that grew 18→22
+  records mid-investigation. Read the transcript before that write and the record shows up one
+  reload LATE. `stopForReplay()` (ClaudeSessionService) closes the race, but ONLY waits when
+  `pendingPermissions.isNotEmpty()` — an unconditional wait slowed every ordinary reload and
+  the user noticed within a day.
+- **A two-way decided/denied branch treats "no record" as the happy path.** replayCard drew
+  "✓ Approved" for a plan whose tool_use never got a tool_result. Any card that replays a
+  decision needs a third, neutral state for "the transcript does not say" — absence of evidence
+  is not consent. Parser flag `undecided`, footer `.und-t`.
+- **A resumed CLI does NOT re-emit a pending permission.** `--resume` on a transcript ending in
+  a dangling ExitPlanMode tool_use produces no frames at all (probed with and without the
+  panel's `initialize` handshake, 2026-08-24) and writes nothing new. The pending request dies
+  with its process; only the transcript can tell you it existed.
+- **`tools/cdp.py`: the `file:///jbcefbrowser/` prefix is NOT unique.** Every JCEF page in the
+  IDE shares it, and a fresh sandbox opens a "What's new" tab that sorts first — `panel_target()`
+  grabbed it and the harness died on "window.onClaudeEvent is not a function". It now matches
+  the panel's `<title>` first. A fresh sandbox config is a new environment; re-verify the tools
+  that assume what is on screen.
