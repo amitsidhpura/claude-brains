@@ -1138,3 +1138,22 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .effort .d.cur { transform: scale(1.5); background: var(--accent); }
 .effort:hover .d { background: #5a5d63; }
 .effort:hover .d.on { background: var(--accent); }
+/* model-menu footer: the .popup-f idiom stacked — three label+switch rows behind the footer's
+   one top border. Labels ride the .ef-label rail (20px svg slot) so they line up with .pi-title. */
+.pf-stack { flex-direction: column; align-items: stretch; gap: 10px; }
+.tgl-row { display: flex; align-items: center; justify-content: space-between; }
+/* toggle switch — first switch idiom in the panel: 28×16 pill track, 12px knob sliding on .on.
+   Colors from tokens only: off track is a fg/user-bg mix, on track the accent; the knob keeps
+   var(--fg) in both states (enough contrast on the orange, and no new colour constants). */
+.tgl { position: relative; width: 28px; height: 16px; flex: 0 0 28px; border: 0; padding: 0;
+  border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--fg) 22%, var(--user-bg)); transition: background .15s; }
+.tgl::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--fg); transition: left .15s; }
+.tgl.on { background: var(--accent); }
+.tgl.on::after { left: 14px; }
+.tgl:focus { outline: none; }
+.tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tgl[disabled] { opacity: .45; cursor: default; }
+/* fast mode cooling down: half-strength track — visibly "on but not delivering", reason on title */
+.tgl.cooldown { background: color-mix(in srgb, var(--accent) 45%, var(--user-bg)); }

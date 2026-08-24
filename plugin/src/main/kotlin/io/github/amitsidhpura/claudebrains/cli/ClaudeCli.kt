@@ -3,6 +3,7 @@ package io.github.amitsidhpura.claudebrains.cli
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
@@ -355,6 +356,21 @@ class ClaudeCli(
     fun setModel(model: String) = sendControlRequest(buildJsonObject {
         put("subtype", "set_model")
         put("model", model)
+    })
+
+    /** Host-initiated: merge settings into the CLI's per-process flag layer (probed 2026-08-24:
+     * {"fastMode": true} clears the SDK fast-mode gate, false reverts — get_settings.effective
+     * reflects both directions). */
+    fun applyFlagSettings(settings: JsonObject) = sendControlRequest(buildJsonObject {
+        put("subtype", "apply_flag_settings")
+        put("settings", settings)
+    })
+
+    /** Host-initiated: cap extended thinking. null = reset to the session default; 0 = off.
+     * (The CLI schema: max_thinking_tokens int|null, "omitted or null … resets".) */
+    fun setMaxThinkingTokens(maxTokens: Int?) = sendControlRequest(buildJsonObject {
+        put("subtype", "set_max_thinking_tokens")
+        put("max_thinking_tokens", maxTokens?.let { JsonPrimitive(it) } ?: JsonNull)
     })
 
 

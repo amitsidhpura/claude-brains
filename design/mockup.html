@@ -800,6 +800,11 @@ total 196K
             <div class="popup-item"><div class="pi-body"><div class="pi-title">Haiku</div><div class="pi-desc">Haiku 4.5 · Fastest for quick answers</div></div><span class="pi-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>
             <!-- a user-defined (custom) model: name : code : description, removable via the hover × -->
             <div class="popup-item"><div class="pi-body"><div class="pi-title">Fable 5</div><div class="pi-desc">Most capable for your hardest and longest-running tasks</div></div><button class="model-del" title="Remove model"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+            <div class="popup-f pf-stack" id="modelFooter">
+              <div class="tgl-row"><span class="ef-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 2.7a10 10 0 1 0 5.7 5.7"/><circle cx="12" cy="12" r="2"/><path d="M13.4 10.6 19 5"/></svg>1M context</span><button class="tgl on" id="tgl1m" role="switch" aria-checked="true" title="1M context window"></button></div>
+              <div class="tgl-row"><span class="ef-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18z"/><path d="M2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z"/></svg>Fast mode</span><button class="tgl" id="tglFast" role="switch" aria-checked="false" title="Faster responses (Opus only)"></button></div>
+              <div class="tgl-row"><span class="ef-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/><path d="M18 18a4 4 0 0 0 2-7.464"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/><path d="M6 18a4 4 0 0 1-2-7.464"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/></svg>Thinking</span><button class="tgl on" id="tglThink" role="switch" aria-checked="true" title="Extended thinking"></button></div>
+            </div>
           </div>
           </span>
           <span class="menu-anchor">
@@ -1095,6 +1100,15 @@ total 196K
       item.classList.add('on');
       renderModeChip();
       document.getElementById('modeMenu').classList.remove('show');
+    });
+  });
+  // ---- model-menu footer toggles: flip in place, keep the menu open ----
+  ['tgl1m', 'tglFast', 'tglThink'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      b.classList.toggle('on');
+      b.setAttribute('aria-checked', String(b.classList.contains('on')));
     });
   });
   document.querySelectorAll('#modelMenu .popup-item').forEach(function (item) {

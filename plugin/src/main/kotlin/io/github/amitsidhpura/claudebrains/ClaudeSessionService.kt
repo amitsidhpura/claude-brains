@@ -88,6 +88,22 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun customModels(): String = props.getValue(CUSTOM_MODELS_KEY) ?: "[]"
     fun setCustomModels(jsonArray: String) = props.setValue(CUSTOM_MODELS_KEY, jsonArray)
 
+    /** Persisted fast-mode preference (9.4). The CLI's flag layer is per-process, so every
+     * (re)start re-applies it; actual state is reconciled from the CLI's own frames. */
+    fun fastMode(): Boolean = props.getBoolean(FAST_MODE_KEY, false)
+    fun setFastMode(on: Boolean) {
+        props.setValue(FAST_MODE_KEY, on, false)
+        cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", on) })
+    }
+
+    /** Persisted thinking preference (9.5), stored as the exception (off). ON resets the CLI to
+     * its session default (max_thinking_tokens null); OFF caps it at 0. */
+    fun thinkingOff(): Boolean = props.getBoolean(THINKING_OFF_KEY, false)
+    fun setThinking(on: Boolean) {
+        props.setValue(THINKING_OFF_KEY, !on, false)
+        cli?.setMaxThinkingTokens(if (on) null else 0)
+    }
+
     /**
      * @param onEvent sink for raw stream-json conversation lines
      * @param onPermission (requestId, toolName, inputJson, suggestionsJson?) when the CLI asks
@@ -151,6 +167,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
         // Re-apply the persisted model on every (re)start.
         selectedModel()?.takeIf { it.isNotBlank() && it != "default" }?.let { cli?.setModel(it) }
+        // …and the footer-switch preferences, which live in per-process CLI state (flag layer /
+        // thinking cap). Only the non-default states are worth a request.
+        if (fastMode()) cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", true) })
+        if (thinkingOff()) cli?.setMaxThinkingTokens(0)
     }
 
     /**
@@ -441,5 +461,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         const val MODEL_KEY = "claudeCode.selectedModel"
         const val MODE_KEY = "claudeCode.permissionMode"
         const val CUSTOM_MODELS_KEY = "claudeCode.customModels"
+        const val FAST_MODE_KEY = "claudeCode.fastMode"
+        const val THINKING_OFF_KEY = "claudeCode.thinkingOff"
     }
 }

@@ -276,15 +276,23 @@ auto-include selection, voice.
       `ultracode|auto` beyond the slider's five stops
 - **9.3** ✅ **Context gauge** ring on the composer — `modelUsage[].contextWindow` (a map, side
       models included), reset on compaction
-- **9.4** 🟥 [SM] **Fast mode toggle** **[DECIDE]** (`fast_mode_state` + `fast_mode_disabled_reason` on `initialize`,
-      `result.fast_mode_state`; TUI `/fast [on|off]`, Opus only). Mechanism measured 2026-08-23: a
-      headless client starts gated (`sdk_opt_in_required`) and `apply_flag_settings
-      {settings:{fastMode:true}}` clears the gate (state then reflects the account, e.g.
-      `extra_usage_disabled`); `list_models` reports `supportsFastMode` per model. Take: cheap,
-      sibling of the model chip — candidate
-- **9.5** 🟧 [SM] **Thinking level** **[NEW · DECIDE]** — VS Code's `set_thinking_level` host message; the stdio
-      spelling is `set_max_thinking_tokens {max_thinking_tokens, thinking_display}`, accepted over
-      stdio (probed 2026-08-23). Take: likely redundant beside the effort slider
+- **9.4** ✅ **Fast mode toggle** (decided + built 2026-08-24) — a switch in the model-menu footer
+      (`#modelFooter`, with 9.9 and 9.5), enabled only when the roster item says `supportsFastMode`
+      (Opus family; lookup matches with `[1m]` stripped both sides so plain "opus" still gates
+      right). Toggle sends `apply_flag_settings {settings:{fastMode:bool}}` — probed 2026-08-24:
+      `true` clears the `sdk_opt_in_required` gate AND `false` reverts (`get_settings.effective`
+      reflects both). Optimistic click; CLI truth (`fast_mode_state` off|on|cooldown +
+      `fast_mode_disabled_reason`) reconciles from the initialize payload (`__fastMode` frame) and
+      every `result` — a gated account snaps the switch back after the first turn, reason on the
+      tooltip; `cooldown` wears a half-strength track. Pref persisted (`claudeCode.fastMode`),
+      re-applied each CLI start (the flag layer is per-process). Fixture 55.
+- **9.5** ✅ **Thinking on/off** (decided + built 2026-08-24) — a switch in the model-menu footer,
+      default ON, never gated. OFF → `set_max_thinking_tokens {max_thinking_tokens: 0}`; ON →
+      `{max_thinking_tokens: null}` = reset to the session default — a DELIBERATE divergence from
+      VS Code (which pins 31999 + display "summarized"): a hardcoded budget would silently cap
+      models whose default differs. Verified live 2026-08-24: with 0 set, a real turn streams zero
+      thinking blocks. Pref persisted (`claudeCode.thinkingOff`), re-applied each CLI start;
+      seeded to the webview via `__thinking` on every load (no CLI echo exists). Fixture 55.
 - **9.6** ➖ Cost / token breakdown / usage panel (`get_usage`, `get_context_usage`,
       `request_usage_update` **[NEW]**; TUI `/usage`, `/cost`, `/context`) — declined 2026-08-06; the
       built-in `/context` is enabled as a turn for the rare look. (`get_context_usage` and
@@ -294,6 +302,23 @@ auto-include selection, voice.
       the CLI stays silent; the model chip could lie if the gate fires. Probe by exercising it
 - **9.8** ➖ Subagent model (`CLAUDE_CODE_SUBAGENT_MODEL`), Bedrock / Vertex / Foundry setup — env
       and terminal configuration
+- **9.9** ✅ **1M-context toggle** **[NEW]** (built 2026-08-24, user request: Sonnet with 1M had no
+      surface) — a switch in the model-menu footer that appends/strips `[1m]` on the selection and
+      re-selects through `setModel` (persistence rides `claudeCode.selectedModel`; the menu stays
+      open; the row ✓ ignores the tag so Sonnet keeps its checkmark as `sonnet[1m]`). State = tag
+      sniff on the value, else on `resolvedModel` for the exact roster selection — covers `default`
+      (→ `claude-opus-5[1m]`, shows ON; toggling OFF pins `claude-opus-5` since stripping "default"
+      is a noop). **NO client-side validity logic — user decision 2026-08-24**: the CLI's alias
+      whitelist is `sonnet[1m]`/`opus[1m]`/`fable[1m]` (no haiku) and `set_model` NEVER rejects, so
+      an unsupported combination fails on the NEXT turn with the API's own error (measured:
+      `haiku[1m]` → "API Error: 400 The long context beta is not yet available for this
+      subscription", rendered by the existing error path). Gauge denominator set explicitly on
+      toggle (setModel's own sniff leaves it stale on the strip path); verified end-to-end: a real
+      `sonnet[1m]` turn reports `modelUsage contextWindow 1000000`. **The switch reconciles to the
+      REAL window after the first message** (user request 2026-08-24): `reconcileFromResult` takes
+      `modelUsage[].contextWindow` from every result and snaps the switch to it (`oneMFromCli`),
+      so Fable toggled "off" shows ON once the API confirms it ran 1M anyway; cleared on every
+      model change so the display is tag-derived until that model's first result. Fixture 55.
 
 ## 10. Auth & account
 - **10.1** ➖ Login / logout / account display / `disableLoginPrompt` — **by design**: sign in once by
@@ -372,9 +397,9 @@ auto-include selection, voice.
       configuration; ➖
 
 ## 16. Quality gates (not features, but part of "what we have")
-- **16.1** ✅ `./gradlew test` (113, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
+- **16.1** ✅ `./gradlew test` (115, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
       control RUN
-- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 53, **406** assertions, real captured
+- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 56, **444** assertions, real captured
       wire frames replayed into the live webview over CDP
 - **16.3** ✅ `./gradlew probe` (replay without the IDE); `tools/cdp.py`; `window.__gallery()`;
       DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins — gotchas)

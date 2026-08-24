@@ -70,6 +70,15 @@
   // whole-message `assistant` frame; also cleared at `result` so an interrupted stream can't make
   // the NEXT turn's un-streamed frame (a local command's answer) look already-drawn.
   let msgStreamed = false;
+  // An API error reaches the live wire TWICE: a synthetic assistant message (message.model
+  // "<synthetic>") and then the result's is_error text — identical strings (taped 2026-08-24,
+  // haiku[1m] turn). The transcript keeps only the assistant record and SessionStore already
+  // replays it as an error item, so live must also draw ONE block: the whole-message branch
+  // stashes synthetic texts here instead of rendering prose, and the result drains the stash —
+  // dropping ONLY a text identical to its own is_error text (the taped echo). Anything else
+  // (a differing text, a second synthetic message, a non-error result) is drawn as its own
+  // error block, so dedupe can never swallow a message it hasn't literally re-shown.
+  let syntheticEcho = [];
   let toolsById = {};         // tool_use id -> {el, name, io} for OUT boxes; reset by clearLogUI
   // Marks the newest un-superseded pending edit matching (tool, file) as card-owned (4.4).
   // permission_request frames carry no tool_use_id, so tool+file is the only correlation;
@@ -138,6 +147,9 @@
         if (!msgStreamed) {
           ((ev.message || {}).content || []).forEach(function (b) {
             if (b && b.type === 'text' && b.text) {
+              // the CLI's API-error echo — stash for the result, never draw as prose (see
+              // syntheticEcho's declaration); tool_use content in synthetic frames is untouched
+              if ((ev.message || {}).model === '<synthetic>') { syntheticEcho.push(b.text); return; }
               const k = track(el('blk', '')); k.innerHTML = renderMd(b.text); foldCode(k);
             }
           });
@@ -173,12 +185,24 @@
       case '__models':
         models = ev.items || [];
         currentModel = ev.selected || (models[0] && models[0].value) || null;
+        oneMFromCli = null;   // fresh roster/selection: the 1M switch is tag-derived until a result speaks
         { const cm = allModels().find(function (m) { return m.value === currentModel; });
           const w = (cm && !cm.custom) ? windowOf(cm) : (/\[1m\]/i.test(currentModel || '') ? CTX_1M : 0);
           if (w) { ctxWindowFromCli = w; renderContext(); }
           if (cm) { setModelChip(chipName(cm), cm.value); }
           else if (currentModel) { setModelChip(prettyModel(currentModel), currentModel); } }
-        renderModels();
+        renderModels(); syncModelFooter();
+        return;
+      case '__fastMode':
+        // CLI truth from the initialize payload; a pref-only frame (CLI not started yet) shows
+        // the persisted preference until the real state arrives. Reconciled again on every result.
+        fastModeState = ev.state || (ev.pref ? 'on' : 'off');
+        fastModeReason = ev.reason || '';
+        syncModelFooter();
+        return;
+      case '__thinking':
+        thinkingOn = ev.on !== false;
+        syncModelFooter();
         return;
       case 'system':
         if (typeof ev.permissionMode === 'string') applyCliMode(ev.permissionMode);

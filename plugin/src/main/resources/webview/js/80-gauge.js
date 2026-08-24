@@ -155,16 +155,34 @@
     return parts.join(' ');
   }
 
+  /**
+   * Everything a `result` frame teaches the footer and the gauge, in one callable piece so the
+   * harness can drive it without rendering a whole result's chrome:
+   * - item 17a: the AUTHORITATIVE window → gauge denominator;
+   * - the same window → the 1M switch (oneMFromCli), so the switch shows the REAL context size
+   *   from the first message after a model change (fable reports 1M whatever the tag says);
+   * - fast-mode truth (state + reason), snapping an optimistic toggle back when the account
+   *   gates it and tracking on/cooldown/off across turns.
+   */
+  function reconcileFromResult(ev) {
+    const w = windowFromUsage(ev.modelUsage || ev.model_usage, currentModel);
+    if (w && w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); }
+    if (w) { oneMFromCli = w >= CTX_1M; syncModelFooter(); }
+    if (typeof ev.fast_mode_state === 'string') {
+      fastModeState = ev.fast_mode_state;
+      fastModeReason = ev.fast_mode_disabled_reason || '';
+      syncModelFooter();
+    }
+  }
   function onResult(ev) {
     msgStreamed = false;   // an interrupted stream must not mark the next message as drawn
     const usage = ev.usage || {};
     if (typeof usage.output_tokens === 'number') reqTokens += usage.output_tokens;
-    // Item 17a. Deliberately ABOVE the background-task early return below: an intermediate result
-    // carries modelUsage too, and the window is worth taking from the first one that offers it
-    // rather than waiting for the turn to finish suspending. Only ever widens what we know — a
-    // miss returns 0 and leaves the tag-derived seed alone.
-    { const w = windowFromUsage(ev.modelUsage || ev.model_usage, currentModel);
-      if (w && w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); } }
+    // Item 17a and the footer switches. Deliberately ABOVE the background-task early return
+    // below: an intermediate result carries modelUsage too, and the window is worth taking from
+    // the first one that offers it rather than waiting for the turn to finish suspending. A miss
+    // returns 0 and leaves the tag-derived seed alone.
+    reconcileFromResult(ev);
     flushMd();
     curBubble = null;
     finishThinking();
@@ -182,16 +200,23 @@
     const outTok = reqTokens || (turnTokens + msgTokens);
     setBusy(false);
     if (ev.is_error) {
+      const resultText = (typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error');
+      // drain stashed synthetic texts the result does NOT literally repeat — chronologically first
+      syntheticEcho.forEach(function (t) { if (t !== resultText) errorBlock(t); });
       if (stopping) { statusLine('Stopped', SVG_STOP); }
       else {
-        errorBlock((typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error'));
+        // the one copy of the taped API-error echo — its identical synthetic twin was stashed
+        errorBlock(resultText);
         addRetryLine();
       }
     } else {
+      // a synthetic echo with no error result at all — drain, so the dedupe can never swallow one
+      syntheticEcho.forEach(function (t) { errorBlock(t); });
       const done = el('done', '');
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
       done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero
     }
+    syntheticEcho = [];   // turn-scoped: a stale echo must not leak into the next result
     // The queue waits for the request to END, not for the stream to go quiet: draining here means
     // a follow-up never lands mid-turn. `stopping` is still true for an interrupted turn, which is
     // exactly when the queue must NOT fire — read it before it is cleared.

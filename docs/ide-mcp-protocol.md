@@ -446,6 +446,24 @@ flag settings layer"), `stop_task`, `background_tasks` (Ctrl+B semantics), `gene
 No `set_effort` / `set_output_style` / `list_sessions` subtypes exist. Effort is a spawn flag
 (`--effort <v>`) and possibly `apply_flag_settings{effortLevel}` (unprobed).
 
+**Probed 2026-08-24 (CLI 2.1.241), all live over stdio:**
+- `list_models` (and the `initialize` response's `models`) items carry `{value, resolvedModel,
+  displayName, description, supportsEffort?, supportedEffortLevels?, supportsAdaptiveThinking?,
+  supportsAutoMode?, supportsFastMode?}` — no 1M flag; the `[1m]` tag on `value`/`resolvedModel`
+  is the only marker. The initialize response also carries top-level `fast_mode_state`
+  (`off|on|cooldown`) + `fast_mode_disabled_reason` (e.g. `sdk_opt_in_required`), and
+  `result` events repeat `fast_mode_state`.
+- `set_model` NEVER rejects — even `haiku[1m]` returns success; an invalid combination fails on
+  the next turn with the API's error ("400 The long context beta is not yet available for this
+  subscription"). Valid `[1m]` aliases per the binary: `sonnet[1m]`, `opus[1m]`, `fable[1m]`.
+  `set_model "sonnet[1m]"` verified: `get_settings.applied.model = "claude-sonnet-5[1m]"`, and a
+  real turn reports `modelUsage["claude-sonnet-5[1m]"].contextWindow = 1000000`.
+- `apply_flag_settings {settings:{fastMode:true}}` clears the SDK fast-mode gate AND
+  `{fastMode:false}` reverts — `get_settings.effective.fastMode` reflects both directions
+  (the flag lands in the `flagSettings` source layer; per-process, not persisted).
+- `set_max_thinking_tokens {max_thinking_tokens: 0}` verified live: the next turn streams zero
+  thinking blocks; `null`/omitted resets to the session default (the schema's own words).
+
 Schema-less but accepted (undocumented): `end_session`, `add_directory`, `stage_file`,
 `rewind_conversation`, `side_question`, `ultrareview_launch`, `remote_control`, `channel_enable`,
 `generate_session_title`, and the `claude_*`/`mcp_*` auth family.

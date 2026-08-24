@@ -183,6 +183,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             "mode" -> msg["mode"]?.jsonPrimitive?.content?.let { session.setPermissionMode(it) }
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
+            "fastMode" -> session.setFastMode(msg["on"]?.jsonPrimitive?.content == "true")
+            "thinking" -> session.setThinking(msg["on"]?.jsonPrimitive?.content != "false")
             "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
             // Pre-apply gutter lookup for an auto-approved edit's diff (4.4). The page asks at
@@ -653,6 +655,15 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             pushFrame(frame)
         }
+        // Fast-mode truth rides the same payload (fast_mode_state / fast_mode_disabled_reason);
+        // forward it with the persisted preference so the footer switch reflects the CLI, and the
+        // pref covers the gap when the state is absent. Replayed on every load via seedUi.
+        pushFrame(buildJsonObject {
+            put("type", "__fastMode")
+            meta["fast_mode_state"]?.let { put("state", it) }
+            meta["fast_mode_disabled_reason"]?.let { put("reason", it) }
+            put("pref", session.fastMode())
+        })
     }
 
     /**
@@ -680,6 +691,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         project.basePath?.let { pushFrame(buildJsonObject { put("type", "__project"); put("root", it) }) }
 
         lastInitMeta?.let { pushInitMeta(it) }
+            // before the CLI's first initialize there is still a preference to show on the switch
+            ?: pushFrame(buildJsonObject { put("type", "__fastMode"); put("pref", session.fastMode()) })
+        // Thinking is Kotlin-owned preference with no CLI echo — seed it on every load.
+        pushFrame(buildJsonObject { put("type", "__thinking"); put("on", !session.thinkingOff()) })
         lastCommandsChanged?.let { pushEvent(it) }   // after the seed: it REPLACES the init roster
 
         lastTitle = null; titleProbed = false
