@@ -3,6 +3,42 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-24 — the model menu grows a footer: 1M / fast / thinking switches
+- **User request that started it**: "Today I wanted to use Sonnet with 1m context but there was no
+  option." Built checklist **9.9** (1M-context toggle), **9.4** (fast mode) and **9.5** (thinking
+  on/off) as three switches in a `#modelFooter` strip under the model dropdown — the first
+  toggle-switch idiom in the panel (`.tgl`, `.pf-stack`, tokens/color-mix only). Mockup-first,
+  render approved, then ported.
+- **Everything protocol-side was probed before design** (CLI 2.1.241, live stdio): the roster's
+  full item shape incl. `supportsFastMode`; NO 1M flag anywhere — the `[1m]` value tag is the
+  marker; `set_model` NEVER rejects (even `haiku[1m]` → success; the turn then fails with "API
+  Error: 400 The long context beta is not yet available"); `apply_flag_settings{fastMode}` works
+  BOTH directions; `set_max_thinking_tokens` 0/null verified live (0 → zero thinking blocks).
+  All recorded in `docs/ide-mcp-protocol.md`.
+- **Scope was cut twice by the user at plan review**: no client-side validity logic on the 1M
+  switch (flip anything, let the API error surface), and the whole "show effort/model changes in
+  the conversation" idea dropped. Plan-mode loop: ExitPlanMode rejected until "disable rules are
+  client-side" was explained and purged from the plan.
+- **Follow-ups the user drove same-session**: (1) the 1M switch reconciles to the REAL window
+  from `result.modelUsage[].contextWindow` (`reconcileFromResult` in 80-gauge.js) — fable toggled
+  "off" snaps ON after its first turn; cleared per model change. (2) API-error double-render fixed:
+  the CLI echoes an error as a synthetic assistant message (`message.model "<synthetic>"`) AND the
+  result's is_error text; live drew both (unstreamed turns only). Now the synthetic text is
+  stashed and deduped by EXACT string equality against the result text — hardened after the user
+  asked "could this swallow a message?" (it could: a differing text was dropped; now every
+  non-identical text draws its own error block). (3) three icon swaps (circle-gauge / fast-forward
+  / brain — the old zap duplicated the Auto-mode chip's icon).
+- Fast mode on THIS account: opt-in clears `sdk_opt_in_required` but state stays off with
+  `extra_usage_disabled` — fast bills as extra usage; `result.usage.speed` ("fast"/"standard") is
+  the per-turn ground truth.
+- Proof: fixtures **55** (28 asserts) and **56** (5) with FOUR recorded negative controls (stash
+  control, harness-abort, two wrong-value/pre-fix controls); harness **444/444**; gradle **115**.
+  Fixture 51's bare `.popup-f .ef-label` selector broke when the second footer appeared — scoped
+  to `#modeMenu`.
+- Kotlin: `applyFlagSettings`/`setMaxThinkingTokens` (ClaudeCli), prefs `claudeCode.fastMode` /
+  `claudeCode.thinkingOff` re-applied each CLI start (flag layer is per-process), `__fastMode` /
+  `__thinking` frames pushed by pushInitMeta/seedUi.
+
 ## 2026-08-24 — the phantom was PhpStorm's, and a plan card that lied twice
 - **Phantom Enter closed by attribution, not by code.** A fresh check found the real ticket:
   **IJPL-161111** "JCEF: the keyboard on linux is broken" (dups JBR-7536/7547) — Linux+OSR,
@@ -254,50 +290,15 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Next: unchanged — the nine [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥. Plus a
   one-off `./gradlew test` on the Windows box to settle the CRLF splice path.
 
-## 2026-08-17 (seventh) — the low tier stops looking like the medium one
-- **Session was a `/context load` briefing plus one mark change.** `docs/feature-checklist.md`'s
-  open-low mark went 🟨 → 🟦 → ⬜ (the user could not tell yellow from orange; blue was my pick,
-  ⬜ was theirs). 16 rows, the status-mark key, and the scope-rule line. Mark set now
-  ✅ / 🟡 partial / 🟥 / 🟧 / ⬜ / ➖ / 🚫.
-- The 2026-08-17 register decision had explicitly banned ⬜ ("reads as not started"); the new
-  decisions entry lifts that ban for the low tier and says so, so a later session does not
-  "correct" it back. 🟨 left untouched in this journal and in the superseded decisions entry —
-  history stays as written.
-- **Load-time verification caught four drifts in `state.md`**, all fixed in this save: the 🟥 list
-  cited 8.5 / 8.9 / 8.13 for rewind-fork, side-question and reload-log-replay, but those ids are
-  **8.7 / 8.11 / 8.14** (8.5 is ✅ Delete conversation, 8.9 is 🚫 tabs, 8.13 is ➖
-  `generate_session_title`); and the [DECIDE] rows number **nine**, not eight. The checklist was
-  right every time — `state.md`'s summary had been written from memory.
-- Standing lesson, cheap here and expensive later: when `state.md` paraphrases a numbered
-  register, re-derive the ids from the register at load, never copy them forward.
-- Context files are well over the retention targets (`decisions.md` 761 lines, `gotchas.md` 729,
-  targets ~100). Not addressed; flagged for a consolidation pass.
-- Next: unchanged — the nine [DECIDE] rows, then 9.4 fast-mode toggle [SM], the cheapest 🟥.
-
-## 2026-08-17 (sixth) — aliases become names, and the roster survives a reload
-- **7.7 shipped**: aliases score like names in the / menu filter, ride the row muted, and a typed
-  alias is canonicalised before the allowlist gate (`canonicalCmd`). Motivation from the roster
-  itself: `/review`, `/peers`, `/reset`, `/new` are what the CLI advertises, and a typed `/review`
-  was being refused as "not available in the IDE".
-- **The negative control earned its keep again**: the fixture's first "discriminator" — typing
-  `review` puts /code-review first — PASSED on the pre-fix build, because `review` is a substring
-  of the name and already ranked 2 above compact's description-only 3. Re-expressed as `/reset →
-  /clear` (in neither name nor description pre-fix). One expression also threw on null on the
-  pre-fix build and aborted the run — every row is null-safe now (the 2026-08-17 lesson, relearned
-  cheaply). Final control 7 fail / 5 pass; fixed build 12/12; whole harness 356/356.
-- **7.10 shipped**: ChatPanel caches the newest raw `commands_changed` frame and replays it after
-  the init seed on every page load. Verified live without a fixture, over CDP: drop
-  `reload-probe.md` into the testing repo's `.claude/commands/` (the CLI watcher pushed within
-  ~6s), assert roster 54 + badge, `location.reload()`, assert again. Pre-fix the reload replayed the
-  53-entry initialize roster.
-- Control build via `git stash push -- chat.html chat.css` → runIde → harness → `stash pop` →
-  runIde: two IDE launches, cheaper than building a pinned commit, and honest because ChatPanel's
-  Kotlin change is orthogonal to what fixture 52 asserts.
-- Trap noted: `pgrep -f 'PhpStorm-2024.2/jbr/bin/java'` matches the pgrep-launching shell itself
-  (its command line carries the pattern) — read the pid's cmd before concluding "still running".
-- Next: the eight [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥.
-
 ## Digest
+- **2026-08-17 (seventh)** — open-low mark 🟨 → ⬜ (user can't tell yellow from orange; their pick),
+  lifting the register decision's own ⬜ ban with a decisions entry saying so. Load-time
+  verification caught state.md citing 8.5/8.9/8.13 for rows that are 8.7/8.11/8.14 and "eight"
+  [DECIDE] rows when there were nine → the re-derive-ids-from-the-register rule (conventions).
+- **2026-08-17 (sixth)** — 7.7 aliases score like names in the / menu (+`canonicalCmd` before the
+  allowlist gate) and 7.10 the roster survives reload (ChatPanel replays the newest raw
+  `commands_changed` after the init seed). Negative control re-earned its keep: the first
+  "discriminator" passed pre-fix (substring already ranked) and was re-expressed as /reset → /clear.
 - **2026-08-17 (fifth)** — checklist 2.10/2.11: autosave moved onto the SDK hook lane
   (`PreToolUse Edit|Write|MultiEdit|Read`, the reference's own mechanism, no toggle) and stale
   `~/.claude/ide/*.lock` files are swept on every lock write, dead pid only — 15 corpses had

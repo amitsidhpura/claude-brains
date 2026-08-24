@@ -14,9 +14,10 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
-- The nine remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11, 9.4,
-  9.5, 12.3, 12.6, 13.2, 14.2) need a yes / later / no;
-  9.4 fast-mode toggle [SM] is the cheapest 🟥 left.
+- The seven remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11,
+  12.3, 12.6, 13.2, 14.2) need a yes / later / no (9.4 and 9.5 decided + built 2026-08-24).
+- Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
+  `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
   keep planning with text, Shift+Tab = approve with text — both slot into the existing `done()`
   paths in chat.html.

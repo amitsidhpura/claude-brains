@@ -1,89 +1,74 @@
 # State
 
 ## Current focus
-**2026-08-24 (twelfth session): phantom Enter traced to a FIXED upstream bug (sandbox bumped),
-then a real replay bug found and fixed — a pending plan card claiming verdicts it never had.
-**Released as 0.9.0** at the end of the session.**
-- **Phantom Enter CLOSED.** Root cause is **IJPL-161111** "JCEF: the keyboard on linux is
-  broken" (dups JBR-7536/7547), fixed upstream in **2024.2.2 / 2024.3**; the sandbox pinned
-  2024.2.0 — pre-fix. Bumped `plugin/build.gradle.kts` to `phpstorm("2024.2.6")` (build
-  242.26775.23, JBR 21.0.5-b509.30). User re-tested many times: never reproduced. The old
-  gotchas attribution (JBR-5348/5115) was stale — those are 2023 fixes already in our JBR.
-- **Pending-plan replay honesty (user report, screenshots).** A plan card pending at reload
-  replayed "✓ Approved" once, then "✗ Kept planning" quoting the CLI's own error. Three fixes:
-  (1) `SessionStore` emits `undecided` for a plan tool_use with NO tool_result → replay draws
-  "◌ Interrupted — no decision recorded" (`.und-t`, neutral, 55-replay.js); (2) the CLI's
-  auto-deny text (`RenderLimits.PERMISSION_ABORT_PREFIX`) is filtered from `planFeedback` the
-  way REJECT_MESSAGE is; (3) `ClaudeSessionService.stopForReplay()` — refresh/resume kill the
-  CLI and wait BEFORE reading the transcript, so its dying flush lands in the same reload.
-- **Reload speed regression, caught by the user and fixed the same session:** the wait made
-  EVERY reload slow. Now conditional on `pendingPermissions.isNotEmpty()` — instant for
-  ordinary reloads, still correct for the pending-card case. User confirmed reload "perfect".
-- **Proof:** gradle test **115** · live harness **411** (new fixture 54; control run 406/5 —
-  every new assert seen failing first) · `probe` on the user's real session parses honestly.
-- **Memory infrastructure overhauled (post-release):** `gotchas.md` 878→~510 and `decisions.md`
-  885→~420 with zero facts dropped; `/context load` now reads a briefing TIER (~8k tokens, was
-  ~41k) — see decisions 2026-08-24. The skill was generalized + compressed to 96 lines for reuse.
+**2026-08-24 (thirteenth session): the model menu grew a footer — 1M context / Fast mode /
+Thinking switches (checklist 9.9 / 9.4 / 9.5), plus two user-driven follow-ups. All committed
+and pushed at the session's end (this save rides the same commit). UNRELEASED on `main` —
+next release is a fresh bump.**
+- **The three switches** live in `#modelFooter` (chat.html) under the model list: `.tgl` toggle
+  idiom (new; chat.css ~:1146), logic in `30-menus.js` (`syncModelFooter`, `rosterFor`,
+  `shown1m`), frames `__fastMode`/`__thinking` (70-events), Kotlin `applyFlagSettings` /
+  `setMaxThinkingTokens` (ClaudeCli), prefs `claudeCode.fastMode` / `claudeCode.thinkingOff`
+  re-applied each CLI start (ClaudeSessionService ~:171).
+- **1M switch: NO validity logic (user decision)** — flip anything; an unsupported combo errors
+  on the next turn. It reconciles to the REAL window from `result.modelUsage[].contextWindow`
+  (`reconcileFromResult`, 80-gauge.js), cleared per model change. Thinking ON = null (reset to
+  default; deliberate divergence from VS Code's 31999), OFF = 0.
+- **API-error double-render fixed**: the CLI echoes an error as a synthetic assistant message
+  AND the result's is_error text (gotchas § Protocol). Live now dedupes by EXACT text equality
+  only — everything else draws its own error block (hardened after the user asked "could this
+  swallow a message?" — it could, fixture 56's second control proved it).
+- Footer icons: circle-gauge / fast-forward / brain (user-picked).
+- **Fast mode on this account**: opt-in clears `sdk_opt_in_required` but `extra_usage_disabled`
+  remains — enable extra usage on claude.ai to actually get fast turns; ground truth per turn is
+  `result.usage.speed`.
 
 ## Released — 0.9.0 (2026-08-23)
-**0.9.0 is the shipped version** (tag `v0.9.0`, commit `f53a10c`). GitHub release + custom feed
-(`updatePlugins.xml`) + Marketplace upload all green; asset verified byte-identical to the local
-zip. Contents: anchored plan comments (5.6) · pending-plan replay honesty · VFS open-path fix ·
-compaction replay-order fix.
-Nothing is unreleased on `main` right now. Next release is a fresh bump when work lands.
-
-## Post-release follow-ups (open)
-- **User to push the updated context skill to the gist:** `gh gist edit
-  b2d033439ba4ca5bcd018f4fe5eef773 -f SKILL.md .claude/skills/context/SKILL.md` — and check the
-  uploaded file's line 1 is exactly `---` (mangled twice by an unknown writer; gotchas).
-- `docs/slash-commands.md` still documents CLI 2.1.233 — never synced after the 2.1.241 audit.
-- Marketplace **web description** is hand-edited and uploads do not refresh it.
-- 0.9.0 verified **Compatible on all seven IDEs** (242.26775.23 → 262.10315.32) — that ladder's
-  floor is now exactly the sandbox build. `verifyPlugin` is mandatory from here (release.md 3b).
+Tag `v0.9.0`, commit `f53a10c`; GitHub release + custom feed + Marketplace all green. Everything
+from the 2026-08-24 session (footer switches, error dedupe) is on `main` but UNRELEASED.
+`verifyPlugin` is mandatory on the next release (release.md 3b; conventions).
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG] · **8.11** side
-  question [MD, probe pre-paid] · **8.14** reloaded-webview log replay [LG] · **9.4** fast-mode
-  toggle [SM, mechanism measured] · **11.3** kill-background-process [MD, `stop_task` accepted].
-- **Nine [DECIDE] rows** await the user: 8.7, 8.10, 8.11, 9.4, 9.5, 12.3, 12.6, 13.2, 14.2.
-- `/clear` grew a `[name]` hint in 2.1.241 → a menu pick INSERTS instead of running and the
-  native branch drops the name — decision recorded on checklist 7.6.
+  question [MD, probe pre-paid] · **8.14** reloaded-webview log replay [LG] · **11.3**
+  kill-background-process [MD, `stop_task` accepted]. (9.4 shipped 2026-08-24.)
+- **Seven [DECIDE] rows** await the user: 8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2
+  (9.4/9.5 decided + built 2026-08-24).
+- `/clear [name]` decision still open (checklist 7.6); `docs/slash-commands.md` still documents
+  CLI 2.1.233.
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **411** (fixtures to 54); `./gradlew test` **115**.
-- Webview iteration loop (fixture-first control → apply → runIde restart → verify BY CONTENT):
-  `runbook.md`. jb.gg timeout → `-PskipVerifierIdes` (never release under it).
-- **Sandbox is now PhpStorm 2024.2.6**; its dir is `build/idea-sandbox/PS-2024.2.6/`.
-- **Restarting the sandbox: `pkill -f 'run[I]de'` only kills gradle** — the IDE orphan then
-  swallows relaunches (hit again 2026-08-24: `runIde` returns BUILD SUCCESSFUL in ~6s with no
-  window). Kill it by pid: `pgrep -f 'idea.system.pat[h]'`.
-- Sandbox CDP pins to 9222 whatever the flag says; verify the build BY CONTENT before trusting
-  a run. Control builds restore the WHOLE `plugin/src/main/resources/webview/` directory.
-- Headless CLI probes run in `~/Sites/claude-brains-testing`.
+- `python3 tools/live_harness.py` baseline **444** (fixtures to 56); `./gradlew test` **115**.
+- Fixture 55 = the model-menu footer (28 asserts, 4 controls recorded); fixture 56 = the
+  API-error dedupe (5 asserts, 2 controls). Fixture 51's rail selector is now scoped to
+  `#modeMenu` — bare idiom-class selectors break when an idiom is duplicated (gotchas § CSS).
+- Sandbox **PhpStorm 2024.2.6**, dir `build/idea-sandbox/PS-2024.2.6/`. Restart: `pkill -f
+  'run[I]de'` kills only gradle — kill the IDE by pid via `pgrep -f 'idea.system.pat[h]'`.
+  New quirk: a relaunch right after a clean kill can exit 0 in ~2s with no window and NO
+  orphan — just retry once (gotchas § Testing).
+- Verify builds BY CONTENT over CDP before trusting a run; control builds restore the WHOLE
+  `plugin/src/main/resources/webview/` directory. Headless CLI probes run in
+  `~/Sites/claude-brains-testing`.
 
 ## Next steps
-- [ ] Get the user's yes / later / no on the **nine [DECIDE]** rows in
-      `docs/feature-checklist.md`.
-- [ ] Decide `/clear [name]`: pass the name through as the new conversation's title, or pin
-      pick-runs for native commands (checklist 7.6).
-- [ ] Sync `docs/slash-commands.md` to 2.1.241 (still says 2.1.233; misses the `/clear` hint).
+- [ ] Get yes / later / no on the **seven [DECIDE]** rows (8.7, 8.10, 8.11, 12.3, 12.6, 13.2,
+      14.2).
+- [ ] Decide `/clear [name]` (checklist 7.6); sync `docs/slash-commands.md` to 2.1.241.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts → reloaded-webview
       log replay (**8.14**) → kill-background-process (**11.3**) → tweak-travel (**3.5**).
-      **9.4** fast-mode toggle [SM] is the cheapest 🟥 left.
 - [ ] Sync the **Marketplace web description** (hand-edited; uploads don't refresh it).
-- [ ] **Windows errand:** `./gradlew test` once (CRLF splice path never run there) + click a
-      `Read` path for a fresh file to confirm the VFS fix on the box that reported it.
+- [ ] **User errands**: gist push of the context skill (`gh gist edit
+      b2d033439ba4ca5bcd018f4fe5eef773 -f SKILL.md .claude/skills/context/SKILL.md`, check
+      line 1 is exactly `---`); Windows `./gradlew test` + VFS click check.
 
 ## Known gaps (deliberately left)
-- 5.6: keyboard-only selection can't open the comment pill; interrupted-plan boilerplate quote
-  (backlog). VS Code's editor-tab plan preview not replicated — the card body is our preview.
-- **Confirm-card path wrapping DECLINED by the user 2026-08-24** — the card header path still
-  wraps to a second line AND middle-ellipsises at narrow widths. Plan was written and rejected;
-  do not re-propose unprompted.
-- Compaction live-vs-resume divergences DECIDED (renderer-parity Audit 2). Plan-card keyboard
-  shortcuts deferred 2026-08-16. `DiffReview.open` snapshot-only lookup parked.
-- Paths in free prose not shortened; `/batch` verified at N=2 only; sub-agent WORK outcome not
-  surfaced; `prefers-reduced-motion` OS propagation unverified.
+- Effort/model conversation markers **dropped by the user 2026-08-24** (decisions) — do not
+  re-propose. Confirm-card path wrapping declined 2026-08-24 (previous session) — same.
+- 1M switch on Fable is a near-no-op by design (fable is natively 1M; the reconcile snaps it
+  honest after the first turn). Fast-mode "· fast" turn-summary marker offered, parked
+  (backlog).
+- 5.6 keyboard-only comment pill; plan-card keyboard shortcuts deferred 2026-08-16;
+  `DiffReview.open` snapshot-only lookup parked; `/batch` verified at N=2 only.
 
 ## Which machine — check FIRST, both are real
 This session ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in

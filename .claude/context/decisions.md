@@ -4,6 +4,44 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-24 — 1M / fast / thinking live as switches in the model-menu footer (9.9, 9.4, 9.5)
+*Why*: "Sonnet with 1M context" had no surface — the `[1m]` opt-in existed only as a typed raw id.
+All three are model-adjacent settings, so they stack in one `.popup-f pf-stack` footer under the
+model list, as toggle switches (`.tgl` — the panel's first switch idiom; user picked switches over
+checkbox/segmented). *Rejected*: separate composer chips (crowds the bar); VS Code's command-menu
+placement (we have no command menu). 9.5 built despite the checklist's "likely redundant beside
+effort" take — the user's explicit call.
+
+## 2026-08-24 — The 1M switch carries NO client-side validity logic
+*Why*: user decision at plan review ("I don't want any hardcoded logic"). `set_model` never rejects
+(measured: `haiku[1m]` → success) so validity can't be asked of the CLI; a hardcoded haiku/fable
+table would drift with every roster change. An unsupported combo fails on the NEXT turn with the
+API's own error, rendered by the existing error path (measured: "400 The long context beta is not
+yet available for this subscription"). *Rejected*: the plan's original disabled-states table
+(haiku off+disabled, fable on+disabled, default disabled); erroring at toggle time (no CLI surface
+for it). Corollary the user then asked for: the switch reconciles to the REAL window from
+`result.modelUsage[].contextWindow` after each model's first turn (`reconcileFromResult`),
+cleared per model change — CLI truth over both the tag and our seed.
+
+## 2026-08-24 — Thinking ON = max_thinking_tokens null, not VS Code's 31999
+*Why*: the CLI schema defines null as "reset to session default"; VS Code's `(31999,"summarized")`
+pins a pre-adaptive budget that would silently cap models whose default differs. OFF = 0.
+*Rejected*: byte-for-byte VS Code parity (a two-line change in ClaudeCli if ever wanted).
+
+## 2026-08-24 — Effort/model conversation markers: dropped by the user
+*Why*: asked originally ("show effort in live and replay"), then withdrawn at plan review after
+learning a model-switch marker could never replay (mid-session model changes leave NO transcript
+record — measured by key). Do not re-propose unprompted. The muted `/effort` turn stays as is.
+
+## 2026-08-24 — An API error draws ONCE: dedupe by exact text, never by kind
+*Why*: the CLI echoes an error twice on the live wire (synthetic assistant message + result
+is_error, identical strings) while the transcript keeps only the assistant record — replay was
+always single (SessionStore already maps `isApiErrorMessage` → error item); live now stashes
+synthetic texts and drops only a text the result's error block literally re-shows. Everything
+else — differing text, second synthetic message, non-error result, interrupt — draws its own
+error block. *Rejected*: dedupe by kind/flag alone (the user's "could this swallow a message?"
+exposed that a differing text WAS silently dropped — fixture 56's second control proved it).
+
 ## 2026-08-24 — The context skill stays lean: rules only, and it is shared via the gist
 The skill (`.claude/skills/context/SKILL.md`) is general-purpose — the user includes it in other
 projects from gist `b2d033439ba4ca5bcd018f4fe5eef773` — so it carries no project-specific numbers,

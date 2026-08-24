@@ -5,6 +5,26 @@ Each bullet is a RULE plus the minimum evidence to trust it. Payload shapes live
 re-read those before trusting memory here.
 
 ## Protocol / wire
+- **A `success` control_response proves DELIVERY, not validity.** `set_model` accepts any string —
+  `haiku[1m]` (no such alias) returns success and the failure only surfaces on the NEXT turn as an
+  API-error result ("400 The long context beta is not yet available…"). Anything gating on model
+  validity must either be client knowledge or wait for the turn. (Probed 2026-08-24, 2.1.241.)
+- **The CLI emits an API error TWICE on the live wire**: a synthetic assistant message
+  (`message.model === "<synthetic>"`, text block) and then the result's `is_error` text —
+  identical strings. The transcript keeps only the assistant record (+ `isApiErrorMessage:true`),
+  so replay is naturally single; a live renderer that draws both shows a duplicate — and only on
+  UNSTREAMED error turns, which is how it hides. Dedupe by EXACT text equality, never by kind: a
+  synthetic text the result doesn't repeat is a distinct message (fixture 56's control proved one
+  was being silently dropped). There is also a synthetic constructor with `stop_reason:"tool_use"`
+  in the binary — text-only filters stay safe.
+- **The registry's `context.supports_1m_suffix` does NOT mean a `[1m]` alias exists** — haiku-4-5
+  carries it `true` while the alias whitelist (`sonnet[1m]`/`opus[1m]`/`fable[1m]`) has no haiku.
+  The alias list is the operative fact; the registry flag is parser tolerance.
+- **Fast mode has TWO gates and one ground truth**: `apply_flag_settings{fastMode:true}` clears
+  only the SDK gate (`sdk_opt_in_required`); the account gate remains (`extra_usage_disabled` =
+  extra usage off in the subscription). Whether a given turn actually ran fast is
+  `result.usage.speed` (`"fast"`/`"standard"`) — `fast_mode_state` says intent, `usage.speed`
+  says delivery. `{fastMode:false}` reverts (both probed 2026-08-24).
 - **The control-response parser WHITELISTS fields; everything else dies silently.** Allow admits
   `behavior`/`updatedInput`/`updatedPermissions` (deny adds `message`); a `feedback` field probed on
   2.1.233 reached the model in ZERO frames, no warning. The TUI's `acceptFeedback` is an internal
@@ -300,6 +320,14 @@ re-read those before trusting memory here.
   the IDE stealing focus on a real keypress.
 
 ## Webview / CSS / layout
+- **A fixture selector on a shared idiom class must be scoped to its menu.** When the model menu
+  grew its own `.popup-f` footer (2026-08-24), fixture 51's bare `.popup-f .ef-label` matched the
+  CLOSED model menu first — 0×0 rects, all four asserts failed including the glyph GUARD reading 0.
+  querySelector returns document order, and `#inputbar` holds several popups; write
+  `#modeMenu .popup-f …`, and expect this class of break whenever an idiom is duplicated.
+- **The model menu's rows have NO `.pi-ic` slot** (unlike the mode menu), so its titles start at
+  the 14px popup padding and the footer rail contract is icon-left == title-left — the label TEXT
+  sits 30px right of the titles by design. Fixture 51's text-delta contract is mode-menu-only.
 - **`.turn-body`'s paint containment eats anything drawn OUTWARD, and it has bitten twice** (card menu as
   a clipped sliver; the in-flight ring as a cut half-rectangle — ring left edge x=8 against a turn box
   starting at x=14). Containment blocks HIT-TESTING too, so clipped elements still pass querySelector and
@@ -391,6 +419,11 @@ re-read those before trusting memory here.
   serves the STALE stylesheet — a CSS fix measured that way reads as "no effect".
 
 ## Testing, probes and sandboxes
+- **`runIde` can exit 0 in ~2s with no window right after a clean sandbox kill — with NO orphan.**
+  Seen twice 2026-08-24/25: both process layers verified dead, yet the next launch's `Task :runIde`
+  completed instantly (BUILD SUCCESSFUL, no CDP). A plain retry launched fine both times. Distinct
+  from the orphan-swallow trap below: check for the orphan first, then just relaunch once before
+  digging.
 - **`pkill`/`pgrep -f <pattern>` matches the shell that runs it** when the pattern appears in your own
   command line — including in a later `&&` branch. Symptoms: exit 144 with everything after the kill
   silently skipped, or "still running" three times running because the probe saw itself. Use a
