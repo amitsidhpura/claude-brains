@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.9.0"
+version = "0.10.0"
 
 repositories {
     mavenCentral()
@@ -102,6 +102,20 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.10.0</b>
+            <ul>
+              <li>Pick your context window: a 1M context switch at the bottom of the model menu
+                  flips any model to its 1M-token variant — Sonnet with 1M context is one click
+                  now. After the first reply the switch shows the window the API actually
+                  granted</li>
+              <li>Fast mode switch in the same menu (Opus models): enables Anthropic's faster
+                  responses where the account allows it, and explains itself when it can't —
+                  the reason is on the switch's tooltip</li>
+              <li>Thinking switch: turn extended thinking off for quick back-and-forth and
+                  back on for hard work, without touching the terminal</li>
+              <li>API errors now appear once — the same message used to show twice, as a plain
+                  line and again as the red error box</li>
+            </ul>
             <b>0.9.0</b>
             <ul>
               <li>Comment on a plan before you answer it. Select any text in the plan card and a
