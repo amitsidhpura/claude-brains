@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-25 — 0.10.0 goes out
+- **Released 0.10.0** (tag `v0.10.0`, commit `55fdcb1`): the model-menu footer switches (1M
+  context / fast mode / thinking), the 1M-to-real-window reconciliation, and the API-error
+  single-render fix. Notes structured per release.md's update template; approval gate held —
+  the full notes were shown and the user said go.
+- `verifyPlugin` ran BEFORE the gate this time (release.md 3b, the 0.9.0 lesson): **Compatible
+  on all seven IDEs** (242.26775.23 → 262.10315.32), no warnings. The user interrupted mid-release
+  to ask "was verify done?" — having the verdict-file table ready to paste is exactly the point
+  of the mandatory step.
+- Asset verified 200 + byte-identical to the local zip; feed serving 0.10.0;
+  `marketplace-upload.yml` green in 10s. The Marketplace API listed 0.10.0 after a few minutes'
+  verification lag (0.9.0 behaved the same) — user's dashboard screenshot confirms **Approved**,
+  all compatibility checks Success incl. JetBrains' IDE-run check.
+- Nothing unreleased on `main` now. Next release is a fresh bump when work lands.
+
 ## 2026-08-24 — the model menu grows a footer: 1M / fast / thinking switches
 - **User request that started it**: "Today I wanted to use Sonnet with 1m context but there was no
   option." Built checklist **9.9** (1M-context toggle), **9.4** (fast mode) and **9.5** (thinking

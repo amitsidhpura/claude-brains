@@ -1,10 +1,9 @@
 # State
 
 ## Current focus
-**2026-08-24 (thirteenth session): the model menu grew a footer — 1M context / Fast mode /
-Thinking switches (checklist 9.9 / 9.4 / 9.5), plus two user-driven follow-ups. All committed
-and pushed at the session's end (this save rides the same commit). UNRELEASED on `main` —
-next release is a fresh bump.**
+**2026-08-24/25 (thirteenth session): the model menu grew a footer — 1M context / Fast mode /
+Thinking switches (checklist 9.9 / 9.4 / 9.5), plus two user-driven follow-ups.
+Released as 0.10.0 at the session's end.**
 - **The three switches** live in `#modelFooter` (chat.html) under the model list: `.tgl` toggle
   idiom (new; chat.css ~:1146), logic in `30-menus.js` (`syncModelFooter`, `rosterFor`,
   `shown1m`), frames `__fastMode`/`__thinking` (70-events), Kotlin `applyFlagSettings` /
@@ -23,10 +22,14 @@ next release is a fresh bump.**
   remains — enable extra usage on claude.ai to actually get fast turns; ground truth per turn is
   `result.usage.speed`.
 
-## Released — 0.9.0 (2026-08-23)
-Tag `v0.9.0`, commit `f53a10c`; GitHub release + custom feed + Marketplace all green. Everything
-from the 2026-08-24 session (footer switches, error dedupe) is on `main` but UNRELEASED.
-`verifyPlugin` is mandatory on the next release (release.md 3b; conventions).
+## Released — 0.10.0 (2026-08-25)
+**0.10.0 is the shipped version** (tag `v0.10.0`, commit `55fdcb1`). Contents: the three
+model-menu footer switches (9.9/9.4/9.5), the 1M reconcile-to-real-window, the API-error
+single-render fix, new footer icons. `verifyPlugin` ran BEFORE the approval gate: Compatible on
+all seven IDEs (242.26775.23 → 262.10315.32), no warnings. GitHub release + custom feed +
+Marketplace upload all green; asset byte-identical; Marketplace **Approved** (user's dashboard,
+all compatibility checks Success incl. the IDE-run check).
+Nothing is unreleased on `main`. Next release is a fresh bump when work lands.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG] · **8.11** side
