@@ -3,6 +3,29 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-25 (second) — model-menu polish, and command turns learn to show themselves
+- **Custom model rows got the selection ✓** (user screenshot: no tick on "Opus 4.8 (1M)"). The
+  `.on` class was always right; `renderModels()`'s ternary emitted the remove × INSTEAD of the
+  check span. Now every row gets `.pi-check`; a custom row's × lives INSIDE it, overlaying the
+  ✓'s box — two rounds of hand-derived offsets were falsified by `#inputbar` ID rules (svg 18px;
+  `button {padding:4px}` flex-squeezed the × to 10px, caught only by the user's eye because
+  center asserts pass under symmetric shrink). Fixture 57, three negative controls run.
+- **Chip `set_model` writes a `/model` command trio to the transcript** (measured, CLI 2.1.245)
+  — resume grew `/model haiku` bubbles live never drew, and one became a session TITLE. User
+  chose hide-on-resume (AskUserQuestion): `cleanInjected` drops the wrapper, confirmation stdout
+  stays, titles fall through to the first real message. Verified with `./gradlew probe` on the
+  real session (user bubbles 4 → 1).
+- **/effort reversed by the user**: "show it like a model change." Measured wire ≠ disk (live:
+  synthetic assistant + result, SAME text, nothing else; disk: caveat + wrapper +
+  `system/local_command`). The `effortMuted` gate now draws the synthetic confirmation as a
+  block, still swallowing echo/streams/summary; replay drops the `/effort` wrapper. Supersedes
+  the 2026-07-30 audit-trail acceptance AND corrects 2026-08-24's "model changes leave no
+  transcript record" premise. Fixture 58 (verbatim measured frames) + reworked unit test +
+  real end-to-end `/effort medium` in the sandbox.
+- Baselines now: harness **462** (fixtures to 58), `./gradlew test` **116**.
+- Next: unchanged — seven [DECIDE] rows, `/clear [name]`, backlog order; docs/slash-commands.md
+  still documents 2.1.233 (installed CLI is 2.1.245 now — the sync row aged again).
+
 ## 2026-08-25 — 0.10.0 goes out
 - **Released 0.10.0** (tag `v0.10.0`, commit `55fdcb1`): the model-menu footer switches (1M
   context / fast mode / thinking), the 1M-to-real-window reconciliation, and the API-error
@@ -276,36 +299,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   plugin installed" check on 2026.2.1 — "No issues occurred". The split webview loaded clean in
   their environment too.
 
-## 2026-08-19 — chat.html becomes fourteen files, and "Very High" gets its line back
-- **The webview split shipped** (`41f24f9`): chat.html (4542 lines, one 4400-line `<script>`) is
-  markup-only at 131 lines; the JS lives in `webview/js/` as 14 numbered files cut at the existing
-  section banners, spliced back into ONE script by new `ui/WebviewAssets.kt` at a `<!--JS-->`
-  marker. Assembled page verified byte-identical (banners aside) — no JS was hand-edited, a
-  python script did the cuts at exact line numbers. `RenderLimitsTest` now asserts over the
-  ASSEMBLED page (raw chat.html would have made every content check vacuous) plus manifest ⇄
-  directory equality; negative control RUN (broken marker + dropped manifest entry → 4
-  discriminating failures, incl. AUTH_BLOCKED as a bonus). gradle test 107, harness 356, then a
-  7-step manual ladder by the user in the sandbox touched every file, replay path included.
-- Kotlin trap found: block comments NEST, so the literal glob `js/*.js` inside a KDoc opened a
-  comment that never closed ("Unclosed comment" at file end). In gotchas now.
-- **Effort-label wrap fixed** (`e06add1`): user screenshot showed "Very High" on two lines in the
-  mode-menu footer with the row half empty. Measured over CDP: JCEF gives a text flex item a base
-  a hair under max-content (53px vs 55) — desktop Chrome doesn't, so design/mockup.html could
-  never reproduce it. One declaration (`white-space: nowrap` on `.ef-label`); fixture 51 gained a
-  step; the user's still-running sandbox predated the CSS edit, so it WAS the pre-fix build and
-  the negative control ran against it honestly (bH 37 fail → restart → 19, 12/12). Baseline 361.
-- **"Why does PhpStorm ask for a restart on update?"** answered from the real IDE's idea.log
-  (2026.2.1 snap): the 0.7.1 no-restart install crashed on `NoSuchFileException` for
-  `~/.cache/JetBrains/PhpStorm2026.2/plugins/claude-brains.zip` at unpack (a download-cache race —
-  two of our updates 39 min apart that day) and fell back to install-on-restart. Not plugin.xml
-  (no require-restart, all EPs dynamic); and a hot-swap would have to unload live JCEF + the WS
-  server + the claude process anyway. User: "I am ok with it" — accepted, not to be engineered around.
-- Sandbox port gotcha reconfirmed: `-PjcefDebugPort=9223` was on the JVM cmdline, but the
-  hand-set Registry value kept CDP on 9222 — found by probing both ports by content.
-- Next: unchanged — the nine [DECIDE] rows; 9.4 fast-mode toggle is the cheapest 🟥. Plus a
-  one-off `./gradlew test` on the Windows box to settle the CRLF splice path.
-
 ## Digest
+- **2026-08-19** — the webview split ships (`41f24f9`: chat.html → markup + 14 js files spliced by
+  WebviewAssets, RenderLimitsTest asserts the ASSEMBLED page; controls run); "Very High" wrap fixed
+  (JCEF-only flex base — nowrap on `.ef-label`); restart-on-update diagnosed as a download-cache
+  race and ACCEPTED by the user; Kotlin nested-comment and Registry-port traps promoted to gotchas.
 - **2026-08-17 (seventh)** — open-low mark 🟨 → ⬜ (user can't tell yellow from orange; their pick),
   lifting the register decision's own ⬜ ban with a decisions entry saying so. Load-time
   verification caught state.md citing 8.5/8.9/8.13 for rows that are 8.7/8.11/8.14 and "eight"

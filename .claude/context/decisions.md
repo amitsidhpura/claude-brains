@@ -4,6 +4,29 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-25 — Chip/slider command turns show ONE confirmation line, no bubble, live and resumed
+*Why*: the CLI writes a command trio (`isMeta` caveat + `<command-name>` wrapper +
+stdout/local_command confirmation) to the transcript for BOTH the chip's `set_model` control
+request and the slider's `/effort` turn (measured 2026-08-25, CLI 2.1.245) — so resume showed
+`/model haiku` / `/effort high` bubbles live never drew, and a wrapper could become a derived
+session TITLE. User picked hide-on-resume for /model (AskUserQuestion) and then asked for /effort
+to "show like a model change": `cleanInjected` drops exactly {`/model`, `/effort`} wrappers; the
+`effortMuted` gate draws the CLI's synthetic-assistant confirmation live (the normal path stashes
+synthetic text into `syntheticEcho` and draws nothing). **Supersedes** the 2026-07-30 "/effort
+bubble stays on resume as audit trail" acceptance — the audit trail is now the confirmation line
+both paths render. Also corrects 2026-08-24's premise that model changes leave no transcript
+record: on 2.1.245 they demonstrably do. *Rejected*: showing the bubble live too (chip clicks
+would paint command bubbles); replay filtering by promptSource (no discriminating key exists);
+a title-only fix (leaves the parity drift).
+
+## 2026-08-25 — The custom row's × overlays the ✓ inside `.pi-check`; no offset arithmetic near #inputbar
+*Why*: two rounds of stylesheet-derived offsets were falsified by ID rules (`#inputbar svg` 18px
+resizes both glyphs; `#inputbar button {padding:4px}` beat `.model-del{padding:0}` and
+flex-squeezed the × svg to 10px). Nesting the button in the check span with `inset` makes the
+centers coincide by construction; an ID-scoped `#inputbar .model-del{padding:0}` kills the
+squeeze. Corollary pinned in fixture 57: center-equality asserts pass under SYMMETRIC shrink —
+size equality must be asserted separately. *Rejected*: `right`/`top` magic numbers (twice).
+
 ## 2026-08-24 — 1M / fast / thinking live as switches in the model-menu footer (9.9, 9.4, 9.5)
 *Why*: "Sonnet with 1M context" had no surface — the `[1m]` opt-in existed only as a typed raw id.
 All three are model-adjacent settings, so they stack in one `.popup-f pf-stack` footer under the
@@ -29,6 +52,9 @@ pins a pre-adaptive budget that would silently cap models whose default differs.
 *Rejected*: byte-for-byte VS Code parity (a two-line change in ClaudeCli if ever wanted).
 
 ## 2026-08-24 — Effort/model conversation markers: dropped by the user
+**Superseded in part 2026-08-25**: the user themselves asked for effort visibility — /effort now
+draws the CLI's confirmation line on both paths (see the 2026-08-25 entry); the marker-style
+display and the model half stay dropped.
 *Why*: asked originally ("show effort in live and replay"), then withdrawn at plan review after
 learning a model-switch marker could never replay (mid-session model changes leave NO transcript
 record — measured by key). Do not re-propose unprompted. The muted `/effort` turn stays as is.

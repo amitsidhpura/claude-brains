@@ -5,6 +5,21 @@ Each bullet is a RULE plus the minimum evidence to trust it. Payload shapes live
 re-read those before trusting memory here.
 
 ## Protocol / wire
+
+- **A `set_model` control request writes a `/model` COMMAND TRIO to the transcript** (measured
+  2026-08-25, CLI 2.1.245): `isMeta` caveat + `<command-name>/model</command-name>` wrapper +
+  `<local-command-stdout>Set model to …</local-command-stdout>`, all `type:"user"` string-content
+  records — chip clicks masquerade as typed commands on disk, and a wrapper can become a derived
+  session title. (Directly contradicts the 2026-08-24 "model changes leave no transcript record"
+  measurement — re-measure per CLI version.) Replay drops {`/model`,`/effort`} wrappers in
+  `cleanInjected` by user decision.
+- **/effort: the live wire and the disk record disagree** (measured 2026-08-25, CLI 2.1.245,
+  panel flags): live = `init` → assistant `model:"<synthetic>"` carrying "Set effort level to …"
+  → `result` success with the SAME text — no user frames, no stream_events; disk = caveat +
+  wrapper + `system/local_command`. And the normal un-streamed assistant path NEVER draws
+  synthetic text — it stashes it into `syntheticEcho` for the API-error dedupe (entry above) —
+  so anything that wants a synthetic message VISIBLE must draw it itself (the `effortMuted`
+  gate does, 70-events.js).
 - **A `success` control_response proves DELIVERY, not validity.** `set_model` accepts any string —
   `haiku[1m]` (no such alias) returns success and the failure only surfaces on the NEXT turn as an
   API-error result ("400 The long context beta is not yet available…"). Anything gating on model
@@ -320,6 +335,14 @@ re-read those before trusting memory here.
   the IDE stealing focus on a real keypress.
 
 ## Webview / CSS / layout
+
+- **Never do offset/size arithmetic inside `#inputbar`'s popups — ID rules falsify it.**
+  `#inputbar svg {width:18px}` resizes every glyph (beats `.pi-check svg` 16 and `.model-del svg`
+  12), and `#inputbar button {padding:4px}` beats a class's `padding:0` — inside an 18px overlay
+  that squeezed the × svg to 10px via flex-shrink (2026-08-25: two rounds of hand-derived offsets
+  wrong, then the shrink). Align by STRUCTURE (nest + `inset` overlay, ID-scoped resets like
+  `#inputbar .model-del{padding:0}`), and remember a SYMMETRIC shrink passes every center-equality
+  assert — pin rendered `getBoundingClientRect().width` equality too (fixture 57's sizeD).
 - **A fixture selector on a shared idiom class must be scoped to its menu.** When the model menu
   grew its own `.popup-f` footer (2026-08-24), fixture 51's bare `.popup-f .ef-label` matched the
   CLOSED model menu first — 0×0 rects, all four asserts failed including the glyph GUARD reading 0.
