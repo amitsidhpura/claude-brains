@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.10.0"
+version = "0.11.0"
 
 repositories {
     mavenCentral()
@@ -102,6 +102,18 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.11.0</b>
+            <ul>
+              <li>Effort changes show themselves: sliding the effort level now prints the CLI's
+                  own confirmation ("Set effort level to …") in the chat — it used to happen
+                  silently</li>
+              <li>Custom models get the selection checkmark in the model menu, with the remove
+                  button sitting exactly where the checkmark is, at its proper size — a selected
+                  custom model used to look unselected</li>
+              <li>Model and effort changes no longer replay as typed commands when a
+                  conversation is resumed — the confirmation line is what both views show, and a
+                  conversation can no longer be titled "/model haiku"</li>
+            </ul>
             <b>0.10.0</b>
             <ul>
               <li>Pick your context window: a 1M context switch at the bottom of the model menu
