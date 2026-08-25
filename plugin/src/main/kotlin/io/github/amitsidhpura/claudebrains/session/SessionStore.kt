@@ -1557,6 +1557,17 @@ object SessionStore {
             t.startsWith("<ide_selection>")) return null
         CMD_NAME_RE.find(t)?.let { m ->
             val name = m.groupValues[1].trim()
+            // A model switch from the panel's chip (a `set_model` control request — the composer
+            // refuses typing /model) still makes the CLI write a /model command trio to disk, and
+            // the effort slider's /effort turn persists the same trio with its confirmation as
+            // `system`/`local_command` (both measured 2026-08-25, CLI 2.1.245). Live draws
+            // neither wrapper — each change shows as its confirmation line alone — so replay
+            // dropping them restores parity, and a session title can no longer become
+            // "/model haiku" (this function feeds computeTitle's first-user fallback too).
+            // Drop list is {/model, /effort} ONLY, by user decisions 2026-08-25 (the /effort one
+            // REVERSES the 2026-07-30 "keep the bubble as audit trail" acceptance — the audit
+            // trail is now the confirmation line both paths render; renderer-parity.md).
+            if (name == "/model" || name == "/effort") return null
             val args = CMD_ARGS_RE.find(t)?.groupValues?.get(1)?.trim().orEmpty()
             return if (args.isEmpty()) name else "$name $args"
         }

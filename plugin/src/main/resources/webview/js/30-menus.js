@@ -199,8 +199,9 @@
       e.stopPropagation();
       setEffortUI(i);
       // there is no silent control request for the effort level, so it rides a /effort turn; mute
-      // that turn's UI (below) so the slider is as quiet as the mode picker. Only when idle — mid-turn
-      // we couldn't tell the effort result apart from the real one.
+      // that turn's UI except the CLI's own "Set effort level to …" confirmation, which the gate in
+      // onClaudeEvent draws as a block — an effort change shows like a model change (2026-08-25).
+      // Only when idle — mid-turn we couldn't tell the effort result apart from the real one.
       if (!busy) effortMuted = true;
       bridge({ kind: 'user', text: '/effort ' + d.dataset.v });
     });
@@ -268,13 +269,17 @@
     modelItems.innerHTML = shown.map(function (m) {
       // the ✓ ignores the [1m] tag: "sonnet[1m]" (set by the footer switch) is still the Sonnet row.
       // Safe because roster values are unique once stripped; an id matching no row marks nothing.
-      return '<div class="popup-item' + (strip1m(m.value) === strip1m(currentModel) ? ' on' : '') + '" data-v="' + escA(m.value) + '">' +
+      return '<div class="popup-item' + (strip1m(m.value) === strip1m(currentModel) ? ' on' : '') + (m.custom ? ' custom' : '') + '" data-v="' + escA(m.value) + '">' +
         '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
         (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
         '</div>' +
-        // custom rows get a remove (×) on hover; built-in rows show the selected checkmark
-        (m.custom ? '<button class="model-del" title="Remove model" data-del="' + escA(m.value) + '">' + SVG_X + '</button>'
-                  : '<span class="pi-check">' + SVG_CHECK + '</span>') +
+        // every row shows the selected checkmark; a custom row's remove (×) lives INSIDE the
+        // check span, overlaying the ✓'s own box so their centers coincide by construction
+        // (offset arithmetic is a trap here: the #inputbar 18px ID rule resizes every glyph).
+        // Hover swaps ✓ for × via chat.css (#modelMenu .popup-item.custom:hover .pi-check).
+        '<span class="pi-check">' + SVG_CHECK +
+        (m.custom ? '<button class="model-del" title="Remove model" data-del="' + escA(m.value) + '">' + SVG_X + '</button>' : '') +
+        '</span>' +
         '</div>';
     }).join('');
     Array.prototype.forEach.call(modelItems.children, function (c) {

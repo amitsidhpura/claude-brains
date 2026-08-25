@@ -1,0 +1,43 @@
+{
+ "item": "effort slider — the CLI's confirmation shows live, like a model change (2026-08-25)",
+ "branch": "the effortMuted gate in onClaudeEvent draws the SYNTHETIC assistant confirmation as a .blk while still swallowing the rest of the /effort turn (echo, streams, result summary); the result clears the mute",
+ "provenance": "Both frames are the CLI's OWN output, captured VERBATIM 2026-08-25 (CLI 2.1.245) from a headless probe run with the panel's exact flags (--input-format stream-json --output-format stream-json --include-partial-messages --verbose) in ~/Sites/claude-brains-testing, one '/effort low' user message: the wire is init -> assistant with model '<synthetic>' carrying the confirmation text -> result success with the SAME text in .result (num_turns 0; no user echo, no wrapper, no stream_events, no system/local_command frame live — the local_command record is DISK-only). The fixture arms effortMuted directly (the same shared-scope flag the slider sets at 30-menus.js) instead of clicking the real slider, because the click would send a live /effort turn to the session powering the panel (fixture 55's rule for fast/thinking). NEGATIVE CONTROL RUN 2026-08-25 against the pre-change webview (sandbox started BEFORE the 70-events.js change, build verified BY CONTENT: gate still swallows assistant frames): blkDelta 0 != 1 and lastBlkText null-or-old != 'Set effort level to low (this s' — the mute swallowed the confirmation exactly as the user reported (effort changes invisible live); doneDelta/bubbleDelta/mutedAfter GUARDs passed both sides (the result frame cleared the mute pre-change too).",
+ "steps": [
+  {
+   "note": "a muted /effort turn draws ONLY the synthetic confirmation block; no summary, no bubble; the result clears the mute",
+   "setup": "window.__ef1 = (function () { const before = { blks: document.querySelectorAll('.blk').length, dones: document.querySelectorAll('.done').length, bubbles: document.querySelectorAll('.msg-user').length, muted: effortMuted }; effortMuted = true; window.onClaudeEvent(JSON.stringify({\"type\": \"assistant\", \"message\": {\"model\": \"<synthetic>\", \"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Set effort level to low (this session only): Quick, straightforward implementation with minimal overhead\"}], \"id\": \"8b9ca284-91f6-46d8-8025-e186c21b393b\"}, \"uuid\": \"07bbdb5c-784b-4397-b780-cc62218a1ade\", \"session_id\": \"ab6ebf5a-8896-4894-b341-17f413fc7f2c\"})); const midBlks = document.querySelectorAll('.blk').length; window.onClaudeEvent(JSON.stringify({\"type\": \"result\", \"subtype\": \"success\", \"is_error\": false, \"duration_ms\": 9, \"duration_api_ms\": 0, \"num_turns\": 0, \"result\": \"Set effort level to low (this session only): Quick, straightforward implementation with minimal overhead\", \"session_id\": \"ab6ebf5a-8896-4894-b341-17f413fc7f2c\", \"total_cost_usd\": 0, \"uuid\": \"3c7e9100-4f3e-470f-a3cc-314640e8db43\"})); const blkEls = document.querySelectorAll('.blk'); const last = blkEls[blkEls.length - 1]; const out = { beforeMuted: before.muted, blkDelta: midBlks - before.blks, lastBlkText: last ? (last.textContent || '').slice(0, 30) : null, doneDelta: document.querySelectorAll('.done').length - before.dones, bubbleDelta: document.querySelectorAll('.msg-user').length - before.bubbles, mutedAfter: effortMuted }; return out; })();",
+   "expect": [
+    {
+     "js": "window.__ef1.beforeMuted",
+     "equals": false,
+     "why": "GUARD: the panel starts unmuted — the fixture arms the flag itself"
+    },
+    {
+     "js": "window.__ef1.blkDelta",
+     "equals": 1,
+     "why": "DISCRIMINATING: the synthetic assistant confirmation draws exactly one .blk while muted (pre-change: 0 — the gate swallowed assistant frames wholesale)"
+    },
+    {
+     "js": "window.__ef1.lastBlkText",
+     "equals": "Set effort level to low (this ",
+     "why": "DISCRIMINATING: the drawn block carries the CLI's own confirmation text (pre-change: absent) — the same line a resumed session shows from the system/local_command record"
+    },
+    {
+     "js": "window.__ef1.doneDelta",
+     "equals": 0,
+     "why": "GUARD: the result is still swallowed — no turn summary for an effort change, matching the model chip's silence"
+    },
+    {
+     "js": "window.__ef1.bubbleDelta",
+     "equals": 0,
+     "why": "GUARD: no user bubble appears — the slider never echoes and the wire carries no user frame"
+    },
+    {
+     "js": "window.__ef1.mutedAfter",
+     "equals": false,
+     "why": "GUARD: the result clears the mute exactly as before — later turns render normally"
+    }
+   ]
+  }
+ ]
+}

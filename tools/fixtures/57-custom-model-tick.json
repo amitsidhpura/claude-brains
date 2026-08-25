@@ -1,0 +1,79 @@
+{
+ "item": "custom model rows carry the selection checkmark (2026-08-25)",
+ "branch": "renderModels() emits .pi-check on EVERY row; custom rows get the remove (×) IN ADDITION, plus a .custom class; #modelMenu .popup-item.custom:hover .pi-check hides the ✓ so the hover-revealed × replaces it; the × button lives INSIDE .pi-check, overlaying the ✓'s box, so the two glyph centers coincide by construction",
+ "provenance": "Both injected frames are OUR OWN Kotlin->webview frames (self-consistency only, by design): the __models roster items are copied from fixture 55's step 1, which recorded them VERBATIM from the CLI's initialize/list_models response (CLI 2.1.241, 2026-08-24); the __customModels item mirrors what ChatPanel.kt pushes back — the JSON that persistCustom() itself serialized, so entries carry custom:true (parseCustomModel's shape). Selection is injected via the __models frame's `selected` (the ChatPanel restore path, 70-events.js), NOT via setModel — nothing is persisted and no set_model reaches the live CLI; the restore step re-injects the saved roster/custom list the same way. Menu opened by CLICKING THE CHIP, never by adding .show (tg() positioning gotcha). The hover swap (✓ -> ×) is NOT asserted here — CDP cannot synthesize a real :hover — it was verified in real JCEF 2026-08-25 via CDP CSS.forcePseudoState — re-run after the × moved INSIDE the check span — on BOTH custom-row states (selected: rest ✓ visible/× none, hover ✓ svg hidden/× shown; unselected: rest nothing, hover × shown via its explicit visibility:visible inside the hidden span), with glyph-center dx=dy=0 under hover both times. A one-time probe, not a harness assert, because Panel.eval speaks Runtime.evaluate only. NEGATIVE CONTROL RUN 2026-08-25 against the pre-fix webview (whole plugin/src/main/resources/webview/ dir restored to HEAD via git stash, sandbox restarted, build verified BY CONTENT): the GUARDs (display, onRowV, otherCheckVisible, delExists) passed — the .on class was always computed correctly for custom rows — and the two DISCRIMINATING asserts failed exactly as the bug predicts (7 passed, 2 failed): onRowCustom false != true (no custom class emitted), checkVisible null != 'visible' (the ternary emitted the × INSTEAD of the ✓ — no .pi-check node on the custom row at all), which is the reported symptom: a selected custom row with no tick.",
+ "steps": [
+  {
+   "note": "a selected custom model row shows the checkmark and keeps its remove button",
+   "setup": "window.__cm1 = (function () { window.__cmSaved = JSON.stringify({ items: models, custom: customModels, selected: currentModel }); window.onClaudeEvent(JSON.stringify({ type: '__customModels', items: [{\"value\": \"claude-opus-4-8[1m]\", \"displayName\": \"Opus 4.8 (1M)\", \"custom\": true}] })); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'claude-opus-4-8[1m]', items: [{\"value\": \"default\", \"resolvedModel\": \"claude-opus-5[1m]\", \"displayName\": \"Default (recommended)\", \"description\": \"Opus 5 with 1M context \\u00b7 Best for everyday, complex tasks\", \"supportsEffort\": true, \"supportsFastMode\": true}, {\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5\", \"displayName\": \"Sonnet\", \"description\": \"Sonnet 5 \\u00b7 Efficient for routine tasks\", \"supportsEffort\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-4-5-20251001\", \"displayName\": \"Haiku\", \"description\": \"Haiku 4.5 \\u00b7 Fastest for quick answers\"}] })); document.getElementById('modelChip').click(); const pop = document.getElementById('modelMenu'); const onRow = pop.querySelector('#modelItems .popup-item.on'); const chk = onRow && onRow.querySelector('.pi-check'); const other = pop.querySelector('#modelItems .popup-item[data-v=\"sonnet\"] .pi-check'); return { display: getComputedStyle(pop).display, onRowV: onRow ? onRow.dataset.v : null, onRowCustom: onRow ? onRow.classList.contains('custom') : null, checkVisible: chk ? getComputedStyle(chk).visibility : null, otherCheckVisible: other ? getComputedStyle(other).visibility : null, delExists: !!(onRow && onRow.querySelector('.model-del')), alignDx: (function(){ const del = onRow && onRow.querySelector('.model-del'); if (!chk || !del) return null; del.style.display = 'inline-flex'; const c = chk.querySelector('svg').getBoundingClientRect(); const d = del.querySelector('svg').getBoundingClientRect(); del.style.display = ''; window.__cmDy = Math.round((d.top + d.height/2) - (c.top + c.height/2)); window.__cmSizeD = Math.round(d.width - c.width); return Math.round((d.left + d.width/2) - (c.left + c.width/2)); })(), sizeD: window.__cmSizeD, alignDy: window.__cmDy }; })();",
+   "expect": [
+    {
+     "js": "window.__cm1.display",
+     "equals": "block",
+     "why": "GUARD: the popup is really laid out — everything below is void otherwise"
+    },
+    {
+     "js": "window.__cm1.onRowV",
+     "equals": "claude-opus-4-8[1m]",
+     "why": "GUARD: the .on class lands on the custom row — true even pre-fix (the comparison at 30-menus.js was never the bug), so this only anchors WHICH row the discriminating asserts read"
+    },
+    {
+     "js": "window.__cm1.onRowCustom",
+     "equals": true,
+     "why": "DISCRIMINATING: the row carries the .custom class the hover-swap CSS keys on (pre-fix: no such class existed)"
+    },
+    {
+     "js": "window.__cm1.checkVisible",
+     "equals": "visible",
+     "why": "DISCRIMINATING: the custom row HAS a .pi-check and .popup-item.on reveals it (pre-fix: null — the ternary emitted the × instead, no check node at all — the reported bug)"
+    },
+    {
+     "js": "window.__cm1.otherCheckVisible",
+     "equals": "hidden",
+     "why": "GUARD: a non-selected built-in row's check stays hidden — the unconditional span did not light every row"
+    },
+    {
+     "js": "window.__cm1.delExists",
+     "equals": true,
+     "why": "GUARD: the remove (×) button still exists on the custom row — the check is ADDED, not swapped in"
+    },
+    {
+     "js": "window.__cm1.alignDx",
+     "equals": 0,
+     "why": "DISCRIMINATING: the × glyph's horizontal center sits exactly on the ✓'s — the hover swap must not jump. Pre-align control (sibling button, right:8px): FAILED with 2 != 0 — note the naive stylesheet math predicted 5, but the #inputbar 18px svg ID rule resizes both glyphs (the documented trap), which is WHY the fix overlays instead of computing offsets"
+    },
+    {
+     "js": "window.__cm1.alignDy",
+     "equals": 0,
+     "why": "DISCRIMINATING: vertical centers match — the × overlays the check span (inset 1px 0 0 0, matching its padding-top), not the row middle, so rows with a description stay aligned too"
+    },
+    {
+     "js": "window.__cm1.sizeD",
+     "equals": 0,
+     "why": "DISCRIMINATING: the × svg RENDERS at the ✓'s size — center alignment alone cannot catch a symmetric shrink. Pre-fix control: FAILED with -8 (the `#inputbar button {padding:4px}` ID rule beat .model-del's padding:0 inside the 18px overlay, flex-squeezing the × svg to 10px while the ✓ stayed 18 — the user saw a tiny ×)"
+    }
+   ]
+  },
+  {
+   "note": "restore the pre-fixture roster, custom list and selection",
+   "setup": "window.__cm2 = (function () { const saved = JSON.parse(window.__cmSaved || '{}'); window.onClaudeEvent(JSON.stringify({ type: '__customModels', items: saved.custom || [] })); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: saved.selected || null, items: saved.items || [] })); closeMenus(); return { restored: currentModel === (saved.selected || currentModel), customRestored: customModels.length === (saved.custom || []).length, closed: !document.getElementById('modelMenu').classList.contains('show') }; })();",
+   "expect": [
+    {
+     "js": "window.__cm2.restored",
+     "equals": true,
+     "why": "GUARD: the live selection is back to what the session had before the fixture"
+    },
+    {
+     "js": "window.__cm2.customRestored",
+     "equals": true,
+     "why": "GUARD: the injected custom model did not leak into the live customModels list"
+    },
+    {
+     "js": "window.__cm2.closed",
+     "equals": true,
+     "why": "GUARD: the menu is closed again"
+    }
+   ]
+  }
+ ]
+}

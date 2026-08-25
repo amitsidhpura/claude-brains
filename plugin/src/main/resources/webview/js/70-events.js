@@ -95,11 +95,24 @@
 
   window.onClaudeEvent = function (raw) {
     let ev; try { ev = JSON.parse(raw); } catch (_) { return; }
-    // A /effort change rides a real turn; swallow its stream/echo/summary so the slider is as quiet
-    // as the mode picker. Cleared on the turn's result. (setBusy was never called for it — the effort
-    // click uses a raw bridge, not sendTurn — so muting these leaves no spinner or stuck busy state.)
+    // A /effort change rides a real turn. The CLI answers it with a SYNTHETIC assistant
+    // whole-message carrying the confirmation ("Set effort level to …") and a result with the
+    // SAME text — nothing else on the wire (measured 2026-08-25, CLI 2.1.245, panel flags:
+    // init → assistant model:"<synthetic>" → result success, num_turns 0). Draw that
+    // confirmation here, like a model change's "Set model to …" line — the NORMAL assistant
+    // path would stash a synthetic into syntheticEcho for the error dedupe and draw nothing —
+    // and keep swallowing the rest (echo, streams, and the result: no turn summary, matching
+    // the model chip's silence). Cleared on the turn's result. (setBusy was never called for
+    // it — the effort click uses a raw bridge, not sendTurn — so no spinner or stuck busy.)
     if (effortMuted) {
-      if (ev.type === 'stream_event' || ev.type === 'assistant' || ev.type === 'user') return;
+      if (ev.type === 'assistant' && !ev.parent_tool_use_id) {
+        ((ev.message || {}).content || []).forEach(function (b) {
+          if (b && b.type === 'text' && b.text) { const k = track(el('blk', '')); k.innerHTML = renderMd(b.text); foldCode(k); }
+        });
+        stampMessage(ev.uuid);
+        return;
+      }
+      if (ev.type === 'stream_event' || ev.type === 'user') return;
       if (ev.type === 'result') { effortMuted = false; return; }
     }
     switch (ev.type) {

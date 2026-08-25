@@ -44,9 +44,15 @@ reads as a command attempt and is refused, same as the CLI's own TUI.
 
 `/model` and `/effort` are intentionally Hidden: the composer already has dedicated controls
 for them - the model chip + dropdown (search / custom models) and the effort slider (which
-sends `/effort <level>` directly) - so slash entries would be redundant. The slider's silent
-`/effort` turn was verified in `runIde` 2026-07-30; a resumed session shows the `/effort` turn
-(the transcript records it and replay doesn't filter) - accepted as an honest audit trail.
+sends `/effort <level>` directly) - so slash entries would be redundant. Both changes now show
+the same way (user decisions 2026-08-25, superseding the 2026-07-30 "silent /effort, visible on
+resume" acceptance): live and resume alike render ONLY the CLI's confirmation line ("Set model
+to ..." / "Set effort level to ..."), never a command bubble. Mechanics: the chip's `set_model`
+control request and the slider's `/effort` turn each make the CLI write a command trio to the
+transcript (CLI 2.1.245); replay drops both `<command-name>` wrappers (scoped to exactly these
+two), live draws the /effort confirmation from the CLI's synthetic assistant frame through the
+`effortMuted` gate, and neither wrapper can become a derived session title any more
+(renderer-parity.md has the full records).
 
 ## How custom commands are detected (measured 2026-08-15, CLI 2.1.228)
 

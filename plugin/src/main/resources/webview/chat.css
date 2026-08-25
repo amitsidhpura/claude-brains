@@ -1091,11 +1091,22 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .popup-search::placeholder { color: var(--user-muted); }
 .popup-item { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
 .popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
-/* remove (×) on a custom model row — hover-revealed, like the history/attachment delete controls */
-.model-del { display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  background: transparent; border: 0; color: var(--user-muted); cursor: pointer; padding: 3px;
+/* remove (×) on a custom model row — hover-revealed, like the history/attachment delete controls.
+   The button sits INSIDE .pi-check, overlaying the ✓'s box (inset top = the span's 1px padding-top),
+   so ✓ and × share one center by construction — no offset math, which the #inputbar 18px svg ID
+   rule would silently break anyway. `visibility: visible` un-hides it inside a hidden check span
+   (non-selected rows), so the × still appears on hover there. */
+.model-del { display: none; position: absolute; inset: 1px 0 0 0; padding: 0;
+  background: transparent; border: 0; color: var(--user-muted); cursor: pointer;
   border-radius: var(--radius); align-items: center; justify-content: center; }
-.popup-item:hover .model-del { display: inline-flex; }
+/* `#inputbar button { padding: 4px }` beats the class rule above; inside the 18px overlay that
+   forced padding squeezed the × svg (flex-shrink) to 10px. ID-scope the reset so ✓ and × render
+   the same 18px (measured: 18/18 fixed vs 18/10 without this). */
+#inputbar .model-del { padding: 0; }
+.popup-item:hover .model-del { display: inline-flex; visibility: visible; }
+/* on a custom row hover hides the ✓ (the span and its svg) — the × above re-shows itself
+   (scoped to #modelMenu: bare idiom-class selectors break when the idiom is duplicated) */
+#modelMenu .popup-item.custom:hover .pi-check { visibility: hidden; }
 .model-del:hover { color: var(--fg); }
 .model-del svg { width: 12px; height: 12px; display: block; }
 .pi-ic { color: var(--user-muted); width: 20px; text-align: center; font-family: ui-monospace, Consolas, monospace; padding-top: 1px;
@@ -1111,7 +1122,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 /* a command's aliases, muted beside its name — same tone as the source badge, kept at the
    title's own size because it is a name too, not a label */
 .pi-alias { color: var(--user-muted); margin-left: 8px; font-weight: 400; }
-.pi-check { color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
+.pi-check { position: relative; color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
 .pi-check svg { width: 16px; height: 16px; }
 .popup-item.on .pi-check { visibility: visible; }
 .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--user-divider);

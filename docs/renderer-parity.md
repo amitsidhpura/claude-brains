@@ -221,7 +221,37 @@ Mostly deliberate; listed so nothing is silently forgotten.
       `/effort <level>` user box, so a resumed session shows turns that live deliberately hid.
       Inverse of the usual lossy-on-resume shape. **Accepted 2026-07-30** — user verified in the
       `runIde` sandbox and chose to keep the visible `/effort` box on resume as an honest audit
-      trail; no replay filter will be added.
+      trail; no replay filter will be added. **Superseded 2026-08-25** — after the /model parity
+      fix (row below) the user reversed this: effort changes now SHOW like model changes — the
+      live mute passes the CLI's synthetic confirmation through as a block, and replay drops the
+      wrapper bubble — see the closed row below.
+- [x] **Chip-driven `/model` turns grew a user bubble on resume** — found and CLOSED 2026-08-25
+      (user screenshots, CLI 2.1.245). Every model-chip/menu switch is a `set_model` control
+      request, yet the CLI writes a /model command trio to the transcript as `type:"user"` STRING
+      records: an isMeta caveat, a `<command-name>/model</command-name>` wrapper, and a
+      `<local-command-stdout>Set model to …</local-command-stdout>`. Live drew only the stdout
+      confirmation (the wrapper falls out of `onUserEvent` silently); replay prettified the
+      wrapper into a `/model haiku` user box AND `computeTitle`'s first-user fallback named the
+      session "/model haiku". Fix: `cleanInjected()` drops the wrapper when the command is
+      `/model` — **scoped to /model by user decision 2026-08-25** (the composer refuses typing
+      /model, so in panel sessions the wrapper can only be chip bookkeeping; the stdout line keeps
+      rendering on both paths, so the audit trail survives). `/effort` initially kept its bubble per the
+      row above, then joined the drop list the same day (next row). Test `model and effort changes replay as confirmation lines, not command bubbles`
+      pins the drop list ({/model, /effort} only — /context still bubbles) and the title;
+      verified against the real session with `./gradlew probe` (user bubbles 4 → 1).
+- [x] **Effort changes were invisible live** — found and CLOSED 2026-08-25 (user request,
+      reversing the 2026-07-30 acceptance above). The slider's `/effort` turn was muted wholesale
+      (`effortMuted`), so live showed NOTHING while resume showed a bare `/effort <level>` bubble.
+      Measured (CLI 2.1.245, headless probe with the panel's exact flags): the wire is
+      init → assistant `model:"<synthetic>"` carrying "Set effort level to …" → result success
+      with the SAME text (no user echo, no wrapper, no stream_events live; the disk record is
+      caveat + wrapper + `system`/`local_command` stdout). Fix, both sides: the live mute now
+      draws the synthetic confirmation as a block (the normal assistant path would stash it in
+      `syntheticEcho` and draw nothing) while still swallowing echo/streams/summary; replay drops
+      the `/effort` wrapper (cleanInjected) and the `local_command` record already replays as the
+      same block. Both views now show the confirmation line alone — exactly the /model shape.
+      Fixture 58 (verbatim measured frames) pins the live half; the SessionStoreTest row above
+      pins replay.
 - [x] **CLI spill metadata was replay-only** — found and CLOSED 2026-08-05. Probed in `runIde`
       (`seq 1 200000`): when a Bash result is too big the CLI writes it to a file, and the
       transcript record carries `toolUseResult.persistedOutputPath` / `persistedOutputSize`, so
