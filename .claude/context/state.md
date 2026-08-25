@@ -1,9 +1,8 @@
 # State
 
 ## Current focus
-**2026-08-25 (fourteenth session): model-menu polish + command-turn parity — five fixes, all
-verified, committed at the session's end (unreleased on `main`; next release is a fresh bump
-when the user asks).**
+**2026-08-25 (fourteenth session): model-menu polish + command-turn parity — five fixes,
+released as 0.11.0 at the session's end.**
 - **Custom model rows show the selection ✓** (fixture 57): `renderModels()` (30-menus.js) emits
   `.pi-check` on EVERY row; a custom row's remove × lives INSIDE the check span, overlaying the
   ✓'s box (`inset`), with `#inputbar .model-del{padding:0}` killing the ID-rule padding squeeze.
@@ -19,10 +18,14 @@ when the user asks).**
 - Docs synced: renderer-parity.md (two closed rows + superseded row), slash-commands.md § the
   /model-/effort paragraph, feature-checklist §16.2.
 
-## Released — 0.10.0 (2026-08-25)
-Tag `v0.10.0`, commit `55fdcb1`, Marketplace **Approved**. Contents: model-menu footer switches
-(9.9/9.4/9.5), 1M reconcile-to-real-window, API-error single-render, footer icons. This
-session's five fixes are ON TOP and unreleased.
+## Released — 0.11.0 (2026-08-25)
+**0.11.0 is the shipped version** (tag `v0.11.0`, commit `4c8899b`). Contents: effort
+confirmation line, custom-model checkmark + ×-overlay, /model-/effort resume parity + title
+fix. `verifyPlugin` ran BEFORE the gate (Compatible ×7, 0 warnings — after catching a silent
+non-run, gotchas § Build). GitHub release + feed + Marketplace all green; asset byte-identical;
+Marketplace **Approved** (user's dashboard, all checks Success incl. the IDE-run check).
+Nothing is unreleased on `main`. Next release is a fresh bump when work lands. (0.10.0 shipped
+earlier the same day: footer switches, 1M reconcile, API-error single-render.)
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG] · **8.11** side

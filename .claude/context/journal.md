@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-25 (third) — 0.11.0 goes out
+- **Released 0.11.0** (`4c8899b`, tag `v0.11.0`): effort confirmation line (new), custom-model
+  checkmark + ×-overlay fixes, /model-/effort resume parity + title fix. Minor bump: one new
+  visible capability. Full release.md run; gate held at step 6 with the complete notes and the
+  verdict table.
+- `verifyPlugin` Compatible ×7 (242.26775.23 → 262.10315.32), 0 warnings — but the FIRST attempt
+  never ran: a background compound command's `cd plugin` failed (cwd already there from an
+  earlier call) and the trailing `echo VERIFY-DONE` masked exit 0. Caught by reading the verdict
+  FILES, which still said 0.10.0 — the version in the verdict path is part of the check
+  (gotchas § Build).
+- Asset 200 + `cmp`-identical; feed serving 0.11.0; `marketplace-upload` run green in 13s;
+  Marketplace API listed 0.11.0 after ~5 min lag; user's dashboard screenshot confirms
+  **Approved**, all compatibility checks Success incl. the 2026.2.2 EAP IDE-run check.
+- Nothing unreleased on `main`. Next release is a fresh bump when work lands.
+
 ## 2026-08-25 (second) — model-menu polish, and command turns learn to show themselves
 - **Custom model rows got the selection ✓** (user screenshot: no tick on "Opus 4.8 (1M)"). The
   `.on` class was always right; `renderModels()`'s ternary emitted the remove × INSTEAD of the
@@ -281,25 +296,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   Identify the panel by content (`/json/list` title), never by the port you asked for.
 - Next: unchanged backlog; the fix is uncommitted-then-committed this session and NOT released.
 
-## 2026-08-19 (second) — 0.8.0 goes out
-- **Released 0.8.0** (`dce3600`, tag `v0.8.0`): aliases (7.7), autosave hook (2.10), roster
-  across reload (7.10), per-review close_tab (2.4), lock sweep (2.11), effort-label fix — plus
-  the webview split riding along unadvertised (internal, per release.md). Minor bump: features.
-- Full `docs/release.md` run, gate held at step 6 until the user read the complete notes.
-  Verifier Compatible ×7 (242 → 262), 0 warnings; zip carried all 14 `webview/js/` files and the
-  baked 0.8.0 notes; asset 200 + `cmp`-identical; feed serving 0.8.0 within a minute; upload run
-  32276262660 success (11s); **Approved the same day** (sixth in a row).
-- `plugin.xml` description un-staled in the same release: "sixteen built-ins … plus auto-enabled
-  custom commands, skills and MCP prompts" replaces "/compact + /clear only". The Marketplace
-  WEB description still carries the old wording — hand-edited Markdown, uploads don't touch it;
-  left with the user (now in state.md next steps).
-- Marketplace API lag showed a fourth time: `updates?size=2` still named 0.7.2 newest after the
-  successful upload; the plugin page showed 0.8.0 Approved. The page is the truth.
-- New on the version page: alongside the verifier ladder, JetBrains ran a live "IDE run with the
-  plugin installed" check on 2026.2.1 — "No issues occurred". The split webview loaded clean in
-  their environment too.
-
 ## Digest
+- **2026-08-19 (second)** — 0.8.0 released (`dce3600`: aliases, autosave hook, roster reload,
+  close_tab, lock sweep; webview split rides unadvertised); verifier ×7 clean, Approved same day;
+  plugin.xml description un-staled (web description stays hand-edited — user errand); Marketplace
+  API lag seen a fourth time (the plugin PAGE is the truth); JetBrains' live IDE-run check debuts.
 - **2026-08-19** — the webview split ships (`41f24f9`: chat.html → markup + 14 js files spliced by
   WebviewAssets, RenderLimitsTest asserts the ASSEMBLED page; controls run); "Very High" wrap fixed
   (JCEF-only flex base — nowrap on `.ef-label`); restart-on-update diagnosed as a download-cache

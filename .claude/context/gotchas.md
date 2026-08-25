@@ -235,6 +235,14 @@ re-read those before trusting memory here.
   a literal `--` inside an SVG comment kills the parse and the icon silently renders as nothing.
 
 ## Build / toolchain / release
+
+- **A verdict file's PATH must carry the version being released** — reading
+  `pluginVerifier/PS-*/plugins/<id>/X.Y.Z/verification-verdict.txt` for the WRONG X.Y.Z makes a
+  verifier that never ran look green. 2026-08-25: a background `cd plugin && ./gradlew
+  verifyPlugin …; echo DONE` had its `cd` fail (Bash cwd persists across calls — it was already
+  in plugin/), the `;`-chained echo still printed, exit 0 — and stale 0.10.0 verdicts sat on
+  disk looking complete. Glob for the NEW version's verdict files and count all seven; absolute
+  paths in background compound commands.
 - **Kotlin block comments NEST.** A literal `/*` inside a KDoc (writing the glob `js/*.js` in prose) opens
   a comment that never closes; the compiler reports "Unclosed comment" at the file's LAST line. Say "files
   under js/" in comments; globs only in strings.
