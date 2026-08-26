@@ -258,6 +258,13 @@ re-read those before trusting memory here.
 
 ## Build / toolchain / release
 
+- **A multi-file edit script that asserts AFTER it has already written leaves a half-applied
+  change — and a release bump is the worst place for one.** 2026-08-26: the 0.11.1 prep script
+  wrote `build.gradle.kts`, then aborted on `updatePlugins.xml` because `count('0.11.0') == 2` was
+  wrong (the string appears three times: the version attribute plus twice in the URL). Gradle then
+  built a real 0.11.1 zip against a feed still saying 0.11.0; only the `git diff --stat` review
+  caught it. Check EVERY precondition before the FIRST write, assert on the exact token
+  (`version="0.11.0"`, not the bare number), and always diff before the gate.
 - **A verdict file's PATH must carry the version being released** — reading
   `pluginVerifier/PS-*/plugins/<id>/X.Y.Z/verification-verdict.txt` for the WRONG X.Y.Z makes a
   verifier that never ran look green. 2026-08-25: a background `cd plugin && ./gradlew

@@ -4,6 +4,20 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-26 — 0.11.1 is a PATCH, its notes get a "Changed" section, and the Fable caveat ships
+
+The effort-slider relocation shipped as 0.11.1, not 0.12.0: `docs/release.md` reserves the minor
+bump for new capability, and moving a control between two menus adds none. The GitHub notes used
+a **🧭 Changed** heading in place of the template's ✨ New / 🐛 Fixes, because the release was
+neither — filing a relocation under Fixes would have implied something was broken. And the
+measured Fable thinking no-op went into ⚠️ Notes as a plain sentence.
+
+*Why:* users read notes to learn what they will SEE; an honest heading and a stated limitation
+beat a template fit. *Rejected:* 0.12.0 (offered at the gate, declined by omission); filing under
+Fixes; leaving the Fable no-op out (it is real, measured, and users on Fable will hit it).
+*Precedent:* the notes template in `docs/release.md` now has a third shape in practice — a
+Changed-only release — without the doc being edited for it; edit the doc if it recurs.
+
 ## 2026-08-26 — Effort lives in the MODEL menu, and its level shows on NO chip
 
 The slider moved out of `#modeMenu`'s `.popup-f` into `#modelFooter` as its last row, under the

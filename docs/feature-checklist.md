@@ -441,10 +441,10 @@ auto-include selection, voice.
 ## 16. Quality gates (not features, but part of "what we have")
 - **16.1** ✅ `./gradlew test` (115, JUnit 5 over SessionStore/RenderLimits) — every suite's negative
       control RUN
-- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 58, **462** assertions, real captured
+- **16.2** ✅ Live harness `tools/live_harness.py` — fixtures numbered to 58, **467** assertions, real captured
       wire frames replayed into the live webview over CDP
 - **16.3** ✅ `./gradlew probe` (replay without the IDE); `tools/cdp.py`; `window.__gallery()`;
       DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins — gotchas)
 - **16.4** ✅ Plugin Verifier 0 warnings on PhpStorm 242→262; Marketplace upload automated on
-      `release: published`; releases 0.4.0 → 0.8.0 all Approved
+      `release: published`; releases 0.4.0 → 0.11.1 all Approved
 - **16.5** ✅ Standing manual-test checklist (`docs/manual-test.md`, 92 items, register 0 open)

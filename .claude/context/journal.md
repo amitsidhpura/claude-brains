@@ -3,6 +3,24 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-26 (third) — 0.11.1 goes out (saved 2026-08-27)
+- **Released 0.11.1** (`979326c`, tag `v0.11.1`) — the effort slider's move into the model menu,
+  the bare mode chip, the "Models" header. PATCH bump: a relocation adds no capability. Full
+  `docs/release.md` run; gate held at step 6 with the complete notes and the 7-IDE verdict table.
+- `verifyPlugin` Compatible ×7 (242.26775.23 → 262.10315.32), 0 warnings, verdict files read by
+  path for 0.11.1; a mid-run peek at the log (verifier 1.410 "0.11.1 against PS-…") ruled out
+  the 0.11.0 silent non-run before waiting on it.
+- Asset 200 + `cmp`-identical; the raw feed served 0.11.1 with NO CDN lag; `marketplace-upload`
+  green in ~5s, response `version "0.11.1"`, update id 1152867; API listed it after exactly
+  300s (the standing ~5-min lag). User's dashboard screenshot: **Approved**, 242.0+, every
+  compatibility check Success incl. the 2026.2.2 rc IDE-run check.
+- Release notes used a **🧭 Changed** section instead of ✨ New / 🐛 Fixes (nothing was either)
+  and surfaced the Fable thinking no-op under ⚠️ Notes — both offered at the gate, both accepted.
+- Near-miss worth the gotcha: the feed-bump script asserted `count('0.11.0') == 2` when the
+  string appears three times (version + twice in the URL) — it aborted AFTER build.gradle.kts
+  was already written, leaving a half-applied bump that only the `git diff` review caught.
+- Nothing unreleased on `main` after this save.
+
 ## 2026-08-26 (second) — the checklist meets 2.1.246, and nothing moved
 - **`docs/feature-checklist.md` re-audited 2.1.241 → 2.1.246**, both references diffed rather than
   assumed: extension `package.json` contributions and the 12-tool IDE-MCP roster byte-identical
@@ -267,31 +285,13 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Not done: keyboard-only selection can't trigger the pill (backlog); still NO release — 0.8.0
   ships, `main` now carries VFS fix + compaction fix + 2.1.241 audit + this feature.
 
-## 2026-08-23 — the checklist meets 2.1.241, and the wire answers back
-- `docs/feature-checklist.md` re-audited 2.1.233 → 2.1.241 (user ask; both sides installed at
-  241). Same method as 2026-08-17 — package.json contributions, `case"…"` vocab, typed control
-  subtypes — plus LIVE stdio probes this time. Verdict: **no new feature surfaces on either
-  side**; extension contributions and the 12-tool IDE-MCP set identical, typed control vocab +1
-  @internal (`register_device_hooks`).
-- Baseline problem (2.1.233 gone from disk) solved by downloading the old vsix from the
-  marketplace vspackage URL — gzip-wrapped, and it carries `resources/native-binary/claude`, a
-  true CLI binary baseline. `vscode/` re-extracted at 2.1.241. Procedure now in runbook.md.
-- What moved was measurement, not features: `stop_task` accepted over stdio (11.3 unblocked;
-  relay whitelist added it at 2.1.238), `side_question` answers headlessly with a real model
-  reply (8.11), `apply_flag_settings{effortLevel}` takes effect (9.2 watch-item resolved) and
-  `{fastMode:true}` clears `sdk_opt_in_required` (9.4), `set_max_thinking_tokens` accepted (9.5);
-  `rename_session`/`get_settings`/`list_models`/`get_context_usage` all answer. New row 14.4
-  (`get_workspace_diff`). §16 counts unstaled (tests 109, harness 361, releases → 0.8.0).
-- **`/clear` grew a `[name]` hint** → a panel menu pick now INSERTS `/clear ` instead of running
-  (`cmdTakesArg` keys on the hint) and the native branch drops a typed name; 7.6 records the
-  pending decision (pass the name through as the title, or pin pick-runs).
-- Trap: a `new Set([...subtypes])` in the binary is the remote-relay whitelist, NOT the stdio
-  accept list — schemas for side_question/apply_flag_settings existed at 2.1.233 while the
-  checklist said "no host-side control". Only a live probe settles acceptance (gotchas).
-- Follow-ups: `docs/slash-commands.md` still says 2.1.233 and misses the /clear hint; the nine
-  [DECIDE] rows unchanged but 8.11/9.4/9.5/11.3 now have their probes pre-paid.
-
 ## Digest
+- **2026-08-23** — checklist re-audited 2.1.233 → 2.1.241: no new surfaces either side; what moved
+  was measurement — `stop_task`, `side_question`, `apply_flag_settings{effortLevel,fastMode}`,
+  `set_max_thinking_tokens`, `rename_session` all ANSWER over stdio (probes pre-paid for 8.11/9.4/
+  9.5/11.3); `/clear` grew a `[name]` hint (7.6 decision opened); the missing 2.1.233 baseline was
+  downloaded as a gzip-wrapped vsix carrying the CLI binary (runbook). Trap promoted: a binary's
+  `new Set([...subtypes])` is the relay whitelist, not the stdio accept list (gotchas § Protocol).
 - **2026-08-21 (second)** — replay drew "Conversation compacted" ABOVE its `/compact` bubble: the
   CLI writes boundary+summary at compaction END, physically before the command records — file order
   lies, timestamps don't. Fixed, then generalized as `DisplacedAnchor` (the retry-storm reorder
