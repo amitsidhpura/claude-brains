@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.11.0"
+version = "0.11.1"
 
 repositories {
     mavenCentral()
@@ -102,6 +102,15 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * what users are updating FROM.
  */
 val changeNotesHtml = """
+            <b>0.11.1</b>
+            <ul>
+              <li>The effort slider moved into the model menu, as the last row under the 1M
+                  context, Fast mode and Thinking switches — every model-dependent control in one
+                  place. The Modes menu now holds only the four modes</li>
+              <li>The mode chip shows just the mode name — the effort level no longer trails it
+                  as "(High)"; it is read off the slider, one click away in the model menu</li>
+              <li>The model menu is titled "Models"</li>
+            </ul>
             <b>0.11.0</b>
             <ul>
               <li>Effort changes show themselves: sliding the effort level now prints the CLI's
