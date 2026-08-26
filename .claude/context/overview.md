@@ -24,7 +24,8 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 - `.github/workflows/marketplace-upload.yml` — the only CI: on `release: published` it re-posts the
   published GitHub asset to the JetBrains Marketplace. Nothing is built in CI
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
-- `docs/feature-checklist.md` — feature register vs VS Code + TUI (2.1.233): 124 rows with STABLE
+- `docs/feature-checklist.md` — feature register vs VS Code + TUI (re-audited against 2.1.246 on
+  2026-08-26): 127 rows with STABLE
   `section.row` ids, colour tiers, effort tags — refer to features by id (e.g. 2.4)
 - `docs/limits.md` — every size cap (folded/scrolled/truncated/volume) and where it is set
 - `docs/client-parity.md` — CLI data we drop, scored vs terminal TUI and VS Code extension

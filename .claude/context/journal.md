@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-26 (second) — the checklist meets 2.1.246, and nothing moved
+- **`docs/feature-checklist.md` re-audited 2.1.241 → 2.1.246**, both references diffed rather than
+  assumed: extension `package.json` contributions and the 12-tool IDE-MCP roster byte-identical
+  (diffed against the `vscode/` 2.1.241 extraction — the old extension dir itself was already
+  gone); CLI typed vocabulary +1 (`upload_device_hook_template`, @internal device-hooks); headless
+  `initialize` on BOTH binaries: +`analytics_disabled`, 53→53 commands with no hint changes, same
+  models/flags/agents/output styles/account keys.
+- Header refs → 2.1.246; `[NEW]` legend → "added none"; new re-audit paragraph (newest first);
+  §2 heading "unchanged through 2.1.246"; **new row 9.10 🚫** records the declined roster-flag gate
+  in the register (126 → 127 rows, ids untouched).
+- Side-finding worth acting on: the command roster is unchanged 2.1.233 → 2.1.246 across the two
+  audits, so "sync `docs/slash-commands.md`" is a version-LABEL edit, not a re-verification.
+- Two lessons promoted from the digested 2026-08-21 (second) entry into gotchas (compaction
+  record order; gradle stream split + background cwd), plus the extension-dir-deleted trap.
+
 ## 2026-08-26 — effort moves into the model menu, and three chip suffixes later it hides
 
 - **Effort slider MOVED from the mode menu's `.popup-f` into `#modelFooter`** as its last row,
@@ -276,30 +291,13 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Follow-ups: `docs/slash-commands.md` still says 2.1.233 and misses the /clear hint; the nine
   [DECIDE] rows unchanged but 8.11/9.4/9.5/11.3 now have their probes pre-paid.
 
-## 2026-08-21 (second) — the /compact bubble finds its place, and the trick gets a name
-- User screenshots (live vs resumed): replay drew "Conversation compacted" ABOVE the /compact
-  bubble that caused it. Measured on a real shopify transcript: the CLI writes boundary + summary
-  at compaction END, physically BEFORE the command records, which keep typed-at timestamps
-  (boundary 13:20:19 @ file pos 295; its /compact 13:18:11 @ 298). File order lies; live was right.
-- Fixed in SessionStore, then — user asked for a common solution — generalized: `DisplacedAnchor`
-  (arm index+ts, insert-before when a later record's ts proves it earlier, shift/forget on
-  eviction). The 2026-08-09 retry-storm reorder refactored onto the same class. Global timestamp
-  sort rejected: ts-less records, per-block same-ts messages, the streaming eviction window, and
-  "timestamps always win" is an unmeasured premise (decisions.md).
-- Proof chain: probe on the real session pre/post fix (inversion → corrected); refactor
-  byte-identical (`probe --json` + cmp); +2 order tests (compact, late-flushed retries — the old
-  retry test pinned SPELLINGS only, the reorder was previously unpinned); negative control by
-  neutering the shared guard → exactly the 2 order tests fail. gradle test 107 → 109.
-- User confirmed in their real IDE ("Showing perfect now"), then asked about the leftover
-  "Distilled for 41s" footer: decided to KEEP both divergences (footer live-only, summary box
-  resume-only) — recorded as deliberate in docs/renderer-parity.md Audit 2.
-- jb.gg/teamcity config-time "Connection timed out" struck again mid-session; `-PskipVerifierIdes`
-  cleared it (the 2026-08-12 gotcha, working as documented). Host answered fine minutes later.
-- Trap relearned: `2>&1 > file` splits gradle's streams (stderr keeps the terminal); use
-  `> file 2>&1`. And background Bash tasks start in the repo root, not the shell's cwd.
-- Next: unchanged backlog; both 2026-08-21 fixes committed together, still unreleased.
-
 ## Digest
+- **2026-08-21 (second)** — replay drew "Conversation compacted" ABOVE its `/compact` bubble: the
+  CLI writes boundary+summary at compaction END, physically before the command records — file order
+  lies, timestamps don't. Fixed, then generalized as `DisplacedAnchor` (the retry-storm reorder
+  refactored onto it, byte-identical by `probe --json` + cmp); +2 order tests with a neutered-guard
+  control (107 → 109). Live-only "Distilled" footer / resume-only summary box KEPT as deliberate
+  divergences (renderer-parity Audit 2). Lessons in gotchas (§ Replay, § Testing) and decisions.
 - **2026-08-21** — "File not found" on a live path: `LocalFileSystem.findFileByPath` reads the VFS
   SNAPSHOT, not disk (not Windows-specific). Reproduced against the user's LIVE PhpStorm via its own
   MCP bridge using read-only `checkDocumentDirty`; fixed with `findVFileOnDisk` (refresh) on the two

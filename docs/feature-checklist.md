@@ -3,9 +3,10 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.241, last full re-audit 2026-08-23)
-- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.241-linux-x64/`
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.241`; headless roster in `docs/slash-commands.md`
+**References** (both on 2.1.246, last full re-audit 2026-08-26)
+- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.246-linux-x64/` (the local
+  `vscode/` extraction used for diffing is still 2.1.241 — re-extract when a diff needs it)
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.246`; headless roster in `docs/slash-commands.md`
 - Data-level parity (every CLI event we drop or render) lives in `docs/client-parity.md`, not here
 
 **Status marks**
@@ -32,11 +33,27 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no → re-mark ➖/🚫) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
+
+**Re-audit 2026-08-26 (2.1.241 → 2.1.246)** — nothing new on either side, measured rather than
+assumed. Extension: `package.json` contributions (23 commands, 9 keybindings, config, views,
+menus) and the 12-tool IDE-MCP roster are identical, diffed against the 2.1.241 extraction. CLI:
+the typed control vocabulary grew exactly one subtype, `upload_device_hook_template` (the
+@internal device-hooks family, beside `register_device_hooks`); a headless `initialize` on both
+binaries shows one new top-level scalar, `analytics_disabled`, the same 53-command roster (no
+adds, no drops, no hint changes — three bundled-skill descriptions swapped an em-dash for a
+hyphen), the same 5-model roster with identical capability flags, the same 6 agents, 5 output
+styles and `account` keys. Consequence for `docs/slash-commands.md`: its roster has been unchanged
+from 2.1.233 through 2.1.246 (this audit covers 241→246, the 2026-08-23 one 233→241), so syncing
+it is a version-label edit, not a re-verification. What did move this session is BEHAVIOR, not
+surface, and is folded into rows: effort moved into the model menu with no chip suffix (9.2),
+the Thinking switch is measured INERT on Fable (9.5), and per-model gating on roster capability
+flags was tried on paper and declined on evidence (9.10). Probe outputs in the 2026-08-26 session
+scratchpad.
 
 **Re-audit 2026-08-23 (2.1.233 → 2.1.241)** — no new feature surfaces on either side: the
 extension's contributions and IDE-MCP tool set are byte-for-byte the same roster, and the CLI's
@@ -95,7 +112,7 @@ auto-include selection, voice.
 - **1.23** ⬜ [SM] `permission_denied` reason / `decision_reason` on the permission card — P3 polish
 - **1.24** ⬜ [SM] `result.terminal_reason` (19 values) surfaced when a turn ends oddly — P3 polish
 
-## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged in 2.1.241)
+## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.246)
 - **2.1** ✅ `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`, `getLatestSelection`,
       `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ `openDiff` — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -328,6 +345,22 @@ auto-include selection, voice.
       `modelUsage[].contextWindow` from every result and snaps the switch to it (`oneMFromCli`),
       so Fable toggled "off" shows ON once the API confirms it ran 1M anyway; cleared on every
       model change so the display is tag-derived until that model's first result. Fixture 55.
+
+- **9.10** 🚫 Per-model GATING of the effort slider and Thinking switch on the roster's
+      capability flags (`supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking`).
+      Proposed 2026-08-26 after an article warned that model-dependent controls let users "toggle
+      things that silently do nothing" — and dropped the same day on measurement: `haiku` is the
+      one roster entry carrying NONE of the three flags, yet with haiku selected `/effort max` is
+      accepted with the CLI's full confirmation line and the next turn streams a real thinking
+      block (user screenshot). The flags say what a menu should OFFER; `/effort` is session-global
+      ("this session only") and any model accepts it, so the gate would have disabled two working
+      controls. The inverse failed too: `supportsAdaptiveThinking` is `true` on Fable, where the
+      switch is measured inert (9.5) — no flag discriminates it in either direction. Only
+      `supportsFastMode` gates anything (9.4), and only because delivery was probed separately.
+      Rendering the dot count from `supportedEffortLevels` was also left: every non-haiku model
+      returns all five today and the shorter-list case has no model on this roster to reproduce
+      against. Revive only if a CLI version ships a flag that is proven to track behavior.
+      Gotchas § Protocol; decisions 2026-08-26.
 
 ## 10. Auth & account
 - **10.1** ➖ Login / logout / account display / `disableLoginPrompt` — **by design**: sign in once by

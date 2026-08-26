@@ -64,7 +64,7 @@ re-read those before trusting memory here.
   list.** Typed schemas prove VOCABULARY, never acceptance — only sending the request headlessly and
   reading the response settles it (`stop_task` entered the set at 2.1.238 while stdio had accepted
   `side_question`/`apply_flag_settings` since ≤2.1.233). The schema helper's minified name changes per
-  build (`Tt` 2.1.233, `Ht` 2.1.241): match `subtype:<ident>("initialize")` first or a version diff
+  build (`Tt` 2.1.233, `Ht` 2.1.241, `o` 2.1.246): match `subtype:<ident>("initialize")` first or a version diff
   silently returns zero for one side.
 - **A hint read out of the binary is NOT the hint the wire sends.** `strings` shows two `/goal`
   records, one with `argumentHint:"[<condition> | clear]"`; the roster sends an EMPTY hint. Probe the
@@ -167,6 +167,13 @@ re-read those before trusting memory here.
   mutates workspace files.
 
 ## Replay / transcript
+- **Compaction records land in the file BEFORE the command that caused them.** The CLI writes the
+  boundary + summary at compaction END, physically ahead of the `/compact` command records, which
+  keep their typed-at timestamps (measured 2026-08-21 on a real transcript: boundary 13:20:19 at
+  file pos 295, its /compact 13:18:11 at pos 298). File order lies; a naive replay draws
+  "Conversation compacted" above the bubble that triggered it. Reorder by ANCHOR (`DisplacedAnchor`
+  in SessionStore.kt), never by a global timestamp sort — decisions 2026-08-21 has the four
+  reasons a global sort is wrong.
 - **Live wire and transcript disagree in SPELLING and in ORDER for the same events.** Field names and
   even TYPES differ; the file order of late-flushed records lies while timestamps + the `parentUuid`
   chain stay chronological. Accept both spellings on both paths; trust timestamps over file position.
@@ -470,6 +477,14 @@ re-read those before trusting memory here.
   serves the STALE stylesheet — a CSS fix measured that way reads as "no effect".
 
 ## Testing, probes and sandboxes
+- **The old VS Code extension dir is DELETED on auto-update — the local `vscode/` extraction is the
+  only diff base you will ever have.** 2026-08-26: `~/.vscode/extensions/` held only 2.1.246; the
+  2.1.241→2.1.246 contributions/tool-roster diff was possible solely because `vscode/` (gitignored)
+  still held 2.1.241. Re-extract to the current version right AFTER an audit, so the next one has a
+  base. CLI versions, by contrast, stay on disk under `~/.local/share/claude/versions/`.
+- **`2>&1 > file` splits gradle's streams** (stderr stays on the terminal) — write `> file 2>&1`.
+  And background Bash tasks start in the REPO ROOT, not the shell's cwd: `./gradlew` from a
+  backgrounded command fails with "no such file" unless the command `cd plugin`s itself.
 - **`runIde` can exit 0 in ~2s with no window right after a clean sandbox kill — with NO orphan.**
   Seen twice 2026-08-24/25: both process layers verified dead, yet the next launch's `Task :runIde`
   completed instantly (BUILD SUCCESSFUL, no CDP). A plain retry launched fine both times. Distinct
