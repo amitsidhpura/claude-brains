@@ -3,6 +3,37 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-26 — effort moves into the model menu, and three chip suffixes later it hides
+
+- **Effort slider MOVED from the mode menu's `.popup-f` into `#modelFooter`** as its last row,
+  below the 1M / fast / thinking switches; model popup header renamed "Select a model" → **Models**.
+  `#modeMenu` now holds nothing but modes. Mirrored in `design/mockup.html`.
+- **The level's chip suffix went through three forms in one session** — mode chip `(High)` →
+  model chip `(High)` → model chip `· High` → **no chip at all**. The user rejected two bracket
+  groups from a screenshot (`Default (Opus 5) (High)`), so six candidates were injected as real
+  `.chip-btn` nodes INSIDE `#inputbar` and screenshotted over CDP; the middot won, then was itself
+  rejected — "better is to hide effort". Final: `setModelChip` is byte-identical to its old body,
+  and `syncModelChip`/`currentEffort`/`.chip-sep` are gone. See decisions.
+- `.ef-row` is deliberately NOT `.tgl-row` so fixture 55 keeps counting exactly three TOGGLE rows.
+- **Fixture 51 retargeted + renamed** `51-mode-menu-effort-rail.json` → `51-model-menu-effort-rail.json`.
+  Its old text-delta contract DIED: model rows have no `.pi-ic` to measure against, so it would
+  have been vacuous. Now pins the moved row's icon against the 1M row's and inherits the model-title
+  rail from fixture 55 by transitivity. Step 3 pins the ABSENCE of the level on both chips.
+- **Three negative controls RUN**, each build verified BY CONTENT first: HEAD (10 pass / 7 fail),
+  the rejected middot build (15/2 — only the model-chip asserts), the rejected bracket build.
+  They are complementary: HEAD leaves the model-chip asserts passing, middot leaves the mode-chip
+  one passing. No assert passed in every build. Live 462 → **467**, unit **116**.
+- **Article claim triaged, three ways.** "Model-dependent controls will silently do nothing":
+  (a) the structural half was already satisfied by this session's move; (b) the Haiku half was
+  REFUTED by the user's own screenshot — haiku carries none of `supportsEffort`/
+  `supportedEffortLevels`/`supportsAdaptiveThinking` yet accepts `/effort max` and streams
+  thinking, so the gate I proposed would have broken working controls; (c) the **Fable half was
+  CONFIRMED** by a controlled headless probe — `set_max_thinking_tokens 0` returns success and
+  fable still streams a thinking block, identical to the control run. Documented, not fixed.
+- Gotchas hit: a relaunched sandbox served the PREVIOUS build's bytes while its own sandbox file
+  was already correct — caught only by the by-content check. And `runIde` detaches: gradle exits
+  0/1 while the IDE keeps running, so the task "failing" says nothing about the IDE.
+
 ## 2026-08-25 (third) — 0.11.0 goes out
 - **Released 0.11.0** (`4c8899b`, tag `v0.11.0`): effort confirmation line (new), custom-model
   checkmark + ×-overlay fixes, /model-/effort resume parity + title fix. Minor bump: one new
@@ -268,35 +299,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   `> file 2>&1`. And background Bash tasks start in the repo root, not the shell's cwd.
 - Next: unchanged backlog; both 2026-08-21 fixes committed together, still unreleased.
 
-## 2026-08-21 — "File not found" on a path that was right there
-- User report (Windows, PhpStorm, project `D:\sites\metrobuildsuppliers`): clicking the path on a
-  `Read` line raised the plugin's "File not found" balloon for a screenshot in `_local/`.
-- The balloon itself cleared the wire: `notifyMissing` prints the RAW path it received, and it
-  showed the full correct absolute path — so the click, the `dataset.path` round-trip and the
-  bridge were all fine, and only the lookup had failed. Diagnosing from the error text saved
-  chasing the webview.
-- Root cause: `findVFile` → `LocalFileSystem.findFileByPath` reads the VFS snapshot, not the disk.
-  Not Windows-specific at all; the user just hit the window there.
-- **Reproduced on Linux against the USER'S LIVE PhpStorm** by talking to its own MCP bridge
-  (lock file → WebSocket → `tools/call`), using read-only `checkDocumentDirty` so nothing opened
-  in their IDE: a file created at the project root seconds earlier answered "not found" while
-  pre-existing `index.php` resolved. Re-probed ~2 min later: both resolved — a staleness window.
-- Fix: `findVFileOnDisk` (snapshot → `refreshAndFindFileByPath`) on the two "open this path"
-  callers only; read-locked callers must not refresh (deadlock). See decisions + gotchas.
-- Verified in a sandbox (`runIde --args=<testRepo>`, which skips all GUI clicking) with a
-  three-call discriminating run at one instant: snapshot lookup "not found" / fixed lookup
-  "opened" / absent path still "not found". Then drove the user's ACTUAL path — `__bridge`
-  `{kind:'open'}` over CDP — and `getOpenEditors` confirmed the file opened; ghost path opened
-  nothing. gradle test 107, compile clean.
-- Cross-checked by a second model (Fable) at the user's request: threading triage re-derived from
-  the code (`Threads.kt` `readLocked` = `runReadAction`; the `open` branch takes no lock), full
-  caller sweep, verdict ship. It also noted the failure path now attempts two refreshes on a
-  missing absolute path (harmless, pre-existing fallback shape) — left alone.
-- Sandbox CDP port gotcha AGAIN: `-PjcefDebugPort=9223` on the command line, CDP served on 9222.
-  Identify the panel by content (`/json/list` title), never by the port you asked for.
-- Next: unchanged backlog; the fix is uncommitted-then-committed this session and NOT released.
-
 ## Digest
+- **2026-08-21** — "File not found" on a live path: `LocalFileSystem.findFileByPath` reads the VFS
+  SNAPSHOT, not disk (not Windows-specific). Reproduced against the user's LIVE PhpStorm via its own
+  MCP bridge using read-only `checkDocumentDirty`; fixed with `findVFileOnDisk` (refresh) on the two
+  "open this path" callers only — read-locked callers must not refresh (deadlock). Lessons live in
+  gotchas (VFS staleness, sandbox CDP port ≠ the port you asked for) and decisions 2026-08-21.
 - **2026-08-19 (second)** — 0.8.0 released (`dce3600`: aliases, autosave hook, roster reload,
   close_tab, lock sweep; webview split rides unadvertised); verifier ×7 clean, Approved same day;
   plugin.xml description un-staled (web description stays hand-edited — user errand); Marketplace

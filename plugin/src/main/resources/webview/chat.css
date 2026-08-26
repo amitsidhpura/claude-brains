@@ -1149,10 +1149,15 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .effort .d.cur { transform: scale(1.5); background: var(--accent); }
 .effort:hover .d { background: #5a5d63; }
 .effort:hover .d.on { background: var(--accent); }
-/* model-menu footer: the .popup-f idiom stacked — three label+switch rows behind the footer's
-   one top border. Labels ride the .ef-label rail (20px svg slot) so they line up with .pi-title. */
+/* model-menu footer: the .popup-f idiom stacked — three label+switch rows plus the effort
+   slider behind the footer's one top border. Labels ride the .ef-label rail (20px svg slot) so
+   they line up with .pi-title. Effort MOVED here from the mode menu's own .popup-f on
+   2026-08-26 (user request): the level belongs with the model it applies to, and #modeMenu now
+   holds nothing but modes. .ef-row is deliberately NOT .tgl-row — it carries a dot slider, not
+   a switch, and keeping the two class names apart is what lets fixture 55 go on counting the
+   toggle rows while fixture 51 measures this one. */
 .pf-stack { flex-direction: column; align-items: stretch; gap: 10px; }
-.tgl-row { display: flex; align-items: center; justify-content: space-between; }
+.tgl-row, .ef-row { display: flex; align-items: center; justify-content: space-between; }
 /* toggle switch — first switch idiom in the panel: 28×16 pill track, 12px knob sliding on .on.
    Colors from tokens only: off track is a fg/user-bg mix, on track the accent; the knob keeps
    var(--fg) in both states (enough contrast on the orange, and no new colour constants). */

@@ -1,0 +1,110 @@
+{
+ "item": "UI — model-menu footer rail + effort shown only in the popup (2026-08-16, moved 2026-08-26)",
+ "branch": "the effort row rides the same left rail as the other #modelFooter labels, its longest level renders on one line, and the level appears on NEITHER chip",
+ "provenance": "Pure CSS/DOM geometry — no wire frames, so this fixture asserts only what the STYLESHEET and the chip writer must produce, never anything about the CLI. RETARGETED 2026-08-26: the effort slider MOVED out of the mode menu's .popup-f into the model menu's #modelFooter (user request), so every selector here moved with it — #modeMenu/#modeChip became #modelMenu/#modelChip, and the row is `.ef-row`, deliberately not `.tgl-row` so fixture 55 can go on counting exactly three toggle rows. WHAT STEP 1 MEASURES NOW, and why it changed shape: in the mode menu the rail was provable directly, because mode rows carry a .pi-ic slot the label could be compared against. Model rows have NO .pi-ic (fixture 55 states this), so the old textDelta/iconDelta-vs-.pi-ic arithmetic has nothing to measure against and would be vacuous. Step 1 instead pins the moved row against the three rows it joined: its icon's left edge must coincide with the 1M row's, and it must take the same 20px flex-basis slot. The model-TITLE rail is not re-measured here on purpose — fixture 55 already pins `#modelFooter .ef-label` svg.left == a model .pi-title left for the first footer row, and a shared left edge is transitive, so duplicating it here would be a second copy that can only drift. This also keeps the fixture roster-independent: it needs no injected model list. THE ARITHMETIC IT INHERITS, measured in the real panel 2026-08-17: `#inputbar svg { width:18px; height:18px }` is an ID rule and BEATS `.ef-label svg { width:15px; height:15px }`, so the declared size is dead inside the composer and every icon there renders an 18px GLYPH. The rail works because flex-basis is a property that ID rule does not set: `flex: 0 0 20px` gives the svg a 20px SLOT while the glyph stays 18. Both are asserted, and the pair is the point — a build that lost the flex-basis would read slot 18, glyph 18. STEP 2 (added 2026-08-19, kept verbatim but retargeted): user screenshot — 'Very High' wrapped to two lines with the row half empty. Measured live over CDP: JCEF gives the <b>'s flex base 53px against a 55px max-content, so only the one two-word level wrapped; desktop Chrome on the same markup+CSS keeps it to one line, which is why design/mockup.html could never show it. Fix is a single declaration — white-space: nowrap on .ef-label. NEGATIVE CONTROL 2026-08-19: run against the sandbox still serving the pre-fix chat.css, the discriminating assertion failed with bH 37; on the fixed stylesheet it reads 19. STEP 3 is NEW 2026-08-26 and is the one that pins the MOVE rather than the layout: the level now trails the model chip as '(Very High)' and must NOT trail the mode chip, because a chip has to label the popup it opens. Pre-move the two assertions are exactly inverted, so this step discriminates in both directions on its own. The menu is opened by CLICKING THE CHIP, not by adding .show by hand — a force-shown popup skips tg()'s positioning (2026-08-16 gotcha) — and closeMenus() runs inside the same setup so a failure cannot leave a menu open over later fixtures. Deltas are rounded: the panel sits at a fractional x, so raw lefts carry .39px and only the DIFFERENCE is exact. SEPARATOR CHANGED 2026-08-26, same day: the first implementation used '(<level>)' and the user rejected it from a screenshot — 'Default (Opus 5) (High)', two bracket groups. Six candidates (two brackets / middot / merged bracket / muted word / icon+level / no suffix) were injected as real .chip-btn nodes INSIDE #inputbar — so the 18px svg ID rule and the 6px inline-flex gap applied exactly as on the live chip — and screenshotted over CDP; the middot won. Step 3's asserts moved with it and gained a fourth that fails on the bracketed form specifically. FINAL FORM 2026-08-26: the chip suffix was REMOVED altogether. The bracketed form was rejected from a screenshot ('Default (Opus 5) (High)', two bracket groups), the middot form that replaced it was picked from a six-candidate render and then also rejected — 'better is to hide effort'. So the level now displays in exactly one place, the popup's own 'Effort <b>' label, and step 3 pins the ABSENCE on both chips rather than the presence on one. That inverts what step 3 asserted in its two earlier revisions, which is the point: it now fails against the original layout (level on the mode chip) AND against both rejected candidates (level on the model chip, bracketed or middot). Its first assert is a GUARD on #efName precisely because absence-asserts are the shape that passes vacuously — without a positive check that the slider moved at all, three '=== -1' assertions would go green on a dead fixture. THREE NEGATIVE CONTROLS, ALL RUN 2026-08-26 against the FINAL assertions, each build verified BY CONTENT before the fixture was run. (a) Whole plugin/src/main/resources/webview/ restored to HEAD via git stash — header 'Select a model', no .ef-row, #modeMenu #effort present, modeChip 'Auto (High)': 10 passed, 7 FAILED — all five of step 1's real asserts (the row does not exist: efLeft/iconDelta/svgSlot/glyph all null, rowIsLast false), step 2's height assert (bH 0 — pre-move #efName sits in the CLOSED mode menu, so the rect collapses rather than wrapping to the 37 its 2026-08-19 wording cites), and step 3's MODE-chip assert. (b) The rejected MIDDOT candidate rebuilt — syncModelChip restored, .chip-sep re-added, effort row left in place, modelChip 'Default (Opus 5) · High': 15 passed, 2 FAILED, exactly step 3's two MODEL-chip asserts. (c) The rejected BRACKET candidate, run earlier against the same step-3 shape, modelChip 'Default (Opus 5) (High)'. Controls (a) and (b) are complementary by design and the split is the evidence: (a) leaves the model-chip asserts passing because HEAD's model chip never carried a level, (b) leaves the mode-chip assert passing because that candidate had already bared the mode chip. Between them every DISCRIMINATING assert in this fixture has been shown to fail against a build lacking the thing it names, and no assert passed in every build.",
+ "steps": [
+  {
+   "note": "the moved effort row shares the other footer labels' left rail",
+   "setup": "window.__rail = (function () { document.getElementById('modelChip').click(); const pop = document.getElementById('modelMenu'); const efLbl = pop.querySelector('#modelFooter .ef-row .ef-label'); const tgLbl = pop.querySelector('#modelFooter .tgl-row .ef-label'); const ef = efLbl && efLbl.querySelector('svg').getBoundingClientRect(); const tg = tgLbl && tgLbl.querySelector('svg').getBoundingClientRect(); const out = { display: getComputedStyle(pop).display, rowIsLast: !!(efLbl && efLbl.closest('.ef-row') === pop.querySelector('#modelFooter > :last-child')), efLeft: ef ? ef.left : null, iconDelta: (ef && tg) ? Math.round(ef.left - tg.left) : null, svgSlot: ef ? Math.round(ef.width) : null, glyph: ef ? Math.round(ef.height) : null }; closeMenus(); return out; })();",
+   "expect": [
+    {
+     "js": "window.__rail.display",
+     "equals": "block",
+     "why": "GUARD: the popup is really laid out — every measurement below is void otherwise"
+    },
+    {
+     "js": "window.__rail.efLeft > 0",
+     "equals": true,
+     "why": "GUARD: and positioned, so these are real rects and not a collapsed 0x0 (null pre-move — the .ef-row does not exist in the model footer)"
+    },
+    {
+     "js": "window.__rail.rowIsLast",
+     "equals": true,
+     "why": "DISCRIMINATING: the effort row is the LAST child of #modelFooter — below the three switches, which is where it was asked to sit"
+    },
+    {
+     "js": "window.__rail.iconDelta",
+     "equals": 0,
+     "why": "DISCRIMINATING: its icon's left edge coincides with the 1M row's, i.e. the moved row landed on the footer rail (null pre-move)"
+    },
+    {
+     "js": "window.__rail.svgSlot",
+     "equals": 20,
+     "why": "DISCRIMINATING: the svg takes the 20px flex-basis slot that makes the rail work (18 if a build ever loses `flex: 0 0 20px`)"
+    },
+    {
+     "js": "window.__rail.glyph",
+     "equals": 18,
+     "why": "GUARD: the GLYPH stays 18px — it comes from `#inputbar svg` (ID beats .ef-label svg), so the rail must not have resized the icon"
+    },
+    {
+     "js": "document.getElementById('modelMenu').classList.contains('show')",
+     "equals": false,
+     "why": "GUARD: the menu was closed again, so it cannot cover a later fixture's assertions"
+    }
+   ]
+  },
+  {
+   "note": "the longest effort label renders on one line, in its new home",
+   "setup": "window.__wrap = (function () { document.getElementById('modelChip').click(); const pop = document.getElementById('modelMenu'); const nameEl = document.getElementById('efName'); const prev = efDots.findIndex(function (d) { return d.classList.contains('cur'); }); setEffortUI(3); const r = nameEl.getBoundingClientRect(); const out = { display: getComputedStyle(pop).display, label: nameEl.textContent, bH: Math.round(r.height), bW: Math.round(r.width), modelChipText: document.getElementById('modelChip').textContent, modeChipText: document.getElementById('modeChip').textContent }; setEffortUI(prev >= 0 ? prev : 2); out.restored = nameEl.textContent; closeMenus(); return out; })();",
+   "expect": [
+    {
+     "js": "window.__wrap.display",
+     "equals": "block",
+     "why": "GUARD: the popup is really laid out — the height below is void otherwise"
+    },
+    {
+     "js": "window.__wrap.label",
+     "equals": "Very High",
+     "why": "GUARD: the measurement is of the one two-word level, driven through setEffortUI"
+    },
+    {
+     "js": "window.__wrap.bH > 0 && window.__wrap.bH <= 24",
+     "equals": true,
+     "why": "DISCRIMINATING: one line (~19px); pre-fix JCEF wrapped it to 37px — desktop Chrome never did, which is why the mockup could not catch this"
+    },
+    {
+     "js": "window.__wrap.restored !== 'Very High' || window.__wrap.label === window.__wrap.restored",
+     "equals": true,
+     "why": "GUARD: the slider went back to the level it was on — the fixture must not change panel state"
+    },
+    {
+     "js": "document.getElementById('modelMenu').classList.contains('show')",
+     "equals": false,
+     "why": "GUARD: the menu was closed again, so it cannot cover a later fixture's assertions"
+    }
+   ]
+  },
+  {
+   "note": "the level shows only on #efName — neither chip carries it",
+   "setup": "window.__suffix = (function () { document.getElementById('modelChip').click(); const pop = document.getElementById('modelMenu'); const nameEl = document.getElementById('efName'); const prev = efDots.findIndex(function (d) { return d.classList.contains('cur'); }); setEffortUI(3); const r = nameEl.getBoundingClientRect(); const out = { display: getComputedStyle(pop).display, label: nameEl.textContent, bH: Math.round(r.height), bW: Math.round(r.width), modelChipText: document.getElementById('modelChip').textContent, modeChipText: document.getElementById('modeChip').textContent }; setEffortUI(prev >= 0 ? prev : 2); out.restored = nameEl.textContent; closeMenus(); return out; })();",
+   "expect": [
+    {
+     "js": "window.__suffix.label",
+     "equals": "Very High",
+     "why": "GUARD: the level really did change — `label` is #efName's text right after setEffortUI(3), the popup's own surface. Without it the three '=== -1' asserts below would pass on a slider that never moved, which is exactly how an absence-test goes vacuous."
+    },
+    {
+     "js": "window.__suffix.modelChipText.indexOf('Very High') === -1",
+     "equals": true,
+     "why": "DISCRIMINATING: the MODEL chip carries no level. Fails against BOTH rejected candidates — the bracketed 'Default (Opus 5) (High)' and the middot 'Default (Opus 5) · High' (user, 2026-08-26: 'better is to hide effort')"
+    },
+    {
+     "js": "window.__suffix.modelChipText.indexOf('·') === -1",
+     "equals": true,
+     "why": "DISCRIMINATING: and no separator was left behind — pins the middot candidate's removal specifically, which the level-word assert alone would miss if a bare '·' survived"
+    },
+    {
+     "js": "window.__suffix.modeChipText.indexOf('Very High') === -1",
+     "equals": true,
+     "why": "DISCRIMINATING: nor does the MODE chip — pre-move it read e.g. 'Manual (Very High)', so this fails against the original layout too"
+    },
+    {
+     "js": "document.getElementById('efName').textContent === window.__suffix.restored",
+     "equals": true,
+     "why": "GUARD: the restore ran — the slider is back on the level the panel had before this fixture"
+    }
+   ]
+  }
+ ]
+}

@@ -1,31 +1,28 @@
 # State
 
 ## Current focus
-**2026-08-25 (fourteenth session): model-menu polish + command-turn parity — five fixes,
-released as 0.11.0 at the session's end.**
-- **Custom model rows show the selection ✓** (fixture 57): `renderModels()` (30-menus.js) emits
-  `.pi-check` on EVERY row; a custom row's remove × lives INSIDE the check span, overlaying the
-  ✓'s box (`inset`), with `#inputbar .model-del{padding:0}` killing the ID-rule padding squeeze.
-  Hover swaps ✓ → × (`#modelMenu .popup-item.custom:hover .pi-check`). NO offset math near
-  #inputbar — gotchas § Webview/CSS.
-- **Chip/slider command turns draw ONE confirmation line, no bubble, live AND resumed**
-  (decisions 2026-08-25): `cleanInjected` (SessionStore.kt) drops exactly {`/model`, `/effort`}
-  wrappers (the CLI writes a command trio to disk for the chip's `set_model` and the slider's
-  `/effort` — gotchas § Protocol); the `effortMuted` gate (70-events.js) draws the /effort
-  confirmation from the CLI's SYNTHETIC assistant frame (the normal path stashes synthetic text
-  into `syntheticEcho`, draws nothing). Titles can no longer become "/model haiku".
-  Supersedes the 2026-07-30 /effort audit-trail acceptance.
-- Docs synced: renderer-parity.md (two closed rows + superseded row), slash-commands.md § the
-  /model-/effort paragraph, feature-checklist §16.2.
+**2026-08-26 (fifteenth session): the effort slider moved into the MODEL menu, and its level is
+now displayed on no chip at all. UNCOMMITTED — see "Ready to commit" below.**
+- **Effort slider is the last row of `#modelFooter`** (`plugin/src/main/resources/webview/chat.html`),
+  under the 1M context / Fast mode / Thinking switches. `#modeMenu` has no `.popup-f` any more —
+  it holds modes only. Model popup header renamed "Select a model" → **Models**.
+- **No chip shows the effort level.** `setModelChip` (30-menus.js) is byte-identical to its
+  pre-session body; `syncModelChip`, `currentEffort` and `.chip-sep` were built and then removed.
+  Chips read `✨ Default (Opus 5)` and `</> Auto`. Three suffix forms were rendered and rejected —
+  decisions 2026-08-26. **Do not re-propose a chip suffix.**
+- `.ef-row` is deliberately NOT `.tgl-row` (chat.css): the effort row carries a dot slider, not a
+  switch, and separate names keep fixture 55's "exactly three toggle rows" count honest.
+- `design/mockup.html` mirrored — markup AND its own copy of the slider JS (its `renderModeChip`
+  was still appending `(High)` on click; static markup alone would have hidden that).
 
-## Released — 0.11.0 (2026-08-25)
-**0.11.0 is the shipped version** (tag `v0.11.0`, commit `4c8899b`). Contents: effort
-confirmation line, custom-model checkmark + ×-overlay, /model-/effort resume parity + title
-fix. `verifyPlugin` ran BEFORE the gate (Compatible ×7, 0 warnings — after catching a silent
-non-run, gotchas § Build). GitHub release + feed + Marketplace all green; asset byte-identical;
-Marketplace **Approved** (user's dashboard, all checks Success incl. the IDE-run check).
-Nothing is unreleased on `main`. Next release is a fresh bump when work lands. (0.10.0 shipped
-earlier the same day: footer switches, 1M reconcile, API-error single-render.)
+## Ready to commit (nothing else is in flight)
+Working tree, all verified, **not committed**:
+`plugin/src/main/resources/webview/{chat.html,chat.css,js/30-menus.js}` · `design/mockup.html` ·
+`docs/{feature-checklist.md,manual-test.md}` · `.claude/context/gotchas.md` ·
+`tools/fixtures/55-model-menu-toggles.json` · fixture 51 RENAMED
+`51-mode-menu-effort-rail.json` → `51-model-menu-effort-rail.json` (use `git mv`/staged rename).
+**0.11.0 is the shipped version** (tag `v0.11.0`, commit `4c8899b`); this work is unreleased and no
+release was requested. Next release = a fresh bump when the user asks.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - 🟥 high rows left: **3.5** tweak-travel [LG] · **8.7** rewind/fork [LG] · **8.11** side
@@ -33,28 +30,30 @@ earlier the same day: footer switches, 1M reconcile, API-error single-render.)
   kill-background-process [MD, `stop_task` accepted].
 - **Seven [DECIDE] rows** await the user: 8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2.
 - `/clear [name]` decision still open (checklist 7.6); `docs/slash-commands.md` still documents
-  CLI 2.1.233 (installed CLI is **2.1.245** now).
+  CLI 2.1.233 — installed CLI is **2.1.246** now.
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **462** (fixtures to 58); `./gradlew test` **116**.
-- Fixture 57 = custom-row tick + ×/✓ overlay geometry (8 asserts incl. center AND size equality
-  — symmetric shrink passes center asserts alone); fixture 58 = /effort confirmation through the
-  effortMuted gate (6 asserts, VERBATIM measured frames). Negative controls all RUN.
-- Unit test `model and effort changes replay as confirmation lines, not command bubbles`
-  (SessionStoreTest) pins the wrapper drop list, the surviving confirmations, and the title.
-- Sandbox **PhpStorm 2024.2.6**, dir `build/idea-sandbox/PS-2024.2.6/`; start:
+- `python3 tools/live_harness.py` baseline **467** (was 462; fixture 51 gained 4 asserts, then
+  step 3 was rewritten and gained 1 more); `./gradlew test` **116**.
+- Fixture 51 = `51-model-menu-effort-rail.json`. Its old text-delta contract is DEAD (model rows
+  have no `.pi-ic` to measure against — it would be vacuous). It now pins the moved row's icon
+  against the 1M row's, inherits the model-title rail from fixture 55 by transitivity, and step 3
+  pins the ABSENCE of the level on BOTH chips. Three negative controls are recorded in its
+  provenance; read that before changing any assert.
+- Sandbox **PhpStorm 2024.2.6**; start (must run from `plugin/`):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
-  --args="$HOME/Sites/claude-brains-testing"`. Kill IDE by pid (`pgrep -f
-  'idea.system.pat[h]'`), `pkill -f 'run[I]de'` gets only gradle; a relaunch right after a
-  clean kill can exit 0 in ~2s — retry once (gotchas § Testing).
-- Verify builds BY CONTENT over CDP before trusting a run; control builds restore the WHOLE
-  `plugin/src/main/resources/webview/` directory. Headless CLI probes run in
-  `~/Sites/claude-brains-testing` (this session: the /effort wire vs disk measurement).
+  --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle exits 0 or 1 while
+  the IDE keeps running, so the background task "failing" says nothing; check
+  `pgrep -f 'idea.system.pat[h]'`. Kill by pid, then wait for CDP to disappear, not just the pid.
+- **ALWAYS verify the running build BY CONTENT over CDP before trusting a fixture run** — a
+  relaunch served the PREVIOUS build's bytes while its own sandbox file was already correct
+  (gotchas § Testing, added this session).
+- Control builds restore the WHOLE `plugin/src/main/resources/webview/` directory.
 
 ## Next steps
-- [ ] Get yes / later / no on the **seven [DECIDE]** rows (8.7, 8.10, 8.11, 12.3, 12.6, 13.2,
-      14.2).
-- [ ] Decide `/clear [name]` (checklist 7.6); sync `docs/slash-commands.md` to 2.1.245.
+- [ ] **Commit + push the working tree** (the user asked for this at the 2026-08-26 save).
+- [ ] Get yes / later / no on the **seven [DECIDE]** rows (8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2).
+- [ ] Decide `/clear [name]` (checklist 7.6); sync `docs/slash-commands.md` to 2.1.246.
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts → reloaded-webview
       log replay (**8.14**) → kill-background-process (**11.3**) → tweak-travel (**3.5**).
 - [ ] Sync the **Marketplace web description** (hand-edited; uploads don't refresh it).
@@ -63,12 +62,15 @@ earlier the same day: footer switches, 1M reconcile, API-error single-render.)
       line 1 is exactly `---`); Windows `./gradlew test` + VFS click check.
 
 ## Known gaps (deliberately left)
-- Effort/model conversation MARKERS dropped 2026-08-24 — superseded IN PART 2026-08-25: /effort
-  now shows the CLI's confirmation line (user's own reversal); the marker-style display and the
-  model half stay dropped. Confirm-card path wrapping declined 2026-08-24 — do not re-propose.
-- Typing `/model` in the composer is refused (`cmdKind` → 'tui'); the chip is the only model
-  surface. A typed `/model` in a TUI session resumes without its bubble too (stdout line stays).
-- 1M switch on Fable is a near-no-op by design. Fast-mode "· fast" marker parked (backlog).
+- **The Thinking switch is INERT on Fable** — `set_max_thinking_tokens 0` is accepted but fable
+  still streams thinking (measured 2026-08-26). "Document only" by user decision; do not gate it.
+- **Do not gate UI on roster capability flags.** haiku carries none of `supportsEffort` /
+  `supportedEffortLevels` / `supportsAdaptiveThinking` yet both controls work there. Only
+  `supportsFastMode` is gated, and only because delivery was probed. Gotchas § Protocol.
+- Effort/model conversation MARKERS dropped 2026-08-24 (partly superseded 2026-08-25: /effort now
+  shows the CLI's confirmation line). Confirm-card path wrapping declined — do not re-propose.
+- Typing `/model` in the composer is refused (`cmdKind` → 'tui'); the chip is the only model surface.
+- 1M switch carries NO client-side validity logic, by decision. Fast-mode "· fast" marker parked.
 - 5.6 keyboard-only comment pill; plan-card keyboard shortcuts deferred 2026-08-16;
   `DiffReview.open` snapshot-only lookup parked; `/batch` verified at N=2 only.
 

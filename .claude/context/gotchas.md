@@ -35,6 +35,21 @@ re-read those before trusting memory here.
 - **The registry's `context.supports_1m_suffix` does NOT mean a `[1m]` alias exists** — haiku-4-5
   carries it `true` while the alias whitelist (`sonnet[1m]`/`opus[1m]`/`fable[1m]`) has no haiku.
   The alias list is the operative fact; the registry flag is parser tolerance.
+- **A missing roster capability flag does NOT mean the control is dead.** Measured 2026-08-26
+  (CLI 2.1.246): `haiku` alone carries NONE of `supportsEffort` / `supportedEffortLevels` /
+  `supportsAdaptiveThinking` — yet with haiku selected, `/effort max` is ACCEPTED with the CLI's
+  full confirmation line, and the next turn emits a real thinking block. The flags say what a
+  model menu should OFFER as a per-model sub-control; `/effort` is a session-global setting
+  ("this session only") that any model accepts. Gating the effort slider or the Thinking switch
+  on them would have DISABLED two controls that visibly work — a regression dressed as a fix.
+  `supportsFastMode` is the one flag we gate on, and only because delivery was probed separately
+  (entry below). The INVERSE holds too: a PRESENT flag does not prove the control works —
+  `supportsAdaptiveThinking` is true for fable, yet `set_max_thinking_tokens 0` on fable returns
+  success and the next turn STILL streams a thinking block (measured 2026-08-26 against a
+  same-prompt control run; on default/Opus the same 0 verifiably kills thinking, 9.5's 2026-08-24
+  check). Thinking cannot be turned off on fable, and no roster field says so. Either direction:
+  before gating or trusting any UI on a roster flag, drive the control on the model in question
+  and watch what actually streams.
 - **Fast mode has TWO gates and one ground truth**: `apply_flag_settings{fastMode:true}` clears
   only the SDK gate (`sdk_opt_in_required`); the account gate remains (`extra_usage_disabled` =
   extra usage off in the subscription). Whether a given turn actually ran fast is
@@ -355,10 +370,15 @@ re-read those before trusting memory here.
   grew its own `.popup-f` footer (2026-08-24), fixture 51's bare `.popup-f .ef-label` matched the
   CLOSED model menu first — 0×0 rects, all four asserts failed including the glyph GUARD reading 0.
   querySelector returns document order, and `#inputbar` holds several popups; write
-  `#modeMenu .popup-f …`, and expect this class of break whenever an idiom is duplicated.
+  `#modelMenu .popup-f …`, and expect this class of break whenever an idiom is duplicated.
+  (The fixture is `51-model-menu-effort-rail.json` since 2026-08-26, when the effort slider moved
+  INTO the model footer — the same scoping lesson, now pointed the other way.)
 - **The model menu's rows have NO `.pi-ic` slot** (unlike the mode menu), so its titles start at
   the 14px popup padding and the footer rail contract is icon-left == title-left — the label TEXT
-  sits 30px right of the titles by design. Fixture 51's text-delta contract is mode-menu-only.
+  sits 30px right of the titles by design. The text-delta contract was mode-menu-only and DIED
+  2026-08-26 when the effort slider moved into the model footer: with no `.pi-ic` to measure
+  against it would have been vacuous, so fixture 51 now pins the moved row's icon against the 1M
+  row's instead, and inherits the title rail from fixture 55 by transitivity.
 - **`.turn-body`'s paint containment eats anything drawn OUTWARD, and it has bitten twice** (card menu as
   a clipped sliver; the in-flight ring as a cut half-rectangle — ring left edge x=8 against a turn box
   starting at x=14). Containment blocks HIT-TESTING too, so clipped elements still pass querySelector and
@@ -470,6 +490,15 @@ re-read those before trusting memory here.
 - **A sandbox launched BEFORE a CSS/JS edit is a free pre-fix build** — resources are spliced at page
   load, so the running panel still serves the old bytes. Run a new fixture's negative control against it
   before asking for the restart. Only works for resource changes; Kotlin needs a rebuild.
+- **A sandbox launched AFTER an edit can STILL serve the old bytes — verify by CONTENT, every
+  time.** The mirror image of the entry above, and it looks like a successful restart: 2026-08-26
+  a relaunch reported the panel up in ~4s with the sandbox's own `30-menus.js` already correct on
+  disk, while the live page still rendered the PREVIOUS build (the removed `.chip-sep` span was
+  still in the DOM). The page had loaded before the resource copy landed. Nothing in the gradle
+  log says so — `BUILD SUCCESSFUL` covers it — so the ONLY reliable signal is querying the live
+  DOM for something the new build must have and the old one cannot. Kill, confirm CDP is gone
+  (not just the pid), relaunch, re-verify. A fixture run against an unverified relaunch proves
+  nothing about the build you think you are testing.
 - **`./gradlew runIde --args="<projectPath>"` opens the sandbox straight onto a project** — it is a plain
   JavaExec task, so no GUI clicking to get a bridge and a panel.
 - **The running IDE's own MCP bridge is a remote debugger for platform-API questions** — read port +

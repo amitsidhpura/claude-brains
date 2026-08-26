@@ -80,8 +80,12 @@
 - **UI changes go to `design/mockup.html` + `chat.css` FIRST**, shown as a render, and only wired
   into `chat.html` once the look is agreed. The user iterates visually and will hand back DevTools
   screenshots with the exact values they want — apply those verbatim rather than re-deciding.
-- When a visual choice is genuinely open (size, thickness, padding), **render the candidates side
-  by side** and let the user pick; do not iterate one guess at a time.
+- When a visual choice is genuinely open (size, thickness, padding, a LABEL), **render the
+  candidates side by side** and let the user pick; do not iterate one guess at a time. Render them
+  in the REAL panel, in the real ancestor — 2026-08-26 the six chip-label candidates were injected
+  as live `.chip-btn` nodes inside `#inputbar`, because the mockup and headless Chrome both get the
+  glyph size wrong there (the `#inputbar svg{18px}` ID rule). And expect the pick to be provisional:
+  the user chose the middot, then rejected it too — the answer was to drop the label entirely.
 - **Ship the safest candidate FIRST, then build the probe against it.** A probe is only honest if its
   columns drive a rule that is genuinely live — otherwise it compares copies of one. Landing the
   boring option (one already used elsewhere in the panel) means nothing novel ships ahead of the

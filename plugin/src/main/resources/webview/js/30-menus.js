@@ -136,7 +136,7 @@
   }
 
   /* ---------- mode picker ---------- */
-  let currentMode = 'manual', currentEffort = 'High';   // effort trails the mode name as "(High)"
+  let currentMode = 'manual';   // no effort suffix since 2026-08-26 — see setModelChip
   function syncModeUI() {
     // the composer's focus ring and Send button follow the mode — see #app[data-mode] in chat.css
     document.getElementById('app').dataset.mode = currentMode;
@@ -144,8 +144,11 @@
       item.classList.toggle('on', item.dataset.v === currentMode);
     });
     const cur = modeItemsEl.querySelector('.popup-item.on');
+    // the mode NAME only: the effort level used to trail it as "(High)", but the slider moved
+    // into the model menu's footer on 2026-08-26 and the level is no longer mirrored onto ANY
+    // chip — it shows on the popup's own "Effort <b>" label. See setModelChip.
     if (cur) modeChip.innerHTML = cur.querySelector('.pi-ic').innerHTML + ' ' +
-      esc(cur.querySelector('.pi-title').textContent + (currentEffort ? ' (' + currentEffort + ')' : ''));
+      esc(cur.querySelector('.pi-title').textContent);
   }
   Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
     item.addEventListener('click', function () {
@@ -185,28 +188,6 @@
       if (want !== currentMode) { currentMode = want; syncModeUI(); bridge({ kind: 'mode', mode: want }); }
     }
   }
-
-  /* ---------- effort slider (sends /effort <level>) ---------- */
-  const effortEl = document.getElementById('effort'), efName = document.getElementById('efName');
-  const efDots = Array.prototype.slice.call(effortEl.querySelectorAll('.d'));
-  function setEffortUI(i) {
-    efDots.forEach(function (d, n) { d.classList.toggle('on', n <= i); d.classList.toggle('cur', n === i); });
-    efName.textContent = efDots[i].dataset.l;
-    currentEffort = efDots[i].dataset.l; syncModeUI();   // reflect the level on the mode chip suffix
-  }
-  efDots.forEach(function (d, i) {
-    d.addEventListener('click', function (e) {
-      e.stopPropagation();
-      setEffortUI(i);
-      // there is no silent control request for the effort level, so it rides a /effort turn; mute
-      // that turn's UI except the CLI's own "Set effort level to …" confirmation, which the gate in
-      // onClaudeEvent draws as a block — an effort change shows like a model change (2026-08-25).
-      // Only when idle — mid-turn we couldn't tell the effort result apart from the real one.
-      if (!busy) effortMuted = true;
-      bridge({ kind: 'user', text: '/effort ' + d.dataset.v });
-    });
-  });
-  setEffortUI(2); // default: High
 
   /* ---------- model picker ---------- */
   let models = [], currentModel = null;
@@ -317,8 +298,13 @@
       setModel(cm.value);
     });
   }
-  // The one writer for the model chip — icon + label, label ESCAPED (custom model names are
-  // user input). Both callers (setModel, the CLI's model event) go through it so they can't drift.
+  // The one writer for the model chip — icon + label, label ESCAPED (custom model names are user
+  // input). All three callers (setModel, the CLI's model event, the retraction fallback) go
+  // through it so they can't drift.
+  // NO effort suffix, on this chip or the mode chip: the level shows ONLY on the model menu's own
+  // "Effort <b>" label. User decision 2026-08-26, after both a bracketed and a middot form were
+  // rendered in the real panel and rejected — "better is to hide effort". The chip is one fact
+  // wide, and the level is one click away in the popup that owns the slider.
   function setModelChip(label, title) {
     modelChip.innerHTML = SVG_SPARK + ' ' + esc(label);
     modelChip.title = title;
@@ -412,3 +398,27 @@
     };
   }
 
+  /* ---------- effort slider (sends /effort <level>) ----------
+     Lives in the MODEL menu's footer since 2026-08-26 (user request); it used to sit in the mode
+     menu's, and is kept next to the model picker here for the same reason. #efName is the ONLY
+     place the level is displayed — no chip carries it (see setModelChip). */
+  const effortEl = document.getElementById('effort'), efName = document.getElementById('efName');
+  const efDots = Array.prototype.slice.call(effortEl.querySelectorAll('.d'));
+  function setEffortUI(i) {
+    efDots.forEach(function (d, n) { d.classList.toggle('on', n <= i); d.classList.toggle('cur', n === i); });
+    efName.textContent = efDots[i].dataset.l;
+    // efName is the whole display: the level is deliberately not mirrored onto any chip
+  }
+  efDots.forEach(function (d, i) {
+    d.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setEffortUI(i);
+      // there is no silent control request for the effort level, so it rides a /effort turn; mute
+      // that turn's UI except the CLI's own "Set effort level to …" confirmation, which the gate in
+      // onClaudeEvent draws as a block — an effort change shows like a model change (2026-08-25).
+      // Only when idle — mid-turn we couldn't tell the effort result apart from the real one.
+      if (!busy) effortMuted = true;
+      bridge({ kind: 'user', text: '/effort ' + d.dataset.v });
+    });
+  });
+  setEffortUI(2); // default: High

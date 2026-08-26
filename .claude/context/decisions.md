@@ -4,6 +4,62 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-26 — Effort lives in the MODEL menu, and its level shows on NO chip
+
+The slider moved out of `#modeMenu`'s `.popup-f` into `#modelFooter` as its last row, under the
+1M / fast / thinking switches; the popup header became "Models". The level is displayed in exactly
+one place — the footer's own `Effort <b id="efName">` label.
+
+*Why:* the level applies to the model, so it belongs in the popup that picks one; a chip must label
+the popup it opens, or it advertises a control that is not there.
+
+*The suffix took three tries, all rendered before deciding.* Moving it to the model chip produced
+`Default (Opus 5) (High)` — two bracket groups, rejected on sight, because the model label already
+carries a parenthetical (`Default (Opus 5)`, `Opus (1M)`). Six candidates were then injected as real
+`.chip-btn` nodes INSIDE `#inputbar` — so the 18px svg ID rule and the 6px inline-flex gap applied
+exactly as on the live chip — and screenshotted over CDP: two-brackets / middot / merged-bracket /
+muted-word / icon+level / none. The middot `Default (Opus 5) · High` was picked, built, verified…
+and then also rejected: **"better is to hide effort"**. Final state drops the suffix entirely, and
+`setModelChip` is byte-identical to its pre-session body.
+
+*Rejected:* keeping `(High)` on the mode chip (points at a popup that no longer holds the control);
+the middot (still noise on a chip that is better one fact wide); an icon+level group (busier still).
+
+*Consequence:* `.ef-row` is deliberately NOT `.tgl-row` — it carries a dot slider, not a switch, and
+separate class names are what let fixture 55 keep counting exactly three TOGGLE rows while fixture 51
+measures the moved one.
+
+## 2026-08-26 — The Thinking switch stays live on Fable, with the no-op documented instead of gated
+
+`set_max_thinking_tokens {max_thinking_tokens: 0}` returns `success` on `claude-fable-5[1m]` and the
+next turn STILL streams a thinking block — measured against a same-prompt control run that produced
+an identical single block (CLI 2.1.246, headless probe with the panel's flags). The same 0 verifiably
+kills thinking on the default/Opus model (9.5's 2026-08-24 check). So the switch is inert on Fable.
+
+*Decision (user, "document only"):* no UI change. Recorded in `docs/feature-checklist.md` 9.5,
+`docs/manual-test.md` 3.5 ("KNOWN INERT, not a bug") and gotchas § Protocol.
+
+*Why not gate it:* no roster field discriminates Fable — `supportsAdaptiveThinking` is `true` for
+sonnet, opus AND fable alike — so gating would need a model-name sniff, a new idiom bought for one
+model's quirk. *Rejected:* disabling the switch on Fable; a warning-only tooltip.
+
+## 2026-08-26 — Roster capability flags do NOT gate the effort slider or the Thinking switch
+
+An article argued model-dependent controls would let users "toggle things that silently do nothing",
+and the CLI does send `supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking` that we
+ignore. Building the gate was proposed and then ABANDONED on evidence: with `haiku` selected — the
+one roster entry carrying none of those three flags — `/effort max` is accepted with the CLI's full
+confirmation line and the next turn emits a real thinking block (user's own screenshot, 2026-08-26).
+
+*Why:* the flags say what a model menu should OFFER as a per-model sub-control; `/effort` is a
+session-global setting ("this session only") that any model accepts. Gating on them would have
+DISABLED two controls that visibly work — a regression dressed as a fix. `supportsFastMode` remains
+the only flag we gate on, and only because delivery was probed separately.
+
+*Rejected:* rendering the dot count from `supportedEffortLevels` (every non-haiku model returns all
+five today; the shorter-list case could not be reproduced — no 4.6 models on this roster).
+*Standing and unchanged:* the 1M switch carries no client-side validity logic (2026-08-24).
+
 ## 2026-08-25 — Chip/slider command turns show ONE confirmation line, no bubble, live and resumed
 *Why*: the CLI writes a command trio (`isMeta` caveat + `<command-name>` wrapper +
 stdout/local_command confirmation) to the transcript for BOTH the chip's `set_model` control

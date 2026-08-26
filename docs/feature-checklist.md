@@ -268,7 +268,10 @@ auto-include selection, voice.
 ## 9. Model, effort, usage
 - **9.1** ✅ **Model chip** (from `initialize.models`, search + custom id) → `set_model`; persisted
       and re-applied on every restart
-- **9.2** ✅ **Effort slider** (low / medium / high / xhigh / max) — sends a muted `/effort` turn
+- **9.2** ✅ **Effort slider** (low / medium / high / xhigh / max) — in the model-menu footer
+      (`#modelFooter`, last row, under 9.9/9.5/9.4; moved out of the mode menu 2026-08-26, and the
+      mode chip's old "(<level>)" suffix was DROPPED rather than moved — the level shows only on
+      the footer's own "Effort <b>" label, on no chip) — sends a muted `/effort` turn
       because no `set_effort` control exists; the resumed transcript shows the turn (accepted
       audit trail). Watch-item RESOLVED 2026-08-23: `apply_flag_settings {settings:{effortLevel}}`
       is accepted over stdio and takes effect (`get_settings` shows the flag layer winning) — the
@@ -277,7 +280,7 @@ auto-include selection, voice.
 - **9.3** ✅ **Context gauge** ring on the composer — `modelUsage[].contextWindow` (a map, side
       models included), reset on compaction
 - **9.4** ✅ **Fast mode toggle** (decided + built 2026-08-24) — a switch in the model-menu footer
-      (`#modelFooter`, with 9.9 and 9.5), enabled only when the roster item says `supportsFastMode`
+      (`#modelFooter`, with 9.9, 9.5 and — since 2026-08-26 — 9.2), enabled only when the roster item says `supportsFastMode`
       (Opus family; lookup matches with `[1m]` stripped both sides so plain "opus" still gates
       right). Toggle sends `apply_flag_settings {settings:{fastMode:bool}}` — probed 2026-08-24:
       `true` clears the `sdk_opt_in_required` gate AND `false` reverts (`get_settings.effective`
@@ -291,7 +294,13 @@ auto-include selection, voice.
       `{max_thinking_tokens: null}` = reset to the session default — a DELIBERATE divergence from
       VS Code (which pins 31999 + display "summarized"): a hardcoded budget would silently cap
       models whose default differs. Verified live 2026-08-24: with 0 set, a real turn streams zero
-      thinking blocks. Pref persisted (`claudeCode.thinkingOff`), re-applied each CLI start;
+      thinking blocks — on the DEFAULT (Opus) model. **Fable ignores it** (measured 2026-08-26,
+      CLI 2.1.246, headless probe with the panel's flags: `set_max_thinking_tokens 0` returns
+      success, the next fable turn still streams a thinking block — identical to the control run
+      without it). The toggle is a silent no-op there; kept as-is by user decision 2026-08-26
+      ("document only" — no roster flag discriminates fable, `supportsAdaptiveThinking` is true
+      for sonnet/opus/fable alike, so gating would need a name sniff). Gotchas § Protocol.
+      Pref persisted (`claudeCode.thinkingOff`), re-applied each CLI start;
       seeded to the webview via `__thinking` on every load (no CLI echo exists). Fixture 55.
 - **9.6** ➖ Cost / token breakdown / usage panel (`get_usage`, `get_context_usage`,
       `request_usage_update` **[NEW]**; TUI `/usage`, `/cost`, `/context`) — declined 2026-08-06; the

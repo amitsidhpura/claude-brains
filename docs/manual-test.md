@@ -182,8 +182,14 @@ count (this header deliberately avoids the bold pattern so it doesn't count itse
 - [x] 3.3 /clear wipes the view and starts fresh; the old session is still in history and resumable
 - [x] 3.4 /compact runs: "Compacting…" working verb, then a compaction marker with folded summary,
       and the context gauge resets
-- [x] 3.5 Effort slider changes the level silently — no turn appears in the conversation;
-      mode chip suffix updates, e.g. "Manual (High)"
+- [x] 3.5 Effort slider — in the MODEL menu's footer, below the three switches (moved there
+      from the mode menu 2026-08-26) — changes the level: the CLI's "Set effort level to …"
+      confirmation line appears, no command bubble, and the popup's own "Effort <b>" label
+      updates. NEITHER chip shows the level — both a bracketed and a middot chip suffix were
+      tried and rejected 2026-08-26; the chips stay the bare model name and mode name.
+      KNOWN INERT, not a bug: the Thinking switch does nothing on Fable — `set_max_thinking_tokens
+      0` is accepted but fable still streams thinking (measured 2026-08-26; checklist 9.5,
+      gotchas § Protocol; "document only" by user decision)
 - [x] 3.6 Menu pick runs a no-arg command immediately; a command with a required `<arg>`
       inserts `/cmd ` and waits
 - [x] 3.7 A local built-in's output (`/context`, `/recap`, `/list-agents`) renders — live and
