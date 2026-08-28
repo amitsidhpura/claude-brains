@@ -7,6 +7,29 @@
   const MAX_DIFF_ROWS = 400;
 
   // structuredPatch hunks -> diff rows. Removed lines number off the old file, kept/added off the new.
+  /**
+   * One structuredPatch-shaped hunk from two whole-file texts: the changed region plus [ctx]
+   * lines of context either side, {oldStart, newStart, lines:[' ctx','-del','+add']}. Used by the
+   * tweak-travel card redraw (3.5), whose `updatedInput` is a WHOLE-FILE old/new — rendering that
+   * through renderEditDiff shows every unchanged line; this gives the card the same 3-line-context
+   * rows replay draws from the CLI's own structuredPatch. Empty array when the texts are equal.
+   */
+  function wholeFileHunk(oldStr, newStr, ctx) {
+    const O = String(oldStr).split('\n'), N = String(newStr).split('\n');
+    if (ctx == null) ctx = 3;
+    let p = 0;
+    while (p < O.length && p < N.length && O[p] === N[p]) p++;
+    let s = 0;
+    while (s < O.length - p && s < N.length - p && O[O.length - 1 - s] === N[N.length - 1 - s]) s++;
+    if (p === O.length && p === N.length) return [];
+    const from = Math.max(0, p - ctx), lines = [];
+    for (let i = from; i < p; i++) lines.push(' ' + O[i]);
+    for (let i = p; i < O.length - s; i++) lines.push('-' + O[i]);
+    for (let i = p; i < N.length - s; i++) lines.push('+' + N[i]);
+    const tailO = O.length - s, tailEnd = Math.min(O.length, tailO + ctx);
+    for (let i = tailO; i < tailEnd; i++) lines.push(' ' + O[i]);
+    return [{ oldStart: from + 1, newStart: from + 1, lines: lines }];
+  }
   function patchRows(hunks) {
     let rows = '', n = 0, truncated = false;
     for (let h = 0; h < hunks.length && !truncated; h++) {

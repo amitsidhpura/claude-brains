@@ -3,15 +3,16 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.246, last full re-audit 2026-08-26)
-- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.246-linux-x64/` (the local
-  `vscode/` extraction used for diffing is still 2.1.241 — re-extract when a diff needs it)
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.246`; headless roster in `docs/slash-commands.md`
+**References** (both on 2.1.250, last full re-audit 2026-08-28)
+- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.250-linux-x64/` (the 2.1.246 dir
+  was still on disk 2026-08-28 and served as the diff base; the local `vscode/` extraction is
+  still 2.1.241 — re-extract when a diff needs it)
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.250`; headless roster in `docs/slash-commands.md`
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.246, 2026-08-28) — 75 ✅ · 5 🟥 · 8 🟧 · 15 ⬜ · 18 ➖ · 6 🚫 (127 rows)
-- **Next up (🟥):** 3.5 In-diff editing before accept · 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay · 11.3 Kill a background process from the panel
+**At a glance** (2.1.250, 2026-08-28) — 77 ✅ · 4 🟥 · 7 🟧 · 16 ⬜ · 18 ➖ · 6 🚫 (128 rows)
+- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay · 11.3 Kill a background process from the panel
 - **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 8.10 Session groups / sessions sidebar · 8.11 Side question · 12.3 Open in editor tab · 12.6 Focus view · 13.2 JSON schema for .claude/settings.json · 14.2 Git actions in the host
 
 **Status marks**
@@ -38,11 +39,36 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no → re-mark ➖/🚫) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
+
+<details><summary><b>Re-audit 2026-08-28 (2.1.246 → 2.1.250)</b></summary>
+
+Surface: nothing new on the extension side — `package.json` contributions differ only in
+`version`/`size`/`installedTimestamp`, and the 12-tool IDE-MCP roster is the same twelve
+`tool("…")` registrations (diffed against the 2.1.246 dir, still on disk). The CLI's typed control
+vocabulary grew four `@internal` cloud-worker subtypes (`remote_tools_announce` / `_probe`,
+`remote_tool_call`, `remote_plumbing_call` — gated on `tengu_violin_wood`, "absent outside cloud
+workers"; not host-facing). A headless `initialize` on both binaries: the same 15 top-level keys,
+the same 5-model roster with identical capability flags, the same 6 agents and `account` keys;
+the command roster grew exactly one entry, the bundled skill `/workflow-authoring` (53 → 54; no
+drops, no hint or description changes) — added to `docs/slash-commands.md` as Hidden/unverified.
+Behaviour (upstream CHANGELOG 2.1.247/248; 2.1.250 is "bug fixes"): `--restricted` launch flag,
+`SendFeedback` tool + `/feedback`, cross-session `SendMessage`/`ListAgents`, `/usage-credits` for
+Enterprise, agent-frontmatter `experimental.cacheTtl` — every one is the terminal's half or a
+tool block the generic renderer already draws; no row. The one thing worth a row is in the VS
+Code WEBVIEW: it now renders a usage-limit **grace** banner off `rate_limit_event`
+(`rateLimitGraceActive` + `overageStatus`, fields the CLI has emitted since ≤ 2.1.246; behind
+`tengu_lantern_sconce`) — new row 1.25. Also noticed, no row: the webview parses the CLI's
+`/model` confirmation copy (`Set model to …` is new at 2.1.250, `Kept model as …` older) into a
+"Switched model" short label — moot here, typed `/model` is refused; the extension host gained a
+`resume_precheck` (gated) and an extension self-update check, both telemetry. Probe outputs in
+the 2026-08-28 session scratchpad.
+
+</details>
 
 <details><summary><b>Re-audit 2026-08-26 (2.1.241 → 2.1.246)</b></summary>
 
@@ -127,8 +153,15 @@ auto-include selection, voice.
       card; P3 polish
 - **1.24** ⬜ [SM] **Turn end reason** — `result.terminal_reason` (19 values) surfaced when a turn
       ends oddly; P3 polish
+- **1.25** ⬜ [SM] **Usage-limit grace banner** [NEW] — VS Code 2.1.250 (behind
+      `tengu_lantern_sconce`) shows "Usage limit reached · a little extra on us, then your credits"
+      / "… · finishing up" when `rate_limit_event.rate_limit_info` carries `rateLimitGraceActive:
+      true` with `overageStatus` allowed / allowed_warning (dismissable; the CLI has emitted the
+      fields since ≤ 2.1.246). Our 1.17 handler treats `status:"allowed"` as silence regardless, so a
+      grace window is invisible. Probe first: an inject through `onClaudeEvent` proves the render, a
+      real grace window is unforceable by design (MT-9.6 pattern)
 
-## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.246)
+## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.250)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -161,10 +194,31 @@ auto-include selection, voice.
       tab with an under-diff bar (Accept ✓ / Accept all edits / Reject ✕), first answer wins
       (2026-08-09); replaces VS Code's editor-title buttons; no keyboard shortcuts by design
 - **3.4** ✅ **"File was modified by the user"** — `staleRecovered` surfaced on the tool line
-- **3.5** 🟥 [LG] **In-diff editing before accept** — tweak-travel: pane edits ride `updatedInput`
-      on accept; roadmap, second half of accept/reject v2
-- **3.6** 🟧 [LG] **Multi-file change review** [NEW] — VS Code `open_file_diffs`; roadmap, a
-      per-turn "files changed" surface would be the shape
+- **3.5** ✅ **In-diff editing before accept** — tweak-travel: the permission diff's right pane is
+      editable; an edited pane rides back as `updatedInput` in the whole-file shape VS Code sends
+      (`EditProposals.tweakedInput`: Edit → old_string = whole file, Write → content, MultiEdit →
+      one such edit — VS Code hands MultiEdit to the card, we don't have to). Probed 2026-08-28
+      (2.1.250): the CLI applies it, the tool_result stays a one-liner, the transcript keeps the
+      model's ORIGINAL `tool_use` while `toolUseResult` records what ran. The card redraws the
+      diff that ran with a "edited in the IDE before accepting" note; replay detects the tweak by
+      replaying both onto `originalFile` (`EditProposals.tweaked`). The pane is editable only
+      through `DiffContentFactoryEx.createEditable` — `DiffContentFactory.create(text)` is a
+      read-only document (found on the hand test; the bridge flow's pane had never been editable).
+      Built and HAND-VERIFIED live + resumed 2026-08-28 (session cad0a74e); fixture 59;
+      accept/reject v2 complete
+- **3.6** ✅ **Multi-file change review** — a per-turn "✎ N files changed · a.md +1−0, … · Review"
+      line under the ✻ summary; Review opens ONE diff tab holding a chain of every file the turn
+      changed ("Before this turn" / "Now", read-only, prev/next between files —
+      `DiffReview.openChain`). Baselines come from the PreToolUse autosave hook the CLI already
+      blocks on (`Autosave` → `TurnChanges.snapshot`, first touch per turn) and settle at `result`
+      (`__files_changed`). VS Code's shape is per-session via a `file_updated` notification to its
+      in-process sdkMcpServer + a checkpoint store; ours is per-turn because that is what the
+      hook sees cleanly. `get_workspace_diff` probed 2026-08-28: git HEAD vs working tree with
+      per-file stats + structuredPatch-shaped hunks — includes the user's own edits, so NOT the
+      source (fact in `ide-mcp-protocol.md`). Limits: Edit/Write/MultiEdit only (a Bash `sed` is
+      invisible — same as VS Code's checkpointing); live turns only — a resumed session draws the
+      line from the transcript (count + names) without Review (backlog). Built and hand-verified
+      2026-08-28 (two files in one turn, chain navigation); fixture 60; `TurnChangesTest`
 
 ## 4. Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
@@ -425,9 +479,9 @@ auto-include selection, voice.
       `enable_jupyter_mcp`; configuration, ➖
 
 ## 16. Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (115, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (130, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 58, 467 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 60, 490 assertions,
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins

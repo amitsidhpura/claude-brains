@@ -484,7 +484,26 @@
       // exactly as it is on replay.
       if (busy) showWorking(); // Claude resumes processing
     };
-    permCards[ev.id] = function (allow) { done(allow, null, true); };
+    permCards[ev.id] = function (allow, tweak) {
+      // Tweak-travel (3.5): the pane the user accepted is not the block the model proposed.
+      // Redraw the diff from what RAN (whole-file old/new — renderEditDiff trims the common
+      // prefix/suffix, so only the changed region shows, same as a replayed structuredPatch)
+      // and note it under the diff, the way replay draws `tweaked` (LIM.tweakNote).
+      // A NEW .diff element rather than innerHTML: foldBlock's state (dataset.folded, the click
+      // toggle, the fold verdict taken at the OLD height) lives on the element — the first hand
+      // test (2026-08-28) left a 19-row diff that could not collapse. wholeFileHunk gives the
+      // 3-line-context rows replay draws from structuredPatch, through the same patchRows.
+      if (tweak) {
+        const d = card.querySelector('.diff');
+        if (d) {
+          const nd = document.createElement('div'); nd.className = 'diff';
+          nd.innerHTML = patchRows(wholeFileHunk(tweak.oldStr || '', tweak.newStr || ''));
+          d.replaceWith(nd); foldBlock(nd);
+          const n = noteLine(LIM.tweakNote); if (n) nd.after(n);
+        }
+      }
+      done(allow, null, true);
+    };
     card.querySelector('.ok').onclick = function () { done(true); };
     card.querySelector('.no').onclick = function () { done(false); };
     Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt:not(.more)'), function (b) {

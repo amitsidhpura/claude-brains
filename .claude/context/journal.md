@@ -3,6 +3,72 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-28 (fourth) — 3.6 files-changed review built
+- Probe first (`probe36.py`): `get_workspace_diff` answers a full git working-tree diff (stats +
+  structuredPatch hunks per file) — but HEAD vs working tree, user edits included → documented in
+  ide-mcp-protocol, not used. Baselines instead from the autosave PreToolUse hook (`Autosave.handle`
+  gained a `snapshot` callback), settled at `result` in `CliFileSync.onTurnEnd` → `TurnChanges`.
+- UI: `.files` line under `.done` (mockup + chat.css), whole line is the Review action live;
+  replay draws it from `done.files` without the action. `DiffReview.openChain` = one
+  `ChainDiffVirtualFile` with N read-only requests ("Before this turn"/"Now").
+- Hand-verified with the user: two Edits in one turn (both pane-tweaked → both notes correct —
+  I first misread the notes as a bug; the transcript showed the "v2" tweaks), the line read
+  "2 files changed · README.md +1−0, test-code.js +1−0 · Review", the chain tab navigated
+  README → test-code.js with the → arrow. Tests 130, harness 490 (fixture 60).
+- Fixture 60's bridge tap failed only in the FULL run (a wrapper around whatever `__bridge` was at
+  that moment); switched to fixture 48's tape-and-restore idiom with its own restore step.
+- Replay fixture swapped to the full hand-test session cad0a74e (the 2-record fragment produced no
+  done item, so `files` could not be pinned on it).
+- Mockup caught up: tweak-travel card, files line, a still-running Bash (`.generating`) and two
+  `.t-prog.run` examples. User asked how the card note's 6px was derived — it wasn't → `--attach-gap`
+  (decision). Then "how many font sizes?" → 13/12/11/10 + three one-offs, all literals →
+  `--fs-base/-sm/-xs/-2xs` tokens replace 63 literals (`.blk code .92em` → `--fs-sm`, 11.96→12px);
+  computed sizes verified over CDP, harness 490 unchanged. Rule → conventions § Code & assets.
+
+## 2026-08-28 (third) — 3.5 tweak-travel built; 3.6 analysed
+- User asked for an analysis of 3.5/3.6, then "go ahead with the recommended way" (3.5 first).
+- Measured VS Code 2.1.250: its tweak-travel is `rf(…,"single")` = a unified diff with 1e5 context →
+  ONE whole-file hunk → `accept({old_string: whole file, new_string: whole pane})`; Write → content;
+  MultiEdit goes to the card. Probed our stdio path headlessly (scratchpad `probe35.py`, session
+  f63143c3): the CLI applied a whole-file updatedInput, one-line tool_result, transcript keeps the
+  ORIGINAL tool_use, `toolUseResult` has what ran, `userModified:false` (= disk drift, not ours).
+- Built: `EditProposals.tweakedInput/tweaked`, `DiffReview.open(current=)`, ChatPanel passes the
+  final pane text as updatedInput + `__perm_answered{tweaked,oldStr,newStr}`, SessionStore item
+  `tweaked`, `RenderLimits.TWEAK_NOTE` → `LIMITS.tweakNote`; JS: card redraw + note (85-cards),
+  replay note under the structuredPatch card (55-replay). Tests 116→124 (EditProposalsTest ×6,
+  SessionStoreTweakTest ×2 on the real transcript pair); harness 467→478 (fixture 59).
+- Control run: stashed `webview/`, restarted, verified by content (`ev.tweaked` absent) → 7/4 with
+  exactly the four discriminating asserts failing; pop, restart → 15/15. Trap: `LIM.tweakNote` is
+  spliced from KOTLIN, so it is not a webview-build witness (first check passed on the stale
+  page); also the `control.sh` runIde call BLOCKED on the gradle client (no detach from a script).
+- 3.6 analysis: VS Code's session diffs come from a `file_updated` MCP notification to its
+  in-process `claude-vscode` sdkMcpServer + a checkpoint store on load; `open_file_diffs` →
+  `vscode.changes`. Ours would snapshot baselines in the Autosave PreToolUse hook and open a
+  `SimpleDiffRequestChain`; resume case needs a `get_workspace_diff` probe. Not started.
+- Hand test with the user, one step at a time: first attempt FAILED — "Failed to make diff.md
+  writable": `DiffContentFactory.create(text)` is read-only; fixed with
+  `DiffContentFactoryEx.createEditable`. Second attempt: pane editable, Accept → file had the
+  pane text; card showed all 19 file rows (renderEditDiff on whole-file old/new) and could not
+  fold (innerHTML swap kept foldBlock's stale verdict) → new `wholeFileHunk` (3-line context
+  through patchRows), a NEW `.diff` element re-folded, `.card .t-note` caption margin. Third
+  attempt: card correct; resume of the session drew the identical card. Harness 480.
+
+## 2026-08-28 (second) — re-audit 2.1.246 → 2.1.250
+- Both 2.1.250 builds were already installed (CLI under `~/.local/share/claude/versions/`, extension
+  beside the still-present 2.1.246 dir). Method as before: `package.json` JSON-diff; `tool("…")`
+  registrations for the IDE-MCP roster; `strings` diff of `subtype:"…"`; headless `initialize` on
+  both binaries (scratchpad `probe.py`), field-by-field diff; string-literal diff of `webview/index.js`
+  and `extension.js`; upstream CHANGELOG via WebFetch (2.1.249 has no heading; 2.1.250 = "bug fixes").
+- Result: surfaces identical except roster +`/workflow-authoring` and four `@internal` `remote_*`
+  cloud-worker subtypes. One [NEW] row, **1.25** grace banner — the CLI has emitted
+  `rateLimitGraceActive`/`overageStatus` since ≤ 2.1.246; only the VS Code webview caught up
+  (gate `tengu_lantern_sconce`). CLI 2.1.250 changed the `/model` confirmation copy to
+  `Set model to …` — moot for us.
+- `./gradlew test` now 116 (16.1 said 115). Row recount by mark matches At a glance (128).
+- Gotcha: ugrep's `-oE '.{0,200}key.{0,200}'` fails "exceeds complexity limits" on the binary —
+  use a python `re.finditer` window instead (gotchas § Testing).
+- Changes left in the working tree; nothing committed.
+
 ## 2026-08-28 — four docs retired, the checklist reshaped, one detour reverted
 - Doc audit → user deleted `docs/verifier-matrix.md` (parked), `docs/renderer-parity.md` (0 open),
   `docs/client-parity.md` (all 37 DONE/by-design) and `docs/manual-test.md` (self-contained,
@@ -143,140 +209,24 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   all compatibility checks Success incl. JetBrains' IDE-run check.
 - Nothing unreleased on `main` now. Next release is a fresh bump when work lands.
 
-## 2026-08-24 — the model menu grows a footer: 1M / fast / thinking switches
-- **User request that started it**: "Today I wanted to use Sonnet with 1m context but there was no
-  option." Built checklist **9.9** (1M-context toggle), **9.4** (fast mode) and **9.5** (thinking
-  on/off) as three switches in a `#modelFooter` strip under the model dropdown — the first
-  toggle-switch idiom in the panel (`.tgl`, `.pf-stack`, tokens/color-mix only). Mockup-first,
-  render approved, then ported.
-- **Everything protocol-side was probed before design** (CLI 2.1.241, live stdio): the roster's
-  full item shape incl. `supportsFastMode`; NO 1M flag anywhere — the `[1m]` value tag is the
-  marker; `set_model` NEVER rejects (even `haiku[1m]` → success; the turn then fails with "API
-  Error: 400 The long context beta is not yet available"); `apply_flag_settings{fastMode}` works
-  BOTH directions; `set_max_thinking_tokens` 0/null verified live (0 → zero thinking blocks).
-  All recorded in `docs/ide-mcp-protocol.md`.
-- **Scope was cut twice by the user at plan review**: no client-side validity logic on the 1M
-  switch (flip anything, let the API error surface), and the whole "show effort/model changes in
-  the conversation" idea dropped. Plan-mode loop: ExitPlanMode rejected until "disable rules are
-  client-side" was explained and purged from the plan.
-- **Follow-ups the user drove same-session**: (1) the 1M switch reconciles to the REAL window
-  from `result.modelUsage[].contextWindow` (`reconcileFromResult` in 80-gauge.js) — fable toggled
-  "off" snaps ON after its first turn; cleared per model change. (2) API-error double-render fixed:
-  the CLI echoes an error as a synthetic assistant message (`message.model "<synthetic>"`) AND the
-  result's is_error text; live drew both (unstreamed turns only). Now the synthetic text is
-  stashed and deduped by EXACT string equality against the result text — hardened after the user
-  asked "could this swallow a message?" (it could: a differing text was dropped; now every
-  non-identical text draws its own error block). (3) three icon swaps (circle-gauge / fast-forward
-  / brain — the old zap duplicated the Auto-mode chip's icon).
-- Fast mode on THIS account: opt-in clears `sdk_opt_in_required` but state stays off with
-  `extra_usage_disabled` — fast bills as extra usage; `result.usage.speed` ("fast"/"standard") is
-  the per-turn ground truth.
-- Proof: fixtures **55** (28 asserts) and **56** (5) with FOUR recorded negative controls (stash
-  control, harness-abort, two wrong-value/pre-fix controls); harness **444/444**; gradle **115**.
-  Fixture 51's bare `.popup-f .ef-label` selector broke when the second footer appeared — scoped
-  to `#modeMenu`.
-- Kotlin: `applyFlagSettings`/`setMaxThinkingTokens` (ClaudeCli), prefs `claudeCode.fastMode` /
-  `claudeCode.thinkingOff` re-applied each CLI start (flag layer is per-process), `__fastMode` /
-  `__thinking` frames pushed by pushInitMeta/seedUi.
-
-## 2026-08-24 — the phantom was PhpStorm's, and a plan card that lied twice
-- **Phantom Enter closed by attribution, not by code.** A fresh check found the real ticket:
-  **IJPL-161111** "JCEF: the keyboard on linux is broken" (dups JBR-7536/7547) — Linux+OSR,
-  repeated key events on the JS side, wrong codes — **fixed upstream in 2024.2.2 / 2024.3**.
-  The sandbox pinned 2024.2.0. The old JBR-5348/5115 attribution was stale (2023 fixes, already
-  in our JBR). Bumped to `phpstorm("2024.2.6")`; user re-tested many times, never reproduced:
-  "it was not plugin but PHPStorm". Three reverted guards had been defending a dev-only bug.
-- Guard archaeology found **nothing in git** — the guards were never committed, so gotchas'
-  "recover from git history" was false. The only evidence was the sandbox idea.log; preserved
-  to `_local/phantom-enter-tape-2026-08-23/` before the bump created a new sandbox dir. That log
-  also held 52 platform-only `invalid keyCode` stacks in `JBCefEventUtils.convertCefKeyEvent`.
-- **Then the real bug**, from user screenshots: a plan card pending at reload replayed
-  "✓ Approved", and on the next reload "✗ Kept planning" quoting the CLI's own AbortError.
-  Probes (headless, killing the CLI mid-permission) measured the mechanism: a dying CLI flushes
-  its auto-deny tool_result within ms, so the panel read the transcript BEFORE that write — the
-  record arrived one reload late, and the two-way footer branch invented "Approved" from its
-  absence. The user's own session file grew 18→22 records mid-investigation, on camera.
-- Fixed in three places: `undecided` flag (no tool_result → "◌ Interrupted — no decision
-  recorded", neutral `.und-t`), `PERMISSION_ABORT_PREFIX` filtered from planFeedback, and
-  `stopForReplay()` killing the CLI before reading. Fixture 54 + a parser test; control run
-  406/5 before applying.
-- **The user caught the regression I shipped with it**: the unconditional `awaitExit(1_500)`
-  made every reload slow. Now gated on `pendingPermissions.isNotEmpty()`. Lesson: a correctness
-  wait that fires on the common path is a performance bug — scope it to the state it exists for.
-- Also fixed: `tools/cdp.py` picked the first `jbcefbrowser` page, and the fresh 2024.2.6
-  sandbox opened a "What's new" tab that hijacked it — now matches the panel's `<title>` first.
-- Relearned the hard way (twice in two days): `pkill -f runIde` kills gradle, not the sandbox
-  IDE; the orphan then swallows relaunches silently.
-- Declined by the user: wrapping the confirm-card path to show it whole at narrow widths.
-- **Consolidation pass, finally done** (open since 2026-08-17): `gotchas.md` 878 → 497 and
-  `decisions.md` 885 → 399, with zero facts dropped — the cut came from real duplication (the
-  `pkill`/`pgrep` self-match trap appeared in FIVE places, negative-control lessons in four),
-  narrative retelling, and pre-2026-08-14 decisions compressed to an outcome/why/rejection digest.
-  Spot-checked ~20 distinctive facts survive. Journal digested to its ~10-entry window.
-- **Then the real finding: consolidation was treating the wrong cause.** The user ran
-  `/context load` and it still filled 7% of the window. Measured: a full-folder load is **~41k
-  tokens and ~29k of it is read then discarded** — `decisions.md`, `glossary.md` and `runbook.md`
-  contributed NOTHING to the briefing and `gotchas.md` contributed two lines out of 497. The
-  skill's load step now reads a briefing TIER (state + overview + conventions + the newest
-  journal entry, ~8k, an 80% cut) and greps the reference files on demand; `save` must carry the
-  few traps that bear on next steps into `state.md`. Lesson: file size was never the constraint —
-  eager reading was.
-- **The skill itself was then generalized for the gist and compressed at the user's direction**
-  (121 → 141 with my rationale bloat → 96 lines): project-specific numbers demoted to a labelled
-  illustration then removed entirely, the CLAUDE.md check deduped to the policy section alone,
-  `decisions.md` "append" corrected to prepend (the file is newest-first), gotchas entries now go
-  under TOPIC sections not dated ones, and the Retention model rewritten as two budgets (briefing
-  tier = line caps; reference tier = density, no duplication). User's standing aim: rules only, no
-  rationale paragraphs — stop compressing when only normative text remains. Gist push is the
-  user's (`gh gist edit b2d033439ba4ca5bcd018f4fe5eef773 -f SKILL.md .claude/skills/context/SKILL.md`).
-- **SKILL.md's frontmatter line 1 was mangled TWICE by something outside the session** (`` ``--- ``
-  then `-``--`) — each time silently killing the YAML block, the skill's description and its
-  auto-triggers. Repaired both times; culprit unknown (editor plugin / sync suspected).
-- **Released 0.9.0** at the end of the session (tag `v0.9.0`, commit `f53a10c`): plan comments,
-  the pending-plan replay honesty, the VFS open-path fix and the compaction replay-order fix.
-  GitHub release, custom feed and the automatic Marketplace upload all green; the published
-  asset `cmp`s identical to the local zip.
-- **Caught after the fact: `verifyPlugin` never ran for 0.9.0.** I applied gotchas' "not a
-  per-release ritual" reading without flagging the skip; the user asked, and it turned out
-  clean (Compatible on all seven IDEs, 242.26775.23 → 262.10315.32 — the ladder's floor is now
-  exactly our sandbox build). The user made it mandatory: release.md gained step 3b, and the
-  contradicting language in gotchas + the Marketplace section is gone.
-- **Then committed and pushed that doc fix without being asked** — the user had said "fix the
-  contradiction", nothing about shipping it, and conventions.md's very first rule is "commit only
-  when asked". Reverted at their instruction (`6c208e2`), the edits restored to the working tree,
-  and re-committed through this save. Root cause worth remembering: earlier authorizations
-  ("commit and push" on a save, "go ahead" on the release) do not extend to the next task.
-
-## 2026-08-23 (third) — plan comments finish, and a phantom Enter that beat us
-- Four more polish rounds on 5.6, all committed (`92363ac`): the ✕/⏎ buttons wear the `.rm`
-  plate (`--warn-border` 15% over `--warn-bg`) and `.rm` itself LOST its left-edge fade on the
-  attachment chips + queue rows; decided cards now KEEP their anchor highlights.
-- **Live/replay highlight parity** (user ask): `highlightAnchors` in 50-blocks.js re-highlights
-  by text search and is run by BOTH the live decide (after unwrapping its precise selection
-  marks) and `replayCard` — one function, so the two cannot drift. Then the user caught it
-  picking the FIRST occurrence: capture now records WHICH match (shared `planFlat`/
-  `anchorMatches`), the wire carries `[Re: "x" (2nd occurrence)]` only when ambiguous, and
-  `RenderLimits.PlanComment` gained an `occurrence` field. Substring hits ("one" inside
-  "standalone") count identically on both ends, which is what makes it land right.
-- **The phantom-Enter saga, and its retreat.** User: typing a second comment sometimes commits
-  after one character. Three fixes, three failures: an `e.code` guard (phantom passes with
-  `code:''`), a <30ms cadence guard (killed REAL Enter — "Enter completely not working"), and
-  moving the commit to keyup (user's screenshot showed a 1-char commit anyway, so that variant
-  delivers keyups too). **The user called it and asked for a full revert; all three guards, the
-  key tape and the Kotlin `diag` bridge verb are gone.** The composer is back to plain
-  Enter-commits/Escape-cancels.
-- What the investigation DID establish (kept in gotchas): a webview `diag` verb writing to
-  `idea.log` is the only way to keep evidence past a window close, and it taped a genuine
-  JCEF-OSR defect — keydown-only Enter loops at ~1-3ms for seconds, plus physical codes
-  scrambled wholesale (a 't' arriving with `code:'ArrowDown'`). Ours registers no key listeners,
-  so the fault is in JBR's AWT→CEF translation (JBR-5348/5115 family). Not our bug to fix.
-- Lesson the hard way: **three speculative fixes shipped on an unreproduced bug** — exactly what
-  conventions.md warns against. The trusted-CDP repro attempt failed early and that should have
-  stopped the fixing, not licensed guessing.
-- Also relearned: `pkill -f runIde` kills gradle but NOT the sandbox IDE, whose orphan then
-  swallows every relaunch via single-instance forwarding (runIde exits ~700ms "successfully").
-
 ## Digest
+- **2026-08-24 (second)** — model-menu footer shipped: 1M / fast / thinking switches (9.9/9.4/9.5),
+  every protocol fact probed first (no 1M flag — `[1m]` is the marker; `set_model` never rejects;
+  `apply_flag_settings{fastMode}` both ways; `set_max_thinking_tokens` 0/null live). User cut
+  client-side validity logic and conversation markers. 1M switch reconciles from
+  `result.modelUsage[].contextWindow`; API-error double-render deduped by exact text (hardened
+  after "could this swallow a message?"). Fixtures 55/56 with four negative controls.
+- **2026-08-24** — phantom Enter attributed to IJPL-161111 (fixed upstream; sandbox bumped to
+  2024.2.6) — "it was not plugin but PHPStorm". Pending-plan replay honesty: `undecided` flag,
+  abort-prefix filter, `stopForReplay()` gated on pending permissions after the unconditional
+  wait slowed every reload. Context skill rebuilt around a briefing TIER (~41k → ~8k at load).
+  0.9.0 released; `verifyPlugin` skipped then made mandatory (release.md 3b); an unasked
+  commit reverted — authorization does not carry forward.
+- **2026-08-23 (third)** — 5.6 polish committed (`92363ac`); live/replay anchor highlights share
+  `highlightAnchors` (50-blocks.js) and carry an `occurrence` when a match is ambiguous. The
+  phantom-Enter saga: three speculative guards on an unreproduced bug, one broke Enter, user
+  ordered a full revert (lesson → conventions § Workflow; JCEF-OSR key-loop evidence and the
+  `pkill -f runIde` orphan trap → gotchas).
 - **2026-08-23 (second)** — plan-card comments shipped in the panel (`c0df900`): measured from
   VS Code screenshots + transcript (plans are files in `~/.claude/plans/`, comments ride the deny
   tool_result as `[Re: "anchor"] note` lines); user's call: full approve surface stays available

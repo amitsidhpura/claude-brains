@@ -44,7 +44,25 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * rather than the panel: the CLI keeps writing whether or not the tool window is open, and a
      * stale editor is not a rendering concern.
      */
-    private val fileSync = CliFileSync(onTurnEnd = { refreshFromDisk(cwd.path) })
+    /** Per-turn "files changed" (3.6): baselines from the autosave hook, settled at `result`. */
+    private val turnChanges = TurnChanges()
+    private val fileSync = CliFileSync(onTurnEnd = {
+        refreshFromDisk(cwd.path)
+        // Read AFTER the refresh, off the EDT (plain disk reads: the CLI wrote to disk and the
+        // VFS may lag; disk is what the CLI's next Read would see).
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread {
+            val ended = turnChanges.endTurn { p -> runCatching { java.io.File(p).takeIf { it.isFile }?.readText() }.getOrNull() }
+            if (ended != null) onEventCb?.invoke(buildJsonObject {
+                put("type", "__files_changed")
+                put("turn", ended.first)
+                put("files", kotlinx.serialization.json.buildJsonArray {
+                    ended.second.forEach { c -> add(buildJsonObject {
+                        put("path", c.path); put("added", c.added); put("removed", c.removed); put("isNew", c.isNew)
+                    }) }
+                })
+            }.toString())
+        }
+    })
 
     private var server: IdeMcpServer? = null
     private var lock: IdeLockFile? = null
@@ -139,6 +157,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         runCatching { cli?.stop() }
         pendingPermissions.clear()
         pendingSuggestions.clear()
+        turnChanges.reset()
         cli = ClaudeCli(
             workingDir = cwd,
             ssePort = port,
@@ -160,7 +179,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             onInit = { commandsJson -> onInitCb?.invoke(commandsJson) },
             onExit = { code -> onExitCb?.invoke(code) },
             onHook = { id, input, respond ->
-                if (id == ClaudeCli.HOOK_AUTOSAVE) Autosave.handle(input, respond)
+                if (id == ClaudeCli.HOOK_AUTOSAVE) Autosave.handle(input, respond, turnChanges::snapshot)
                 else respond(kotlinx.serialization.json.buildJsonObject { put("continue", true) })
             },
         ).apply { start() }
@@ -332,8 +351,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * control_response; the loser gets `false` and must not answer again. This also stops a
      * response for an id the CLI never asked about (or already got) from reaching stdin.
      */
-    fun respondPermission(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList(), feedback: String? = null): Boolean {
-        val input = pendingPermissions.remove(requestId) ?: return false
+    fun respondPermission(
+        requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList(),
+        feedback: String? = null, updatedInput: JsonObject? = null,
+    ): Boolean {
+        // [updatedInput] replaces the pending input on allow — the editor diff's tweaked edit
+        // (3.5, EditProposals.tweakedInput); null answers with the input the CLI asked about.
+        val input = (pendingPermissions.remove(requestId) ?: return false)
+            .let { if (allow && updatedInput != null) updatedInput else it }
         val suggestions = pendingSuggestions.remove(requestId)
         val picked = mutableListOf<JsonElement>()
         if (allow && suggestions != null) {
@@ -363,6 +388,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli?.respondPermission(requestId, allow, input, chosen, feedback)
         return true
     }
+
+    /** The review pairs of a finished turn (3.6); empty when unknown or evicted. */
+    fun reviewTurn(turn: Int): List<TurnChanges.Pair> = turnChanges.review(turn)
 
     /** Answer an AskUserQuestion permission: allow + {questions, answers} as updatedInput. */
     fun answerQuestion(requestId: String, answersJson: String) {

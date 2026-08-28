@@ -1,6 +1,7 @@
 package io.github.amitsidhpura.claudebrains.bridge
 
 import com.intellij.diff.DiffContentFactory
+import com.intellij.diff.DiffContentFactoryEx
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.editor.ChainDiffVirtualFile
@@ -68,10 +69,13 @@ class DiffReview(private val project: Project) {
     private val tabNames = ConcurrentHashMap<CompletableFuture<List<String>>, String>()
 
     /**
-     * [readOnly] locks both panes. The bridge flow leaves the right pane editable because its
-     * final text travels back in the FILE_SAVED verdict; the permission flow answers allow/deny
-     * with the ORIGINAL input, so an editable pane there would silently discard the user's typing
-     * — read-only keeps it honest until tweak-travel is built for that flow.
+     * [readOnly] locks both panes. Both flows leave the right pane editable: the bridge flow's
+     * final text travels back in the FILE_SAVED verdict, and since 2026-08-28 the permission flow
+     * turns the same text into `updatedInput` (tweak-travel, checklist 3.5 — EditProposals).
+     *
+     * [current] is the left pane's text when the caller already read it. The permission flow
+     * passes the text its proposal was built from, so the whole-file `old_string` it may send
+     * back is exactly what the CLI will find on disk; null reads the file here (bridge flow).
      */
     fun open(
         oldPath: String,
@@ -79,6 +83,7 @@ class DiffReview(private val project: Project) {
         tabName: String,
         readOnly: Boolean = false,
         acceptAllLabel: String? = null,
+        current: String? = null,
     ): CompletableFuture<List<String>> {
         val future = CompletableFuture<List<String>>()
         pending.add(future)
@@ -88,7 +93,7 @@ class DiffReview(private val project: Project) {
         val fileType = FileTypeManager.getInstance().getFileTypeByFileName(fileName)
 
         ApplicationManager.getApplication().invokeLater {
-            val current = if (vf != null) {
+            val current = current ?: if (vf != null) {
                 readLocked {
                     FileDocumentManager.getInstance().getDocument(vf)?.text
                         ?: String(vf.contentsToByteArray(), vf.charset)
@@ -96,9 +101,13 @@ class DiffReview(private val project: Project) {
             } else ""
 
             val factory = DiffContentFactory.getInstance()
-            // Kept as a DocumentContent: the right pane is editable, and accept must return its
-            // FINAL text — the reference sends the pane's getText(), user tweaks included.
-            val proposed: DocumentContent = factory.create(project, newContent, fileType)
+            // The right pane must be EDITABLE, and accept returns its FINAL text (the reference
+            // sends the pane's getText(), user tweaks included). `DiffContentFactory.create(project,
+            // text, type)` builds a READ-ONLY document — the pane showed a lock and "Failed to make
+            // diff.md writable" on the first hand test of tweak-travel (2026-08-28), which also
+            // means the bridge flow's pane had never been editable despite the comment above it.
+            // `createEditable` is the platform's own editable variant (API since 2019, 242 ok).
+            val proposed: DocumentContent = DiffContentFactoryEx.getInstanceEx().createEditable(project, newContent, fileType)
             val assigned = AtomicBoolean(false)
             val title = "Claude: $fileName"
             val request = object : SimpleDiffRequest(
@@ -162,6 +171,37 @@ class DiffReview(private val project: Project) {
             closeWith(future)
         }
         return future
+    }
+
+    /**
+     * "Files changed · Review" (3.6): one diff tab holding a CHAIN of requests — every file the
+     * turn changed, baseline on the left (empty for a created file), the current file on the
+     * right — navigable with the diff editor's own prev/next. Read-only, no verdict bar: this is
+     * a look, not a decision. Opened the same way [open] does (our own ChainDiffVirtualFile) so it
+     * can be found and closed like the review tabs.
+     */
+    fun openChain(title: String, pairs: List<io.github.amitsidhpura.claudebrains.TurnChanges.Pair>) {
+        if (pairs.isEmpty()) return
+        ApplicationManager.getApplication().invokeLater {
+            val factory = DiffContentFactory.getInstance()
+            val requests = pairs.map { p ->
+                val name = File(p.path).name
+                val fileType = FileTypeManager.getInstance().getFileTypeByFileName(name)
+                val vf = findVFile(p.path)
+                // Right pane: the live file when the VFS has it (so a later edit is reflected),
+                // else the text read at turn end. Left: the baseline text, or nothing for a new file.
+                val right = if (vf != null) factory.create(project, vf) else factory.create(project, p.after, fileType)
+                val req = SimpleDiffRequest(
+                    "$title — $name",
+                    factory.create(project, p.before ?: "", fileType), right,
+                    if (p.before == null) "New file" else "Before this turn", "Now",
+                )
+                req.putUserData(DiffUserDataKeys.FORCE_READ_ONLY, true)
+                req
+            }
+            val diffFile = ChainDiffVirtualFile(SimpleDiffRequestChain(requests), title)
+            FileEditorManager.getInstance(project).openFile(diffFile, true)
+        }
     }
 
     /**

@@ -143,6 +143,10 @@
 - Styles live ONLY in `webview/chat.css`; editing chat.html markup? Mirror it in
   `design/mockup.html` too. No new hardcoded colours — add a token to `:root` and use
   `var(--x)` (for tints prefer `color-mix()` over a companion `-rgb` token).
+  **Same for text sizes and gaps**: `font-size` takes one of `--fs-base/-sm/-xs/-2xs`
+  (13/12/11/10 — tokenised 2026-08-28 after the user asked how a 6px gap had been derived and it
+  hadn't been), spacing takes `--block-gap` / `--attach-gap`. A literal px is a question waiting
+  to be asked; if a fifth size is genuinely needed, add a token and say why in its comment.
 - Popups/dropdowns copy the conversations-list idiom WHOLE: a FIXED width plus a hover-only
   action gutter. Never reserve space for hover affordances (rejected 2026-08-09) — and never
   take half the idiom, since the hover gutter only stays jiggle-free because the width is fixed.

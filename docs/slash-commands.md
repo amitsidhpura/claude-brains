@@ -100,7 +100,9 @@ Roster captured from the CLI `initialize` response 2026-08-15 (CLI 2.1.228; re-v
 2.1.233 the same day: identical names, same entry schema, suffix marker intact). Suffix-marked
 custom entries are excluded - they are auto-enabled, not listed. 51 rows: 50 from the main-repo
 capture plus the built-in `/context`, restored from the testing-repo capture because this repo's
-own /context project skill shadows it (see the shadowing note above).
+own /context project skill shadows it (see the shadowing note above); 52 since 2026-08-28, when
+the 2.1.250 roster added `/workflow-authoring` (the only roster change from 2.1.233 to 2.1.250 —
+re-probed headlessly at 2.1.241, 2.1.246 and 2.1.250: no drops, no hint or description changes).
 Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
 relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
 are visible in the menu; every other built-in is hidden.
@@ -180,6 +182,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/claude-api` | Hidden | [ ] |  | Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, mod… |
 | `/dataviz` | Hidden | [ ] |  | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML… |
 | `/design-sync` | Hidden | [ ] |  | Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or a bare pack… |
+| `/workflow-authoring` | Hidden | [ ] |  | Reference for writing a Workflow tool script (script API and gotchas, resume, quality patterns, worked examples). Load before authoring… **New in 2.1.250** (headless roster 2026-08-28; not yet driven through the panel) |
 
 ### Hidden — internal / special session types
 

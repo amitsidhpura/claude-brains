@@ -58,6 +58,10 @@
     const card = el('card warn', '');
     if (!fillAppliedCard(card, it)) { card.remove(); return; }
     foldBlock(card.querySelector('.diff'));
+    // Tweak-travel (3.5): the structuredPatch drawn is the edit that RAN; this line says it
+    // differs from what the model proposed. Same text and same slot (under the diff, above the
+    // footer) as the live card's redraw in permCards — LIM.tweakNote.
+    if (it.tweaked) { const d = card.querySelector('.diff'), n = noteLine(LIM.tweakNote); if (d && n) d.after(n); }
   }
 
   // Answered AskUserQuestion: questions with the chosen options checked, no inputs.
@@ -171,6 +175,7 @@
         case 'done': {
           const d = el('done', '');
           d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0, it.seed, it.prevSeed);
+          if (it.files && it.files.length) filesLine(it.files.map(function (p) { return { path: p }; }), null);
           break;
         }
         case 'thinking': {

@@ -178,8 +178,25 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
 - CLI → host (stdout line): `{"type":"control_request","request_id":"…","request":{"subtype":"can_use_tool","tool_name":"Edit","input":{…},"permission_suggestions":[…],"blocked_path":"…?"}}`
 - host → CLI (stdin line): `{"type":"control_response","response":{"subtype":"success","request_id":"…","response":{"behavior":"allow","updatedInput":{…},"updatedPermissions":[…]?}}}`
   - reject: `response:{"behavior":"deny","message":"…"}`
+  - **`updatedInput` may replace the edit wholesale (measured 2026-08-28, CLI 2.1.250):** answering
+    an Edit's `can_use_tool` with `{file_path, old_string: <whole current file>, new_string: <whole
+    edited file>, replace_all:false}` is applied as given — the file is written with the host's
+    text, the tool_result is the usual one-liner, no warning. This is exactly what the VS Code
+    extension sends after the user edits the diff pane (`rf(…, "single")`: a unified diff with
+    100 000 lines of context = one whole-file hunk). Write → `content`, MultiEdit → `edits:[…]`.
+    The transcript then keeps the model's ORIGINAL `tool_use` input; only `toolUseResult`
+    (`oldString`/`newString`/`originalFile`, `content` for Write) records what actually ran, and its
+    `userModified` flag means "the file changed on disk since the read", NOT "the host changed the
+    edit". Our tweak-travel (checklist 3.5) rides this: `EditProposals.tweakedInput` / `.tweaked`.
   - transport error: `response:{"subtype":"error","request_id":"…","error":"…"}` — the CLI answers
     a refused host request this way too (e.g. `set_permission_mode` to bypass); surface it, don't drop it.
+- **`get_workspace_diff` (host→CLI, probed 2026-08-28, 2.1.250)**: no params; answers
+  `{diff:{stats:{filesCount,linesAdded,linesRemoved}, perFileStats:[{path,added,removed,isBinary,
+  isUntracked}], hunks:[{path, hunks:[<structuredPatch hunk>]}], skippedLarge:[], restricted:[],
+  source:{kind:"working-tree"}}}` — git HEAD vs working tree (paths repo-relative), so it includes
+  the user's own and staged changes; "timed out: still being computed" is a retryable error text.
+  Not used for 3.6 (per-turn Claude-only changes come from the autosave hook); the git-backed
+  fallback if a resumed session ever needs a Review.
 - Other control subtypes: `initialize` (host→CLI: declares `hooks`, `sdkMcpServers`, `jsonSchema`,
   `systemPrompt`), `set_permission_mode` (host→CLI: `{subtype,mode}`), `hook_callback`, `mcp_message`.
 - **Host hooks over stream-json (measured 2026-08-17, CLI 2.1.233):** `initialize` takes

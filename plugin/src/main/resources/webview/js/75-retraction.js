@@ -442,6 +442,24 @@
     if (tokens > 0) s += ' · ' + SVG_DOWN + fmtTok(tokens) + ' tokens';
     return s;
   }
+  // "Files changed" line under the summary (3.6). [turn] non-null = live, reviewable: the
+  // whole line is the action. Replay passes null (no baselines survive a resume) and the line
+  // is informational — the count is real (from the transcript), the diff is not available.
+  function filesLine(files, turn) {
+    if (!files || !files.length) return null;
+    const d = el('files' + (turn != null ? ' click' : ''), '');
+    const names = files.map(function (f) {
+      const p = String(f.path || ''), i = p.lastIndexOf('/');
+      const s = (typeof f.added === 'number' && typeof f.removed === 'number' && (f.added || f.removed))
+        ? ' <span class="f-add">+' + f.added + '</span><span class="f-rem">−' + f.removed + '</span>' : '';
+      return '<span class="f-name" title="' + escA(p) + '">' + esc(i >= 0 ? p.slice(i + 1) : p) + '</span>' + s;
+    });
+    d.innerHTML = SVG_PENCIL + files.length + (files.length === 1 ? ' file changed' : ' files changed') +
+      ' · ' + names.join(', ') + (turn != null ? ' · <span class="f-review">Review</span>' : '');
+    if (turn != null) { d.title = 'Open a diff of every file this turn changed'; d.onclick = function () { bridge({ kind: 'review', turn: turn }); }; }
+    else d.title = 'Changed in this turn — the diff is only available while the session is live';
+    return d;
+  }
   // Timeline status line with an optional leading glyph that hangs in the dot column
   // (so icon + text align with .blk / .think / .retry). Text is set safely (textContent).
   // The todo checklist. Three feeders, all whole-list snapshots (never increments by the time

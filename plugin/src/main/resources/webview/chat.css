@@ -44,6 +44,15 @@
      the five attached blocks carried -6/-2/+2/+2/+2 against an 18px flex gap, i.e. 12/16/20/20/20px,
      and three of them ended up FARTHER from their own tool line than an unrelated block. */
   --block-gap: 18px;
+  /* Type scale — the ONLY text sizes (audited 2026-08-28: 13/12/11/10 in 1px steps, all
+     literals until then). base: prose, tool lines, verdicts · sm: IN/OUT, diffs, code, chips,
+     secondary lines · xs: captions and meta (.t-note, dates, badges) · 2xs: micro labels (the
+     IN/OUT key column, the source badge). Glyph boxes (.icon-btn, .spin) and the welcome title
+     are sized on their own and are not text. */
+  --fs-base: 13px;
+  --fs-sm: 12px;
+  --fs-xs: 11px;
+  --fs-2xs: 10px;
   --attach-gap: 8px;   /* picked from design/tool-gap-probe.html against 12/8/6/4; 8px is the gap
                           .card-h already puts between a card's header and its body, so the panel's
                           two "this belongs to that" idioms agree */
@@ -61,7 +70,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
-  font: 13px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  font: var(--fs-base)/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
 img { max-width: 100%; height: auto; }
 
 /* scrollbars */
@@ -94,7 +103,7 @@ img { max-width: 100%; height: auto; }
    out of the panel (a flex item's default min-width:auto refuses to shrink below its text). */
 /* flex:1 + min-width:0 so a long conversation title ellipsises instead of shoving the actions
    out of the panel (a flex item's default min-width:auto refuses to shrink below its text). */
-#head .title { font-size: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+#head .title { font-size: var(--fs-base); font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 #head .actions { display: flex; gap: 10px; flex: none; }
 /* Rename. The pencil is a SIBLING of the title text, never an overlay on it: the chip's .rm idiom
    lays the control over the end of the text, which is right for a chip whose text is decoration but
@@ -128,7 +137,7 @@ img { max-width: 100%; height: auto; }
 #head .title-edit { display: none; flex: 1; min-width: 0; align-items: center; gap: 9px; }
 #head.editing .title { display: none; }
 #head.editing .title-edit { display: flex; }
-#head .title-edit input { flex: 1; min-width: 0; font: inherit; font-size: 13px; font-weight: 600;
+#head .title-edit input { flex: 1; min-width: 0; font: inherit; font-size: var(--fs-base); font-weight: 600;
   color: var(--fg); background: none; border: none; padding: 0; outline: none; }
 /* Same colours as the permission card's verdict pair, so a confirm reads the same everywhere. */
 #head .title-edit button { flex: none; background: transparent; border: 0; cursor: pointer; padding: 0;
@@ -198,7 +207,7 @@ body.at-top #fade-top { opacity: 0; }
    (v0.10.12) can't creep back over the title text. Wears the same chip metrics and surface as
    the history list's "current" badge (.hist-item .badge) — one badge look in the UI, not two. */
 .w-ver { position: absolute; top: -3px; left: 100%; margin-left: 6px;
-  font-size: 11px; font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
+  font-size: var(--fs-xs); font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
   background: var(--user-raised); color: var(--user-muted);
   border: 1px solid var(--user-border); white-space: nowrap; }
 .w-ver:empty { display: none; }
@@ -206,13 +215,13 @@ body.at-top #fade-top { opacity: 0; }
    subtitle of the title rather than the first line of the help text below it, so it pulls up
    out of #welcome's 12px gap to sit closer to the name, and holds --fg weight 500 against
    .w-sub's muted 400 — hierarchy from spacing and weight, no third colour. */
-.w-slogan { margin-top: -5px; font-size: 13px; font-weight: 500; color: var(--fg); }
+.w-slogan { margin-top: -5px; font-size: var(--fs-base); font-weight: 500; color: var(--fg); }
 /* One line needs a ~340px panel; a right-anchored tool window is often narrower. Each half is
    nowrap so the only place it CAN break is the space between the two sentences — it degrades to
    two balanced lines ("Develop in the IDE." / "Configure in the Terminal.") instead of stranding
    a word, and the split reads as the point being made. */
 .w-slogan span { white-space: nowrap; }
-.w-sub { font-size: 13px; line-height: 1.65; color: var(--muted); }
+.w-sub { font-size: var(--fs-base); line-height: 1.65; color: var(--muted); }
 .w-sub kbd { font: 12px ui-monospace, Consolas, monospace; color: var(--fg);
   background: var(--raised); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; }
 
@@ -333,7 +342,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 .tbl th, .tbl td { border: 0; padding: 5px 10px; text-align: left; vertical-align: top; }
 /* header TEXT matches .cb-h too, not just its background: 11px --muted at normal weight, so the
    strip reads as a label above the data rather than a heavier row of its own. */
-.tbl th { background: var(--code-head); color: var(--muted); font-size: 11px; font-weight: 400;
+.tbl th { background: var(--code-head); color: var(--muted); font-size: var(--fs-xs); font-weight: 400;
   white-space: nowrap; border-bottom: 1px solid var(--border); }
 .tbl tbody tr:nth-child(even) td { background: var(--code-stripe); }
 .tbl .ta-c { text-align: center; } .tbl .ta-r { text-align: right; }
@@ -355,10 +364,10 @@ blockquote > *:last-child { margin-bottom: 0; }
 .blk a { color: var(--blue); text-decoration: none; }
 .blk a:hover { text-decoration: underline; }
 .blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;
-  font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 
 /* thinking */
-.think { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px;
+.think { position: relative; padding-left: 22px; color: var(--muted); font-size: var(--fs-base);
   --dot-c: var(--dot); }
 .think summary { cursor: pointer; user-select: none; list-style: none; display: inline-flex; align-items: center; gap: 3px; }
 .think.no-body summary { cursor: default; }   /* nothing streamed: a label, not a control */
@@ -372,10 +381,10 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* live progress: thinking-in-progress + generating */
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .think-live { position: relative; padding-left: 22px; --dot-c: var(--dot); }
-.think-live .th { color: var(--muted); font-size: 13px; }
+.think-live .th { color: var(--muted); font-size: var(--fs-base); }
 .think-live .shimmer { background: linear-gradient(90deg, #797d84 35%, #eceff4 50%, #797d84 65%); background-size: 200% 100%;
   -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer var(--pulse-period) linear infinite; }
-.generating { position: relative; display: flex; align-items: baseline; gap: 8px; padding-left: 22px; color: var(--fg); font-size: 13px; }
+.generating { position: relative; display: flex; align-items: baseline; gap: 8px; padding-left: 22px; color: var(--fg); font-size: var(--fs-base); }
 .generating .spin { position: absolute; left: 0; top: 0; width: 14px; text-align: center; color: var(--accent);
   font-size: 14px; line-height: 20px; }
 .generating .verb { background: linear-gradient(90deg, #c2603d 35%, #f2b492 50%, #c2603d 65%); background-size: 200% 100%;
@@ -384,7 +393,17 @@ blockquote > *:last-child { margin-bottom: 0; }
 .generating .meta svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 1px; }
 
 /* completion summary: ✻ Baked for 1m 53s · ↓ 88 tokens */
-.done { position: relative; padding-left: 22px; font-size: 13px; color: var(--muted); }
+.done { position: relative; padding-left: 22px; font-size: var(--fs-base); color: var(--muted); }
+/* "N files changed" under the summary (3.6): same voice as .done; the whole line is the Review
+   action on live turns (.click), plain text on replay. Counts wear the diff colours. */
+.files { position: relative; padding-left: 22px; font-size: var(--fs-sm); color: var(--muted); }
+.files svg { position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; }
+.files.click { cursor: pointer; }
+.files.click:hover .f-review { text-decoration: underline; }
+.files .f-review { color: var(--accent); }
+.files .f-name { color: var(--fg); }
+.files .f-add { color: var(--green); margin-left: 4px; }
+.files .f-rem { color: var(--red); margin-left: 2px; }
 .done .star { position: absolute; left: 1px; top: 0; color: var(--accent); }
 .done svg { width: 12px; height: 12px; vertical-align: -2px; margin: 0 1px 0 3px; }
 
@@ -396,7 +415,7 @@ blockquote > *:last-child { margin-bottom: 0; }
    panel — the clamp still produced one line, but the overflow ran off the right edge and the panel
    clipped the filename. Bounding the row is what points the shrink at .p-head instead. */
 .tool-line { position: relative; display: flex; align-items: baseline; max-width: 100%; min-width: 0;
-  padding-left: 22px; font-size: 13px; color: var(--muted); box-sizing: border-box;
+  padding-left: 22px; font-size: var(--fs-base); color: var(--muted); box-sizing: border-box;
   --dot-c: var(--green); }
 .tool-line b { flex: 0 0 auto; }
 /* A running tool has no verdict yet, so it must not wear one. White while in flight; the dot turns
@@ -445,7 +464,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 /* Range suffix on a Read ("(lines 40-80)"). Its own span, dimmer than the path and OUTSIDE
    .t-desc.path — the click handler sends that element's text to the editor, so a range folded into
    it would be sent as part of the filename. */
-.tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: 12px; }
+.tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: var(--fs-sm); }
 .tool-line .t-desc.path, .card-h code { cursor: pointer; }
 .tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
 /* A path is clamped to ONE line: it is already project-relative by the time it gets here, and what
@@ -486,7 +505,7 @@ blockquote > *:last-child { margin-bottom: 0; }
   margin: calc(var(--attach-gap) - var(--block-gap)) 0 0 22px;
 }
 .io { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
-  overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 /* The ROW is the scroll box, and it is the box that carries the padding — the same one-element
    arrangement .diff uses, and the whole reason its scrollbar looks right. A scrollbar is painted
    at the bottom of its container's PADDING box, so putting both here lands it flush on the border
@@ -511,7 +530,7 @@ blockquote > *:last-child { margin-bottom: 0; }
    32px is the floor, and it is 22 + 10 on purpose: "OUT" measures 21.11px, so 22px is the real
    minimum — anything narrower overflows the label into the gap or (below ~18px) breaks IN/OUT
    alignment. box-sizing is border-box globally, so that padding-left counts against min-width. */
-.io-k { color: var(--dot); font-size: 10px; padding-top: 2px; min-width: 32px; padding-left: 10px;
+.io-k { color: var(--dot); font-size: var(--fs-2xs); padding-top: 2px; min-width: 32px; padding-left: 10px;
   position: sticky; left: 0; z-index: 1; background: var(--code-bg); }
 /* pre (no wrap): long lines keep their width and the ROW scrolls, like .diff / codeblock pre.
    flex: none (not flex: 1 + min-width: 0) so the row's scrollWidth is driven by the text itself
@@ -540,7 +559,7 @@ blockquote > *:last-child { margin-bottom: 0; }
    to run the command — a foreground failure lands as an errored tool_result, the same command pushed
    to run_in_background by the sandbox guard leaves none at all. A dot that is red or green depending
    on that is worse than no dot. The outcome is in the line's own TEXT, which is the CLI's summary. */
-.t-prog { font-size: 12px; color: var(--dot); }   /* margin: the attached-block contract */
+.t-prog { font-size: var(--fs-sm); color: var(--dot); }   /* margin: the attached-block contract */
 .t-prog.run { color: var(--muted); }
 /* Images a tool returned (client-parity item 8): a Playwright screenshot, or Read on a PNG.
    Aligned with the IN/OUT box at 22px so it reads as that tool's output. Capped in height rather
@@ -551,7 +570,12 @@ blockquote > *:last-child { margin-bottom: 0; }
    modified on disk since you last read it". Standalone because the tools it applies to (Edit,
    Write) have no IN/OUT box for it to ride in; same 22px column and ↳ glyph as .io-note so the two
    read as one idiom. Amber rather than red: the edit DID apply, so this is a caveat, not a failure. */
-.t-note { color: var(--amber); font-size: 11px; }   /* margin: the attached-block contract */
+.t-note { color: var(--amber); font-size: var(--fs-xs); }   /* margin: the attached-block contract */
+/* Inside a card (tweak-travel, 3.5) the note is a caption between the diff and the footer, not a
+   block attached under a tool line: no 22px tool indent. --attach-gap above it — the same 8px the
+   note gets under a tool line and the card's own header→content step (.card-h) — so the note sits
+   at one distance from a diff wherever it appears; 2px nudges ↳ in from the box's border. */
+.card .t-note { margin: var(--attach-gap) 0 0 2px; }
 /* align-items is load-bearing: a column flex container defaults to STRETCH, which blew every image
    out to the full panel width — a 64x64 icon measured 474x320, a mostly-empty bordered box with the
    picture pinned into its top-left corner by object-position. flex-start lets each image size to
@@ -564,8 +588,8 @@ blockquote > *:last-child { margin-bottom: 0; }
 .tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 120px; object-fit: contain;
   object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 4px; background: var(--code-bg); cursor: zoom-in; display: block; }
-.tool-imgs .ti-missing { color: var(--muted); font-size: 11px; }
-.io-cut, .io-note { display: block; padding: 0 10px 8px 42px; color: var(--muted); font-size: 11px;
+.tool-imgs .ti-missing { color: var(--muted); font-size: var(--fs-xs); }
+.io-cut, .io-note { display: block; padding: 0 10px 8px 42px; color: var(--muted); font-size: var(--fs-xs);
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
 .io-cut.click { cursor: pointer; }
 .io-cut.click:hover { color: var(--fg); text-decoration: underline; }
@@ -575,11 +599,11 @@ blockquote > *:last-child { margin-bottom: 0; }
 
 /* code block */
 .codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: var(--code-head); color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: var(--code-head); color: var(--muted); font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
 .codeblock .cb-h button { background: transparent; border: 0; color: var(--muted); border-radius: var(--radius); padding: 2px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; }
 .codeblock .cb-h button:hover { color: var(--fg); }
 .codeblock .cb-h button svg { width: 14px; height: 14px; display: block; }
-.codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 .hl-k { color: #c586c0; } .hl-s { color: #ce9178; } .hl-c { color: #6a9955; font-style: italic; } .hl-n { color: #b5cea8; } .hl-v { color: #9cdcfe; }
 
 /* permission / plan / question card */
@@ -666,7 +690,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 .plan-sep { margin: 10px -12px 0; border-top: 1px solid var(--border); }
 .plan-fb { display: block; width: 100%; margin-top: 10px; padding: 7px 10px;
   background: var(--warn-field); color: var(--fg); border: 1px solid var(--warn-border);
-  border-radius: var(--radius); font: inherit; font-size: 13px; outline: none; }
+  border-radius: var(--radius); font: inherit; font-size: var(--fs-base); outline: none; }
 .plan-fb::placeholder { color: var(--dot); }
 
 /* Plan comments (checklist 5.6): select text in the plan body, anchor a note to it. Comment
@@ -683,7 +707,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    ancestor and floated to the top of the log (user report, real IDE, 2026-08-23) */
 .card.plan { position: relative; }
 .plan-add { position: absolute; display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 9px; font-size: 12px; color: var(--fg); background: var(--panel);
+  padding: 3px 9px; font-size: var(--fs-sm); color: var(--fg); background: var(--panel);
   border: 1px solid var(--warn-border); border-radius: 999px; cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,.4); white-space: nowrap; z-index: 30; }
 .plan-add svg { width: 12px; height: 12px; }
@@ -696,7 +720,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    and wears the SAME size as the .plan-fb field beside it (13px / 7px 10px): the feedback
    surface reads as one control family (user picks 2026-08-23). Committed rows keep 28px on
    the right for the hover-✕ gutter. */
-.plan-c { position: relative; display: block; font-size: 13px;
+.plan-c { position: relative; display: block; font-size: var(--fs-base);
   padding: 7px 28px 7px 10px; background: var(--warn-field); border: 1px solid var(--warn-border);
   border-radius: var(--radius); }
 .plan-c .c-a { display: block; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis;
@@ -732,12 +756,12 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .plan-c .c-ok:hover { color: var(--fg); }
 .plan-c .c-ok svg { width: 12px; height: 12px; }
 .plan-c input { flex: 1 1 auto; min-width: 0; background: none; border: 0; outline: none;
-  color: var(--fg); font: inherit; font-size: 13px; padding: 0; }
+  color: var(--fg); font: inherit; font-size: var(--fs-base); padding: 0; }
 .plan-c input::placeholder { color: var(--dot); }
 
 .card-menu .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
-  overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 /* pre (not pre-wrap): long lines keep their width and the .diff box scrolls horizontally
    (overflow-x: auto) rather than folding — matches the codeblock <pre> behaviour */
 .diff .del { display: block; color: var(--red); white-space: pre; }
@@ -754,19 +778,19 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 
 /* AskUserQuestion option text */
 .q-body { display: flex; flex-direction: column; min-width: 0; }
-.q-t { color: var(--fg); font-size: 13px; }
-.q-d { font-size: 11px; margin-top: 1px; }   /* color set by the .ask warm-tone rule */
+.q-t { color: var(--fg); font-size: var(--fs-base); }
+.q-d { font-size: var(--fs-xs); margin-top: 1px; }   /* color set by the .ask warm-tone rule */
 
 /* AskUserQuestion — tabbed multi-question card */
 .ask { border: 1px solid var(--warn-border); border-radius: var(--radius); background: var(--warn-bg); }
 .ask-h { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 12px 0; }
 .ask-tabs { display: flex; gap: 18px; }
 /* resting color comes from the warm-tone rule below (.ask .q-d, .ask-foot, .ask-tab) */
-.ask-tab { background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 13px;
+.ask-tab { background: transparent; border: 0; cursor: pointer; font: inherit; font-size: var(--fs-base);
   padding: 0 0 9px; border-bottom: 2px solid transparent; }
 .ask-tab.active { color: var(--fg); border-bottom-color: var(--warn-border); }
 .ask-tab:hover { color: var(--fg); }
-.ask-q { padding: 12px; color: var(--fg); font-size: 13px; line-height: 1.5; }
+.ask-q { padding: 12px; color: var(--fg); font-size: var(--fs-base); line-height: 1.5; }
 .ask-list { display: flex; flex-direction: column; padding: 0 8px 6px; gap: 2px; }
 .ask-opt { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: var(--radius); cursor: pointer; }
 .ask-opt:hover { background: rgba(var(--accent-rgb), .07); }
@@ -777,7 +801,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 /* 31px left: input text (31 + 1px border + 10px padding) lands on the option-label edge (42px) */
 .ask-other { padding: 2px 8px 6px 31px; }
 .ask-other input { width: 100%; background: var(--warn-field); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 7px 10px;
-  color: var(--fg); font: inherit; font-size: 13px; outline: none; }
+  color: var(--fg); font: inherit; font-size: var(--fs-base); outline: none; }
 .ask-other input::placeholder { color: var(--dot); }
 /* replayed (historical) card: answers are a record, not a control.
    NB: must not be called `.done` — that's the completion-summary line (22px dot-column indent). */
@@ -786,13 +810,13 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .ask-done .ask-opt.checked:hover { background: rgba(var(--accent-rgb), .14); }
 .ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
 .ask-go:disabled { opacity: .45; cursor: not-allowed; }
-.ask-foot { padding: 0 12px 12px; font-size: 12px; }
+.ask-foot { padding: 0 12px 12px; font-size: var(--fs-sm); }
 /* warm muted tone for secondary text inside the question card */
 .ask .q-d, .ask-foot, .ask-tab { color: #e4bda6; }
 
 /* error block */
 .error { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #6b3a3a; background: #241a1a; color: var(--red);
-  border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+  border-radius: var(--radius); padding: 8px 12px; font-size: var(--fs-base); }
 .error svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
 .error code { font-family: ui-monospace, Consolas, monospace; }
 
@@ -800,7 +824,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 #histPanel { position: absolute; right: 10px; z-index: 30; width: 310px; background: var(--panel);
   border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; }
 #histPanel.show { display: block; }
-.hist-h { padding: 10px 14px 6px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.hist-h { padding: 10px 14px 6px; font-size: var(--fs-xs); color: var(--muted); border-bottom: 1px solid var(--border); }
 /* 5 complete rows: a two-line row (title + desc/date) measures 54px */
 /* 5 rows. Rows are ~54.2px, not a round 54 — renderHistory() overwrites this with the measured
    5-row height once rows exist (the IDE's font decides it); 271px is the static fallback and
@@ -822,26 +846,26 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .hist-del:hover { color: var(--red); }
 .hist-del svg { width: 15px; height: 15px; display: block; }
 /* armed state: the row becomes the confirmation, so there is no modal to mis-click */
-.hist-confirm { display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--fg); }
+.hist-confirm { display: none; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--fg); }
 .hist-item.arm .t, .hist-item.arm .d, .hist-item.arm .hist-del { display: none; }
 .hist-item.arm .hist-confirm { display: flex; }
 .hist-item.arm { cursor: default; background: var(--warn-bg); }
 .hist-confirm span { flex: 1; }
-.hist-confirm button { border: 0; border-radius: 3px; padding: 3px 8px; font: inherit; font-size: 12px;
+.hist-confirm button { border: 0; border-radius: 3px; padding: 3px 8px; font: inherit; font-size: var(--fs-sm);
   cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .hist-confirm button svg { width: 13px; height: 13px; }
 .hist-confirm .yes { background: var(--danger); color: #fff; }
 .hist-confirm .yes:hover { background: var(--danger-hover); }
 /* .no inherits the shared neutral button colours */
-.hist-item .t { color: var(--fg); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.hist-item .t { color: var(--fg); font-size: var(--fs-base); display: flex; align-items: center; gap: 6px; }
 /* the title truncates; min-width:0 lets a flex item shrink below its content so ellipsis kicks in,
    and the badge (flex 0 0 auto) stays whole beside it instead of being clipped by a long title */
 .hist-item .t-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hist-item .d { color: var(--muted); font-size: 11px; margin-top: 1px; }
+.hist-item .d { color: var(--muted); font-size: var(--fs-xs); margin-top: 1px; }
 /* live transcript: labelled, and deliberately has no delete control */
-.hist-item .badge { flex: 0 0 auto; font-size: 11px; font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
+.hist-item .badge { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
   background: var(--user-raised); color: var(--user-muted); border: 1px solid var(--user-border); }
-.hist-empty { padding: 10px 14px; color: var(--muted); font-size: 12px; }
+.hist-empty { padding: 10px 14px; color: var(--muted); font-size: var(--fs-sm); }
 
 /* image placeholder (shared by chips + user-message images) */
 .ph-img { position: relative; display: block; background: linear-gradient(135deg, #35486b, #6b3555); }
@@ -850,7 +874,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 /* composer attachment chips (image.png 283×162 · .gitignore · …) */
 #chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--user-divider); }
 .att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--user-raised);
-  border: 1px solid var(--user-border); border-radius: var(--radius); font-size: 12px; color: var(--fg); line-height: 1; cursor: default; }
+  border: 1px solid var(--user-border); border-radius: var(--radius); font-size: var(--fs-sm); color: var(--fg); line-height: 1; cursor: default; }
 /* Remove control, shared by the attachment chip and the queue row (.q-row) so the two cannot
    drift: hidden until its row is hovered, then absolutely placed over the text end as a SOLID
    plate (the left-edge fade was dropped 2026-08-23, user pick) so revealing it never reflows
@@ -866,7 +890,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .att .thumb .ph-img svg { width: 10px; height: 10px; }
 .att .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .att > svg { width: 14px; height: 14px; color: var(--user-muted); flex: 0 0 auto; }
-.att .meta { color: var(--user-muted); font-size: 11px; }
+.att .meta { color: var(--user-muted); font-size: var(--fs-xs); }
 
 /* attachments inside a user message: chip row on top, click opens preview */
 .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
@@ -885,7 +909,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .lb-img { border-radius: var(--radius); overflow: hidden; }
 .lb-img .ph-img { display: block; width: 320px; height: 200px; }   /* mockup placeholder keeps a size */
 .lb-img img { display: block; max-width: 86vw; max-height: 78vh; }
-.lb-cap { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+.lb-cap { text-align: center; color: var(--muted); font-size: var(--fs-sm); margin-top: 8px; }
 .lb-x { position: absolute; top: -12px; right: -12px; width: 26px; height: 26px; border-radius: 50%; background: var(--raised);
   border: 1px solid var(--border-strong); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .lb-x:hover { background: var(--raised-hover); }
@@ -893,10 +917,10 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 
 /* command preview in permission card (Bash) */
 .card .cmd { margin: 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
-  font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre; overflow-x: auto; }
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); white-space: pre; overflow-x: auto; }
 
 /* retry — timeline line: icon sits in the dot column, text at the shared indent */
-.retry { position: relative; padding-left: 22px; font-size: 13px; }
+.retry { position: relative; padding-left: 22px; font-size: var(--fs-base); }
 .retry a { color: var(--muted); text-decoration: none; }
 .retry a:hover { color: var(--fg); }
 .retry svg { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px; }
@@ -906,7 +930,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    in flight takes the accent, because "which of these is happening now" is the question the list
    is glanced at to answer. */
 .todos { display: flex; flex-direction: column; gap: 3px; }   /* margin: the attached-block contract */
-.todo { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: var(--fg); }
+.todo { display: flex; align-items: flex-start; gap: 7px; font-size: var(--fs-base); color: var(--fg); }
 .todo-ic { flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--dot); }
 .todo-ic svg { width: 13px; height: 13px; display: block; }
 .todo.completed { color: var(--muted); }
@@ -919,7 +943,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .todo.pending { color: var(--muted); }
 
 /* status lines (⏹ Stopped, — resumed —, …): glyph in the dot column, text at the shared indent */
-.status { position: relative; padding-left: 22px; color: var(--muted); font-size: 13px; }
+.status { position: relative; padding-left: 22px; color: var(--muted); font-size: var(--fs-base); }
 .status .s-ic { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px;
   display: inline-flex; align-items: center; justify-content: center; }
 .status .s-ic svg { width: 12px; height: 12px; display: block; }
@@ -934,17 +958,17 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    that selector list would subtract --block-gap from it and pull it 10px INTO the status line. */
 .compact .compact-sum { margin: var(--attach-gap) 0 0 22px; padding: 8px 10px; background: var(--code-bg);
   border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted);
-  font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+  font-size: var(--fs-sm); line-height: 1.5; white-space: pre-wrap; }
 .compact .compact-sum.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
-.ok-t { color: var(--green); font-size: 13px; }
-.no-t { color: var(--red); font-size: 13px; }
+.ok-t { color: var(--green); font-size: var(--fs-base); }
+.no-t { color: var(--red); font-size: var(--fs-base); }
 /* a replayed plan card that was never decided — neutral, neither verdict color */
-.und-t { color: var(--muted); font-size: 13px; }
+.und-t { color: var(--muted); font-size: var(--fs-base); }
 /* granted rules on a resolved card: one chip per rule, so compound-command rules stay separable */
 .ok-t code { display: inline-block; margin: 1px 2px; padding: 0 6px; border-radius: 3px;
   background: color-mix(in srgb, var(--green) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
-  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 17px; }
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-xs); line-height: 17px; }
 
 /* ---------- composer ---------- */
 #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
@@ -976,10 +1000,10 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 /* No override of .rm's fade colour here, deliberately: .att.click lifts on hover too and keeps its
    remove control on the base --user-raised pill, so matching the attachment means matching that. */
 /* One line, ellipsised: the row is a reminder of what is pending, not a place to re-read a draft. */
-.q-text { flex: 1; min-width: 0; color: var(--fg); font-size: 12px; cursor: text;
+.q-text { flex: 1; min-width: 0; color: var(--fg); font-size: var(--fs-sm); cursor: text;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.q-att { color: var(--user-muted); margin-left: 8px; font-size: 11px; }
-.chip-btn { background: transparent; border: 0; color: var(--user-muted); cursor: pointer; font: inherit; font-size: 12px; line-height: 1;
+.q-att { color: var(--user-muted); margin-left: 8px; font-size: var(--fs-xs); }
+.chip-btn { background: transparent; border: 0; color: var(--user-muted); cursor: pointer; font: inherit; font-size: var(--fs-sm); line-height: 1;
   border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
 /* display:inline-flex above beats the UA's [hidden]{display:none} — without this re-assert a
    "hidden" bg chip kept showing its pulsing ::before dot forever (manual-test 7.3), and
@@ -1061,7 +1085,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    because rows here vary (a command with no description is shorter) and a hardcoded n × row cap
    scrolls a list that visibly fits. Keep it >= 5 real rows so it never clips before the measure. */
 #slashList { max-height: 274px; overflow-y: auto; padding-bottom: 4px; }
-.popup-empty { padding: 10px 14px; color: var(--user-muted); font-size: 12px; }
+.popup-empty { padding: 10px 14px; color: var(--user-muted); font-size: var(--fs-sm); }
 /* @-file-mention menu. Body-level, positioned by openMenu() with viewport coords from
    getBoundingClientRect — hence FIXED, unlike the composer popups (absolute in their anchors);
    with position:static those inline left/top were ignored and the menu "opened" invisibly in
@@ -1072,7 +1096,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
   border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); }
 /* Same middle-ellipsis contract as the tool line and the card header: a plain end-ellipsis ate the
    FILENAME, which is the one segment a file row must keep. .p-head shrinks, .p-tail never does. */
-.mi { padding: 6px 14px; font-size: 12px; color: var(--fg); cursor: pointer;
+.mi { padding: 6px 14px; font-size: var(--fs-sm); color: var(--fg); cursor: pointer;
   display: flex; align-items: baseline; overflow: hidden; }
 .mi .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mi .p-tail { flex: 0 0 auto; white-space: nowrap; }
@@ -1080,13 +1104,13 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 #attachMenu { left: 0; min-width: 220px; }
 #attachMenu .popup-item { align-items: center; }
 .popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--user-muted);
-  font-size: 11px; border-bottom: 1px solid var(--user-divider); }
+  font-size: var(--fs-xs); border-bottom: 1px solid var(--user-divider); }
 /* model dropdown search/type field — its own section: 14px insets to match the rest of the popup,
    with a full-width divider below separating "type a model" from the list */
 .popup-search-wrap { padding: 8px 14px; border-bottom: 1px solid var(--user-divider); }
 .popup-search { display: block; width: 100%; box-sizing: border-box; padding: 6px 9px;
   background: var(--user-raised); color: var(--fg); border: 1px solid var(--user-border);
-  border-radius: var(--radius); font: inherit; font-size: 12px; outline: none; }
+  border-radius: var(--radius); font: inherit; font-size: var(--fs-sm); outline: none; }
 .popup-search:focus { border-color: var(--accent); }
 .popup-search::placeholder { color: var(--user-muted); }
 .popup-item { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
@@ -1114,11 +1138,11 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .pi-ic svg { width: 17px; height: 17px; }
 .popup-item.sel .pi-ic, .popup-item.sel .pi-title { color: var(--fg); }
 .pi-body { flex: 1; min-width: 0; }
-.pi-title { color: var(--fg); font-size: 13px; }
-.pi-desc { color: var(--user-muted); font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pi-title { color: var(--fg); font-size: var(--fs-base); }
+.pi-desc { color: var(--user-muted); font-size: var(--fs-xs); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Source badge on custom slash commands ("project" / "user" / "mcp") — the TUI's "(project)"
    marker, worn as muted metadata after the name instead of inside the description. */
-.pi-src { color: var(--user-muted); font-size: 10px; margin-left: 8px; }
+.pi-src { color: var(--user-muted); font-size: var(--fs-2xs); margin-left: 8px; }
 /* a command's aliases, muted beside its name — same tone as the source badge, kept at the
    title's own size because it is a name too, not a label */
 .pi-alias { color: var(--user-muted); margin-left: 8px; font-weight: 400; }
@@ -1126,7 +1150,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .pi-check svg { width: 16px; height: 16px; }
 .popup-item.on .pi-check { visibility: visible; }
 .popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--user-divider);
-  color: var(--user-muted); font-size: 12px; }
+  color: var(--user-muted); font-size: var(--fs-sm); }
 /* The footer label rides the SAME left rail as a mode title: 14px padding + a 20px icon slot +
    a 10px gap = 44. `flex: 0 0 20px` is what does the work, and deliberately so: this popup lives
    inside #inputbar, where `#inputbar svg { width:18px; height:18px }` is an ID rule that BEATS

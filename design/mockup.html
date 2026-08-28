@@ -161,6 +161,34 @@
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">1785155723</span></div>
       </div>
 
+      <!-- STILL RUNNING under a finished Bash: the turn is not over — the CLI is between tool calls,
+           so the working line (✳ spinner + rotating verb + elapsed/tokens meta, chat.html
+           showWorking) sits below the last IN/OUT box until the next block replaces it. -->
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Show git status</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">git status</span></div>
+        <div class="io-row fold" title="Show more" onclick="this.classList.toggle('open')"><span class="io-k">OUT</span><span class="io-v">On branch master
+Changes to be committed:
+  (use "git restore --staged &lt;file&gt;..." to unstage)
+        deleted:    dummy-permission-test.txt</span></div>
+      </div>
+      <!-- TASK PROGRESS (.t-prog.run, 50-blocks.js): a background task's running line hung after
+           its tool's IN/OUT box — "what it is · what it was asked · how it is going" from
+           system/task_started + task_progress. In-flight colour while .run; a finished task drops
+           .run and the text becomes its summary. Two shapes: a backgrounded Bash (task_type
+           local_bash — description only; an exact copy of the IN command is suppressed) and a
+           sub-agent (type · commentary · tool uses · tokens). Several can be live at once — that is
+           the "N tasks" chip in the input bar. -->
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Run the production build</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">IN</span><span class="io-v">npm run build</span></div>
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">vite v5.2.0 building for production…</span></div>
+      </div>
+      <div class="t-prog run">Running in the background · transforming 412 modules</div>
+      <div class="tool-line"><b>Agent</b><span class="t-desc">Audit chat.css for unused rules</span></div>
+      <div class="t-prog run">Explore · Reading chat.css and grepping each selector · 7 tool uses · 3.1k tokens</div>
+      <div class="generating"><span class="spin">✳</span><span class="verb">Percolating…</span><span class="meta">(12s · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg><span class="w-tok">1.2k</span> tokens)</span></div>
+
       <!-- MULTIPLE OUT rows: live appends one per tool_result, so a command that reports twice
            stacks them. Replay keeps a single OUT (last result wins) — Audit 1 #5. -->
       <div class="tool-line"><b>Bash</b><span class="t-desc">Run the suite, then lint</span></div>
@@ -686,6 +714,19 @@ total 196K
         <div class="card-b"><span class="ok-t">✓ Applied</span></div>
       </div>
 
+      <!-- tweak-travel (3.5): the user edited the right pane of the editor diff before accepting.
+           The diff is a 3-line-context hunk of what RAN (live: wholeFileHunk; replay: structuredPatch),
+           the note sits under it as a card caption (.card .t-note), the footer names the surface. -->
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Edit</b> on <code class="path"><span class="p-head"></span><span class="p-tail">README.md</span></code></div>
+        <div class="diff"><span class="ctx"><span class="ln">17</span>  </span>
+<span class="ctx"><span class="ln">18</span>      composer test</span>
+<span class="ctx"><span class="ln">19</span>  probe36</span>
+<span class="add"><span class="ln">20</span>+ changed by claude v2</span></div>
+        <div class="t-note">↳ edited in the IDE before accepting</div>
+        <div class="card-b"><span class="ok-t">✓ Accepted in the editor</span></div>
+      </div>
+
       <!-- replayed edit: permission was refused (toolDenialKind in the JSONL) -->
       <div class="card warn">
         <div class="card-h"><b>Write</b> on <code class="path"><span class="p-head"></span><span class="p-tail">config/app.php</span></code></div>
@@ -741,6 +782,7 @@ total 196K
       <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg></span>Stopped</div>
 
       <div class="done"><span class="star">✻</span> Distilled for 27s · <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>608 tokens</div>
+      <div class="files click" title="Open a diff of every file this turn changed"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>2 files changed · <span class="f-name">README.md</span> <span class="f-add">+1</span><span class="f-rem">−1</span>, <span class="f-name">index.php</span> <span class="f-add">+4</span><span class="f-rem">−0</span> · <span class="f-review">Review</span></div>
 
       <!-- CLI process died: the one status line that renders in the error tone -->
       <div class="status err"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>claude process exited (1)</div>

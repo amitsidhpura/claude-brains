@@ -4,6 +4,45 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-28 — The card note's gap is `--attach-gap` (8px), not a literal
+**Decision:** `.card .t-note { margin: var(--attach-gap) 0 0 2px }`. **Why:** the 6px first shipped
+was eyeballed; the user asked how it was derived and it wasn't. The card's own rhythm is the token
+(`.card-h` margin-bottom, `.card .blk` margin-top) and the note already sits at `--attach-gap` under
+a tool line, so one token keeps the note-to-diff distance identical in both places. Approved on the
+real panel 2026-08-28. **Rejected:** keeping 6px (unjustified); 10px to match `.card-b` (that is the
+footer's step, not a content gap). The 2px left nudge stays by eye — it aligns ↳ with the box border.
+
+## 2026-08-28 — Tweak-travel sends a WHOLE-FILE edit, and MultiEdit rides it too
+**Decision:** an edited permission-diff pane goes back as `updatedInput` in VS Code's own shape —
+Edit `{old_string: whole current file, new_string: whole pane}`, Write `content`, MultiEdit
+`edits:[that one edit]` (`EditProposals.tweakedInput`). An untouched pane answers with the
+ORIGINAL input (byte-identical to pre-3.5). The card redraws its diff from what ran and adds
+"edited in the IDE before accepting"; replay derives the same flag by replaying input and
+`toolUseResult` onto `originalFile`. **Why:** measured — VS Code 2.1.250's `rf(…,"single")` is a
+100 000-line-context diff, i.e. the whole file, and the CLI applied our whole-file answer over
+stdio without complaint (probe f63143c3); the whole file is trivially unique for `old_string`,
+so no hunk-minimising diff code is needed on either path. **Rejected:** a minimal-hunk diff
+(more code, same result, and a non-unique minimal old_string could FAIL the CLI's check);
+leaving the pane read-only (the verdict already carried the pane text — it was being thrown
+away); sending MultiEdit to the card only, as VS Code does (the schema accepts the whole-file
+edit and the card path is unchanged).
+
+## 2026-08-28 — 3.6 multi-file review: analysed, not started — data before UI
+**Outcome (same day):** built as decided — probe showed `get_workspace_diff` is git HEAD vs
+working tree (user edits included), so baselines come from the autosave PreToolUse hook; the
+line is PER-TURN (what the hook sees cleanly), not per-session like VS Code; Review is live-only,
+the resumed-session variant is parked in backlog. Hand-verified 2026-08-28.
+
+**Decision:** build order for 3.6 is (1) probe `get_workspace_diff` headlessly and snapshot
+per-file baselines in the existing PreToolUse Autosave hook, (2) only then a "Files changed (n)"
+summary line opening a `SimpleDiffRequestChain`. **Why:** the UI half is nearly free
+(`DiffReview` already opens a `ChainDiffVirtualFile`); what VS Code has and we lack is the
+`{old,new}` map, fed there by a `file_updated` MCP notification to its in-process
+`claude-vscode` sdkMcpServer (we use an external ws server via `--mcp-config`) plus a checkpoint
+store on load. **Rejected for now:** `ChangeListManager` (working tree vs HEAD) as the source —
+mixes the user's own edits with Claude's; adopting sdkMcpServers just to receive `file_updated`
+(unprobed whether the CLI would notify a ws server at all).
+
 ## 2026-08-28 — Closed audit docs are deleted, not archived; their knowledge moves to the reference tier
 **Decision:** `docs/verifier-matrix.md`, `docs/renderer-parity.md` and `docs/client-parity.md` deleted
 (user, 2026-08-28). Rule going forward: a doc whose every item is closed is history — promote the

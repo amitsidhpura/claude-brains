@@ -32,12 +32,28 @@ object Autosave {
     private val CONTINUE: JsonObject = buildJsonObject { put("continue", true) }
 
     /** Hook input is the CLI's standard shape: `{hook_event_name, tool_name, tool_input:{file_path…}}`. */
-    fun handle(input: JsonObject, respond: (JsonObject) -> Unit) {
+    /** Edit tools whose PreToolUse is the last moment the file is still un-edited (3.6). */
+    private val EDIT_TOOLS = setOf("Edit", "Write", "MultiEdit")
+
+    /**
+     * [snapshot] receives (path, text-before-the-edit) for Edit/Write/MultiEdit — the baseline
+     * TurnChanges keeps per turn; null text = the file does not exist yet (a Write creating it).
+     * Taken AFTER the save, so the baseline is exactly what the CLI is about to read.
+     */
+    fun handle(input: JsonObject, respond: (JsonObject) -> Unit, snapshot: ((String, String?) -> Unit)? = null) {
+        val toolName = input["tool_name"]?.jsonPrimitive?.contentOrNull
+        val rawPath = input["tool_input"]?.jsonObject?.get("file_path")?.jsonPrimitive?.contentOrNull
+        val wantSnap = snapshot != null && toolName in EDIT_TOOLS && !rawPath.isNullOrBlank()
         val toolInput = input["tool_input"]?.jsonObject
         val path = toolInput?.get("file_path")?.jsonPrimitive?.contentOrNull
             ?: toolInput?.get("notebook_path")?.jsonPrimitive?.contentOrNull
         val vf = path?.takeIf { it.isNotBlank() && !it.startsWith("file:", ignoreCase = true) }?.let(::findVFile)
-        if (vf == null) { respond(CONTINUE); return }
+        if (vf == null) {
+            // No VFS file: nothing to save, and the baseline is "absent" (or unreadable — treat
+            // the same; a disk read here would be the only unlocked read in the flow).
+            if (wantSnap) snapshot!!(rawPath!!, readOnDisk(rawPath))
+            respond(CONTINUE); return
+        }
         // Reply from the EDT AFTER the save, so the tool cannot outrun the disk write.
         ApplicationManager.getApplication().invokeLater {
             try {
@@ -47,6 +63,7 @@ object Autosave {
                     fdm.saveDocument(doc)
                     log.info("autosaved before ${input["tool_name"]?.jsonPrimitive?.contentOrNull}: ${vf.path}")
                 }
+                if (wantSnap) snapshot!!(rawPath!!, doc?.text ?: String(vf.contentsToByteArray(), vf.charset))
             } catch (t: Throwable) {
                 log.warn("autosave failed for ${vf.path}", t)
             } finally {
@@ -54,4 +71,7 @@ object Autosave {
             }
         }
     }
+
+    private fun readOnDisk(path: String): String? =
+        runCatching { java.io.File(path).takeIf { it.isFile }?.readText() }.getOrNull()
 }

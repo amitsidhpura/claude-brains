@@ -117,7 +117,8 @@ class RenderLimitsTest {
                 "inKeys:[\"command\",\"prompt\",\"function\"]," +
                 "plumbingTags:[\"tool_use_error\",\"system-reminder\"]," +
                 "planDenyPrefix:\"User chose to stay in plan mode and continue planning\"," +
-                "planCommentsHeader:\"Comments on the plan:\"}",
+                "planCommentsHeader:\"Comments on the plan:\"," +
+                "tweakNote:\"edited in the IDE before accepting\"}",
             RenderLimits.asJs(),
         )
     }

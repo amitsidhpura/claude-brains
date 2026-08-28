@@ -1,0 +1,198 @@
+{
+ "item": "tweak-travel (3.5): an edit changed in the editor diff pane before accepting",
+ "branch": "__perm_answered{tweaked,oldStr,newStr} REPLACES the live card's .diff with a 3-line-context hunk of the edit that RAN (wholeFileHunk → patchRows, re-folded) and adds the LIM.tweakNote line; replay draws the same line from the item's `tweaked` flag (SessionStore ← EditProposals.tweaked) under the structuredPatch card. Untweaked answers and untweaked replay items draw NO note.",
+ "provenance": "The permission_request frame is ChatPanel's synthetic shape (fixture 11). __perm_answered's tweaked/oldStr/newStr are OUR OWN Kotlin→JS fields (ChatPanel.respondFromEditor), so the live steps are self-consistency evidence. The __transcript item mirrors what SessionStore serializes for the 2026-08-28 probe session f63143c3 (CLI 2.1.250): the model proposed beta→BETA, the pane accepted 'BETA (tweaked by user)', the CLI applied it and persisted toolUseResult{oldString,newString,originalFile,structuredPatch,userModified:false} while the tool_use kept the ORIGINAL input — the structuredPatch hunk below is that record's, verbatim; `tweaked:true` is the flag EditProposals.tweaked derives from it (pinned in EditProposalsTest). What the CLI does with a whole-file updatedInput was measured in that probe, not here. NEGATIVE CONTROL RUN 2026-08-28 against the pre-fix webview (whole plugin/src/main/resources/webview/ dir stashed to HEAD 682028e, sandbox restarted, served JS verified BY CONTENT: no 'ev.tweaked' in the page script — note LIM.tweakNote is spliced from Kotlin and is NOT a webview witness): 7 passed, 4 failed, exactly the four DISCRIMINATING asserts — step 1 'diff shows the edit that RAN' (the card kept the proposal's BETA) and 'the note names why' (no .t-note), step 3's two replay-note asserts. Two step-1 asserts pass in BOTH builds and are guards, not discriminators: '- beta' is also in the proposal's diff, and 'BETA\\n' is absent from any diff textContent. Steps 2 and 4 (no note without the flag) pass in both builds by design. After stash pop + restart: 15/15.",
+ "steps": [
+  {
+   "note": "editor accepted an EDITED pane: the card's diff becomes what ran, plus the note",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "t1",
+     "tool": "Edit",
+     "input": "{\"file_path\": \"/tmp/demo.txt\", \"old_string\": \"beta\", \"new_string\": \"BETA\"}"
+    },
+    {
+     "type": "__perm_answered",
+     "id": "t1",
+     "allow": true,
+     "tweaked": true,
+     "oldStr": "alpha\nbeta\ngamma\n",
+     "newStr": "alpha\nBETA (tweaked by user)\ngamma\n"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.diff').textContent})()",
+     "contains": "BETA (tweaked by user)",
+     "why": "the diff shows the edit that RAN, not the model's proposal"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.diff').textContent})()",
+     "contains": "- beta",
+     "why": "whole-file old/new trims to the changed region: the removed line is shown"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.diff').textContent.indexOf('BETA\\n')})()",
+     "equals": -1,
+     "why": "the proposed (un-tweaked) line is gone from the diff"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();const n=c.querySelector('.t-note');return n?n.textContent:null})()",
+     "contains": "edited in the IDE before accepting",
+     "why": "the note names why the diff differs from the proposal (LIM.tweakNote)"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.card-b').textContent})()",
+     "contains": "Accepted in the editor",
+     "why": "the verdict paints as before — tweak-travel changes the diff, not the decision"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelectorAll('.diff > *').length})()",
+     "equals": 5,
+     "why": "whole-file old/new (3 lines, one changed) renders as a hunk: ctx alpha, -beta, +BETA…, ctx gamma, plus the trailing empty line context — NOT every line of the file (hand test 2026-08-28 showed all 19 rows)"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();const d=c.querySelector('.diff');return d.dataset.folded==='1' && d.nextElementSibling.classList.contains('t-note') && d.nextElementSibling.nextElementSibling.classList.contains('card-b')})()",
+     "equals": true,
+     "why": "the NEW .diff went through foldBlock (collapsible again) and the note sits between it and the footer"
+    }
+   ]
+  },
+  {
+   "note": "negative control: an UNTOUCHED pane accepted in the editor draws no note and keeps the proposal's diff",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "t2",
+     "tool": "Edit",
+     "input": "{\"file_path\": \"/tmp/demo.txt\", \"old_string\": \"beta\", \"new_string\": \"BETA\"}"
+    },
+    {
+     "type": "__perm_answered",
+     "id": "t2",
+     "allow": true
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return !!c.querySelector('.t-note')})()",
+     "equals": false,
+     "why": "no tweak, no note"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.diff').textContent})()",
+     "contains": "BETA",
+     "why": "the proposal's diff stands"
+    }
+   ]
+  },
+  {
+   "note": "replay: a tool item flagged tweaked draws the note under its structuredPatch card",
+   "frames": [
+    {
+     "type": "__clear"
+    },
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "user",
+       "text": "replace beta"
+      },
+      {
+       "role": "tool",
+       "text": "Edit",
+       "desc": "probe35.txt",
+       "isPath": true,
+       "fullPath": "/home/syncroze/Sites/claude-brains-testing/probe35.txt",
+       "file": "/home/syncroze/Sites/claude-brains-testing/probe35.txt",
+       "patch": [
+        {
+         "oldStart": 1,
+         "oldLines": 4,
+         "newStart": 1,
+         "newLines": 4,
+         "lines": [
+          " alpha",
+          "-beta",
+          "+BETA (tweaked by user)",
+          " gamma",
+          " delta"
+         ]
+        }
+       ],
+       "tweaked": true
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.diff').textContent})()",
+     "contains": "BETA (tweaked by user)",
+     "why": "replay draws the structuredPatch — the edit that ran"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();const n=c.querySelector('.t-note');return n?n.textContent:null})()",
+     "contains": "edited in the IDE before accepting",
+     "why": "same note, same slot (under the diff) as live"
+    },
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return c.querySelector('.diff').nextElementSibling.classList.contains('t-note')})()",
+     "equals": true,
+     "why": "the note sits directly under the diff, above the ✓ Applied footer, exactly where the live redraw puts it"
+    }
+   ]
+  },
+  {
+   "note": "negative control: the same replay item without the flag draws no note",
+   "frames": [
+    {
+     "type": "__clear"
+    },
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "user",
+       "text": "replace beta"
+      },
+      {
+       "role": "tool",
+       "text": "Edit",
+       "desc": "probe35.txt",
+       "isPath": true,
+       "fullPath": "/home/syncroze/Sites/claude-brains-testing/probe35.txt",
+       "file": "/home/syncroze/Sites/claude-brains-testing/probe35.txt",
+       "patch": [
+        {
+         "oldStart": 1,
+         "oldLines": 4,
+         "newStart": 1,
+         "newLines": 4,
+         "lines": [
+          " alpha",
+          "-beta",
+          "+BETA",
+          " gamma",
+          " delta"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const c=[...document.querySelectorAll('.card')].pop();return !!c.querySelector('.t-note')})()",
+     "equals": false,
+     "why": "no flag, no note"
+    }
+   ]
+  }
+ ]
+}

@@ -372,9 +372,16 @@
       // paint the card decided WITHOUT sending a second response — Kotlin already answered the
       // CLI, and its arbiter would drop a duplicate anyway. Unknown id = the card answered
       // first (or a stale frame): nothing to do.
+      // `tweaked` (3.5): the user edited the diff pane before accepting — oldStr/newStr are the
+      // edit that actually ran, so the card redraws its diff and says so.
+      // Files this turn changed (3.6): Kotlin's TurnChanges settled at `result`, so the frame
+      // lands right after the turn's ✻ summary line. Review → the IDE opens a diff chain of the
+      // turn's (baseline, final) pairs — live turns only; replay draws the same line from the
+      // transcript without the action (see 55-replay's done case).
+      case '__files_changed': return filesLine(ev.files || [], ev.turn);
       case '__perm_answered': {
         const fn = permCards[ev.id];
-        if (fn) fn(ev.allow === true || ev.allow === 'true');
+        if (fn) fn(ev.allow === true || ev.allow === 'true', ev.tweaked ? { oldStr: ev.oldStr, newStr: ev.newStr } : null);
         return;
       }
       // A usage limit was hit or is close. No terminal to check — the terminal is not running this

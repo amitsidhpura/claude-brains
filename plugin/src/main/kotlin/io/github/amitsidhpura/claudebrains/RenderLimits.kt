@@ -29,6 +29,10 @@ object RenderLimits {
      *  replay footer. One copy, or the parser drifts from the producer. */
     const val PLAN_NOTES_MARKER = "\n\n## User notes on approval\n"
 
+    /** Tweak-travel (3.5): the note under an edit the user changed in the editor diff before
+     *  accepting. Live (the card, via LIMITS) and replay (`tweaked` on the item) share this text. */
+    const val TWEAK_NOTE = "edited in the IDE before accepting"
+
     /** Plan comments (checklist 5.6): a note anchored to selected plan text serializes as one
      *  line — `[Re: "anchor"] text` — byte-compatible with the VS Code client's own deny format
      *  (measured off its transcript, 2026-08-23). On deny the block is
@@ -459,6 +463,7 @@ object RenderLimits {
         return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX,pathTailMax:$PATH_TAIL_MAX," +
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
             "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}," +
-            "planDenyPrefix:\"$PLAN_DENY_PREFIX\",planCommentsHeader:\"$PLAN_COMMENTS_HEADER\"}"
+            "planDenyPrefix:\"$PLAN_DENY_PREFIX\",planCommentsHeader:\"$PLAN_COMMENTS_HEADER\"," +
+            "tweakNote:\"$TWEAK_NOTE\"}"
     }
 }

@@ -1,0 +1,164 @@
+{
+ "item": "files changed (3.6): a per-turn 'N files changed · Review' line under the summary",
+ "branch": "__files_changed{turn,files[{path,added,removed,isNew}]} → filesLine() as a clickable .files.click line whose Review sends bridge{kind:'review',turn}; replay draws the same line from the done item's `files` (paths only) WITHOUT the action or counts.",
+ "provenance": "__files_changed is OUR OWN Kotlin→JS frame (ClaudeSessionService's CliFileSync turn-end → TurnChanges.endTurn); the replay `done.files` is what SessionStore serializes (pinned against the real probe transcript in SessionStoreTweakTest). Self-consistency evidence only. What the IDE opens on Review (DiffReview.openChain) is Swing and out of this harness's reach — hand-verified 2026-08-28 in the sandbox. NEGATIVE CONTROLS: step 2 (empty list draws nothing), step 4 (replay done without files draws nothing).",
+ "steps": [
+  {
+   "note": "live: a turn that changed two files gets a Review line; Review bridges the turn index",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge60) { window.__realBridge60 = window.__bridge; } window.__tape60 = []; window.__bridge = function(j){ window.__tape60.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "__files_changed",
+     "turn": 7,
+     "files": [
+      {
+       "path": "/p/README.md",
+       "added": 1,
+       "removed": 1,
+       "isNew": false
+      },
+      {
+       "path": "/p/src/new.php",
+       "added": 4,
+       "removed": 0,
+       "isNew": true
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f?f.textContent:null})()",
+     "contains": "2 files changed",
+     "why": "the count"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.textContent})()",
+     "contains": "README.md +1−1, new.php +4−0 · Review",
+     "why": "basenames with per-file counts, then the action"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();f.click();return JSON.stringify(window.__tape60.filter(function(o){return o.kind==='review'}).map(function(o){return o.turn}))})()",
+     "equals": "[7]",
+     "why": "clicking sends review for THIS turn's index"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.querySelector('.f-name').title})()",
+     "equals": "/p/README.md",
+     "why": "the full path rides the tooltip"
+    }
+   ]
+  },
+  {
+   "note": "negative control: an empty list draws no line",
+   "frames": [
+    {
+     "type": "__files_changed",
+     "turn": 8,
+     "files": []
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.files').length",
+     "equals": 1,
+     "why": "still only the line from step 1"
+    }
+   ]
+  },
+  {
+   "note": "replay: the done item's files draw the same line, informational (no Review, no counts)",
+   "frames": [
+    {
+     "type": "__clear"
+    },
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "user",
+       "text": "edit"
+      },
+      {
+       "role": "tool",
+       "text": "Edit",
+       "desc": "a.txt",
+       "isPath": true,
+       "fullPath": "/p/a.txt"
+      },
+      {
+       "role": "done",
+       "durMs": 1000,
+       "tokens": 5,
+       "seed": "s1",
+       "files": [
+        "/p/a.txt"
+       ]
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f?f.textContent:null})()",
+     "equals": "1 file changed · a.txt",
+     "why": "count + name, no Review"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.classList.contains('click')})()",
+     "equals": false,
+     "why": "not an action on replay"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.previousElementSibling.classList.contains('done')})()",
+     "equals": true,
+     "why": "sits directly under the ✻ summary, like live"
+    }
+   ]
+  },
+  {
+   "note": "negative control: a replayed done without files draws nothing",
+   "frames": [
+    {
+     "type": "__clear"
+    },
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "user",
+       "text": "ask"
+      },
+      {
+       "role": "done",
+       "durMs": 1000,
+       "tokens": 5,
+       "seed": "s2"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.files').length",
+     "equals": 0,
+     "why": "no files, no line"
+    }
+   ]
+  },
+  {
+   "note": "restore the real bridge (fixture 48's idiom) so later fixtures talk to Kotlin again",
+   "setup": "if (window.__realBridge60) { window.__bridge = window.__realBridge60; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [],
+   "expect": [
+    {
+     "js": "window.__bridge === window.__realBridge60",
+     "equals": true,
+     "why": "bridge restored"
+    }
+   ]
+  }
+ ]
+}

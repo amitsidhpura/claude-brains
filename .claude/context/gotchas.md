@@ -55,6 +55,13 @@ re-read those before trusting memory here.
   extra usage off in the subscription). Whether a given turn actually ran fast is
   `result.usage.speed` (`"fast"`/`"standard"`) — `fast_mode_state` says intent, `usage.speed`
   says delivery. `{fastMode:false}` reverts (both probed 2026-08-24).
+- **A tweaked `updatedInput` leaves no trace on the `tool_use` block.** The transcript's assistant
+  record keeps the model's ORIGINAL Edit input; what ran is only in `toolUseResult`
+  (`oldString`/`newString`/`originalFile`), whose `userModified:false` is about disk drift, not the
+  host's change (probe 2026-08-28, 2.1.250). So a replay that draws the card from the input LIES
+  after a tweak; draw from `structuredPatch` (SessionStore already does) and detect the tweak by
+  replaying both edits onto `originalFile` (`EditProposals.tweaked`). Live, the only witness is the
+  host itself — hence the `__perm_answered{tweaked,oldStr,newStr}` frame.
 - **The control-response parser WHITELISTS fields; everything else dies silently.** Allow admits
   `behavior`/`updatedInput`/`updatedPermissions` (deny adds `message`); a `feedback` field probed on
   2.1.233 reached the model in ZERO frames, no warning. The TUI's `acceptFeedback` is an internal
@@ -514,6 +521,28 @@ re-read those before trusting memory here.
   2.1.241→2.1.246 contributions/tool-roster diff was possible solely because `vscode/` (gitignored)
   still held 2.1.241. Re-extract to the current version right AFTER an audit, so the next one has a
   base. CLI versions, by contrast, stay on disk under `~/.local/share/claude/versions/`.
+  (2026-08-28: got lucky — 2.1.246 and 2.1.250 were both installed, so the diff ran dir-to-dir.)
+- **`DiffContentFactory.create(project, text, fileType)` yields a READ-ONLY document** — the pane
+  shows a lock and typing says "Failed to make diff.md writable", whatever `FORCE_READ_ONLY` says.
+  Editable text content is `DiffContentFactoryEx.getInstanceEx().createEditable(project, text,
+  fileType)` (on 242). Found 2026-08-28 on the first hand test of tweak-travel; the bridge flow's
+  "editable pane" comment had been wrong since 2026-08-09 and nothing measured it.
+- **Do not `pkill`/`kill` by a gradle-wrapper pattern while the sandbox runs.** The `runIde`
+  wrapper launched with `( … & )` and a stuck `gradlew probe` are indistinguishable in `pgrep -af`
+  (both `java -Dorg.gradle.appname=gradlew …`); killing the wrong one takes the IDE down with it
+  (2026-08-28). Find the probe by its `--args`, or just wait it out — `probe` blocks on the build
+  lock while `runIde` is preparing the sandbox.
+- **`window.LIMITS` / `LIM.*` is spliced from RenderLimits.kt — it is NOT a witness of which
+  webview JS is served.** A control build check that reads `LIM.tweakNote` passed on the pre-fix
+  page (2026-08-28) because the Kotlin side was unchanged by the stash. Verify webview builds by a
+  string that lives in `webview/js/*.js` (e.g. `[...document.scripts].map(s=>s.textContent).join('')
+  .indexOf('ev.tweaked')`).
+- **`./gradlew runIde` DETACHES from an interactive/background Bash but BLOCKED inside a plain
+  shell script** (`control.sh`, 2026-08-28: the gradle client stayed attached for 10+ min while the
+  IDE ran). In a script, launch it with `( … & )` and poll CDP, never wait for the wrapper.
+- **`grep -oE '.{0,200}key.{0,200}'` over a CLI binary fails under ugrep** ("exceeds complexity
+  limits" — the system `grep` is ugrep) and prints nothing useful. Read context windows with a
+  python `re.finditer` over `strings -n 6 <bin>` output instead; the bare-key `grep -c` still works.
 - **`2>&1 > file` splits gradle's streams** (stderr stays on the terminal) — write `> file 2>&1`.
   And background Bash tasks start in the REPO ROOT, not the shell's cwd: `./gradlew` from a
   backgrounded command fails with "no such file" unless the command `cd plugin`s itself.

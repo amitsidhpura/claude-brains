@@ -181,6 +181,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 session.answerQuestion(id, msg["answers"]?.jsonPrimitive?.content ?: "{}")
             }
+            // "Files changed · Review" (3.6): open a diff chain of the turn's (baseline, now) pairs.
+            "review" -> msg["turn"]?.jsonPrimitive?.content?.toIntOrNull()?.let { turn ->
+                val pairs = session.reviewTurn(turn)
+                if (pairs.isNotEmpty()) permDiffReview.openChain("Claude: changes (turn $turn)", pairs)
+            }
             "mode" -> msg["mode"]?.jsonPrimitive?.content?.let { session.setPermissionMode(it) }
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
             "fastMode" -> session.setFastMode(msg["on"]?.jsonPrimitive?.content == "true")
@@ -405,9 +410,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     }
 
     /**
-     * The editor surface of an edit permission: a real diff (read-only, Accept/Reject buttons on
-     * the in-editor banner) opened alongside the panel card, either of which answers the
-     * can_use_tool. Verdict mapping
+     * The editor surface of an edit permission: a real diff (Accept/Reject buttons on the
+     * in-editor banner, right pane editable) opened alongside the panel card, either of which
+     * answers the can_use_tool. An edited pane rides back as `updatedInput` (tweak-travel, 3.5 —
+     * EditProposals.tweakedInput; whole-file shape as VS Code sends it) and the card is redrawn
+     * with the edit that actually ran plus a note. Verdict mapping
      * differs from the bridge flow on ONE point — TAB_CLOSED here means "the editor bows out",
      * not accept-as-proposed: closing the diff without deciding leaves the card as the sole
      * surface, because a permission must never be granted by a window being tidied away.
@@ -421,23 +428,29 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 ?: return@executeOnPooledThread
             // Degrade to card-only when the proposal can't be reconstructed (old_string not
             // found — e.g. the file changed underneath): a wrong diff is worse than none.
-            val proposed = EditProposals.proposedContent(tool, obj, readFileText(path))
+            // ONE read feeds the proposal, the left pane and the tweak's whole-file old_string:
+            // a second read could differ (unsaved buffer vs disk, VFS lag) and the CLI would then
+            // fail to find the old_string it is handed.
+            val current = readFileText(path)
+            val proposed = EditProposals.proposedContent(tool, obj, current)
                 ?: return@executeOnPooledThread
             // The bar's COMBINED suggestion button (user's spec 2026-08-09): one button that
             // grants every allow-suggestion whole — deliberately no split/partial-grant
             // dropdown here; the panel card keeps that.
             val combined = combinedSuggestion(suggestionsJson)
             val future = permDiffReview.open(
-                path, proposed, File(path).name, readOnly = true,
-                acceptAllLabel = combined?.first,
+                path, proposed, File(path).name,
+                acceptAllLabel = combined?.first, current = current,
             )
             permDiffs[requestId] = future
             future.whenComplete { verdict, _ ->
                 permDiffs.remove(requestId)
+                val tweak = verdict?.getOrNull(1)?.let { EditProposals.tweakedInput(tool, obj, current, it) }
+                val tweakDiff = tweak?.let { Pair(current ?: "", verdict[1]) }
                 when (verdict?.firstOrNull()) {
-                    "FILE_SAVED" -> respondFromEditor(requestId, allow = true)
+                    "FILE_SAVED" -> respondFromEditor(requestId, allow = true, updatedInput = tweak, tweakDiff = tweakDiff)
                     "FILE_SAVED_ALL" -> respondFromEditor(requestId, allow = true,
-                        suggestionTokens = combined?.second.orEmpty())
+                        suggestionTokens = combined?.second.orEmpty(), updatedInput = tweak, tweakDiff = tweakDiff)
                     "DIFF_REJECTED" -> respondFromEditor(requestId, allow = false)
                     // TAB_CLOSED / cancellation: no answer from the editor; the card stands.
                 }
@@ -474,13 +487,25 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         return (if (hasRules) "Always allow" else "Accept all edits") to tokens
     }
 
-    /** Editor verdict → control response, and (when it won the race) retire the panel card. */
-    private fun respondFromEditor(requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList()) {
-        if (session.respondPermission(requestId, allow, suggestionTokens)) {
+    /**
+     * Editor verdict → control response, and (when it won the race) retire the panel card.
+     * [tweakDiff] (current → final pane text) rides the frame so the card can redraw its diff as
+     * the edit that actually ran — live's counterpart of replay's `structuredPatch`.
+     */
+    private fun respondFromEditor(
+        requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList(),
+        updatedInput: JsonObject? = null, tweakDiff: Pair<String, String>? = null,
+    ) {
+        if (session.respondPermission(requestId, allow, suggestionTokens, updatedInput = updatedInput)) {
             pushFrame(buildJsonObject {
                 put("type", "__perm_answered")
                 put("id", requestId)
                 put("allow", allow)
+                if (tweakDiff != null) {
+                    put("tweaked", true)
+                    put("oldStr", tweakDiff.first)
+                    put("newStr", tweakDiff.second)
+                }
             })
         }
     }

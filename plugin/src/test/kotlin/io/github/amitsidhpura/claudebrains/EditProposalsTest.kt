@@ -4,6 +4,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import org.junit.jupiter.api.Test
 
 /**
@@ -78,5 +82,71 @@ class EditProposalsTest {
         assertNull(EditProposals.proposedContent("Bash", obj("""{"command":"ls"}"""), "x"))
         assertNull(EditProposals.proposedContent("Edit",
             obj("""{"old_string":"a","new_string":"b"}"""), null))
+    }
+
+    // ---- tweak-travel (3.5) ---------------------------------------------------------------
+
+    @Test
+    fun `untouched pane answers with the original input (null)`() {
+        assertNull(EditProposals.tweakedInput("Edit",
+            obj("""{"file_path":"/f","old_string":"beta","new_string":"BETA"}"""),
+            "alpha\nbeta\n", "alpha\nBETA\n"))
+        assertNull(EditProposals.tweakedInput("Write",
+            obj("""{"file_path":"/f","content":"x"}"""), null, "x"))
+    }
+
+    @Test
+    fun `edited pane rides back as a whole-file edit, the shape VS Code sends`() {
+        val t = EditProposals.tweakedInput("Edit",
+            obj("""{"file_path":"/f","old_string":"beta","new_string":"BETA"}"""),
+            "alpha\nbeta\n", "alpha\nBETA (tweaked)\n")!!
+        assertEquals("/f", t["file_path"]!!.jsonPrimitive.content)
+        assertEquals("alpha\nbeta\n", t["old_string"]!!.jsonPrimitive.content)
+        assertEquals("alpha\nBETA (tweaked)\n", t["new_string"]!!.jsonPrimitive.content)
+        assertEquals("false", t["replace_all"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `write and multiedit keep their own schemas`() {
+        val w = EditProposals.tweakedInput("Write",
+            obj("""{"file_path":"/f","content":"x"}"""), null, "y")!!
+        assertEquals("y", w["content"]!!.jsonPrimitive.content)
+        assertNull(w["old_string"])
+        val m = EditProposals.tweakedInput("MultiEdit",
+            obj("""{"file_path":"/f","edits":[{"old_string":"a","new_string":"b"}]}"""),
+            "a", "c")!!
+        val e = m["edits"]!!.jsonArray.single().jsonObject
+        assertEquals("a", e["old_string"]!!.jsonPrimitive.content)
+        assertEquals("c", e["new_string"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `underivable proposal never claims a tweak`() {
+        assertNull(EditProposals.tweakedInput("Edit",
+            obj("""{"file_path":"/f","old_string":"missing","new_string":"b"}"""), "content", "anything"))
+        assertNull(EditProposals.tweakedInput("Bash", obj("""{"command":"ls"}"""), "x", "y"))
+    }
+
+    // Replay half. The Edit record is the 2026-08-28 probe, verbatim: the model proposed
+    // beta→BETA, the user accepted "BETA (tweaked by user)" from the editor pane.
+    private val probeInput = obj("""{"replace_all":false,"file_path":"/p/probe35.txt","old_string":"beta","new_string":"BETA"}""")
+    private val probeResult = obj("""{"filePath":"/p/probe35.txt","oldString":"alpha\nbeta\ngamma\ndelta\n","newString":"alpha\nBETA (tweaked by user)\ngamma\ndelta\n","originalFile":"alpha\nbeta\ngamma\ndelta\n","userModified":false,"replaceAll":false}""")
+
+    @Test
+    fun `replay detects a tweaked edit from toolUseResult`() {
+        assertTrue(EditProposals.tweaked("Edit", probeInput, probeResult))
+    }
+
+    @Test
+    fun `negative control - the same edit applied as proposed is not a tweak`() {
+        val plain = obj("""{"filePath":"/p/probe35.txt","oldString":"beta","newString":"BETA","originalFile":"alpha\nbeta\ngamma\ndelta\n","userModified":false,"replaceAll":false}""")
+        assertFalse(EditProposals.tweaked("Edit", probeInput, plain))
+        // Write create: originalFile null, content as proposed
+        assertFalse(EditProposals.tweaked("Write",
+            obj("""{"file_path":"/f","content":"x"}"""), obj("""{"type":"create","filePath":"/f","content":"x","originalFile":null}""")))
+        assertTrue(EditProposals.tweaked("Write",
+            obj("""{"file_path":"/f","content":"x"}"""), obj("""{"type":"create","filePath":"/f","content":"x-edited","originalFile":null}""")))
+        // a result with no comparable fields is silence, not a claim
+        assertFalse(EditProposals.tweaked("Edit", probeInput, obj("""{"filePath":"/p"}""")))
     }
 }

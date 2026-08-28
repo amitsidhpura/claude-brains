@@ -496,6 +496,9 @@ object SessionStore {
         var uuid: String? = null
         var isError: Boolean = false
         var patch: JsonElement? = null     // structuredPatch hunks (authoritative diff + line numbers)
+        var tweaked = false                // the applied edit differs from the proposed one (3.5)
+        var input: JsonObject? = null      // the tool_use input, for the tweak comparison; never serialized
+        var files: List<String>? = null    // paths the request's edit tools touched (3.6, on `done`)
         var content: String? = null        // Write body (no patch available)
         var oldStr: String? = null         // Edit fallback when no patch
         var newStr: String? = null
@@ -545,6 +548,7 @@ object SessionStore {
             dropped?.let { put("dropped", it) }
             seed?.let { put("seed", it) }
             prevSeed?.let { put("prevSeed", it) }
+            files?.takeIf { it.isNotEmpty() }?.let { put("files", JsonArray(it.map { p -> JsonPrimitive(p) })) }
             desc?.let { put("desc", it) }
             suffix?.let { put("suffix", it) }
             todos?.let { put("todos", it) }
@@ -559,6 +563,7 @@ object SessionStore {
             outTotal?.let { put("outTotal", it) }
             outFile?.let { put("outFile", it) }
             note?.let { put("note", it) }
+            if (tweaked) put("tweaked", true)
             if (interrupted) put("interrupted", true)
             trigger?.let { put("trigger", it) }
             level?.let { put("level", it) }
@@ -713,6 +718,8 @@ object SessionStore {
         // row. It travels on the item rather than being inferred from render order, because windowed
         // replay renders earlier chunks LAST (prepended) — document order isn't render order.
         var prevDoneSeed: String? = null
+        // Paths the request's Edit/Write/MultiEdit calls named, for the done item's files line (3.6).
+        val reqFiles = LinkedHashSet<String>()
 
         fun flushSummary() {
             val s = reqStart
@@ -731,9 +738,11 @@ object SessionStore {
                     tokens = reqTokens
                     seed = sd
                     prevSeed = prevDoneSeed
+                    files = reqFiles.toList()
                 })
                 prevDoneSeed = sd
             }
+            reqFiles.clear()
             reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false; reqError = false
             reqSeed = null; reqMsgIds.clear()
         }
@@ -1018,6 +1027,7 @@ object SessionStore {
                                         "tool_use" -> {
                                             val ti = toolItem(b, byToolId)
                                             out.add(ti)
+                                            if (ti.text in EDIT_TOOLS) ti.fullPath?.let { reqFiles.add(it) }
                                             // Task* increments rebuild the checklist. TaskUpdate is
                                             // complete from its INPUT; TaskCreate needs the id the
                                             // CLI assigns, which only its result carries — so that
@@ -1270,6 +1280,8 @@ object SessionStore {
         }
     }
 
+    private val EDIT_TOOLS = setOf("Edit", "Write", "MultiEdit")
+
     /** Build the block for a tool_use, indexing it so its result can be attached later. */
     private fun toolItem(b: JsonObject, byToolId: HashMap<String, Item>): Item {
         val name = b["name"]?.jsonPrimitive?.content ?: "tool"
@@ -1320,6 +1332,7 @@ object SessionStore {
                 if (name == "Write") content = inp?.get("content")?.jsonPrimitive?.content
             }
         }
+        item.input = inp
         b["id"]?.jsonPrimitive?.content?.let { byToolId[it] = item }
         return item
     }
@@ -1379,6 +1392,11 @@ object SessionStore {
 
         res?.get("structuredPatch")?.takeIf { it is JsonArray && it.jsonArray.isNotEmpty() }
             ?.let { item.patch = it }
+        // Tweak-travel (3.5): the patch above already shows the edit that RAN; this says why it
+        // differs from the block the model proposed. Needs the original input, kept on the item.
+        if (res != null && item.input != null && item.text in setOf("Edit", "Write")) {
+            item.tweaked = io.github.amitsidhpura.claudebrains.EditProposals.tweaked(item.text, item.input!!, res)
+        }
 
         // An image the tool returned — a Playwright screenshot, or `Read` on a PNG (item 8).
         // Discriminated by `toolUseResult.type == "image"`, NOT by `isImage`: that field exists but
