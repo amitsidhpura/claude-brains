@@ -1046,8 +1046,8 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .bg::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
   flex: none; animation: bg-pulse var(--pulse-period) ease-in-out infinite; }
 @keyframes bg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-/* Rows are read-only — there is no "kill task" here, that is the terminal's half (§ Philosophy) —
-   so they must not offer the hover affordance the other popup items use to say "clickable".
+/* Rows are not clickable as a whole — only their hover-✕ (below, 11.3) acts — so they must not
+   offer the hover affordance the other popup items use to say "clickable".
    Qualified with .popup-item deliberately: a bare .bg-row ties on specificity and LOSES, because
    .popup-item is declared further down this file. Measured headless, not assumed.
    `.sel` is listed for the same reason and it is the half that was MISSED: .popup-item.bg-row only
@@ -1056,6 +1056,18 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    hover, lighter after". `nosel` on #bgMenu stops the class being applied at all; this is the belt
    to that braces. */
 .popup-item.bg-row, .popup-item.bg-row:hover, .popup-item.bg-row.sel { background: transparent; cursor: default; }
+/* kill a task (11.3): the conversations-list gutter idiom (.hist-del below) — the gutter is reserved
+   only while the row is hovered, the button is hidden until then, red on its own hover. The popup's
+   width is fixed, so nothing jiggles. A row whose ✕ was clicked dims until the CLI's next roster
+   frame drops it (or keeps it — the stop is the CLI's to honour). */
+.popup-item.bg-row:hover:has(.bg-x) { padding-right: 36px; }
+.bg-x { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); display: none;
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 3px; }
+.popup-item.bg-row:hover .bg-x { display: block; }
+.bg-x:hover { color: var(--red); }
+.bg-x svg { width: 15px; height: 15px; display: block; }
+.bg-row.stopping { opacity: .5; }
+.bg-row.stopping .bg-x { cursor: default; color: var(--muted); }
 #inputbar .icon-btn { color: var(--user-muted); }
 #inputbar .icon-btn:hover { color: var(--fg); }
 #send { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;

@@ -173,6 +173,16 @@ re-read those before trusting memory here.
   snapshots), a git repo and client-supplied uuids; dry_run first. **Never probe it on a live CLI** — it
   mutates workspace files.
 
+- **A sub-agent's tools go through the PARENT's permission gate.** In Manual mode an async agent's
+  `Bash` raises the ordinary `can_use_tool` card on the panel and the task parks until it is
+  answered — a probe that waits for `task_notification` waits forever (3 min lost 2026-08-29).
+  Answer the card over CDP (`[...document.querySelectorAll('button')].filter(b=>b.textContent.trim()
+  ==='Accept').pop().click()`) or run probes in acceptEdits/auto.
+- **Task status vocabulary differs per frame** (2.1.250): `task_updated.patch.status` ∈
+  `completed|failed|killed|paused`, `task_notification.status` ∈ `completed|failed|stopped`; a
+  kill sends both, same instant. Check both words in every consumer. And status is LIFECYCLE — an
+  agent whose work failed still says `completed` (decisions 2026-08-29).
+
 ## Replay / transcript
 - **Compaction records land in the file BEFORE the command that caused them.** The CLI writes the
   boundary + summary at compaction END, physically ahead of the `/compact` command records, which
@@ -516,6 +526,12 @@ re-read those before trusting memory here.
   serves the STALE stylesheet — a CSS fix measured that way reads as "no effect".
 
 ## Testing, probes and sandboxes
+- **`tools/cdp.py` prints its `# target:` line on STDERR.** Piping stdout through `tail -n +2` (to
+  "skip the header") silently drops the first line of a pretty-printed JSON result → "Extra data"
+  parse errors. Redirect `2>/dev/null` instead; string results print raw.
+- **Sessions the user drives by hand may not be findable in `~/.claude/projects`.** 2026-08-28 three
+  hand-test sessions (screenshots in hand) existed in no project dir; only CDP-driven ones did.
+  Unexplained — do not spend time hunting; re-run the scenario over CDP and tape it.
 - **The old VS Code extension dir is DELETED on auto-update — the local `vscode/` extraction is the
   only diff base you will ever have.** 2026-08-26: `~/.vscode/extensions/` held only 2.1.246; the
   2.1.241→2.1.246 contributions/tool-roster diff was possible solely because `vscode/` (gitignored)

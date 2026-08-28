@@ -3,6 +3,29 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 — 11.3 kill-a-task built and hand-tested; 11.4 measured and declined; §11 assessed
+- 11.3 built in one pass: `stop_task{task_id}` (schema from the binary, field confirmed), hover-✕ on
+  roster rows copying the `.hist-del` gutter idiom, `.stopping` dim, REPLACE-only removal. First
+  CDP run: `sleep 240` on the roster → ✕ → roster empty in ~1s and the `sleep` pid gone.
+- User hand-tested four scenarios (MT-7.8): shell; Explore sub-agent — the SUSPENDED turn resumed and
+  finished (summary + Send back), the case that could have hung; one-of-two shells (survivor
+  untouched); Escape + new conversation (the surviving shell died with the replaced CLI, no orphan).
+  Findings: none. User declined a confirm step. Stopping-id memory pruned per roster frame after the
+  test showed a killed id lingering.
+- 2.1.250 roster schema grew `ambient` ("hosts should exclude from activity indicators") — filtered
+  from roster + suspend count on the schema's word; user asked for measurement → first ambient task
+  kept as `window.__ambientSeen` + console warning. Harness 490 → 513.
+- 11.4 re-measured with a wire tape: an agent told to `exit 3` and reply FAILED ended
+  `task_notification{completed}`. Lifecycle ≠ verdict; VS Code's `handleTaskNotification` only
+  deletes from a map. Row → 🚫. Kill vocabulary drift found on the same tape (`task_updated{killed}`
+  + `task_notification{stopped}`); `taskLine` now paints `stopped`; fixture 45 +1 step, negative
+  control (`paused` must not paint) failed as required. Harness 514.
+- Probe trap: the sub-agent's Bash raised the ordinary permission card on the parent and the probe
+  waited 3 min for a notification that could not come until the card was answered (gotchas).
+- 11.6 and 11.5 assessed (see state.md); user has not decided. 11.5's `{}` ack is schema-invalid.
+- Tooling: `cdp.py` prints the `# target` line on stderr — piping through `tail -n +2` eats the
+  first line of the JSON result (gotchas § Testing).
+
 ## 2026-08-28 (fourth) — 3.6 files-changed review built
 - Probe first (`probe36.py`): `get_workspace_diff` answers a full git working-tree diff (stats +
   structuredPatch hunks per file) — but HEAD vs working tree, user edits included → documented in
@@ -194,22 +217,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Next: unchanged — seven [DECIDE] rows, `/clear [name]`, backlog order; docs/slash-commands.md
   still documents 2.1.233 (installed CLI is 2.1.245 now — the sync row aged again).
 
-## 2026-08-25 — 0.10.0 goes out
-- **Released 0.10.0** (tag `v0.10.0`, commit `55fdcb1`): the model-menu footer switches (1M
-  context / fast mode / thinking), the 1M-to-real-window reconciliation, and the API-error
-  single-render fix. Notes structured per release.md's update template; approval gate held —
-  the full notes were shown and the user said go.
-- `verifyPlugin` ran BEFORE the gate this time (release.md 3b, the 0.9.0 lesson): **Compatible
-  on all seven IDEs** (242.26775.23 → 262.10315.32), no warnings. The user interrupted mid-release
-  to ask "was verify done?" — having the verdict-file table ready to paste is exactly the point
-  of the mandatory step.
-- Asset verified 200 + byte-identical to the local zip; feed serving 0.10.0;
-  `marketplace-upload.yml` green in 10s. The Marketplace API listed 0.10.0 after a few minutes'
-  verification lag (0.9.0 behaved the same) — user's dashboard screenshot confirms **Approved**,
-  all compatibility checks Success incl. JetBrains' IDE-run check.
-- Nothing unreleased on `main` now. Next release is a fresh bump when work lands.
-
 ## Digest
+- **2026-08-25** — 0.10.0 released (`v0.10.0`, `55fdcb1`): model-menu footer switches, 1M
+  reconciliation, API-error single-render. `verifyPlugin` BEFORE the gate (7 IDEs Compatible) — the
+  user interrupted to ask "was verify done?": keep the verdict table ready. Marketplace Approved after
+  a few minutes' lag (same as 0.9.0).
 - **2026-08-24 (second)** — model-menu footer shipped: 1M / fast / thinking switches (9.9/9.4/9.5),
   every protocol fact probed first (no 1M flag — `[1m]` is the marker; `set_model` never rejects;
   `apply_flag_settings{fastMode}` both ways; `set_max_thinking_tokens` 0/null live). User cut

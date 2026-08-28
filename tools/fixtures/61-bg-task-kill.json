@@ -1,0 +1,227 @@
+{
+ "item": "kill a background task from the roster (11.3): hover-✕ on a bg-row sends stop_task, row dims until the CLI's next roster frame",
+ "branch": "renderBgTasks(): each row with a task_id gets .bg-x; click → bridge{kind:'stopTask', id} once (a second click is swallowed), row.stopping; the next background_tasks_changed REPLACES the set (never optimistic removal). `ambient:true` tasks are excluded from the roster and the suspend count.",
+ "provenance": "background_tasks_changed{tasks[{task_id,task_type,description,ambient?}]} is the CLI's 2.1.250 schema read from the binary (`strings`), same shape fixture 04 uses. stop_task{task_id} accepted over stdio — probed 2026-08-23 (success; unknown ids also answer success). The bridge verb is OUR side; whether the CLI actually kills the task is hand-verified against a real task in the sandbox (journal 2026-08-28). NEGATIVE CONTROLS: step 3 (a roster frame that still lists the task keeps the row, still dimmed — no optimistic removal), step 5 (ambient tasks draw no row).",
+ "steps": [
+  {
+   "note": "live: two tasks on the roster, each row carries a ✕; clicking one sends stopTask for THAT id and dims the row",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge61) { window.__realBridge61 = window.__bridge; } window.__tape61 = []; window.__bridge = function(j){ window.__tape61.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg_a",
+       "task_type": "local_bash",
+       "description": "sleep 300"
+      },
+      {
+       "task_id": "bg_b",
+       "task_type": "Explore",
+       "description": "Audit chat.css"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 2,
+     "why": "both rows"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row .bg-x').length",
+     "equals": 2,
+     "why": "each row has its ✕"
+    },
+    {
+     "js": "document.getElementById('bgChip').textContent",
+     "equals": "2 tasks",
+     "why": "the chip counts both"
+    },
+    {
+     "js": "(function(){var r=document.querySelectorAll('#bgList .bg-row')[0];r.querySelector('.bg-x').click();r.querySelector('.bg-x').click();return JSON.stringify(window.__tape61.filter(function(o){return o.kind==='stopTask'}).map(function(o){return o.id}))})()",
+     "equals": "[\"bg_a\"]",
+     "why": "one stopTask for the clicked id; the second click is swallowed"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row')[0].classList.contains('stopping')",
+     "equals": true,
+     "why": "the clicked row dims"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row')[1].classList.contains('stopping')",
+     "equals": false,
+     "why": "the other row does not"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 2,
+     "why": "NOT removed optimistically"
+    }
+   ]
+  },
+  {
+   "note": "the CLI's next roster frame no longer lists bg_a: the row goes, the survivor is untouched",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg_b",
+       "task_type": "Explore",
+       "description": "Audit chat.css"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 1,
+     "why": "REPLACE semantics"
+    },
+    {
+     "js": "document.querySelector('#bgList .bg-row .pi-title').textContent",
+     "equals": "Audit chat.css",
+     "why": "the survivor"
+    },
+    {
+     "js": "document.querySelector('#bgList .bg-row').classList.contains('stopping')",
+     "equals": false,
+     "why": "untouched"
+    },
+    {
+     "js": "document.getElementById('bgChip').textContent",
+     "equals": "1 task",
+     "why": "chip follows"
+    },
+    {
+     "js": "JSON.stringify(Object.keys(stoppingBgTasks))",
+     "equals": "[]",
+     "why": "the dropped id is forgotten (pruned per roster frame, hand-test 2026-08-28)"
+    }
+   ]
+  },
+  {
+   "note": "negative control: click bg_b, then a roster frame that STILL lists it — the row stays, still dimmed (the stop is the CLI's to honour)",
+   "setup": "document.querySelector('#bgList .bg-row .bg-x').click()",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg_b",
+       "task_type": "Explore",
+       "description": "Audit chat.css"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape61.filter(function(o){return o.kind==='stopTask'}).map(function(o){return o.id}))",
+     "equals": "[\"bg_a\",\"bg_b\"]",
+     "why": "second id sent"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 1,
+     "why": "still listed"
+    },
+    {
+     "js": "document.querySelector('#bgList .bg-row').classList.contains('stopping')",
+     "equals": true,
+     "why": "still dimmed after re-render"
+    },
+    {
+     "js": "JSON.stringify(Object.keys(stoppingBgTasks))",
+     "equals": "[\"bg_b\"]",
+     "why": "a still-listed id is kept"
+    }
+   ]
+  },
+  {
+   "note": "an empty roster clears everything, including the stopping memory",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": []
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('bgChip').hidden",
+     "equals": true,
+     "why": "chip hides"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 0,
+     "why": "no rows"
+    }
+   ]
+  },
+  {
+   "note": "negative control: ambient housekeeping tasks (2.1.250 schema) draw no row and do not suspend",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg_w",
+       "task_type": "watcher",
+       "description": "live-update watcher",
+       "ambient": true
+      },
+      {
+       "task_id": "bg_c",
+       "task_type": "Explore",
+       "description": "Real work"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 1,
+     "why": "only the non-ambient task"
+    },
+    {
+     "js": "document.getElementById('bgChip').textContent",
+     "equals": "1 task",
+     "why": "chip excludes ambient"
+    },
+    {
+     "js": "document.querySelector('#bgList .bg-row').classList.contains('stopping')",
+     "equals": false,
+     "why": "fresh id, fresh state"
+    },
+    {
+     "js": "JSON.stringify(window.__ambientSeen)",
+     "equals": "{\"task_id\":\"bg_w\",\"task_type\":\"watcher\",\"description\":\"live-update watcher\",\"ambient\":true}",
+     "why": "the first ambient task is kept verbatim as the measurement witness"
+    }
+   ],
+   "setup": "delete window.__ambientSeen;"
+  },
+  {
+   "note": "restore the real bridge and clear",
+   "setup": "window.__bridge = window.__realBridge61; delete window.__realBridge61; window.onClaudeEvent(JSON.stringify({type:'system', subtype:'background_tasks_changed', tasks:[]})); window.onClaudeEvent(JSON.stringify({type:'__clear'})); delete window.__ambientSeen;",
+   "frames": [],
+   "expect": [
+    {
+     "js": "typeof window.__realBridge61",
+     "equals": "undefined",
+     "why": "restored"
+    }
+   ]
+  }
+ ]
+}

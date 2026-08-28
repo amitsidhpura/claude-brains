@@ -11,8 +11,8 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-28) — 77 ✅ · 4 🟥 · 7 🟧 · 16 ⬜ · 18 ➖ · 6 🚫 (128 rows)
-- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay · 11.3 Kill a background process from the panel
+**At a glance** (2.1.250, 2026-08-29) — 78 ✅ · 3 🟥 · 6 🟧 · 16 ⬜ · 18 ➖ · 7 🚫 (128 rows)
+- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay
 - **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 8.10 Session groups / sessions sidebar · 8.11 Side question · 12.3 Open in editor tab · 12.6 Focus view · 13.2 JSON schema for .claude/settings.json · 14.2 Git actions in the host
 
 **Status marks**
@@ -412,14 +412,22 @@ auto-include selection, voice.
       (`mcp_servers[].status`), MCP prompts and skills in the / menu, hook output, sub-agent
       progress line + prompt + final report, background task roster (`bg` chip, reset at the CLI
       boundary), Todo/Task checklist (`TodoWrite` + the Kotlin task store)
-- **11.3** 🟥 [MD] **Kill a background process from the panel** — roster rows are display-only.
-      Protocol check DONE 2026-08-23: `stop_task {task_id}` is a control request the stdio host
-      accepts (typed schema since ≤2.1.233, added to the remote-relay whitelist at 2.1.238; probed
-      live — success, unknown ids answer without error, so verify against a real task id when
-      building). A sibling `background_tasks {tool_use_id?}` backgrounds foreground tasks (Ctrl+B
-      semantics). Needs only the roster-row action (conversations-list hover-gutter idiom).
-      Backlog § Next up
-- **11.4** 🟧 [MD] **Sub-agent work outcome** — the dot was built and withdrawn 2026-08-13; known gap
+- **11.3** ✅ [MD] **Kill a background process from the panel** — built 2026-08-28: each roster
+      row carries a hover-✕ (conversations-list gutter idiom, no confirm step) → bridge `stopTask`
+      → `stop_task {task_id}`; the row dims until the CLI's next `background_tasks_changed`
+      REPLACES the set (never removed optimistically — unknown ids answer success too, so the
+      roster frame is the only confirmation). `ambient:true` tasks (2.1.250 schema: "hosts should
+      exclude them from activity indicators") are dropped from the roster and the suspend count — UNMEASURED (no live frame yet): the first one seen is kept verbatim as `window.__ambientSeen` + a console warning, read it over CDP the day it appears.
+      Fixture 61. Sibling `background_tasks {tool_use_id?}` (Ctrl+B semantics) not taken
+- **11.4** 🚫 **Sub-agent work outcome** — the dot was built and withdrawn 2026-08-13; RE-MEASURED
+      2026-08-29 on 2.1.250: an Explore agent whose Bash returned `is_error:true` and which replied
+      "FAILED: could not complete the task." ended `task_updated{status:"completed"}` +
+      `task_notification{status:"completed", summary:"FAILED: …"}` — task status is the task's
+      LIFECYCLE (`completed|failed|stopped`; a panel ✕ = `killed`/`stopped`), never the work's
+      verdict; the summary prose is the only signal, and colouring from prose was rejected
+      2026-08-13. VS Code's `handleTaskNotification` only deletes the task from its map — it shows
+      no outcome either. Declined: nothing measurable to build on; the summary already rides the
+      Explore line
 - **11.5** ⬜ [SM] **Elicitation** — `elicitation` control request; our empty ack answers it with
       neither decline nor an answer, no local MCP server elicits today. Probe if one ever does
 - **11.6** 🟧 [MD] **Extensibility status view** — read-only: which MCP servers/plugins are live;
@@ -492,7 +500,7 @@ auto-include selection, voice.
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below
 
-## 17. Manual verification record (from the retired docs/manual-test.md, 102/102 passed 2026-08-07→08-26)
+## 17. Manual verification record (from the retired docs/manual-test.md, 103/103 passed 2026-08-07→08-28)
 - Source: `git show 9bd1683:docs/manual-test.md` (deleted 2026-08-28; §16.5). Setup was `cd plugin && ./gradlew runIde`, open the Claude Brains tool window; items were ticked by number ("3.4 done"); **(hard to trigger)** items carry their exact trigger recipe below.
 - Defect markers were exactly two: `ISSUE (date):` = open, `RESOLVED (date) — how:` = closed, *how* ∈ fixed / removed / not a bug; `grep -c '\*\*ISSUE'` was the open count. Final state: 31 RESOLVED, 0 ISSUE.
 - Undated items below were ticked on the first pass (2026-08-07/08); later dates come from the item's own note. Cross-cutting caveat (6.4): grants from 2026-08-07/08 persist in the testing project's `settings.local.json`, so permission cards only reappear for novel commands (the pass used `factor`/`mcookie`/`openssl`/`base32`, never granted).
@@ -589,7 +597,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.7 Context gauge & background tasks</b> — 7 items · 4 RESOLVED</summary>
+<details><summary><b>17.7 Context gauge & background tasks</b> — 8 items · 4 RESOLVED</summary>
 
 - **MT-7.1** Gauge after first turn, plausible %; orange at ≥50% → 9.3 · 2026-08-07
 - **MT-7.2** Clicking the gauge sends /compact → 9.3, 1.16 · 2026-08-07
@@ -598,6 +606,7 @@ auto-include selection, voice.
 - **MT-7.5** During a background suspend no early completion summary; one at true end → 11.2, 1.13 · 2026-08-12 · scope corrected 2026-08-12: AGENT-type only — a background SHELL (`task_type "local_bash"`) does not suspend, the CLI's `result` IS the true end and the summary SHOULD appear while the chip shows the shell (see MT-8.15, fixture 44)
 - **MT-7.6** bg chip reflects what is actually running across turns AND restarts → 11.2 · 2026-08-15 · RESOLVED 2026-08-15: fixed — "chip said 2 tasks but there were none": the chip was RIGHT (two orphaned `until … sleep 30 … done` waiter loops, 2h34m and 1h31m old); real defect inverse: roster reset sat in `sendTurn` (hid live shells) and `clearLogUI` never cleared it (CLI emits the level only on membership CHANGE, per-process, nothing at startup); reset moved into `clearLogUI`; fixture 04 both directions (5 red pre-fix); real CLI `sleep 120` stayed "1 task" across a second message, new conversation cleared it; the client-parity audit had claimed this since before it was true
 - **MT-7.7** Roster rows leave no lingering hover highlight → 11.2 · 2026-08-15 · RESOLVED 2026-08-15: fixed — `sel` cursor painted by document `mouseover` with no `mouseout`, plus `tg()` seeding row 0; `.bg-row` opt-out (0,3,0) beat `:hover` but only TIED `.popup-item.sel` (0,2,0) and lost on order — stuck colour `rgb(44, 57, 76)`; fix: `nosel` on `#bgMenu` honoured at all three `sel` sites + `.popup-item.bg-row.sel` opt-out; roster deliberately non-interactive; verified with REAL CEF mouse events (`rgba(0,0,0,0)`, `sel` count 0), slash menu still moves its cursor on hover
+- **MT-7.8** Kill a background task from the roster ✕ → 11.3 · 2026-08-28 · real CLI 2.1.250 over CDP: `sleep 240` (`run_in_background`) on the roster as `local_bash` id `bmr1j2ggf` with its ✕; click → row dims, `stop_task` sent; the CLI's empty `background_tasks_changed` arrived within 1s, chip gone, and the `sleep 240` process (pid 518773) was no longer in the process tree — the kill is real, not cosmetic; fixture 61 (23 asserts, two negative controls), harness 490→513; hand-tested by the user 2026-08-28: shell, Explore sub-agent (suspended turn resumed and finished — summary + Send), one-of-two shells (survivor untouched), Escape + new-conversation reset (the surviving shell died with the replaced CLI, no orphan)
 
 </details>
 

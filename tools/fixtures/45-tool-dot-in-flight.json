@@ -1485,6 +1485,83 @@
       ]
     },
     {
+      "note": "`stopped` is what 2.1.250's task_notification says for a killed task (measured 2026-08-29: a panel ✕ on a shell sent task_updated{killed} + task_notification{stopped})",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_stp_k1",
+              "name": "Agent"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_stp_k1",
+                "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nThe agent is working in the background."
+              }
+            ]
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_progress",
+          "task_id": "t_toolu_stp_k1",
+          "tool_use_id": "toolu_stp_k1",
+          "description": "Dummy task",
+          "subagent_type": "general-purpose",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "t_toolu_stp_k1",
+          "tool_use_id": "toolu_stp_k1",
+          "status": "stopped",
+          "summary": "agent killed",
+          "usage": {
+            "total_tokens": 15600,
+            "tool_uses": 1
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "getComputedStyle(document.querySelector('.tool-line'), '::before').backgroundColor",
+          "equals": "rgb(242, 130, 127)",
+          "why": "task_notification's typed enum is completed|failed|stopped in 2.1.250 (`strings`), and a real kill arrived as `stopped` — without this word the line would settle grey while its task_updated twin painted it red"
+        }
+      ]
+    },
+    {
       "note": "task_updated carries the same statuses, and no tool_use_id",
       "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run dummy tasks', []);",
       "frames": [

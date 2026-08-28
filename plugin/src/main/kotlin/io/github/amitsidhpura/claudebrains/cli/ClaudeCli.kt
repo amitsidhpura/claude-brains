@@ -352,6 +352,15 @@ class ClaudeCli(
     /** Host-initiated: interrupt the in-flight response. */
     fun interrupt() = sendControlRequest(buildJsonObject { put("subtype", "interrupt") })
 
+    /** Host-initiated: kill ONE background task (a sub-agent or a backgrounded shell) by the
+     * `task_id` the `background_tasks_changed` roster carries. Schema `stop_task{task_id}`; in
+     * the stdio host since 2.1.238 (probed 2026-08-23). The CLI answers success for unknown ids
+     * too, so the only confirmation is the next roster frame no longer listing the task. */
+    fun stopTask(taskId: String) = sendControlRequest(buildJsonObject {
+        put("subtype", "stop_task")
+        put("task_id", taskId)
+    })
+
     /** Host-initiated: switch the model for this session (e.g. "sonnet", "opus[1m]", "default"). */
     fun setModel(model: String) = sendControlRequest(buildJsonObject {
         put("subtype", "set_model")

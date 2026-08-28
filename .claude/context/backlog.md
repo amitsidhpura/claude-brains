@@ -17,6 +17,14 @@
 ## Next up
 - The seven remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11,
   12.3, 12.6, 13.2, 14.2) need a yes / later / no (9.4 and 9.5 decided + built 2026-08-24).
+- **11.5 Elicitation, two steps** (assessed 2026-08-29, undecided): (1) `ClaudeCli.handleControlRequest`
+  catch-all answers `elicitation` with `{action:"decline"}` — today's `{}` is schema-invalid
+  (enum `accept|decline|cancel`, `content?`); (2) a ~30-line stdio MCP probe server in
+  `~/Sites/claude-brains-testing/.mcp.json` whose one tool calls `elicitation/create` (form mode,
+  two-field schema) — tape whether the CLI forwards the request over stdio at all. VS Code passes
+  no `onElicitation` handler. Build a form (askTabs idiom) only after a used server elicits.
+- **11.6 extensibility status view** — recommended 🚫 2026-08-29; if wanted it is [SM]: a popup
+  listing `mcp_servers[].name · status` (+ agents/skills/plugins) from the `system/init` frame.
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
@@ -35,12 +43,6 @@
   restarting the CLI (unlike `refresh`, which restarts it) and reconciled against frames still
   arriving mid-turn. Deliberately deferred: no reload has ever been observed in the wild, and the
   chrome was the part that could never heal.
-- **11.3** Kill a background process from the panel: the roster rows (`renderBgTasks`) are display-only and
-  `interrupt()` only stops the in-flight response. Protocol check DONE 2026-08-23: `stop_task
-  {task_id}` is accepted over stdio (probed; unknown ids answer success too, so verify against a
-  real task id when building). Needs a bridge verb + an action on the roster row (conversations-
-  list hover-gutter idiom).
-
 - **`DiffReview.open` VFS staleness** (parked 2026-08-21): its left pane resolves `oldPath`
   through snapshot-only `findVFile`, so a file the VFS has not caught up on renders as NEW. Fix is
   `findVFileOnDisk` (it holds no read lock at that point — the `readLocked` block is inside the

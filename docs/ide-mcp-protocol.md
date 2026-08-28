@@ -454,7 +454,7 @@ worker's park deadline) settles it"), `oauth_token_refresh`, `host_auth_token_re
 `channel_enable`, `rewind_files`, `rewind_conversation`, `cancel_async_message`, `read_file`,
 `stage_file`, `register_repo_root`, `add_directory`, `file_suggestions`, `seed_read_state`,
 `reload_plugins`, `reload_skills`, `apply_flag_settings` ("merges the provided settings into the
-flag settings layer"), `stop_task`, `background_tasks` (Ctrl+B semantics), `generate_session_title`,
+flag settings layer"), `stop_task` (`{task_id}` from the `background_tasks_changed` roster — sent by the panel's roster ✕, 11.3; unknown ids answer success), `background_tasks` (Ctrl+B semantics), `generate_session_title`,
 `rename_session`, `submit_feedback`, `side_question`, `ultrareview_launch`, `message_rated`,
 `remote_control`, `claude_authenticate`, `claude_oauth_callback`,
 `claude_oauth_wait_for_completion`, `log_otel_event`, plus loopback arms for `hook_callback`,
@@ -723,6 +723,15 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
   `task_progress` adds `last_tool_name` + `usage:{total_tokens, tool_uses, duration_ms}`;
   `task_updated` = `{task_id, patch:{status, end_time}}`; `task_notification` = `{status, summary,
   output_file, usage}` (1).
+- **Task status is lifecycle, not verdict** (measured 2026-08-29, 2.1.250, wire tapes on
+  `onClaudeEvent`): a panel `stop_task` on a `local_bash` task → same instant `background_tasks_changed
+  {tasks:[]}` + `task_updated{patch:{status:"killed"}}` + `task_notification{status:"stopped"}` (the
+  two frames use DIFFERENT words — typed enums `completed|failed|killed|paused` vs
+  `completed|failed|stopped`). An async Explore agent whose Bash failed (`is_error:true`) and which
+  replied "FAILED: …" ended `task_updated{completed}` + `task_notification{completed, summary:"FAILED:
+  …"}`. `task_started` now also carries `is_backgrounded`, `spawn_depth`; a sub-agent's Bash still
+  raises the ordinary `can_use_tool` card on the parent (the task parks until it is answered). Its
+  persisted `toolUseResult` gained `isAsync, description, resolvedModel, prompt, canReadOutputFile`.
 - Zero `isSidechain:true` across 23,123 main-transcript records; an async `Agent`'s persisted
   `toolUseResult` is launch metadata only — `{agentId, outputFile, status}` (1).
 - `background_tasks_changed.tasks[]` items are `{task_id, task_type, description}`;

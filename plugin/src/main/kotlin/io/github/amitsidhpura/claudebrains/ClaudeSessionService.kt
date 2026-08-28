@@ -423,6 +423,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     fun interrupt() = cli?.interrupt()
 
+    fun stopTask(taskId: String) = cli?.stopTask(taskId)
+
     fun setModel(model: String) {
         props.setValue(MODEL_KEY, model)
         cli?.setModel(model)

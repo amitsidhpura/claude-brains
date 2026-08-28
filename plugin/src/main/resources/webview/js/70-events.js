@@ -28,9 +28,15 @@
    * changes repeatedly within one turn. Printed as events it would be a stream of near-duplicate
    * lines; as a chip it answers "what is running?" at a glance and disappears when nothing is.
    */
+  // task_ids whose ✕ was clicked and whose roster frame has not yet come back. The roster is a
+  // LEVEL signal (REPLACE semantics below), so the row is never removed optimistically — the CLI's
+  // next frame is the only truth — but the row must stop offering a second click and say it heard.
+  // Reset at the CLI boundary with the roster itself (40-sessions.js).
+  let stoppingBgTasks = {};
   function renderBgTasks() {
     const chip = document.getElementById('bgChip'), list = document.getElementById('bgList');
     if (!chip || !list) return;
+    if (!bgTasks.length) stoppingBgTasks = {};
     if (!bgTasks.length) {
       chip.hidden = true;
       chip.textContent = '';               // stale "1 task" must not flash if the chip re-shows
@@ -57,6 +63,22 @@
         body.appendChild(d);
       }
       row.appendChild(body);
+      // Kill (11.3): `stop_task{task_id}` — the conversations-list hover-gutter idiom, no arm/confirm
+      // step: a killed task costs one re-ask, a deleted conversation is gone (the reason that list
+      // confirms). While the CLI has not answered with a new roster the row reads "stopping".
+      if (t && t.task_id) {
+        const id = String(t.task_id);
+        if (stoppingBgTasks[id]) row.classList.add('stopping');
+        const x = document.createElement('button');
+        x.className = 'bg-x'; x.title = 'Stop this task'; x.innerHTML = SVG_X;
+        x.onclick = function (e) {
+          e.stopPropagation();
+          if (stoppingBgTasks[id]) return;
+          stoppingBgTasks[id] = true; row.classList.add('stopping');
+          bridge({ kind: 'stopTask', id: id });
+        };
+        row.appendChild(x);
+      }
       list.appendChild(row);
     });
   }
@@ -320,10 +342,28 @@
           // never merge, or a finished task would stay on the roster forever. It is a LEVEL signal,
           // not an edge one, which is why the roster is a chip that reflects the present rather
           // than a timeline entry that accumulates.
-          bgTasks = Array.isArray(ev.tasks) ? ev.tasks : [];
+          // `ambient` (2.1.250 schema): "housekeeping tasks the CLI does not surface as user
+          // work … hosts should exclude them from activity indicators" — so they are neither
+          // on the roster nor in the suspend count. Not yet seen on a live frame; the filter
+          // is the schema's own instruction and costs nothing when the field is absent.
+          const rawTasks = Array.isArray(ev.tasks) ? ev.tasks : [];
+          bgTasks = rawTasks.filter(function (t) { return !(t && t.ambient === true); });
+          // Unmeasured as of 2026-08-29 (no live frame has carried the field): keep the FIRST
+          // ambient task verbatim so the fact gets measured the day it appears — readable over
+          // CDP as window.__ambientSeen, and once in the console (tools/cdp.py --console).
+          if (!window.__ambientSeen) {
+            const a = rawTasks.filter(function (t) { return t && t.ambient === true; })[0];
+            if (a) { window.__ambientSeen = a; console.warn('first ambient background task:', JSON.stringify(a)); }
+          }
           pendingBgTasks = bgTasks.filter(function (t) {
             return !t || t.task_type !== 'local_bash';
           }).length;
+          // Forget a "stopping" id once the roster no longer lists it (hand-test 2026-08-28:
+          // a killed shell's id lingered until the set emptied — harmless, but a set that only
+          // grows is a leak by another name).
+          const live = {};
+          bgTasks.forEach(function (t) { if (t && t.task_id) live[String(t.task_id)] = true; });
+          Object.keys(stoppingBgTasks).forEach(function (id) { if (!live[id]) delete stoppingBgTasks[id]; });
           renderBgTasks();
         } else if (ev.subtype === 'status') {
           // Item 35. `permissionMode` on this frame is already read above, like every system event.

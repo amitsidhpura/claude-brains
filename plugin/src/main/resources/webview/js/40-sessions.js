@@ -165,7 +165,7 @@
     // (re)starts and let the next membership change repopulate it." Without it a dead task sat on
     // the chip with no frame ever coming to correct it — and the reset used to live in sendTurn,
     // where it wiped shells that were still running.
-    bgTasks = []; pendingBgTasks = 0; renderBgTasks();
+    bgTasks = []; pendingBgTasks = 0; stoppingBgTasks = {}; renderBgTasks();
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // The MCP notice was cleared off screen with everything else, so the next init must be free to
     // state the same failures again — otherwise a new conversation silently inherits the old one's

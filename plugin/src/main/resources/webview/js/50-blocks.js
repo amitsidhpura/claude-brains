@@ -306,14 +306,21 @@
     // The sub-agent's own line settles when the task does, not when it was launched — and the task
     // is also the ONLY place a sub-agent's failure can come from. Its tool_result was the launch ack
     // and said nothing about the outcome, so without this an agent that died would still settle
-    // green. The status vocabulary is read verbatim out of CLI 2.1.228 (`strings`), which documents
-    // the notification's field as `<status>completed|failed|killed</status>`.
+    // green. The status vocabulary is read verbatim out of the CLI binary (`strings`): 2.1.228 wrote
+    // `<status>completed|failed|killed</status>`; 2.1.250's typed schema is `completed|failed|stopped`
+    // for task_notification while task_updated's patch still says `killed` — MEASURED 2026-08-29
+    // (a panel ✕ on a shell sent task_updated{killed} then task_notification{stopped}). Both words
+    // stay: the two frames arrive together and a version that drops one must not lose the colour.
     // Named states only, NOT "anything that is not completed": the binary also carries `running` and
     // `pending` for other task kinds, and painting a still-running line red is a worse failure than
     // leaving an unknown state green.
+    // What this CANNOT tell: whether the agent's WORK succeeded. Measured 2026-08-29 (2.1.250): an
+    // Explore agent whose Bash returned is_error:true and which replied "FAILED: …" still ended
+    // task_updated{completed} + task_notification{completed}; the summary prose is the only signal,
+    // and colouring from prose was rejected 2026-08-13 (checklist 11.4).
     if (done && st.tool && st.tool.el) {
       st.tool.el.classList.remove('run');
-      if (ev.status === 'failed' || ev.status === 'killed') st.tool.el.classList.add('fail');
+      if (ev.status === 'failed' || ev.status === 'killed' || ev.status === 'stopped') st.tool.el.classList.add('fail');
     }
     const u = ev.usage || {};
     const bits = [];

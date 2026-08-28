@@ -4,6 +4,31 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — The roster ✕ has no confirm step, and never removes a row itself
+Kill a background task (11.3) from a hover-✕ on the roster row, copying the conversations-list
+gutter idiom WHOLE (fixed popup width, gutter reserved only on hover) but NOT its arm/confirm step
+— user's call after the hand-test. *Why*: a killed task costs one re-ask; a deleted conversation is
+gone, which is what the confirm there is for. The row dims and stays until the CLI's next
+`background_tasks_changed` REPLACES the set. *Rejected*: optimistic removal — `stop_task` answers
+success for unknown ids too, so the response proves nothing; only the roster frame does.
+
+## 2026-08-29 — 11.4 sub-agent work outcome is DECLINED on a measurement, not a hunch
+An Explore agent whose Bash returned `is_error:true` and which replied "FAILED: …" ended
+`task_updated{status:"completed"}` + `task_notification{status:"completed", summary:"FAILED: …"}`
+(2.1.250, wire tape). Task status is the task's lifecycle (`completed|failed|stopped`; a panel kill
+= `killed`/`stopped`), never the work's verdict; the summary prose is the only signal and colouring
+from prose was rejected 2026-08-13. VS Code renders no outcome either. *Rejected*: re-building the
+dot on the summary text; keying on the agent's last `is_error` tool result (it is the agent's, not
+the task's, and a recovered failure would paint red).
+
+## 2026-08-29 — `ambient` tasks are filtered on the schema's word, with a witness for the first one
+2.1.250's roster item schema describes `ambient` as housekeeping "hosts should exclude from
+activity indicators". Filtered from the roster AND the suspend count (an ambient non-`local_bash`
+task would otherwise park the turn on Stop forever — the 2026-08-12 shell bug from a new source).
+No live frame has carried the field, so the first one is stored verbatim as `window.__ambientSeen`
+plus one console warning — measure-before-believing satisfied by instrumenting rather than waiting.
+*Rejected*: ignoring the field until seen (the failure mode is a stuck panel, not a cosmetic one).
+
 ## 2026-08-28 — The card note's gap is `--attach-gap` (8px), not a literal
 **Decision:** `.card .t-note { margin: var(--attach-gap) 0 0 2px }`. **Why:** the 6px first shipped
 was eyeballed; the user asked how it was derived and it wasn't. The card's own rhythm is the token

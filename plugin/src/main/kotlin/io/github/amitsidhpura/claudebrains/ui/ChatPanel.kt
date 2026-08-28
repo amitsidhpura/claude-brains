@@ -192,6 +192,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "thinking" -> session.setThinking(msg["on"]?.jsonPrimitive?.content != "false")
             "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
+            // ✕ on a background-task roster row (11.3): kill that one task, not the turn.
+            "stopTask" -> msg["id"]?.jsonPrimitive?.content?.let { session.stopTask(it) }
             // Pre-apply gutter lookup for an auto-approved edit's diff (4.4). The page asks at
             // content_block_stop — before the CLI runs the tool — which is the only moment
             // old_string is still findable. File IO goes to a pooled thread; the answer rides
