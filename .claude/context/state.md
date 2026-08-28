@@ -1,16 +1,21 @@
 # State
 
 ## Current focus
-**2026-08-26 (fifteenth session, three saves; this one written 2026-08-27): effort moved into the
-MODEL menu (`def5366`), the checklist was re-audited to 2.1.246 (`30f095f`), and 0.11.1 was
-released (`979326c`). Nothing is in flight and nothing is unreleased.**
-- **Effort slider is the last row of `#modelFooter`** (`plugin/src/main/resources/webview/chat.html`),
-  under the 1M / Fast mode / Thinking switches; `#modeMenu` holds modes only; the model popup header
-  is **Models**. **No chip shows the effort level** — three suffix forms were rendered and rejected
-  (decisions 2026-08-26). **Do not re-propose a chip suffix.** `.ef-row` is deliberately NOT
-  `.tgl-row` (fixture 55 counts exactly three toggle rows).
-- **Checklist is current to 2.1.246** (both references; last full re-audit 2026-08-26). New row
-  **9.10 🚫** records the declined roster-flag gate; 127 rows.
+**2026-08-28 (sixteenth session): docs pruned and the checklist reshaped — committed at the end of
+the session.** Four completed docs deleted (`docs/verifier-matrix.md`, `docs/renderer-parity.md`,
+`docs/client-parity.md`, `docs/manual-test.md`); their knowledge lives in gotchas § Build (verifier
+DSL traps), gotchas § Replay (deliberate live/replay divergences), `docs/ide-mcp-protocol.md` § 11
+(not-taken wire vocabulary) + § 12 (measured wire facts), and `docs/feature-checklist.md` § 17 (the
+102-item manual-test record). `docs/` now holds five docs: ide-mcp-protocol, feature-checklist,
+limits, release, slash-commands.
+- **Checklist rules now in force**: every row in §1–16 is `**id** mark [effort] **Name** — gist;
+  facts` (one bold = the name); the **At a glance** block after References is hand-maintained —
+  refresh its counts and the 🟥 / [DECIDE] id lists at every audit; `<details>` only where the
+  user asked (two re-audit paragraphs, eleven §17 groups) — no other HTML in the docs.
+- Effort slider is the last row of `#modelFooter` (`plugin/src/main/resources/webview/chat.html`);
+  **no chip shows the effort level** — three suffix forms rejected (decisions 2026-08-26). **Do not
+  re-propose a chip suffix.** `.ef-row` is deliberately NOT `.tgl-row` (fixture 55 counts three).
+- Checklist current to 2.1.246 (127 rows; 9.10 🚫 = declined roster-flag gate).
 
 ## Released — 0.11.1 (2026-08-26)
 **0.11.1 is the shipped version** (tag `v0.11.1`, commit `979326c`): effort slider in the model
@@ -68,5 +73,5 @@ Success incl. the 2026.2.2 rc IDE-run). Next release is a fresh bump when work l
   `DiffReview.open` snapshot-only lookup parked; `/batch` verified at N=2 only.
 
 ## Which machine — check FIRST, both are real
-This session ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in
+The 2026-08-26 and 2026-08-28 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`). Paths for both boxes in
 overview.md § External references. The Windows box still owes the CRLF splice check.

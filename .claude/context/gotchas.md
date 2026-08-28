@@ -212,6 +212,22 @@ re-read those before trusting memory here.
 - **A synthetic fixture whose turns are 3 blocks long cannot catch a turn-boundary bug** — real
   transcripts run ~28 blocks a turn, so a bounded forward scan that passed the fixture gave up constantly
   on real data. Shape the fixture like the real data.
+- **Deliberate live-vs-replay divergences (the closed `docs/renderer-parity.md` audit, deleted
+  2026-08-28; full records via `git show 9bd1683:docs/renderer-parity.md`).** Do not "fix" these:
+  (a) replay card wording is "**Edit** on…" + ✓ Applied, never "Claude wants to…" + ✓ Accepted —
+  the transcript cannot tell manual approval from auto-mode; ✗ variants come from `toolDenialKind`.
+  (b) Non-diff permission cards (e.g. a resolved Bash card) VANISH on resume — `replayCard` renders
+  only with a plan or diff body; the tool line + IN/OUT remain. (c) ⏹ Stopped is reconstructed from
+  `interruptedByShutdown`. (d) Compaction: the summary box is RESUME-only (live `compact_boundary`
+  carries metadata only; the body exists only as the transcript's `isCompactSummary` record), while
+  the "✻ Distilled for Ns" turn footer is LIVE-only (drawn from the `result` event; replay's
+  empty-turn rule skips it). (e) Bash exit-code explanation (`returnCodeInterpretation` on
+  `toolUseResult`) is REPLAY-only — the field is not on the live wire and there is no prose
+  fallback. (f) Thinking durations on replay are record-gap approximations. (g) Retraction
+  (`model_refusal_fallback` / assistant `supersedes`, keyed on record uuid) was BUILT BLIND from the
+  VS Code bundle — no local transcript has ever contained either; unprobed over stream-json.
+  (h) Windowed replay: newest ~250 blocks at a turn boundary, 4 MB image budget spent newest-first,
+  browser find sees only loaded blocks.
 - When live and replay disagree, establish WHICH is correct before designing the fix — the
   duplicated-checklist bug looked like live over-rendering and was live UNDER-rendering. Replay is
   usually the reference. Windowed replay also means browser find only sees loaded blocks.
@@ -297,6 +313,15 @@ re-read those before trusting memory here.
   it and passed only by luck confirmed afterwards). **Read the VERDICT FILES, never the log tail:**
   `build/reports/pluginVerifier/PS-*/plugins/<id>/<ver>/verification-verdict.txt`, one line each. It
   outlives a 2-minute timeout (~30-40s warm, ladder resolution can exceed it) — give it 10 minutes.
+- **Widening `pluginVerification.ides` beyond PhpStorm (parked, backlog) — four traps found by javap
+  against the cached IPGP 2.x jar, 2026-08-01:** (1) `select { channels }` must include **EAP + RC** —
+  the `recommended()` ladder already contains an EAP build (PS-262.x), so RELEASE-only silently drops
+  the newest branch. (2) `select{}` does NOT follow the declared range — its `sinceBuild`/`untilBuild`
+  branch numbers need a manual bump every time a new branch ships; only `recommended()` tracks the
+  range automatically. (3) A product with no build in the range (RustRover/Aqua at 242) resolves to
+  NOTHING, silently — eyeball the resolved IDE list on the first run. (4) `./gradlew verifyPlugin
+  --dry-run` first: it catches DSL errors without the ~20 GB first-run download. Config sketch:
+  `git show 9bd1683:docs/verifier-matrix.md`.
 - **Marketplace approval lags the upload, and the API lags the page.** Minutes after a green upload run,
   `api/plugins/33274/updates` still names the previous version — it reads like a failed upload and is not
   one. Check the plugin PAGE (numeric id; the xmlId form 404s). A failed upload does not burn the version;

@@ -28,11 +28,7 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   2026-08-26): 127 rows with STABLE
   `section.row` ids, colour tiers, effort tags — refer to features by id (e.g. 2.4)
 - `docs/limits.md` — every size cap (folded/scrolled/truncated/volume) and where it is set
-- `docs/client-parity.md` — CLI data we drop, scored vs terminal TUI and VS Code extension
-  (verified against installed 2.1.220). External parity; `docs/renderer-parity.md` is the
-  internal live-vs-resume-vs-mockup one
 - `docs/slash-commands.md` — the slash-command allowlist and per-command verification status
-- `docs/manual-test.md` — the standing manual-test checklist
 - `docs/release.md` — release process (Path B custom repo)
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved changes
   get ported into `plugin/src/main/resources/webview/chat.html`

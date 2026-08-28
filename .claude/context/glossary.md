@@ -2,9 +2,9 @@
 
 - **Live vs replay** — the two render paths: live = wire events through `onClaudeEvent`;
   replay = transcript JSONL through `SessionStore.readTranscript`. Same visuals required, often
-  DIFFERENT field spellings on the wire (see gotchas.md). `docs/renderer-parity.md` audits
-  live-vs-replay-vs-mockup (internal); `docs/client-parity.md` audits us-vs-TUI-vs-VS-Code
-  (external).
+  DIFFERENT field spellings on the wire (see gotchas.md). Deliberate live/replay divergences are
+  listed in gotchas.md § Replay (the internal and external parity audits were closed and deleted
+  2026-08-28).
 - **By design / Declined / Deferred** — three different "we don't have it"s: never will
   (terminal's half), decided against on 2026-08-06 (cost/usage display), wanted-but-later
   (tabs, voice). Release prose must not blur them.

@@ -3,6 +3,29 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-28 — four docs retired, the checklist reshaped, one detour reverted
+- Doc audit → user deleted `docs/verifier-matrix.md` (parked), `docs/renderer-parity.md` (0 open),
+  `docs/client-parity.md` (all 37 DONE/by-design) and `docs/manual-test.md` (self-contained,
+  102/102 — the "92" in 16.5 undercounted). Knowledge promoted first: verifier DSL traps →
+  gotchas § Build; eight deliberate live/replay divergences → gotchas § Replay; not-taken wire
+  vocabulary → `ide-mcp-protocol.md` § 11; ~40 measured wire facts (agent-extracted from 1587
+  lines, deduped by key against §9/§10/gotchas) → § 12; the manual-test items → checklist § 17
+  (one `MT-n.m` line each, mapped to row ids, RESOLVED "how" + hard-to-trigger recipes kept).
+  Every cross-reference re-pointed; each deleted doc has a `git show 9bd1683:docs/<name>.md` pointer.
+- Learned: the "PhpStorm MCP" the CLI shows is OUR server (`bridge/IdeMcpServer.kt` names itself
+  `"Claude Code <ideName> MCP"`); the CLI is the MCP client.
+- **Detour**: a plan-approved bird's-eye restructure (section table + `<details>` headline per row)
+  went through four one-symptom fixes (uniform ▶, indent, no duplicate bodies, body indent) and was
+  reverted as "complete mess". Lesson → conventions § Docs: reformat = design task, show ONE
+  section first. Also: marked needs a blank line after `</summary>` and around `</details>`.
+- What the user DID like, plain markdown, sample-first: re-audit paragraphs each in its own
+  `<details>` (title only in the summary); every §1–16 row in one shape (`**id** mark [effort]
+  **Name** — gist; facts`, §1 approved before the other 103); an **At a glance** block (counts,
+  🟥 Next up, [DECIDE] ids); §17 groups collapsed with counts; the six long ✅/🚫 rows (5.6, 9.2,
+  9.4, 9.5, 9.9, 9.10) trimmed to name + behaviour with pointers to decisions/gotchas. 802 → 601
+  lines, 229 ids in the same order.
+- Committed and pushed at the user's request at session end.
+
 ## 2026-08-26 (third) — 0.11.1 goes out (saved 2026-08-27)
 - **Released 0.11.1** (`979326c`, tag `v0.11.1`) — the effort slider's move into the model menu,
   the bare mode chip, the "Models" header. PATCH bump: a relocation adds no capability. Full
@@ -253,39 +276,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Also relearned: `pkill -f runIde` kills gradle but NOT the sandbox IDE, whose orphan then
   swallows every relaunch via single-instance forwarding (runIde exits ~700ms "successfully").
 
-## 2026-08-23 (second) — plan comments: from VS Code screenshots to a shipped feature
-- The user walked VS Code's plan-preview commenting live (screenshots) and we measured the whole
-  mechanism: plans are files in `~/.claude/plans/<slug>.md` written by an ordinary Write;
-  `get_plan` returns `{exists, content, path}`; comments force keep-planning THERE; the wire is
-  plain text on the deny tool_result — `[Re: "anchor"] note` lines under "Comments on the plan:"
-  (grepped byte-for-byte from the claude-vscode transcript). Checklist 5.6 [LG]→[MD] on that.
-- Then "Lets implement it" — built IN THE PANEL (`c0df900`): select text on the plan card →
-  floating pill → anchored comment rows between the separator and the feedback input. Deny sends
-  the reference client's exact format; approve rides `PLAN_NOTES_MARKER`; SessionStore parses
-  both back (`parsePlanComments` in RenderLimits, format strings in `window.LIMITS`); replay
-  draws the same rows via one shared builder (`planCommentRows`). Kotlin untouched on the wire.
-- **User's design call, diverging from the reference:** the FULL approve surface stays available
-  with comments pending (VS Code collapses to keep-planning-only). Mockup-first with candidates;
-  seven polish rounds followed, each from a real-IDE or mockup pass: pill containing block
-  (`.card.plan{position:relative}` was missing), commit-on-decision-click, two-line composer with
-  ✕/⏎ (later one centered `.c-btns` stack), rows below the separator at the decision surface's
-  10px rhythm, size parity with `.plan-fb`, container `:focus-within` ring, mark geometry matched
-  to `.blk code`, mark mix 40→60%.
-- **The round-4 bug had two heads**: deleting a row mid-compose dropped the composer AND stranded
-  `composing` (pill locked out); plus the generic ✕ loop's `splice(NaN,1)` ate element 0 once the
-  composer got its own ✕. Both pinned in fixture 53's bug-repro step.
-- Proof discipline held all day: fixture 53 grew to 37 asserts across EIGHT control runs (14 fail
-  pre-feature, then 3/4/2/9/2/1/1 per round — every new assert seen failing first); full harness
-  361 → **398**; gradle test 109 → **113** (parser + replay fixtures incl. the byte-exact VS Code
-  deny message); `probe` on the real VS Code transcript replays the comment row.
-- Traps for gotchas: `pkill -f` self-matching the Bash cmdline (twice), `color-mix` computing to
-  `color(srgb …/a)` making an rgba-regex assert VACUOUS (caught because the control run passed
-  when it should fail), `surroundContents` leaving split text nodes (unwrap now `normalize()`s),
-  the global `.turn :focus-visible` out-specifying an element `outline:none`.
-- Not done: keyboard-only selection can't trigger the pill (backlog); still NO release — 0.8.0
-  ships, `main` now carries VFS fix + compaction fix + 2.1.241 audit + this feature.
-
 ## Digest
+- **2026-08-23 (second)** — plan-card comments shipped in the panel (`c0df900`): measured from
+  VS Code screenshots + transcript (plans are files in `~/.claude/plans/`, comments ride the deny
+  tool_result as `[Re: "anchor"] note` lines); user's call: full approve surface stays available
+  with comments pending (VS Code collapses). Fixture 53 = 37 asserts over eight control runs;
+  harness 361→398, gradle 109→113. Keyboard-only pill → backlog.
 - **2026-08-23** — checklist re-audited 2.1.233 → 2.1.241: no new surfaces either side; what moved
   was measurement — `stop_task`, `side_question`, `apply_flag_settings{effortLevel,fastMode}`,
   `set_max_thinking_tokens`, `rename_session` all ANSWER over stdio (probes pre-paid for 8.11/9.4/

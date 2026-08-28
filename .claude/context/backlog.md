@@ -1,7 +1,8 @@
 # Backlog
 
-## Immediate — manual-test issue register (detail in docs/manual-test.md, order in state.md)
-- **Register is at 0 open / 25 resolved (2026-08-15)** — 3.1 + 9.10 shipped. Re-test fixtures
+## Immediate
+- **Manual-test register closed at 0 open (2026-08-15); `docs/manual-test.md` deleted 2026-08-28**
+  (self-contained by design; `git show 9bd1683:docs/manual-test.md`). Re-test fixtures
   `dummy-cmd.md` + `sub/nested-cmd.md` kept under `~/Sites/claude-brains-testing/.claude/commands/`
   (Linux only, not in git; recreate on Windows before any re-test there).
 - A filename longer than the whole tool line is hard-clipped with no ellipsis (the tail never
@@ -104,10 +105,12 @@
   sub-agent result gets `agentId: … (use SendMessage …)` + `<usage>subagent_tokens…</usage>`
   appended (skipped for some agent types). Deliberately not fixed on an unverified premise —
   take it if it ever shows up in a real OUT box.
-- TodoWrite checklist renderer (client-parity item 14) — until then TodoWrite tool lines stay blank by design
 - Test sidechain/subagent replay ordering once local sessions contain `isSidechain` records
-- Widen Plugin Verifier beyond PhpStorm — parked on the breadth decision; all groundwork +
-  config sketch in `docs/verifier-matrix.md` (recommendation on file: edges variant)
+- Widen Plugin Verifier beyond PhpStorm — parked on the breadth decision. Recommendation:
+  **edges** (keep `recommended()` for the PhpStorm ladder + `select {}` the other products at
+  sinceBuild 242 and the current branch only; ~20 GB first run). Full matrix (~80 GB, 2–4 h/run)
+  rejected as redundant. `docs/verifier-matrix.md` deleted 2026-08-28 — its four DSL traps are in
+  gotchas.md § Build; config sketch via `git show 9bd1683:docs/verifier-matrix.md`.
 
 ## Not happening (decided 2026-08-07)
 - Light theme / configurable colours — `docs/colors.md` and `design/colors.html` (the

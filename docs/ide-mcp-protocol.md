@@ -157,7 +157,7 @@ a decision. **The IDE never writes the file**: both panes are temp documents in 
 and the CLI maps the verdict to `{oldContent, newContent}` (TAB_CLOSED → accept-as-proposed,
 DIFF_REJECTED → old content) and does the disk write itself. FILE_SAVED is the accept token,
 not a claim about disk — a caller-less probe that expects a write will wrongly conclude the
-host is broken (manual-test 10.5 did).
+host is broken (a 2026-08-09 manual-test probe did).
 
 ---
 
@@ -309,9 +309,9 @@ The webview reuse (§5) is a later, higher-effort enhancement.
 
 ## 9. Full wire vocabulary — 2.1.222 sweep (2026-08-06)
 
-Raw reference, preserved from the full-bundle completeness sweep (see `docs/client-parity.md`
-§ 32 for the triage — that doc says what we DO about each of these; this section only records
-what EXISTS). Sources: the CLI binary's embedded zod wire schema (~1,160 `.describe()` strings,
+Raw reference, preserved from the full-bundle completeness sweep (the triage lived in the
+deleted `docs/client-parity.md` § 32; what we chose NOT to take is § 11 below; this section only
+records what EXISTS). Sources: the CLI binary's embedded zod wire schema (~1,160 `.describe()` strings,
 byte offsets ≈ 281.9–285.2 M in `resources/native-binary/claude`), `extension.js` (host half,
 bundled Agent SDK 0.3.222), and `webview/index.js`. Counts are occurrence counts in those
 artifacts, not transcript counts. Re-derive after an update with `grep -oaE` over the binary
@@ -651,3 +651,161 @@ stream, or the CLI binary; none is inferred.
   retries at file positions after the error, timestamps before it). Timestamps and the
   `parentUuid` chain stay chronological; file order does not. SessionStore reorders exactly
   this pattern (9.1's replay half).
+
+## 11. Seen on the wire, deliberately NOT taken (from the closed client-parity audit, 2026-08-06)
+
+Promoted from `docs/client-parity.md` when that audit was closed and deleted (2026-08-28; full
+per-item evidence via `git show 9bd1683:docs/client-parity.md`). Every row below EXISTS in the
+2.1.222 CLI vocabulary; none is rendered. **Probe first if ever wanted** — zero local records for
+most of them.
+
+- **`model_consent_fallback`** — the Fable usage-credit gate swapping the session model pre-send
+  (`choice:"consent"|"switch_default"|"cancelled"`), self-described "Not yet in the public
+  SDKMessage union". The gate's dialog arrives as `request_user_dialog{dialog_kind:
+  "fable_overage_consent_prompt"}`; we declare no `supportedDialogKinds`, so the CLI "stays silent
+  so a capable client (or the worker's park deadline) settles it". Live-relevant to Fable users:
+  if it fires, the model chip could lie the way the refusal-fallback `scope` bug did.
+- **`tombstone`** — "remove the referenced message": generalised retraction beyond
+  `supersedes`/`retracted_message_uuids`. `@internal`, zero records; the uuid→DOM map exists, so
+  one branch if it ever reaches our wire.
+- **`tool_progress`** (top-level) — `{tool_use_id, tool_name, elapsed_time_seconds, heartbeat?,
+  subagent_retry?}`; not emitted to stream-json clients as of 2.1.222 (checklist 1.22).
+- **`conversation_reset`** — emitted by `/clear`, plan-mode exit, fresh-session flows; "mount a
+  fresh transcript under `new_conversation_id`". Our `/clear` is native, but probe plan-mode exit.
+- **Effort via `apply_flag_settings` / `--effort`** — no `set_effort` control request exists (hence
+  the `/effort` turn); but a spawn flag `--effort <v>` and a live `apply_flag_settings` control
+  request ("merges into the flag settings layer"; `effortLevel` is a settings key) both exist.
+  Probing `apply_flag_settings{effortLevel}` mid-session could retire the muted turn.
+- **`permission_denied`** subtype carries the auto-deny *reason*; `can_use_tool` also carries
+  `display_name`, `decision_reason`, `matched_ask_rule{source, rule_content}` (checklist 1.23).
+- **`result` extras** — `terminal_reason` (19 values: `prompt_too_long`, `stop_hook_prevented`,
+  `blocking_limit`, …); error subtypes `error_max_turns` / `error_max_budget_usd` /
+  `error_max_structured_output_retries` all render as a generic error block today.
+- **`redacted_thinking`** — live renders nothing; VS Code shows a placeholder (checklist 1.21).
+- **`prompt_suggestion` / `agents_killed` / `session_state_changed`** — suggestion chrome (opt-in
+  at initialize), an "agents killed" banner, and an "authoritative turn-over signal" (`idle` fires
+  only after held-back results flush) that could harden the queue drain if `onResult` proves racy.
+- **`elicitation`** — MCP elicitation forwarded as a control request; our generic empty-`{}` ack
+  answers it with neither `{action:"decline"}` nor a real answer. No local MCP server elicits.
+
+**The by-design list is a decision against EXISTING capability, not a bet on a missing one**
+(2.1.222 sweep): `claude_authenticate` + OAuth callbacks (login), `get_usage` / `get_context_usage`
+/ `get_session_cost` (usage/cost panels), `mcp_toggle` / `mcp_authenticate` / `mcp_set_servers`
+(MCP management) all exist. Raw existence of everything above: § 9. **Unforceable, failing safe:**
+a real rate-limit warning, a real refusal, Bash `interrupted:true` (zero occurrences ever).
+
+## 12. Measured wire facts promoted from the client-parity audit (2026-08-04 → 08-06, CLI 2.1.220–222)
+
+Each line was MEASURED (transcript census by key, or a live stream-json probe) — not read out of the
+binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd1683:docs/client-parity.md`).
+
+### Sub-agent / background-task lifecycle (live-only)
+- `stream_event` frames NEVER carry `parent_tool_use_id` — 28 stream events from a real synchronous
+  sub-agent run, zero with a parent; child work is excluded structurally (1).
+- `task_started` = `{task_id, tool_use_id, description, subagent_type, task_type, prompt}`;
+  `task_progress` adds `last_tool_name` + `usage:{total_tokens, tool_uses, duration_ms}`;
+  `task_updated` = `{task_id, patch:{status, end_time}}`; `task_notification` = `{status, summary,
+  output_file, usage}` (1).
+- Zero `isSidechain:true` across 23,123 main-transcript records; an async `Agent`'s persisted
+  `toolUseResult` is launch metadata only — `{agentId, outputFile, status}` (1).
+- `background_tasks_changed.tasks[]` items are `{task_id, task_type, description}`;
+  `task_type:"local_bash"` does NOT suspend the turn (the CLI's busy set excludes it — the request's
+  `result` is the true end); any other `task_type` suspends (4).
+- Only `Agent` and `WebFetch` inputs carry `prompt`; `TaskUpdate` input is `{taskId, status}`
+  (`activeForm` is on `TaskCreate` beside `description`) (3, 5).
+
+### Tool results (`toolUseResult` vs result text)
+- A FAILED Bash result stores `toolUseResult` as a STRING, not an object — a survey keyed on
+  `stdout` misses every failure (9).
+- Bash `stderr` is merged into the `tool_result` content (151/151); `noOutputExpected` results read
+  `(Bash completed with no output)`; `returnCodeInterpretation` (on `toolUseResult`) disagrees with
+  the output text in 33/35 (9).
+- `toolUseResult.persistedOutputPath` / `persistedOutputSize` are replay-only; live the same fact is
+  prose inside the result text: `<persisted-output>\nOutput too large (402.7KB). Full output saved
+  to: <path>\n\nPreview (first 2KB):\n…\n</persisted-output>` (10).
+- `userModified` is on every Edit result and ALWAYS `false` (2091/2091); the sibling that fires is
+  `staleRecovered:true` (25 records), and the CLI appends the caveat to the result TEXT on both
+  paths: `… updated successfully. (note: the file had been modified on disk since you last read
+  it — …)` (11).
+- Tool image results — live: `tool_result` content block `{type:"image", source:{media_type,
+  data:<base64>}}`; replay: `toolUseResult {type:"image", file:{base64, type, dimensions,
+  originalSize}}` (8).
+- Edit/Write success text is the boilerplate `The file … has been updated successfully` (2033 of
+  ~2100 non-Bash results) (6).
+- `web_search_tool_result.content` is an ARRAY of `{title, url}` on success and an OBJECT
+  `{error_code}` on failure — discriminate by `Array.isArray`; `server_tool_use` is shaped exactly
+  like `tool_use` (`id/name/input`, streams via `input_json_delta`) with no `tool_result` user event;
+  on 2.1.222 an explicit web search runs as a CLIENT-side `WebSearch` tool_use anyway; `ToolSearch`
+  returns a `tool_reference` content block live (12).
+- A PreToolUse hook `permissionDecision:"deny"` yields no hook event — only a `tool_result` with
+  `is_error:true` whose content is the hook's reason (22).
+
+### `system/*` subtype fields (live)
+- `system/informational` `level ∈ info|notice|suggestion|warning`; a `UserPromptSubmit` hook exit 2
+  emits ONLY `{subtype:"informational", level:"warning", prevent_continuation:true, content:
+  "UserPromptSubmit operation blocked by hook:\n…\n\nOriginal prompt: …"}` (22).
+- `system/thinking_tokens` = `{estimated_tokens, estimated_tokens_delta, uuid}`, live-only, never
+  persisted; on this account it never fires — `thinking_delta` streams `thinking:""` with
+  `estimated_tokens:null` followed only by `signature_delta` (signature-only thinking, confirmed
+  LIVE) (19).
+- `system/model_refusal_fallback`: the CLI's emission site writes camelCase (`originalModel`,
+  `fallbackModel`) while VS Code's validator reads `original_model`/`fallback_model` — accept both;
+  `scope ∈ session|local` (absent → `session`; `local` = subagent/`/btw`/background fork, session
+  model unchanged); `direction ∈ retry|revert|sticky`; `retracted_message_uuids[]`.
+  `system/model_refusal_no_fallback` = `{original_model, content}` (one site sends `content:""`).
+  Assistant-frame `supersedes[]` may name tombstoned `tool_result` uuids, not only assistant ones (21).
+- `system/status` `status:"requesting"` fires ~3× per ordinary turn (routine); a failed `/compact`
+  on a short session is `status:"compacting"` → `{status:null, compact_result:"failed",
+  compact_error:"Not enough messages to compact."}` → `result` with `is_error:false` and NO
+  `compact_boundary`; zero `status` records are ever persisted (35).
+- `system/compact_boundary` IS on the live wire; transcript spelling `compactMetadata.preTokens`
+  vs wire `compact_metadata.pre_tokens` (15).
+- `system/init.mcp_servers[].status` enum: `connected|failed|needs-auth|pending|disabled` (13a).
+- Persisted `system/api_error` also carries `source:"request_retry"`; other persisted system
+  subtypes seen locally: `turn_duration`, `local_command`, `away_summary` (31).
+
+### Top-level frames: `assistant` / `result` / `rate_limit_event`
+- `assistant` frames carry `error` unconditionally but NO `subtype`; enum: `authentication_failed,
+  oauth_org_not_allowed, rate_limit, overloaded, billing_error, server_error, invalid_request,
+  model_not_found, max_output_tokens, unknown`. `oauth_org_not_allowed`'s fix is the OPPOSITE of a
+  re-login (API key / ask admin); `authentication_failed` also covers expired AWS/GCP/managed
+  keys (20a).
+- An invalid API key is RETRIED 10× as a `system/api_retry` storm (`error:"authentication_failed"`,
+  `error_status:401`) before the assistant error frame; `CLAUDE_CODE_MAX_RETRIES=1` caps it; the
+  final `result` is `subtype:"success"` + `is_error:true` + `terminal_reason:"api_error"` — an auth
+  failure is NOT a result error subtype (20a).
+- `rate_limit_event` payload key is `rate_limit_info` (accept `rateLimitInfo` too) = `{status:
+  allowed|rejected|…, rateLimitType, utilization, resetsAt (UNIX SECONDS), overageStatus,
+  overageDisabledReason, isUsingOverage}`; `allowed` is the routine case and must render nothing;
+  never persisted (binary: "[sdkMessageAdapter] Ignoring rate_limit_event message") (16).
+
+### `initialize` response and the tasks store
+- The `initialize` control response's keys are exactly `account, agents, available_output_styles,
+  commands, fast_mode_disabled_reason, fast_mode_state, ide_rc_auto_enable_gate, models,
+  output_style, pid, remote_control_auto_enable, remote_control_auto_on_by_default` — no MCP data,
+  no context window (13a, 17a).
+- `TodoWrite` is retired from 2.1.222's roster (every local record is 2.1.178); replaced by
+  `TaskCreate`/`TaskList`/`TaskGet`/`TaskUpdate`. `TaskCreate` result text: `Task #3 created
+  successfully: …`; `TaskList` result: the full list as `#1 [completed] …` (14).
+- Task state PERSISTS TO DISK: `~/.claude/tasks/<sessionId>/<n>.json` = `{id, subject, description,
+  activeForm, status, blocks, blockedBy}`, overwritten in place (14b).
+- `rename_session` over stdio answers "rename_session is not supported in this context
+  (onRenameSession callback not registered)"; the on-disk record is exactly `{type:"custom-title",
+  customTitle, sessionId}` — no uuid/timestamp; forks write `"… (fork)"` (34).
+
+### Transcript records (replay)
+- The compaction summary is a `user` record carrying `isCompactSummary` (NOT `isMeta`), paired to
+  its boundary by `parentUuid == boundary.uuid`; sizes seen 25k–41k chars (15).
+- Interrupt markers are `user` records whose WHOLE text is exactly `[Request interrupted by user]`
+  or `[Request interrupted by user for tool use]`; only 5 of 28 also carry `interruptedByShutdown`
+  — match whole-block equality, never contains (33).
+- `attachment` record subtypes seen: `task_reminder, deferred_tools_delta, agent_listing_delta,
+  skill_listing, command_permissions` (25).
+- Per-record metadata on nearly every record: `effort, attributionSkill, permissionMode, gitBranch,
+  version, cwd` (26).
+- Injected-tag census of user records: `<ide_opened_file>`, `<ide_selection>` (never `isMeta`),
+  `<local-command-stdout>`, `<command-name>`, `<task-notification>` occur; `<system-reminder>`
+  records are all `isMeta`; `<post-tool-use-hook>`, `<ide_diagnostics>`, `<local-command-stderr>`
+  occur zero times (27, 37).
+- `stop_hook_summary` records (`hookCount/hookInfos/hookErrors/preventedContinuation`) occur zero
+  times locally (22).

@@ -52,7 +52,7 @@ control request and the slider's `/effort` turn each make the CLI write a comman
 transcript (CLI 2.1.245); replay drops both `<command-name>` wrappers (scoped to exactly these
 two), live draws the /effort confirmation from the CLI's synthetic assistant frame through the
 `effortMuted` gate, and neither wrapper can become a derived session title any more
-(renderer-parity.md has the full records).
+(records in the deleted `docs/renderer-parity.md`, `git show 9bd1683:docs/renderer-parity.md`).
 
 ## How custom commands are detected (measured 2026-08-15, CLI 2.1.228)
 

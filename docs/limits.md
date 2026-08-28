@@ -120,7 +120,7 @@ this cap is future-proofing rather than a live fix.
 
 ### Every cap that drops CONTENT announces it (2026-08-05)
 
-Closed `docs/client-parity.md` item 10. A cut used to be indistinguishable from a short result: the
+Closed client-parity item 10 (audit since deleted). A cut used to be indistinguishable from a short result: the
 panel showed a slice and nothing said so, which made the fold actively misleading — expanding a
 truncated OUT box yields the 2000-char slice, not the whole output, so the fold read as "you have
 now seen everything". Measured scale before the fix: **79 blocks in a single local session** were

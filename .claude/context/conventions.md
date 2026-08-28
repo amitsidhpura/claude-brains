@@ -119,6 +119,10 @@
   the one you meant — an empty failure list proves nothing on its own.
 
 ## Docs
+- **A document reformat is a design task — show ONE section first, get a yes, then do the file.**
+  2026-08-28: a plan-approved bird's-eye restructure of `docs/feature-checklist.md` (section table +
+  HTML `<details>` headlines) went through four rounds of one-symptom fixes and was reverted as a
+  "complete mess". The docs are plain markdown; the one exception, asked for by the user afterwards: each re-audit paragraph sits in its own `<details>` (title in the summary, not repeated in the body).
 - **A doc outlives the decision that created it.** `docs/release.md` was still titled "Path B —
   no Marketplace" and the README still said "distributed rather than the JetBrains Marketplace"
   two weeks after the plugin was listed there; the README's Docs list linked a `CLAUDE.md` deleted

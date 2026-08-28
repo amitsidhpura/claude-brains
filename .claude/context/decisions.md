@@ -4,6 +4,16 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-28 — Closed audit docs are deleted, not archived; their knowledge moves to the reference tier
+**Decision:** `docs/verifier-matrix.md`, `docs/renderer-parity.md` and `docs/client-parity.md` deleted
+(user, 2026-08-28). Rule going forward: a doc whose every item is closed is history — promote the
+measured facts and standing traps (gotchas / `ide-mcp-protocol.md`), leave a `git show <sha>:path`
+pointer where it was cited, delete the file. **Why:** the three carried 2,090 lines with zero open
+work; a fresh session reading them as live registers would re-audit closed items, and the feature
+checklist is the one register. **Rejected:** keeping them as "archives" in-tree (still read, still
+drift), and deleting without promotion (the client-parity wire evidence — e.g. `staleRecovered` is
+what fires, failed Bash `toolUseResult` is a string — exists nowhere else and cost real probes).
+
 ## 2026-08-26 — 0.11.1 is a PATCH, its notes get a "Changed" section, and the Fable caveat ships
 
 The effort-slider relocation shipped as 0.11.1, not 0.12.0: `docs/release.md` reserves the minor
@@ -51,7 +61,7 @@ an identical single block (CLI 2.1.246, headless probe with the panel's flags). 
 kills thinking on the default/Opus model (9.5's 2026-08-24 check). So the switch is inert on Fable.
 
 *Decision (user, "document only"):* no UI change. Recorded in `docs/feature-checklist.md` 9.5,
-`docs/manual-test.md` 3.5 ("KNOWN INERT, not a bug") and gotchas § Protocol.
+gotchas § Protocol (and the since-deleted `docs/manual-test.md` 3.5).
 
 *Why not gate it:* no roster field discriminates Fable — `supportsAdaptiveThinking` is `true` for
 sonnet, opus AND fable alike — so gating would need a model-name sniff, a new idiom bought for one
@@ -242,7 +252,7 @@ several same-ts records whose only order IS file order; the streaming eviction w
 whole-file buffering (the exact architecture the truncation rewrite removed); and "timestamps always
 outrank file order" is an unmeasured premise, so new anchors must each be earned by a real transcript.
 Also rejected: suppressing or reconstructing the live compaction footer (the marker is the compaction's
-receipt; both divergences recorded as deliberate in docs/renderer-parity.md Audit 2 instead).
+receipt; both divergences recorded as deliberate — now gotchas.md § Replay, item (d); renderer-parity.md deleted 2026-08-28).
 
 ## 2026-08-21 — "Open this path" resolves against DISK; locked readers stay on the snapshot
 `Vfs.kt` gains `findVFileOnDisk` (snapshot hit first, then `refreshAndFindFileByPath`), wired into
