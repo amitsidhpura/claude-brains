@@ -4,6 +4,14 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — 8.14 reloaded-webview log replay: NO (declined, not deferred)
+- A webview reload happens only from a DevTools reload or a JCEF renderer crash; none observed in
+  the wild since `seedUi()` (2026-08-13) began healing the chrome. The log half would need the
+  transcript pushed WITHOUT restarting the CLI and reconciled against mid-turn frames ([LG]).
+- User's call: "does not seem very important" — `refresh` / reopening the session already brings
+  the conversation back after a crash. Removed from `backlog.md`; re-mark only if a real reload is
+  ever seen. Leaves 8.7 as §8's sole open row.
+
 ## 2026-08-29 — Destructive hover stays red (roster ✕, history delete); everything else white
 - The two hover-revealed DESTRUCTIVE controls (`.bg-x:hover`, `.hist-del:hover`) go `--red`;
   every other hover-revealed control (`.rm`, `.model-del`, `.t-edit`) goes `--fg`. User asked

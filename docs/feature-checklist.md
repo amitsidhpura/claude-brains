@@ -11,8 +11,8 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-29) — 83 ✅ · 2 🟥 · 2 🟧 · 2 ⬜ · 39 ➖ (128 rows)
-- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.14 Reloaded-webview log replay
+**At a glance** (2.1.250, 2026-08-29) — 83 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 40 ➖ (128 rows)
+- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation
 - **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 14.2 Git actions in the host
 
 **Status marks**
@@ -375,8 +375,9 @@ auto-include selection, voice.
       SOURCES beyond the local disk lean infrastructure; recorded as a judgment call
 - **8.13** ➖ **`generate_session_title`** [NEW] — the CLI names threads itself (`ai-title`) and we
       show it
-- **8.14** 🟥 [LG] **Reloaded-webview log replay** — chrome heals via `seedUi()`, the log does not;
-      backlog § Next up, no reload observed in the wild yet
+- **8.14** ➖ [LG] **Reloaded-webview log replay** — chrome heals via `seedUi()`, the log does not;
+      declined by the user 2026-08-29: a reload only happens from DevTools or a renderer crash, never
+      seen in the wild, and `refresh` / reopening the session already restores the conversation
 
 ## 9. ✅ Model, effort, usage
 - **9.1** ✅ **Model chip** — from `initialize.models`, search + custom id → `set_model`; persisted

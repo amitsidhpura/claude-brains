@@ -1,10 +1,11 @@
 # State
 
 ## Current focus
-**2026-08-29 (twenty-first session): goal = every checklist section ✅ by 2026-08-30 EOD. Today §15
-closed (15.5 later, 15.6 no), §8 narrowed (8.8 later, 8.10 later, **8.11 side question BUILT**).
-Committed and pushed at the end of the session.** Sections still ⬜: **§8** (8.14 open; 8.7 parked by
-the user — "keep the revert and version control last") and **§14** (all four rows, parked with it).
+**2026-08-29 (twenty-second session): goal = every checklist section ✅ by 2026-08-30 EOD. This
+session: 8.14 DECLINED (➖, `refresh`/reopen covers a crash). Earlier today §15 closed, 8.8/8.10
+later, **8.11 side question BUILT**. Committed and pushed.** Sections still ⬜: **§8** (ONLY 8.7,
+parked by the user — "keep the revert and version control last") and **§14** (all four rows, parked
+with it). Every other section is ✅.
 - **8.11 side question** shipped 2026-08-29: `/btw` (bare = open, `/btw q` = ask) → `#sidePanel`
   floating over the composer (`webview/js/67-side.js`, CSS § side question in `chat.css`) → bridge
   `{kind:'side', id, question, history}` → `ChatPanel` → `ClaudeSessionService.askSideQuestion` →
@@ -18,7 +19,7 @@ the user — "keep the revert and version control last") and **§14** (all four 
 - **8.11 UNMEASURED corners**: `synthetic:true` answers and `refusal_fallback` are passed through /
   ignored, never seen; the CLI's "Side question cancelled" / "Session is shutting down" errors
   render on the row verbatim if they ever arrive.
-- Checklist current to **2.1.250** (128 rows; 83 ✅ · 2 🟥 · 2 🟧 · 2 ⬜ · 39 ➖). Rules still in
+- Checklist current to **2.1.250** (128 rows; 83 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 40 ➖). Rules still in
   force: `**id** mark [effort] **Name** — gist; facts`; the **At a glance** block is hand-maintained
   (recount with `awk` at every change); `<details>` only in the re-audit paragraphs and §17 groups.
 - Effort slider: **no chip shows the effort level** — do not re-propose a chip suffix (2026-08-26).
@@ -31,8 +32,7 @@ the user — "keep the revert and version control last") and **§14** (all four 
 bump when the user asks. `verifyPlugin` runs BEFORE the gate, read the per-IDE verdict files.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
-- 🟥 rows left: **8.7** rewind/fork [LG] (parked, do last) · **8.14** reloaded-webview log replay
-  [LG] (rec. later).
+- 🟥 rows left: **8.7** rewind/fork [LG] only (parked, do last). 8.14 declined 2026-08-29.
 - **[DECIDE] rows**: 8.7, 14.2 only. §14 recommendation already given: 14.1/14.2/14.3 later as one
   "worktrees" bundle, 14.4 no — parked with 8.7 by the user.
 - `/clear [name]` decision still open (checklist 7.6).
@@ -61,8 +61,8 @@ bump when the user asks. `verifyPlugin` runs BEFORE the gate, read the per-IDE v
 **GOAL (user, 2026-08-29): every checklist section ✅ by 2026-08-30 EOD** — ✅ = every row ✅ or ➖.
 One section at a time: present open rows with a recommendation, get build / later / no per row,
 build the yes-rows, mark the rest ➖ with the reason, refresh the heading mark + At a glance.
-- [ ] **§8** — remaining call: **8.14** (rec. later → backlog § Next up keeps it). Then only 8.7
-      keeps §8 ⬜, and the user wants 8.7 + §14 ("revert and version control") LAST.
+- [x] **§8** — 8.14 declined 2026-08-29; only 8.7 keeps §8 ⬜, and the user wants 8.7 + §14
+      ("revert and version control") LAST.
 - [ ] **§14** — 14.1–14.4, recommendation given (later ×3 as a worktrees bundle, 14.4 no); parked.
 - [ ] **8.7** rewind / fork — the last discussion; revival notes in gotchas § Protocol.
 - [ ] After every section: heading mark, At a glance counts, [DECIDE] list, backlog.

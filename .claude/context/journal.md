@@ -3,6 +3,14 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (fifth) — 8.14 declined; §8 down to 8.7
+- Short session: explained 8.14 (page reload → chrome heals via `seedUi()`, conversation log
+  lost; trigger is DevTools reload or a renderer crash; fix = push transcript without restarting
+  the CLI + reconcile mid-turn frames). User declined it — `refresh` / reopen covers the crash case.
+- `docs/feature-checklist.md`: 8.14 ➖ with reason, At a glance 83 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 40 ➖,
+  Next up now 8.7 only; backlog entry removed. §8 stays ⬜ solely on 8.7 (parked last with §14).
+- Remaining before the 2026-08-30 goal: 8.7, §14 (14.1–14.4), `/clear [name]` (7.6).
+
 ## 2026-08-29 (fourth) — §15 closed, 8.8/8.10 deferred, 8.11 side question built and live-verified
 - §15: 15.5 `ask_debugger_help` later (backlog "Debugger MCP tools" [LG]), 15.6 MCP toggles no (by
   design). §8: 8.8 later (follows tabs), 8.10 later ("not very important"). User parked 8.7 + §14 last.

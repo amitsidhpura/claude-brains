@@ -29,12 +29,6 @@
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.
 
-- **8.14** Replay the conversation into a RELOADED webview (the *log* half; the roster half
-  shipped as 7.10 on 2026-08-17). `seedUi()` (2026-08-13) restores the chrome on
-  every page load, but the log itself is still lost — the transcript would have to be pushed WITHOUT
-  restarting the CLI (unlike `refresh`, which restarts it) and reconciled against frames still
-  arriving mid-turn. Deliberately deferred: no reload has ever been observed in the wild, and the
-  chrome was the part that could never heal.
 - **`DiffReview.open` VFS staleness** (parked 2026-08-21): its left pane resolves `oldPath`
   through snapshot-only `findVFile`, so a file the VFS has not caught up on renders as NEW. Fix is
   `findVFileOnDisk` (it holds no read lock at that point — the `readLocked` block is inside the
