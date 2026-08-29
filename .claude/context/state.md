@@ -54,10 +54,12 @@ bump when the user asks. `verifyPlugin` runs BEFORE the gate, read the per-IDE v
       release checklist for that release, not before.
       `design/marketplace/img.png` (879×177, a stray paste committed in `5b50131`) is already gone
       from disk — the deletion rides with the next commit.
-- [ ] **User errands**: re-extract `vscode/` to **2.1.250** (2.1.246 and 2.1.250 dirs both on disk
-      2026-08-28; the older vanishes on the next auto-update); gist push of the context skill
-      (`gh gist edit b2d033439ba4ca5bcd018f4fe5eef773 -f SKILL.md .claude/skills/context/SKILL.md`,
-      line 1 must be exactly `---`); Windows `./gradlew test` + VFS click check.
+- [x] `vscode/` re-extracted to **2.1.251** on 2026-08-29 (from 2.1.241; 2.1.250 was still on disk —
+      extension.js +14.5 KB, webview/index.js +2.4 KB between the two). **Re-audit deferred by the
+      user: wait a few CLI versions past 2.1.250 before the next checklist re-audit.**
+- [x] Gist `b2d033439ba4ca5bcd018f4fe5eef773` verified identical to `.claude/skills/context/SKILL.md`
+      on 2026-08-29 (push again after any SKILL.md edit: `gh gist edit <id> -f SKILL.md <path>`).
+- [ ] **User errands**: Windows `./gradlew test` + VFS click check.
 
 ## Known gaps (deliberately left)
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by decision.

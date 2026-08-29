@@ -67,7 +67,9 @@ success.
    back when a human watched every upload — and step 10 is automatic now, so nothing downstream
    would catch it either. **`buildPlugin` therefore refuses to build a zip whose notes carry no
    `<b>X.Y.Z</b>` entry for its own version** — step 2 fails with an explanatory message rather than
-   producing a shippable zip. Keep older versions listed: they are what users are updating FROM.
+   producing a shippable zip. **Keep exactly the last THREE versions** (decided 2026-08-29; it had
+   grown to 14) — add the new entry at the top, drop the oldest, and leave the closing
+   "Earlier versions" link to the GitHub releases page, which has every tag's notes.
 2. `cd plugin && ./gradlew test buildPlugin` → `build/distributions/claude-brains-X.Y.Z.zip`.
 3. Sanity: `unzip -l` the zip — must contain ONLY our jar + open-source deps
    (never any Anthropic assets).
@@ -160,8 +162,9 @@ only read about behaviour they can see.
 
 **Accuracy rules — claims that have been wrong before:**
 
-- **Slash commands** are an ALLOWLIST, not the CLI's full roster. Only `/compact` and
-  `/clear` are enabled (see `docs/slash-commands.md`). Never write "slash commands" plain.
+- **Slash commands** are an ALLOWLIST, not the CLI's full roster: sixteen verified built-ins plus
+  the panel's own `/btw`, and auto-enabled project/user commands, skills and MCP prompts (see
+  `docs/slash-commands.md`). `/clear` was removed 2026-08-29. Never write "slash commands" plain.
 - **Diffs** normally render inside the permission card (line-numbered, in the chat panel).
   Real IDE diff tabs open only when Claude calls `openDiff`. Don't promise "IDE diff
   previews" as the default path.

@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.11.1"
+version = "0.12.0"
 
 repositories {
     mavenCentral()
@@ -98,10 +98,31 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * Kept honest by the `buildPlugin` check below, because this string is easy to forget and nothing
  * downstream notices: it was last written for 0.3.3 and rode along unread through 0.4.0 and 0.5.0,
  * publishing the wrong notes twice. Now that .github/workflows/marketplace-upload.yml uploads on its
- * own, not even a human at an upload form would catch it. Older versions stay listed while they are
- * what users are updating FROM.
+ * own, not even a human at an upload form would catch it. The LAST THREE versions stay listed
+ * (decided 2026-08-29 — the block had grown to 14); everything older is one click away on the
+ * GitHub releases page linked at the bottom, one entry per tag. When adding a version, drop the
+ * oldest.
  */
 val changeNotesHtml = """
+            <b>0.12.0</b>
+            <ul>
+              <li>Side questions: type <code>/btw</code> (or <code>/btw your question</code>) to
+                  ask something on the side — the answer appears in a small panel above the
+                  composer and never enters the conversation or its transcript</li>
+              <li>Review every file a turn changed: a "N files changed · Review" line under the
+                  turn summary opens one diff tab that walks through each file, before and after</li>
+              <li>Edit a proposed change before accepting it — the right pane of the permission
+                  diff is editable, and what you accept is what gets written</li>
+              <li>Stop a background task from the roster — hover a row and click its ✕</li>
+              <li><code>.claude/settings.json</code> and <code>settings.local.json</code> get
+                  completion and validation from Anthropic's published schema</li>
+              <li>Permission cards say why the CLI is asking when it has a reason, a turn cut short
+                  by a max-turns limit says so under the summary, and redacted thinking shows a
+                  placeholder line instead of nothing</li>
+              <li><code>/clear</code> is gone from the panel: the New-conversation button in the
+                  header does the same thing (typed <code>/clear</code>, <code>/new</code>,
+                  <code>/reset</code> are refused, like <code>/model</code>)</li>
+            </ul>
             <b>0.11.1</b>
             <ul>
               <li>The effort slider moved into the model menu, as the last row under the 1M
@@ -123,164 +144,7 @@ val changeNotesHtml = """
                   conversation is resumed — the confirmation line is what both views show, and a
                   conversation can no longer be titled "/model haiku"</li>
             </ul>
-            <b>0.10.0</b>
-            <ul>
-              <li>Pick your context window: a 1M context switch at the bottom of the model menu
-                  flips any model to its 1M-token variant — Sonnet with 1M context is one click
-                  now. After the first reply the switch shows the window the API actually
-                  granted</li>
-              <li>Fast mode switch in the same menu (Opus models): enables Anthropic's faster
-                  responses where the account allows it, and explains itself when it can't —
-                  the reason is on the switch's tooltip</li>
-              <li>Thinking switch: turn extended thinking off for quick back-and-forth and
-                  back on for hard work, without touching the terminal</li>
-              <li>API errors now appear once — the same message used to show twice, as a plain
-                  line and again as the red error box</li>
-            </ul>
-            <b>0.9.0</b>
-            <ul>
-              <li>Comment on a plan before you answer it. Select any text in the plan card and a
-                  Comment button appears: your note is anchored to that exact passage, shown
-                  beside it, and travels with whichever answer you send — keep planning, or
-                  approve. The comments stay on the card afterwards as the record, and come
-                  back when the conversation is resumed</li>
-              <li>A plan card left undecided no longer invents an answer. Reloading a
-                  conversation while a plan was waiting used to show it as approved, then as
-                  refused quoting an internal error — it now says the decision was never
-                  recorded</li>
-              <li>Clicking a file path opens files written since the IDE last looked at that
-                  folder — they used to report "File not found"</li>
-              <li>A resumed conversation shows a manual /compact in the order it happened: the
-                  command first, then the summary it produced</li>
-            </ul>
-            <b>0.8.0</b>
-            <ul>
-              <li>Typed aliases now work: /review, /reset, /new and /peers reach the commands they
-                  stand for, the / menu finds a command by its alias, and aliases ride the row
-                  muted beside the name — a typed /review used to be refused as not available</li>
-              <li>Unsaved editor changes are what Claude sees: a modified file is saved just
-                  before Claude reads or edits it, the same way the VS Code extension does</li>
-              <li>Commands added while a session is running stay in the / menu even after the
-                  panel reloads — they used to vanish until the next conversation</li>
-              <li>Closing a review closes only that review's diff tab — it used to close every
-                  open diff tab at once</li>
-              <li>The Very High effort level no longer wraps to two lines in the mode menu</li>
-              <li>Crashed or killed IDE sessions no longer leave stale lock files behind for the
-                  CLI to trip over — dead locks are swept automatically</li>
-            </ul>
-            <b>0.7.2</b>
-            <ul>
-              <li>Picking a command from the / menu no longer runs it before you have said what
-                  you want. A command that takes an argument — /context, /compact, /code-review,
-                  /simplify, /loop, /batch — now lands in the composer ready for it; commands
-                  that take none still run on the spot</li>
-              <li>The Effort label in the mode menu lines up with the modes above it</li>
-            </ul>
-            <b>0.7.1</b>
-            <ul>
-              <li>The output of a slash command run on a brand-new conversation (for example
-                  /model) now renders crisp — it used to sit washed out under the header fade
-                  until the log was scrolled</li>
-            </ul>
-            <b>0.7.0</b>
-            <ul>
-              <li>A plan card now takes your words, not just a verdict. A "Tell Claude what to
-                  change" field rides every plan approval: with Keep planning it becomes the
-                  revision request, and with Approve the note travels with the approved plan so
-                  Claude reads it before the first edit</li>
-              <li>Approve is a split button — approve as-is, or switch to auto-edit / auto mode
-                  for the implementation. The mode you pick now actually sticks; the mode chip
-                  used to snap back after approval</li>
-              <li>Your custom commands, skills and MCP prompts appear in the / menu
-                  automatically, marked with where they come from; /reload-skills picks up
-                  new ones mid-session</li>
-              <li>The / menu grows from 2 to 16 built-in commands — /context, /code-review,
-                  /security-review, /run, /loop and more, each verified in the panel (still an
-                  allowlist)</li>
-              <li>A command that answers without streaming, like /context, now shows its
-                  output — it used to produce a finished turn with nothing in it. A failed one
-                  shows the CLI's reason instead of an empty turn</li>
-              <li>A message sent while Claude is working now survives into the resumed
-                  conversation — replay used to silently drop it</li>
-              <li>The background-tasks chip stays honest: sending a message no longer clears
-                  commands that are still running, and a restarted conversation no longer
-                  inherits ones that are gone</li>
-              <li>Permission cards show the same project-relative path as the tool line above
-                  them, the @-mention menu keeps the filename visible when a long path is cut,
-                  and NotebookEdit shows its file path</li>
-              <li>Popup rows no longer keep a stale highlight after the pointer leaves</li>
-            </ul>
-            <b>0.6.0</b>
-            <ul>
-              <li>A tool that is still running now looks different from one that has finished. Its
-                  dot beside the timeline is white and breathing while the work is in flight, and
-                  turns green when it succeeds or red when it fails — so the colour is the outcome
-                  rather than a guess made the moment the line appeared</li>
-              <li>Live thinking shows the same in-flight dot</li>
-              <li>A sub-agent stays marked as running until it actually reports back. Launching one
-                  returns immediately, which used to make several agents look finished seconds after
-                  they started while they were all still working</li>
-              <li>Files the CLI writes now show up in the IDE on their own. An edit appears in an
-                  open editor and a new file appears in the project tree, instead of waiting for
-                  "Reload from disk" or a click away from the window and back</li>
-              <li>The panel honours the system "reduce motion" setting</li>
-            </ul>
-            <b>0.5.3</b>
-            <ul>
-              <li>A new conversation shows its name in the header as soon as it has one. The header
-                  read "New conversation" until the first reply finished — on a long first turn that
-                  is minutes, and the conversations list was already showing the name all along</li>
-              <li>Everything that belongs to a tool line — the IN and OUT boxes, images a tool
-                  returned, the todo checklist, sub-agent progress and caveat lines — now sits the
-                  same distance from it. Some of it used to sit farther from its own tool line than
-                  an unrelated block did, which read as though it belonged to nothing</li>
-              <li>The compaction summary, the bodies of permission cards and thinking text share
-                  that same spacing, so the whole panel reads as one system</li>
-            </ul>
-            <b>0.5.2</b>
-            <ul>
-              <li>Resuming a long conversation brings back its most recent turns. Past a certain
-                  length the panel replayed the oldest part instead, so a thread could come back
-                  looking days out of date; when one is too long to load whole, the top now says
-                  how many earlier blocks were left out</li>
-              <li>The Stop button is there whenever Claude is working — including the turn the CLI
-                  starts on its own when a background command finishes, which used to print with
-                  the button on Send and no way to interrupt it</li>
-              <li>A background command no longer leaves the panel spinning. The turn ends with its
-                  summary while the task chip keeps showing the command still running</li>
-              <li>Tool calls that carry code, such as Playwright's browser_evaluate, show it in the
-                  IN box instead of a cut-off fragment on the tool line</li>
-              <li>Long tool descriptions stay on one line, with the full text on hover</li>
-              <li>IN and OUT boxes match the permission card: the scrollbar sits on the border, and
-                  a collapsed box no longer shows one</li>
-              <li>Clicking outside the rename editor discards the edit, the same as Escape</li>
-              <li>A Bash command is no longer repeated beneath its own IN box while a sub-agent
-                  reports progress</li>
-            </ul>
-            <b>0.5.1</b>
-            <ul>
-              <li>Renaming a conversation sticks on long threads. The new name was saved correctly
-                  but never read back, so the header kept showing the auto-generated title</li>
-            </ul>
-            <b>0.5.0</b>
-            <ul>
-              <li>Rename a conversation from the panel header — hover the title and click the
-                  pencil. It writes the same record the CLI's own /rename does, so a name set here
-                  and one set in the terminal are the same thing</li>
-              <li>File paths on tool lines are project-relative and stay on one line, keeping the
-                  filename readable in a narrow panel; clicking still opens the real file</li>
-              <li>The context gauge gains a ring that fills as the window fills</li>
-              <li>Queued messages match the attachment chips, and their remove control appears on
-                  hover instead of taking up space</li>
-              <li>Images returned by tools no longer stretch out of shape</li>
-            </ul>
-            <b>0.4.0</b>
-            <ul>
-              <li>MCP servers that need your shell's PATH (nvm, asdf) now start when the IDE was
-                  launched from the desktop — they used to fail silently</li>
-              <li>The conversation you are in can be deleted, not just past ones</li>
-              <li>Removed a permanent gap above the composer's first row</li>
-            </ul>
+            <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
 
 /**
