@@ -1,0 +1,58 @@
+{
+ "item": "External links in messages open in the system browser — a click emits a `browse` bridge frame and the webview never navigates or pops up (2026-08-29)",
+ "branch": "20-markdown.js inlineMd (no target=_blank, bare-URL autolink) → 00-core.js document click delegate → ChatPanel `browse` -> BrowserUtil.browse; ChatPanel onBeforePopup is the Kotlin catch-all and is not reachable from here",
+ "provenance": "Pure webview behaviour — no CLI frames. The bug it pins: the panel is an OFF-SCREEN JCEF browser, and a target=\"_blank\" anchor asked CEF for a popup window that had no surface to draw on, so every link click opened a blank PhpStorm window (user report, 2026-08-29, seen 'many times'). The assistant text is injected through the LIVE path with a real assistant frame shape so the markdown goes through inlineMd exactly as a streamed message does. window.__bridge is swapped for a tape for the click and restored in finally, as fixtures 42/66 do, so the click cannot reach the live IDE's BrowserUtil. NEGATIVE CONTROL RUN 2026-08-29 against a sandbox serving the PRE-change 00-core.js/20-markdown.js (the two files stashed, Kotlin left as is; build verified BY CONTENT: the page's scripts contain no `kind: 'browse'`): 2 passed, 6 FAILED — every DISCRIMINATING assert (`blank` 1 not 0, `bare` null, `taped` [] — the click went to CEF as a popup request, not to us — `prevented` null) plus the two guards that depend on the autolink (`anchors` 1 not 2, `bareTrail` null). Only `mdText` and `sameUrl` passed on both builds, which is what guards that do not name the change should do. SECOND CONTROL 2026-08-29, free — the auxclick assert and the two-frame `taped` expectation were added while the sandbox still served the page WITHOUT the auxclick delegate: both FAILED (auxPrevented false, taped one frame) and every other assert passed, so the two new asserts discriminate on their own.",
+ "steps": [
+  {
+   "note": "a markdown link and a bare URL both render as anchors without target=_blank; clicking sends ONE browse frame with the href and nothing else happens; a MIDDLE-click (auxclick) is routed the same way",
+   "setup": "window.__lnk = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); const before = location.href; window.onClaudeEvent(JSON.stringify({type:'assistant', message:{id:'msg_lnk', role:'assistant', model:'<fixture>', content:[{type:'text', text:'See [the docs](https://example.com/docs) and https://example.org/page. Done.'}]}, session_id:'fixture-67'})); const as = [...document.querySelectorAll('#log a[href]')]; const md = as.find(a => a.getAttribute('href') === 'https://example.com/docs') || null; const bare = as.find(a => a.getAttribute('href') === 'https://example.org/page') || null; const real = window.__bridge; const sent = []; window.__bridge = function (j) { sent.push(JSON.parse(j)); }; let prevented = null, out_aux = null; try { if (md) { const ev = new MouseEvent('click', {bubbles:true, cancelable:true}); md.dispatchEvent(ev); prevented = ev.defaultPrevented; } if (md) { const ax = new MouseEvent('auxclick', {bubbles:true, cancelable:true, button:1}); md.dispatchEvent(ax); out_aux = ax.defaultPrevented; } } finally { window.__bridge = real; } const out = { anchors: as.length, blank: as.filter(a => a.getAttribute('target') === '_blank').length, mdText: md ? md.textContent : null, bare: bare ? bare.textContent : null, bareTrail: bare ? bare.nextSibling && bare.nextSibling.textContent.slice(0, 1) : null, taped: sent, prevented: prevented, auxPrevented: out_aux, sameUrl: location.href === before }; window.onClaudeEvent(JSON.stringify({type:'__clear'})); return out; })();",
+   "expect": [
+    {
+     "js": "window.__lnk.anchors",
+     "equals": 2,
+     "why": "GUARD: both URLs became anchors — the assistant text went through inlineMd on the live path (1 pre-change: only the [text](url) form was linked)"
+    },
+    {
+     "js": "window.__lnk.blank",
+     "equals": 0,
+     "why": "DISCRIMINATING: no anchor carries target=_blank any more — that attribute is what asked CEF for the popup (pre-change: 1)"
+    },
+    {
+     "js": "window.__lnk.mdText",
+     "equals": "the docs",
+     "why": "GUARD: the [text](url) form keeps its text as the label"
+    },
+    {
+     "js": "window.__lnk.bare",
+     "equals": "https://example.org/page",
+     "why": "DISCRIMINATING: a bare URL autolinks, and the trailing full stop stays OUTSIDE the href (pre-change: null — bare URLs were plain text)"
+    },
+    {
+     "js": "window.__lnk.bareTrail",
+     "equals": ".",
+     "why": "GUARD: the sentence's full stop follows the anchor as text, so the href is the URL the author wrote"
+    },
+    {
+     "js": "JSON.stringify(window.__lnk.taped)",
+     "equals": "[{\"kind\":\"browse\",\"url\":\"https://example.com/docs\"},{\"kind\":\"browse\",\"url\":\"https://example.com/docs\"}]",
+     "why": "DISCRIMINATING: a left click AND a middle click each → exactly one `browse` frame carrying the href, the shape ChatPanel hands to BrowserUtil.browse (pre-change: [] — the click was CEF's, not ours; before the auxclick delegate (2026-08-29, user: middle-click navigated the PANEL to the page): one frame, the middle click went to CEF as a main-frame navigation)"
+    },
+    {
+     "js": "window.__lnk.prevented",
+     "equals": true,
+     "why": "DISCRIMINATING: the delegate cancelled the anchor's own navigation — without this the webview itself would leave chat.html"
+    },
+    {
+     "js": "window.__lnk.auxPrevented",
+     "equals": true,
+     "why": "DISCRIMINATING: the auxclick (middle button) was cancelled by the delegate too — user 2026-08-29: a middle-click on a link navigated the webview itself to the page, and the panel had to be brought back over CDP. ChatPanel's onBeforeBrowse is the Kotlin catch-all for that route and is not reachable from here."
+    },
+    {
+     "js": "window.__lnk.sameUrl",
+     "equals": true,
+     "why": "GUARD: the page did not navigate"
+    }
+   ]
+  }
+ ]
+}

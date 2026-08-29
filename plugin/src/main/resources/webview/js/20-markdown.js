@@ -28,8 +28,16 @@
       .replace(/`([^`]+)`/g, (m, c) => '<code class="ic">' + c + '</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
       .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>')
-      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
+      // bare URLs autolink too. Not one preceded by `"` or `>` — that is the href, or the text, of
+      // a link the line above just made. Trailing sentence punctuation stays outside the link.
+      .replace(/(^|[^"'>\w])(https?:\/\/[^\s<]*[^\s<.,;:!?)\]'"])/g, '$1<a href="$2">$2</a>');
   }
+  // No target="_blank" on any of these (removed 2026-08-29): the panel is an OFF-SCREEN JCEF
+  // browser, and a _blank click asked CEF for a popup window, which under OSR has no surface to
+  // draw on — the user saw blank PhpStorm windows. External links now go to the system browser
+  // through the document-level click delegate in 00-core.js (`browse` bridge frame), with
+  // ChatPanel's onBeforePopup as the catch-all for anything else that would spawn a popup.
   // A quote marker reaches the block parser as `&gt;`, never `>`, because esc() runs FIRST — see
   // MD_QUOTE. Testing for the raw character is why the blockquote branch silently never fired
   // until 2026-08-03: quoted lines fell through to the paragraph branch, printing the marker

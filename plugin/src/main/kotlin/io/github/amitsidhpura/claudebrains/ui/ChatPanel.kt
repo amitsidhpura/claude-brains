@@ -7,6 +7,7 @@ import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.ide.BrowserUtil
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
@@ -27,7 +28,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
+import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
+import org.cef.network.CefRequest
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.DnDConstants
 import java.awt.dnd.DropTarget
@@ -69,6 +73,33 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             handleFromWeb(raw)
             null
         }
+
+        // No popups, ever: the panel renders off-screen, and a CEF popup spawned from an OSR
+        // browser has no surface to draw on — it appeared as a blank PhpStorm window (user,
+        // 2026-08-29, from target="_blank" links in messages). The webview now routes link
+        // clicks through the `browse` bridge frame; this is the catch-all for whatever else
+        // would open a window (window.open, middle/ctrl-click), sent the same way. Returning
+        // true cancels the popup.
+        browser.jbCefClient.addLifeSpanHandler(object : CefLifeSpanHandlerAdapter() {
+            override fun onBeforePopup(b: CefBrowser?, frame: CefFrame?, targetUrl: String?, targetFrameName: String?): Boolean {
+                if (!targetUrl.isNullOrBlank()) BrowserUtil.browse(targetUrl)
+                return true
+            }
+        }, browser.cefBrowser)
+
+        // Nor navigations: a middle-click on a link fires no popup at all — CEF loads the URL in
+        // the MAIN frame and the panel becomes that page (user, 2026-08-29, second round; the
+        // panel had to be brought back with history.back() over CDP). Any http(s) navigation of
+        // the main frame goes to the system browser instead and is cancelled here, whatever
+        // triggered it; chat.html itself is a file:// page, so the panel's own loads pass.
+        browser.jbCefClient.addRequestHandler(object : CefRequestHandlerAdapter() {
+            override fun onBeforeBrowse(b: CefBrowser?, frame: CefFrame?, request: CefRequest?, userGesture: Boolean, isRedirect: Boolean): Boolean {
+                val url = request?.url ?: return false
+                if (frame?.isMain != true || !(url.startsWith("http://") || url.startsWith("https://"))) return false
+                BrowserUtil.browse(url)
+                return true
+            }
+        }, browser.cefBrowser)
 
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             // Main frame only: this fires per frame, and seedUi() must not run several times for
@@ -262,6 +293,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             // outlives the CLI's tool-results dir — but it covers every file reference in the log.
             // line/endLine are optional and 1-based: a Read that named a range selects it, anything
             // else opens at the top exactly as before.
+            // External links go to the user's default browser (the IDE's own opener honours the
+            // Web Browsers setting). http(s) only — the webview filters, this is the second gate.
+            "browse" -> msg["url"]?.jsonPrimitive?.contentOrNull?.let { url ->
+                if (url.startsWith("http://") || url.startsWith("https://")) BrowserUtil.browse(url)
+            }
             "open" -> msg["path"]?.jsonPrimitive?.content?.let {
                 val line = msg["line"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
                 val endLine = msg["endLine"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()

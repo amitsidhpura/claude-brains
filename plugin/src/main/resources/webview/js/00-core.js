@@ -125,6 +125,22 @@
       else { log.scrollTop = log.scrollHeight; updateScrollBtn(); }
     })(t0);
   }
+  // External links open in the SYSTEM browser, never in the webview or a CEF popup (2026-08-29,
+  // user: links opened blank PhpStorm windows — see 20-markdown.js). Delegated from document so
+  // it covers every markdown surface: the log, the side panel, cards, the gallery.
+  // Both `click` and `auxclick`: a MIDDLE-click fires only the latter, and left unhandled CEF
+  // turned it into a main-frame navigation — the panel itself became jetbrains.com (user,
+  // 2026-08-29, second round). ChatPanel's onBeforeBrowse is the catch-all behind this one.
+  function browseLink(e) {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const url = a.getAttribute('href') || '';
+    if (!/^https?:\/\//i.test(url)) return;
+    e.preventDefault(); e.stopPropagation();
+    bridge({ kind: 'browse', url: url });
+  }
+  document.addEventListener('click', browseLink);
+  document.addEventListener('auxclick', browseLink);
   // File references open in the editor. Delegated from #log so it covers live, replayed and
   // gallery-rendered paths without every render site wiring its own handler.
   log.addEventListener('click', function (e) {
