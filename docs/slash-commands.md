@@ -6,8 +6,9 @@ turn. Consequences:
 
 - **Enabled - sent to CLI**: forwarded as a turn; the CLI expands it (skills, prompts,
   custom/project commands, and prompt-style built-ins like `/compact`).
-- **Enabled - native (IDE)**: handled by the plugin itself (`/clear` -> new conversation,
-  `/btw` -> side-question panel), never forwarded.
+- **Enabled - native (IDE)**: handled by the plugin itself (`/btw` -> side-question panel), never
+  forwarded. `/clear` WAS native until 2026-08-29; removed — the header's New-conversation button
+  is the panel's /clear, so the typed form (and `/new`, `/reset`) is refused like `/model`.
 - **Enabled - custom (automatic)**: project/user command files, project/user skills, and
   MCP-server prompts — detected from the wire (below), shown with a muted source badge
   ("project" / "user" / "mcp"), and sent as a turn. Never hand-listed.
@@ -64,7 +65,7 @@ payloads, with zero false positives across 107 built-in entries in two captures.
 in chat.html strips that suffix into a source badge and auto-enables the command; MCP prompts
 are recognised by their `mcp__<server>__<prompt>` name instead. Nested command files name as
 `sub:nested-cmd` (read off the wire). A custom file named like a built-in cannot shadow
-`/clear` or the allowlist - `cmdKind` checks native/allowlist first.
+`/btw` or the allowlist - `cmdKind` checks native/allowlist first.
 
 Two consequences worth knowing:
 - **The CLI watches the commands dir itself.** A bare file drop pushes `commands_changed`
@@ -79,7 +80,8 @@ Two consequences worth knowing:
 - **`aliases` are first-class (2026-08-17).** The menu filter scores an alias like the name it
   stands for (`/review` surfaces `/code-review` at rank 0, `/peers` → `/list-agents`), rows show
   aliases muted beside the name, and a TYPED alias is resolved to its command before the allowlist
-  gate and sent under the canonical name — so `/new` and `/reset` reach `/clear`'s native branch.
+  gate and sent under the canonical name — so `/review` reaches `/code-review`'s allowlist branch
+  (and `/new`, `/reset` reach `/clear`'s refusal).
   `canonicalCmd()` in chat.html; pinned by fixture 52.
 
 BUILT-INS remain a hand-maintained allowlist in `chat.html` (`CMD_NATIVE` + `CMD_ALLOWED`):
@@ -122,7 +124,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
 | `/btw` | Enabled - native (IDE) | [x] |  | Ask a quick side question without interrupting the conversation — opens the side-question panel (bare) or asks at once (`/btw question`); answered by a `side_question` control request, never a turn. NOT in the stdio roster (54 entries, 2.1.251, measured 2026-08-29): the panel supplies the entry itself (`CMD_LOCAL` in `65-slash.js`), as the TUI and VS Code do (checklist 8.11) |
-| `/clear` | Enabled - native (IDE) | [x] | `/reset`, `/new` | Start a new session with empty context; previous session stays on disk (resumable with /resume) |
+| `/clear` | Hidden | [ ] | `/reset`, `/new` | Start a new session with empty context. REMOVED as a panel command 2026-08-29: the header's New-conversation button does the same thing; the `[name]` hint (2.1.241) made a menu pick insert-not-run, and naming already lives in the header pencil (checklist 7.6) |
 | `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
 | `/context` | Enabled - sent to CLI | [x] |  | Show current context usage |
 | `/code-review` | Enabled - sent to CLI | [x] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs and reuse/simplification/efficiency cleanups at the give… |

@@ -15,8 +15,6 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
-- The two remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 14.2)
-  need a yes / later / no (12.3 / 12.6 declined-deferred and 13.2 built 2026-08-29).
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
@@ -62,7 +60,10 @@
   same-day iterations before the user accepted the shape: toolbar icons (unidentifiable),
   top banner with prose + info tint (wrong position, too loud) — chain in gotchas.md.
 - @-symbol mentions
-- Worktrees
+- **Worktrees bundle** (deferred 2026-08-29): 14.1 create worktree (`create_worktree`, TUI `/branch`)
+  + 14.3 git-aware diff/context. IDE-side first: a worktree is a new project window in JetBrains.
+  NOT in the bundle: 8.7 rewind/fork, 14.2 host git actions, 14.4 wire diff — declined by design
+  (git + Local History, not Claude checkpoints; decisions.md 2026-08-29)
 - Extensibility status view
 - **15.5 Debugger MCP tools** [LG] (deferred 2026-08-29): expose the live PhpStorm debug session (`XDebuggerManager` → frames, variables, breakpoints) as bridge tools in `IdeTools.kt`, mirroring VS Code's `claude-vscode-extension` MCP server + `ask_debugger_help` hand-off; needs an Xdebug session in the sandbox to test
 

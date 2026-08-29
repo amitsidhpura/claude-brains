@@ -1,161 +1,97 @@
 # Conventions
 
-## Workflow
-- **Commit only when asked.** No commits or pushes until the user says so; batch work into one
-  meaningful commit. (Migrated from auto-memory 2026-08-07.) **Authorization does not carry
-  forward** (2026-08-23): "commit and push" for one save, or "go ahead" for a release, covers
-  THAT unit of work only. A later "fix X" is a request to fix X — it ends with the change in the
-  working tree and a report, not a commit. Asked to fix the release-doc contradiction, the fix
-  was committed and pushed unasked; the user caught it and had it reverted. When a task feels
-  finished and committing seems natural, that is the moment to stop and say "changes are in the
-  working tree" instead.
-- **A release starts only when the user asks for one.** `docs/release.md` calls steps 1-5 "local
-  prep, fine to do proactively" — that licenses the mechanics, not the decision. On 2026-08-16 a
-  request to "go ahead with the things you left" (two fixtures + a changelog line) was turned into
-  a version bump, changeNotesHtml, an `updatePlugins.xml` edit, a zip and a verifier run; the user
-  had never said they were ready to ship. Write the notes if asked for notes; leave the version and
-  the feed alone. Note the specific hazard: `updatePlugins.xml` is served live off `main`, so a
-  bumped feed without a published asset offers every custom-repo user an update that 404s.
-- **Measure before believing.** Any claim about what the CLI sends gets checked against real
-  transcripts BY KEY (not substring) or a live stream-json run BEFORE touching the renderer.
-  Two of four client-parity "P0s" described bugs that didn't exist; the real one was
-  mis-described — every time because the premise was never measured first.
-- **Do not fix what you cannot reproduce** (user, 2026-08-12, after rejecting two plans built on a
-  plausible story). A mechanism read out of the code or the CLI binary is a HYPOTHESIS, however
-  well evidenced: it names something that CAN happen, not what DID. Reproduce first, then fix —
-  and say plainly which parts are proven and which are inferred. Two things this caught: six
-  different code paths produced the reported symptom and none had been ruled out, and the
-  reproduction disproved the stated mechanism (see gotchas: transcript vs live wire). If it will
-  not reproduce, the right outcome may be no change at all, just diagnostics for next time.
-- **`./gradlew verifyPlugin` runs on EVERY release — no judgement call** (user's standing
-  instruction 2026-08-23, after 0.9.0 shipped without it). Reasoning "this diff didn't touch
-  platform API, so the verifier is optional" is exactly the shortcut that makes it worthless:
-  the point of the gate is to catch what you did not predict, and its verdict is only useful
-  BEFORE the version number is spent. `docs/release.md` step 3b. Read the per-IDE
-  `verification-verdict.txt` files, never the log tail.
-- **Say when you skip a documented step.** The skip may be defensible, but the call belongs to
-  the user — silently taking the lenient reading of contradictory docs hides a decision they
-  would have made differently (0.9.0, 2026-08-23).
-- **A failed reproduction is a STOP sign, not a licence to guess** (learned expensively
-  2026-08-23). A user-reported phantom commit would not reproduce under trusted CDP keystrokes;
-  three speculative guards shipped anyway, the second BROKE the feature for the user ("Enter
-  completely not working"), and the user ordered a full revert. When the repro fails, the right
-  outputs are diagnostics and a plainly-labelled hypothesis — never a fix. And a guard on an
-  input path must be proven to still pass the GOOD case in the real environment, not just in
-  the harness. **Epilogue 2026-08-24:** the bug was a FIXED upstream IDE defect (IJPL-161111)
-  that only existed because the sandbox pinned a pre-fix build — so before guarding anything
-  environmental, check whether the environment is simply out of date.
-- **A third-party report describes a SYMPTOM, not a diagnosis, and often not even accurately.**
-  "Submit button not disabled" was literally a non-bug (the button is a Send/Stop toggle and is
-  never disabled) while pointing at two real defects. Ask what was on screen at the moment of the
-  problem before choosing what to fix.
-- Enable slash commands one at a time, each verified in `runIde`, then ticked in
-  `docs/slash-commands.md`. The menu is an allowlist — unconfirmed commands stay hidden.
-- **Take a user's exact wording as data, and check the world before the code.** "On hover it made
-  dark bg and on going out it became lighter" was not loose description — the two states had two
-  different causes, and reading it literally is what decomposed the bug. Likewise "the chip says 2
-  tasks but there are none" turned out to be the chip telling the truth: **check the process tree /
-  the actual state first**, because the answer decides which bug you are even looking at. Twice on
-  2026-08-15 the reported premise was wrong in a way that mattered, in opposite directions.
-- **"The CLI accepted it" is not "the panel rendered it."** A headless smoke run proves only the
-  former, and on 2026-08-15 it marked 16 commands verified while `/context` rendered nothing at
-  all. Anything user-facing gets driven through the LIVE panel before it is called verified, and
-  the doc says which of the two claims a checkmark stands for.
-- **When output is missing, tape the wire before blaming either side.** DOM evidence alone cannot
-  separate "the CLI sent nothing" from "the panel dropped it", and a throw inside `onClaudeEvent`
-  is swallowed by JCEF with no trace at all. Wrapping the handler is a few lines and turns a shrug
-  into a diagnosis (it is what found the `/security-review` drop).
-- Test fixtures must state their `provenance`: a shape copied from our own handler proves
-  self-consistency, NOT that the CLI emits it. New suites need a negative control (feed a wrong
-  expectation, check it FAILS) — an all-green first run is what a vacuous suite also looks like.
+Rules first, evidence second. Each rule is one line plus a pointer; the war stories behind them
+live in `gotchas.md` (grep the section named) and `decisions.md`.
 
-## Scope vocabulary (from the Philosophy)
-- Release/status prose splits **"By design"** (settings page, non-terminal login — the
-  terminal's half, never build them, never list as gaps) from **"Not there yet"** (deferred:
-  tabs, auto-include selection, voice). The two lists must not blur. Declined items
-  (cost/usage display, 2026-08-06) are decisions, not queue positions.
+## Workflow
+- **Commit only when asked**, one meaningful commit per unit of work. **Authorization does not
+  carry forward**: "commit and push" covers THAT save; a later "fix X" ends with the change in the
+  working tree and a report (a release-doc fix was committed unasked 2026-08-23 and reverted).
+- **A release starts only when the user asks.** `docs/release.md` steps 1-5 being "fine to do
+  proactively" licenses the mechanics, not the decision — never bump the version, edit
+  `updatePlugins.xml` (served live off `main`: a bumped feed without an asset 404s every
+  custom-repo user) or write changeNotes for a release nobody asked for (happened 2026-08-16).
+- **`./gradlew verifyPlugin` on EVERY release, no judgement call**; read the per-IDE
+  `verification-verdict.txt` files, never the log tail (0.9.0 shipped without it — gotchas § Build).
+- **Say when you skip a documented step** — the call belongs to the user (0.9.0, 2026-08-23).
+- **Measure before believing.** Any claim about what the CLI sends is checked against real
+  transcripts BY KEY or a live stream-json run BEFORE touching the renderer (two of four
+  client-parity "P0s" were bugs that didn't exist). Overview § "Which debug route".
+- **Do not fix what you cannot reproduce** (user, 2026-08-12). A mechanism read out of the code or
+  the CLI binary is a HYPOTHESIS; reproduce first, say which parts are proven vs inferred, and accept
+  that the right outcome may be diagnostics and no change.
+- **A failed reproduction is a STOP sign, not a licence to guess.** Three speculative guards for a
+  phantom Enter broke Enter for the user (2026-08-23); the bug was a fixed upstream IDE defect the
+  sandbox pinned (IJPL-161111) — check whether the environment is out of date before guarding
+  anything environmental. gotchas § JCEF.
+- **A third-party report is a SYMPTOM, not a diagnosis.** Ask what was on screen; take the exact
+  wording as data ("dark bg on hover, lighter on leave" = two causes); **check the process tree /
+  actual state before the code** ("chip says 2 tasks but there are none" — the chip was right).
+- **"The CLI accepted it" is not "the panel rendered it."** User-facing claims are driven through
+  the LIVE panel before being called verified; `docs/slash-commands.md` says which claim a tick
+  stands for (a headless smoke run once "verified" 16 commands while `/context` rendered nothing).
+- **When output is missing, tape the wire** (wrap `onClaudeEvent` — JCEF swallows throws silently)
+  before blaming either side. It is what found the `/security-review` drop.
+- Enable slash commands one at a time, each verified in `runIde`, then ticked in
+  `docs/slash-commands.md`; the menu is an allowlist.
+- Test fixtures state their `provenance` (a shape copied from our own handler proves
+  self-consistency, not that the CLI emits it) and every new suite RUNS its negative control.
+
+## Scope vocabulary (from the Philosophy in overview.md)
+- **By design** (the terminal's half: settings page, login — never build, never list as gaps) vs
+  **Not there yet** (deferred: tabs, auto-include selection, voice) vs **Declined** (cost/usage
+  display 2026-08-06; Claude-side rewind/checkpoints and host git actions 2026-08-29 — git and
+  Local History own undo). The lists must not blur (glossary.md).
 - Feature bar: *is it reached many times an hour while writing code?* Yes → panel. No → terminal.
 
-## Working style (reinforced across the 2026-08-11/12 session)
-- **UI changes go to `design/mockup.html` + `chat.css` FIRST**, shown as a render, and only wired
-  into `chat.html` once the look is agreed. The user iterates visually and will hand back DevTools
-  screenshots with the exact values they want — apply those verbatim rather than re-deciding.
-- When a visual choice is genuinely open (size, thickness, padding, a LABEL), **render the
-  candidates side by side** and let the user pick; do not iterate one guess at a time. Render them
-  in the REAL panel, in the real ancestor — 2026-08-26 the six chip-label candidates were injected
-  as live `.chip-btn` nodes inside `#inputbar`, because the mockup and headless Chrome both get the
-  glyph size wrong there (the `#inputbar svg{18px}` ID rule). And expect the pick to be provisional:
-  the user chose the middot, then rejected it too — the answer was to drop the label entirely.
-- **Ship the safest candidate FIRST, then build the probe against it.** A probe is only honest if its
-  columns drive a rule that is genuinely live — otherwise it compares copies of one. Landing the
-  boring option (one already used elsewhere in the panel) means nothing novel ships ahead of the
-  pick, each column varies one token, and the pick is a one-line edit. Used for `--attach-gap`, then
-  `--pulse-name` (2026-08-13).
-- **Sequence a fix so its negative control is free.** Land the half that creates the state without
-  the half that resolves it, run the new fixture, and the failures ARE the bug demonstrated — then
-  land the rest and watch them go green. Costs nothing and proves which assertions discriminate.
-  Do NOT run the control with neither half: every "must be 0" assertion then passes for the wrong
-  reason, which is exactly what a vacuous suite looks like.
-- Every new test suite gets its negative control RUN, not just written: assert a wrong value, or
-  run the fixture against the build that actually LACKS the fix — `git checkout <fix-commit>~1 --
-  <file>`, NOT `HEAD:`/"current minus my commits", which still contains anything fixed in an
-  earlier session (that mistake made fixture 49 read as vacuous, 2026-08-17). Confirm it fails.
-- **Control builds of the webview restore the whole directory, not one file.** Since the
-  2026-08-19 split, "the webview" is `chat.html` (markup) + `webview/js/*.js` (spliced back into
-  one script by `WebviewAssets`, manifest-checked by `RenderLimitsTest`) + `chat.css`. A control
-  via stash/checkout must target `plugin/src/main/resources/webview/` — a single-file restore
-  builds a half-old page (or, pre/post-split across the boundary, an empty script). For fixes
-  older than the split, check out the pre-split single-file chat.html and the OLD ChatPanel
-  together, or prefer asserting a wrong value instead.
-- **When two defects can mask each other, a fixture that replays them in sequence pins only the
-  first.** Fixture 44 went green against the PRE-FIX build on its second defect, because the first
-  one left `busy` already true and the assertion read as satisfied. Reset the state explicitly
-  between the halves so each step starts from a known baseline — and run the whole fixture against
-  the pre-fix build to find out which assertions actually discriminate, not just that it passes.
-- **A check that skips its own assertion is indistinguishable from a passing one.** A 2026-08-12
-  audit reported "no failures" while never running its main rule: it read `overflow-x` after
-  restoring the fold class, so folded elements looked "not scrollable" and fell out of the branch.
-  When an audit filters what it inspects, print WHAT IT ACTUALLY CHECKED and confirm the list is
-  the one you meant — an empty failure list proves nothing on its own.
+## Working style
+- **UI changes go to `design/mockup.html` + `chat.css` FIRST**, shown as a render, wired into
+  `chat.html` once agreed. The user hands back DevTools screenshots with exact values — apply them
+  verbatim.
+- **Open visual choices: render the candidates side by side**, in the REAL panel and real ancestor
+  (the mockup and headless Chrome get glyph sizes wrong under `#inputbar svg{18px}`), and expect
+  the pick to be provisional — the chip-label candidates ended with no label at all (2026-08-26).
+- **Ship the safest candidate FIRST, then build the probe against it**, so each column varies one
+  live token (`--attach-gap`, `--pulse-name`, 2026-08-13).
+- **Sequence a fix so its negative control is free**: land the state-creating half, run the
+  fixture, watch it fail, land the rest. Never run the control with neither half.
+- **Negative controls run against the build that LACKS the fix** — `git checkout <fix-commit>~1 --
+  <file>`, never HEAD-minus-my-commits (fixture 49 read as vacuous, gotchas § Testing). **Control
+  builds restore the WHOLE `plugin/src/main/resources/webview/` directory** — a single-file restore
+  builds a half-old page.
+- **Two defects that mask each other need explicit state resets between fixture halves** (fixture
+  44 went green on the pre-fix build). Run the whole fixture against pre-fix to learn which
+  assertions discriminate.
+- **A check that skips its own assertion looks like a pass** — audits print WHAT THEY CHECKED
+  (the 2026-08-12 overflow audit never ran its main rule). gotchas § Testing.
 
 ## Docs
-- **A document reformat is a design task — show ONE section first, get a yes, then do the file.**
-  2026-08-28: a plan-approved bird's-eye restructure of `docs/feature-checklist.md` (section table +
-  HTML `<details>` headlines) went through four rounds of one-symptom fixes and was reverted as a
-  "complete mess". The docs are plain markdown; the one exception, asked for by the user afterwards: each re-audit paragraph sits in its own `<details>` (title in the summary, not repeated in the body).
-- **A doc outlives the decision that created it.** `docs/release.md` was still titled "Path B —
-  no Marketplace" and the README still said "distributed rather than the JetBrains Marketplace"
-  two weeks after the plugin was listed there; the README's Docs list linked a `CLAUDE.md` deleted
-  on 2026-08-07. Audit the PREMISE of a doc, not just its details, whenever its subject changes —
-  and check that every relative link still resolves.
-- **Never copy ids out of a numbered register into a summary — re-derive them.** `state.md`'s 🟥
-  list had cited 8.5 / 8.9 / 8.13 for rewind-fork, side-question and reload-log-replay when
-  `docs/feature-checklist.md` said 8.7 / 8.11 / 8.14, and counted eight [DECIDE] rows when there
-  were nine (found 2026-08-17 seventh, at load). The register is the source of truth; a paraphrase
-  written from memory drifts silently and then gets copied forward every save.
-- Release notes and status prose must keep **By design / Declined / Deferred** apart (glossary.md).
-  The README had usage/token display under "deferred but wanted" when it was declined outright on
-  2026-08-06 — a reader takes that as a promise.
+- **A document reformat is a design task — show ONE section first, get a yes, then do the file**
+  (the 2026-08-28 checklist restructure was reverted as a "complete mess"). Docs are plain markdown;
+  the one exception is `<details>` around re-audit paragraphs and §17 groups.
+- **A doc outlives the decision that created it** — audit a doc's PREMISE when its subject changes,
+  and that every relative link resolves (`release.md` said "no Marketplace" two weeks after listing).
+- **Never copy ids out of a numbered register into a summary — re-derive them** (state.md cited
+  8.5/8.9/8.13 for rows that were 8.7/8.11/8.14). The register is the source of truth.
+- Release notes keep **By design / Declined / Deferred** apart; the README once listed a declined
+  item as "deferred but wanted" — a reader takes that as a promise.
+- The Marketplace listing's description comes from `plugin.xml` on upload (user's Marketplace
+  setting, 2026-08-29) — edit plugin.xml only, then check the page after the next release.
 
 ## Code & assets
-- **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/`
-  stays out of git. Personal use only.
-- Styles live ONLY in `webview/chat.css`; editing chat.html markup? Mirror it in
-  `design/mockup.html` too. No new hardcoded colours — add a token to `:root` and use
-  `var(--x)` (for tints prefer `color-mix()` over a companion `-rgb` token).
-  **Same for text sizes and gaps**: `font-size` takes one of `--fs-base/-sm/-xs/-2xs`
-  (13/12/11/10 — tokenised 2026-08-28 after the user asked how a 6px gap had been derived and it
-  hadn't been), spacing takes `--block-gap` / `--attach-gap`. A literal px is a question waiting
-  to be asked; if a fifth size is genuinely needed, add a token and say why in its comment.
-- Popups/dropdowns copy the conversations-list idiom WHOLE: a FIXED width plus a hover-only
-  action gutter. Never reserve space for hover affordances (rejected 2026-08-09) — and never
-  take half the idiom, since the hover gutter only stays jiggle-free because the width is fixed.
-- Any cap or output FORMAT produced by both the live renderer and the replay parser is stated
-  once in `RenderLimits.kt` (spliced as `window.LIMITS`) and pinned by `RenderLimitsTest` —
-  never a second copy in JS.
-- Live and replay draw through the SAME shared block builders in chat.html
-  (`ioRow/ioBox/toolLine/errorBlock/thinkBlock/planCardHtml/writeDiffHtml/askTabsHtml/…`)
-  so they cannot drift. Keep it that way.
-- Plugin Verifier target: 0 warnings on 242→262. Blocking reads via `readLocked {}`
-  (Threads.kt); diagnostics via `DocumentMarkupModel` + `HighlightInfo.fromRangeHighlighter`;
-  `FileSaverDescriptor` via reflection (see gotchas.md for why).
+- **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/` stays
+  out of git. Personal use only.
+- Styles ONLY in `webview/chat.css`; chat.html markup changes are mirrored in `design/mockup.html`.
+  No hardcoded colours, sizes or gaps: colours are `:root` tokens (`color-mix()` for tints),
+  `font-size` is one of `--fs-base/-sm/-xs/-2xs` (13/12/11/10), spacing is `--block-gap` /
+  `--attach-gap`. A literal px is a question waiting to be asked; a fifth size gets a token and a
+  comment saying why.
+- Popups copy the conversations-list idiom WHOLE: FIXED width + hover-only action gutter. Never
+  reserve space for hover affordances (rejected 2026-08-09); never take half the idiom.
+- Any cap or FORMAT shared by live renderer and replay parser lives once in `RenderLimits.kt`
+  (spliced as `window.LIMITS`, pinned by `RenderLimitsTest`) — never a second copy in JS.
+- Live and replay draw through the SAME block builders (`ioRow/ioBox/toolLine/errorBlock/
+  thinkBlock/planCardHtml/writeDiffHtml/askTabsHtml/…`). Keep it that way.
+- Plugin Verifier target: 0 warnings on 242→262. Blocking reads via `readLocked {}` (Threads.kt);
+  diagnostics via `DocumentMarkupModel` + `HighlightInfo.fromRangeHighlighter`;
+  `FileSaverDescriptor` via reflection (gotchas § IDE platform).

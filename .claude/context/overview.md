@@ -33,7 +33,8 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 - `design/mockup.html` — static UI mockup for design iteration in a browser; approved changes
   get ported into `plugin/src/main/resources/webview/chat.html`
 - `tools/cdp.py` — run JS in the live webview over CDP; `tools/live_harness.py` — live-path
-  regression suite (replays recorded wire frames through `onClaudeEvent`); `tools/fixtures/`
+  regression suite (replays recorded wire frames through `onClaudeEvent`); `tools/fixtures/`;
+  `tools/marketplace_shots.py` — regenerates `design/marketplace/*.png` headless from the real renderer
 - `vscode/` — NOT in git. Extracted official VS Code extension (from
   `~/.vscode/extensions/anthropic.claude-code-<ver>/`, minus the binary). Re-extract locally;
   used to reverse-engineer protocols and styles.

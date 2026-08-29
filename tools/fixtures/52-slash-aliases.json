@@ -47,13 +47,13 @@
    "expect": [
     {
      "js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length",
-     "equals": 6,
-     "why": "GUARD: all five allowlisted rows render, plus the panel-supplied /btw (CMD_LOCAL, 2026-08-29)"
+     "equals": 5,
+     "why": "GUARD: the four allowlisted rows render plus the panel-supplied /btw (CMD_LOCAL, 2026-08-29); /clear is hidden since its removal 2026-08-29 (checklist 7.6)"
     },
     {
-     "js": "renderSlash('reset'); var r=document.querySelector('#slashList .popup-item'); r ? r.dataset.cmd : null",
-     "equals": "/clear",
-     "why": "DISCRIMINATING: '/reset' finds /clear at rank 0; pre-fix the alias matched nothing (not in name, not in description)"
+     "js": "renderSlash('reset'); document.querySelectorAll('#slashList .popup-item').length",
+     "equals": 0,
+     "why": "GUARD (inverted 2026-08-29): /clear is no longer native, so its /reset alias surfaces nothing — the row is hidden with its command"
     },
     {
      "js": "renderSlash('peers'); document.querySelectorAll('#slashList .popup-item').length",
@@ -66,9 +66,9 @@
      "why": "DISCRIMINATING: the alias hit is the command it stands for"
     },
     {
-     "js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/clear\"] .pi-alias')||{}).textContent || ''",
-     "equals": "/reset /new",
-     "why": "DISCRIMINATING: aliases ride the title, muted, in roster order"
+     "js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/code-review\"] .pi-alias')||{}).textContent || ''",
+     "equals": "/review",
+     "why": "DISCRIMINATING: aliases ride the title, muted (was /clear's '/reset /new' until /clear's removal 2026-08-29)"
     },
     {
      "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/compact\"] .pi-alias')",
@@ -97,8 +97,8 @@
     },
     {
      "js": "cmdKind('new')",
-     "equals": "native",
-     "why": "DISCRIMINATING: /new and /reset are /clear's aliases → the IDE's own branch"
+     "equals": "tui",
+     "why": "GUARD (inverted 2026-08-29): /new still resolves to /clear, which is now refused like /model — the header New button is the panel's /clear"
     },
     {
      "js": "cmdKind('nonesuch')",

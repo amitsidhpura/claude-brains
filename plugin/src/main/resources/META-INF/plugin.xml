@@ -30,19 +30,17 @@
               of its own; the <code>claude</code> binary is resolved from PATH (or the
               <code>-Dclaude.executable</code> JVM option).</li>
           <li><b>Only verified slash commands are enabled</b> — sixteen built-ins
-              (<code>/compact</code>, <code>/clear</code>, <code>/context</code>,
+              (<code>/compact</code>, <code>/btw</code>, <code>/context</code>,
               <code>/code-review</code>, <code>/init</code> and more), plus your project and user
               commands, skills and MCP prompts, auto-enabled with a source badge. A headless
               stream has no interactive terminal, so commands that need one are hidden rather
-              than half-working. Model, mode and effort have dedicated composer controls
-              instead.</li>
+              than half-working. Model, mode, effort and new conversation have dedicated panel
+              controls instead.</li>
         </ul>
 
         <h3>Not there yet</h3>
         <ul>
           <li><b>Dark UI only</b> — the panel does not follow light IDE themes.</li>
-          <li><b>Diffs live in the chat</b> — changes are reviewed as line-numbered diffs inside
-              the permission card, not in IDE diff tabs.</li>
           <li><b>One conversation at a time</b> — full history with resume and replay exists,
               tabs don't.</li>
           <li><b>No auto-context from the editor</b> — the current selection isn't attached

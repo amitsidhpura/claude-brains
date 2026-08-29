@@ -1235,8 +1235,8 @@ total 196K
     { name: '/help',            desc: 'Show available commands' },
   ];
   var slashList = document.getElementById('slashList');
-  // enabled allowlist mirrors chat.html cmdKind (compact/effort/model/clear); everything else hidden
-  var SLASH_ON = { '/compact': 1, '/clear': 1 };
+  // enabled allowlist mirrors chat.html cmdKind (compact/btw; /clear removed 2026-08-29); everything else hidden
+  var SLASH_ON = { '/compact': 1 };
   function renderSlash(q) {
     var ql = (q || '').toLowerCase();
     var hits = SLASH.filter(function (c) {

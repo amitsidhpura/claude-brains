@@ -4,6 +4,29 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — Undo and branching belong to git, not Claude: 8.7 NO, 14.2/14.4 NO, 14.1/14.3 later
+- User's principle: "depend on concrete de facto git for such things rather than Claude". Rewind via
+  `rewind_files` needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` (bloats every transcript), only
+  covers turns Claude made, only lives as long as the transcript — while `git diff` / `git checkout --`
+  / PhpStorm Local History are universal and already habitual. A panel-side undo would also teach the
+  habit of not committing before letting Claude loose. Fork: New button + `/resume` cover it.
+- 14.2 host git actions and 14.4 `get_workspace_diff` are thin-client git for a webview without git;
+  the IDE's git client and diff viewer are native → ➖ by design.
+- 14.1 create worktree + 14.3 git-aware diff → deferred as ONE "worktrees" backlog bundle: they are
+  panel-vs-terminal convenience, not Claude-vs-git, but a worktree is a new project window in JetBrains
+  so the IDE-side design comes first. With this every checklist section is ✅ (82 ✅ · 46 ➖).
+- Rejected: "rewind files → later" (my first suggestion) — dropped to NO on the user's principle.
+
+## 2026-08-29 — `/clear` removed from the panel (7.6); the New button is the panel's /clear
+- 2.1.241 gave `/clear` an optional `[name]` hint, so a menu pick INSERTED `/clear ` instead of
+  running, and the native branch dropped the typed name. Options were A) pass the name through as
+  the new conversation's title (needs a pending-title held in Kotlin until `system/init` gives the
+  new session id, plus a fixture), B) pin pick-runs and ignore the name, or C) remove `/clear`.
+- User chose C: `#newBtn` already sends the same `{kind:'new'}`, naming already lives in the header
+  pencil (7.9), and `/clear` is a terminal command — same treatment as `/model` and `/rename`.
+  `CMD_NATIVE` is now `{'btw'}`; typed `/clear`, `/new`, `/reset` get the "isn't available in the
+  IDE" refusal. Known loss: no keyboard-only new conversation (the plugin binds no shortcuts).
+
 ## 2026-08-29 — 8.14 reloaded-webview log replay: NO (declined, not deferred)
 - A webview reload happens only from a DevTools reload or a JCEF renderer crash; none observed in
   the wild since `seedUi()` (2026-08-13) began healing the chrome. The log half would need the

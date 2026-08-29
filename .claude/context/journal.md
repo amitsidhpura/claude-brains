@@ -3,6 +3,40 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (sixth) — /clear removed (7.6 ➖); 8.7 + §14 decided; EVERY SECTION ✅
+- GOAL REACHED a day early: `docs/feature-checklist.md` is 82 ✅ · 46 ➖ (128 rows), all 17
+  section headings ✅, no 🟥/🟧/⬜, no [DECIDE]. Remaining wants live in backlog (worktrees bundle,
+  tabs, debugger tools).
+- 8.7 / §14: explained the relation (theme = undo vs isolation; TUI `/branch` fuses fork + worktree;
+  rewind dry-run has a diff shape). User's principle: undo/branching depend on GIT (+ Local History),
+  not Claude checkpoints → 8.7 no, 14.2/14.4 no (by design), 14.1/14.3 later as a worktrees bundle.
+- 7.6 explained (A pass-name / B pin-pick-runs / C remove); user picked C. `65-slash.js`
+  `CMD_NATIVE` → `{'btw'}`, `60-composer.js` native `/clear` branch deleted; typed `/clear`,
+  `/new`, `/reset` now refused like `/model`. Docs: slash-commands row → Hidden, checklist 7.6 ➖,
+  At a glance 82 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 41 ➖, limits.md / ide-mcp-protocol.md / mockup `SLASH_ON` touched.
+- Fixtures 46 and 52 re-pointed (row counts −1; 52's alias assertions moved from /clear to
+  /code-review, `cmdKind('new')` → 'tui'); 36 and 50 unaffected (no /clear in their rosters).
+- Verified: `./gradlew test` 134/0; sandbox restarted, build confirmed by content over CDP
+  (`cmdKind('clear')` = 'tui', `CMD_NATIVE.size` = 1); harness **566/0**; live typed `/clear` → 0
+  bridge sends + refusal status line.
+- Gotcha hit again: a `cd` that fails inside a compound command leaves the shell cwd wherever the
+  previous call left it — the first JS edit silently applied nothing; use absolute paths.
+- Three optional items taken up: (1) `syncGutter` "lag" did NOT reproduce — catches up by the
+  next rAF; recorded in gotchas § Testing, no code change. (2) `conventions.md` trimmed 161 → ~95
+  lines, rules + pointers, stories stay in gotchas. (3) Marketplace text: plugin.xml description
+  fixed (`/clear` → `/btw`, stale "Diffs live in the chat" bullet dropped — 2.2/3.5/3.6 open real
+  diff tabs). A paste-ready Markdown copy was added then REMOVED: the user had set the Marketplace
+  to take the description from the plugin for future releases, so release.md's "hand-synced" note
+  was the stale premise; corrected, verify on the next upload.
+- **Marketplace screenshots reshot** (user: "outdated"): new `tools/marketplace_shots.py` (kept in the
+  repo — the 2026-08-16 script died with its scratchpad) splices chat.html exactly as `loadUi` does,
+  drives five two-panel scenes through the real builders in headless Chrome at 2400×1520. Traps hit:
+  manifest parse truncated at a `)` inside a comment; the pinned user message hides overflow under
+  it (thinking block, ask tabs) — trim scenes to fit; popups need a fixed clamp at 394px. Files:
+  01-conversation, 02-plan-and-questions, 03-control, 04-commands-agents, 05-sessions-models
+  (02-plan-approval / 05-sessions-modes removed). Upload is the user's manual step.
+- User: screenshots go up with the next release. Committed and pushed at the end.
+
 ## 2026-08-29 (fifth) — 8.14 declined; §8 down to 8.7
 - Short session: explained 8.14 (page reload → chrome heals via `seedUi()`, conversation log
   lost; trigger is DevTools reload or a renderer crash; fix = push transcript without restarting

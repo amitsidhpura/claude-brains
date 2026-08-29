@@ -336,11 +336,9 @@
     const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/i);
     if (sc) {
       // Aliases resolve to their command before the gate: the CLI advertises `/review` for
-      // `/code-review` and `/reset`/`/new` for `/clear`, and a typed alias must reach the same
-      // branch as the name it stands for. The turn is sent under the canonical name too.
+      // `/code-review`, and a typed alias must reach the same branch as the name it stands for. The turn is sent under the canonical name too.
       const name = canonicalCmd(sc[1]);
       if (name !== sc[1].toLowerCase()) t = '/' + name + (sc[2] != null ? ' ' + sc[2] : '');
-      if (name === 'clear') { clearComposer(); bridge({ kind: 'new' }); return; }         // fresh conversation
       if (name === 'btw') { clearComposer(); sideOpen(sc[2] || ''); return; }             // side question (8.11)
       if (cmdKind(name) === 'tui') {
         clearComposer();

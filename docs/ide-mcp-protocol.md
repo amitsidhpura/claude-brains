@@ -702,7 +702,8 @@ most of them.
   (2026-08-29): a foreground 12 s Bash under `-p --output-format stream-json` sent none
   (checklist 1.22 ➖).
 - **`conversation_reset`** — emitted by `/clear`, plan-mode exit, fresh-session flows; "mount a
-  fresh transcript under `new_conversation_id`". Our `/clear` is native, but probe plan-mode exit.
+  fresh transcript under `new_conversation_id`". The panel has no `/clear` (removed 2026-08-29;
+  the New button restarts the CLI instead), but probe plan-mode exit.
 - **Effort via `apply_flag_settings` / `--effort`** — no `set_effort` control request exists (hence
   the `/effort` turn); but a spawn flag `--effort <v>` and a live `apply_flag_settings` control
   request ("merges into the flag settings layer"; `effortLevel` is a settings key) both exist.

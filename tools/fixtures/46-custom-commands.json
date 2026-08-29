@@ -25,7 +25,7 @@
         {"js": "cmdKind('login')", "equals": "tui", "why": "GUARD: unverified built-in still hidden — green in both phases"},
         {"js": "cmdKind('dummy-cmd')", "equals": "text", "why": "DISCRIMINATING: custom command is sendable"},
         {"js": "cmdKind('mcp__srv__prompt')", "equals": "text", "why": "DISCRIMINATING: mcp__ prefix is sendable without any suffix"},
-        {"js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length", "equals": 6, "why": "DISCRIMINATING: compact+clear+dummy-cmd+user-probe+mcp prompt + the panel-supplied /btw (CMD_LOCAL, 2026-08-29); login hidden (is 2 pre-fix)"},
+        {"js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length", "equals": 5, "why": "DISCRIMINATING: compact+dummy-cmd+user-probe+mcp prompt + the panel-supplied /btw (CMD_LOCAL, 2026-08-29); login hidden, and clear hidden since its removal 2026-08-29 (is 2 pre-fix)"},
         {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/dummy-cmd\"] .pi-src') || {}).textContent", "equals": "project", "why": "DISCRIMINATING: project badge"},
         {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/user-probe\"] .pi-src') || {}).textContent", "equals": "user", "why": "DISCRIMINATING: user badge"},
         {"js": "renderSlash(''); (document.querySelector('#slashList .popup-item[data-cmd=\"/mcp__srv__prompt\"] .pi-src') || {}).textContent", "equals": "mcp", "why": "DISCRIMINATING: mcp badge derived from the name, no scan entry"},

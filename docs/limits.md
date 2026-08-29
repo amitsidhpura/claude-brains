@@ -105,8 +105,9 @@ cost a debugging round:
 Verified headless against the real chat.html (CSS spliced in as Kotlin does it) at 1–7 rows, both
 open paths, normal and enlarged fonts, and a 380px-tall window. `CMD_ALLOWED` is a `const Set` but
 Sets mutate, so the probe widens the allowlist without editing the code under test — today only
-`/compact` and `/clear` pass `cmdKind`, so the slash menu never reaches 5 rows in production and
-this cap is future-proofing rather than a live fix.
+`/compact` and `/clear` passed `cmdKind` (the allowlist has since grown to 16 and `/clear` was
+removed 2026-08-29), so at the time the slash menu never reached 5 rows in production and
+this cap was future-proofing rather than a live fix.
 
 ## Truncated (data is dropped)
 

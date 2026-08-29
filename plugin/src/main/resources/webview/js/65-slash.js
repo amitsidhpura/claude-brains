@@ -36,7 +36,9 @@
   //  · the mcp__ name prefix — MCP-server prompts (roster-named mcp__<server>__<prompt>)
   // Both classes are prompt expansions the CLI performs on an ordinary turn (verified live with
   // /dummy-cmd, 2026-08-15), which is exactly what "text" means here.
-  const CMD_NATIVE  = new Set(['clear', 'btw']);   // handled in the IDE, never forwarded
+  const CMD_NATIVE  = new Set(['btw']);   // handled in the IDE, never forwarded. /clear (and its
+  // /new, /reset aliases) removed 2026-08-29: the header's New-conversation button IS the panel's
+  // /clear, so the typed form is refused like /model (checklist 7.6).
   // Commands the panel supplies ITSELF, shown only when the roster has no entry of that name.
   // The stdio roster carries no /btw (54 entries, CLI 2.1.251, measured 2026-08-29) — the TUI
   // registers it locally and so does VS Code (`registerAction({id:"slash-command-btw"…})`).
@@ -64,7 +66,7 @@
   }
   function cmdKind(name) {
     const n = canonicalCmd(name);
-    // native/allowlist first: a project file named clear.md must not shadow the IDE's /clear
+    // native/allowlist first: a project file named btw.md must not shadow the IDE's /btw
     if (CMD_NATIVE.has(n)) return 'native';
     if (CMD_ALLOWED.has(n)) return 'text';
     if (customCmds[n]) return 'text';              // project/user command file or skill

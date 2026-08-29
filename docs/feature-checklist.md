@@ -11,9 +11,9 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-29) — 83 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 40 ➖ (128 rows)
-- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation
-- **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 14.2 Git actions in the host
+**At a glance** (2.1.250, 2026-08-29) — 82 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (128 rows) — every section ✅
+- **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
+- **Awaiting a decision ([DECIDE]):** none
 
 **Status marks**
 
@@ -308,10 +308,10 @@ auto-include selection, voice.
 - **7.4** ✅ **16 built-ins enabled** — each driven through the live panel; the rest Hidden by group
 - **7.5** ✅ **Pick rule** — a command with ANY `argumentHint` inserts `/name ` and waits; hint-less
       runs (2026-08-16; the roster carries no `immediate` flag)
-- **7.6** ✅ **`/clear`** — native (→ new conversation). 2.1.241 gave it an optional `[name]` hint
-      (the TUI names the fresh session), so a menu pick now INSERTS `/clear ` instead of running
-      (`cmdTakesArg` keys on the hint) and the native branch drops any typed name — decide whether
-      to pass it through as the new conversation's title or pin the old pick-runs behavior
+- **7.6** ➖ **`/clear`** — REMOVED by the user 2026-08-29: the header's New-conversation button
+      (`#newBtn`) is the panel's `/clear`, so the typed form (and `/new`, `/reset`) is refused like
+      `/model`. Moot with it: the 2.1.241 `[name]` hint that made a menu pick insert-not-run —
+      naming lives in the header pencil (7.9)
 - **7.7** ✅ **Aliases** — first-class: the menu filter scores them like names, rows show them
       muted (`.pi-alias`), a typed alias resolves to its command before the allowlist gate
       (`canonicalCmd`; `/review` → `/code-review`, `/new` → `/clear`); fixture 52, 2026-08-17
@@ -329,7 +329,7 @@ auto-include selection, voice.
       page load (cleared on a fresh `initialize`); driven live over CDP 2026-08-17, a mid-session
       command survived `location.reload()`
 
-## 8. ⬜ Sessions / history
+## 8. ✅ Sessions / history
 - **8.1** ✅ **New / Resume / Refresh** — Resume = history list → `--resume <id>`; Refresh
       re-resumes and recovers a dead CLI (guarded by `SessionStore.exists`)
 - **8.2** ✅ **History list** — from `~/.claude/projects/<enc-cwd>/*.jsonl`; titles from
@@ -344,14 +344,13 @@ auto-include selection, voice.
       in gotchas.md § Replay); windowed with an aligned turn-boundary cut, "N earlier blocks not
       loaded" marker and load-earlier on scroll-up; interrupt markers, sub-agent lines, plan
       feedback, steered messages all replay
-- **8.7** 🟥 [LG] **Rewind / checkpoints + fork conversation** [DECIDE] — the one substantial
-      capability gap vs both clients (VS Code `rewind_code` / `fork_conversation`; TUI `/rewind`,
-      `/branch`, `/fork`). Per-turn file rewind was REMOVED 2026-07-30; revival notes in gotchas
-      § Protocol (`CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`, git repo, client uuids via
-      `stampMessage`, dry_run first). The wire shape is a typed control now: `rewind_files
-      {user_message_id, dry_run}` → `{canRewind, filesChanged, insertions, deletions}`, plus a
-      `file_snapshot` / `files_persisted` record family (2026-08-23; unchanged since 2.1.233, not
-      probed live — it mutates files). Status: still UNDECIDED — needs an explicit yes / later / no
+- **8.7** ➖ [LG] **Rewind / checkpoints + fork conversation** — DECLINED by the user 2026-08-29,
+      by design: undo and branching depend on git (+ PhpStorm Local History), not on Claude's
+      transcript-embedded checkpoints (VS Code `rewind_code` / `fork_conversation`; TUI `/rewind`,
+      `/branch`, `/fork`). Per-turn file rewind was removed 2026-07-30; wire shape for the record:
+      `rewind_files {user_message_id, dry_run}` → `{canRewind, filesChanged, insertions, deletions}`
+      + `file_snapshot` / `files_persisted` records, gated on `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`
+      (never probed live — it mutates files; gotchas § Protocol). Fork: New button + `/resume` cover it
 - **8.8** ➖ [MD] **Reopen closed session** — Ctrl+Shift+T; the plugin binds no shortcuts and has no
       tabs — deferred by the user 2026-08-29, follows conversation tabs (8.9)
 - **8.9** ➖ **Multiple conversation tabs** — deferred by the user (do last)
@@ -507,16 +506,18 @@ auto-include selection, voice.
       the CLI writes rules into got nothing. Optional depends on `com.intellij.modules.json` for
       2024.3+ (JCEF pattern). Matcher pinned by `ClaudeSettingsSchemaTest`
 
-## 14. ⬜ Worktrees & git
-- **14.1** 🟧 [LG] **Create worktree** — `create_worktree`; TUI `/branch`; roadmap
-- **14.2** ⬜ [MD] **Git actions in the host** [NEW · DECIDE] — `checkout_branch`,
-      `check_git_status`, `update_skipped_branch`. Take: read the webview flow before deciding;
-      probably belongs with worktrees
-- **14.3** 🟧 [LG] **Git-aware diff/context** — roadmap
-- **14.4** ⬜ [SM] **Workspace diff over the wire** [NEW] — `get_workspace_diff` control, the engine
-      behind the TUI's thin-client `/diff` (one base ref, 5s git timeout, 50 files, 1MB/file caps);
-      newly noticed 2026-08-23 (present since ≤2.1.233). The IDE has native git diff, so this
-      leans ➖ unless 14.3 wants the CLI's view of the diff
+## 14. ✅ Worktrees & git
+- **14.1** ➖ [LG] **Create worktree** — `create_worktree`; TUI `/branch`. Deferred by the user
+      2026-08-29 as the head of the "worktrees" backlog bundle (with 14.3); a worktree is a new
+      project window in JetBrains, so the IDE-side question comes first
+- **14.2** ➖ [MD] **Git actions in the host** [NEW] — `checkout_branch`, `check_git_status`,
+      `update_skipped_branch`. Declined 2026-08-29, by design: thin-client git for a webview that
+      has no git; the IDE's git client is one keystroke away
+- **14.3** ➖ [LG] **Git-aware diff/context** — deferred 2026-08-29 into the "worktrees" bundle
+      with 14.1; only concrete once a worktree exists to diff against
+- **14.4** ➖ [SM] **Workspace diff over the wire** [NEW] — `get_workspace_diff` control, the engine
+      behind the TUI's thin-client `/diff` (one base ref, 5s git timeout, 50 files, 1MB/file caps;
+      present since ≤2.1.233). Declined 2026-08-29, by design: the IDE's diff viewer is native
 
 ## 15. ✅ Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
