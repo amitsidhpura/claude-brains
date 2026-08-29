@@ -35,7 +35,14 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   it (thinking block, ask tabs) — trim scenes to fit; popups need a fixed clamp at 394px. Files:
   01-conversation, 02-plan-and-questions, 03-control, 04-commands-agents, 05-sessions-models
   (02-plan-approval / 05-sessions-modes removed). Upload is the user's manual step.
-- User: screenshots go up with the next release. Committed and pushed at the end.
+- User: screenshots go up with the next release. Committed and pushed (`d886879`, `a0cec7b`).
+- Later: `vscode/` re-extracted to 2.1.251 (re-audit deferred a few versions by the user); gist
+  verified identical to SKILL.md; change notes trimmed to the LAST THREE versions + GitHub releases
+  link (user's call — the block had grown to 14).
+- **Released 0.12.0** on the user's go: bump + notes, tests 134/0, `buildPlugin`, zip audited,
+  `verifyPlugin` 7/7 Compatible (verdict files read), approval gate with the full notes, commit
+  `0e1af47` + tag, GitHub release with byte-identical asset, feed live, `marketplace-upload` green.
+  Marketplace moderation pending at save time. User's manual steps: screenshots + description check.
 
 ## 2026-08-29 (fifth) — 8.14 declined; §8 down to 8.7
 - Short session: explained 8.14 (page reload → chrome heals via `seedUi()`, conversation log

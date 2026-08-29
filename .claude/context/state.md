@@ -17,10 +17,13 @@ design, 14.1/14.3 later as the backlog "Worktrees bundle"). Earlier today §15 c
 - Do not re-propose: an effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md).
 
-## Released — 0.11.1 (2026-08-26)
-**0.11.1 is the shipped version** (tag `v0.11.1`, commit `979326c`). Everything since (3.5, 3.6,
-11.3, 11.5, 1.21/1.23/1.24, 13.2, 8.11, /clear removal) is unreleased on `main`; the next release is a fresh
-bump when the user asks. `verifyPlugin` runs BEFORE the gate, read the per-IDE verdict files.
+## Released — 0.12.0 (2026-08-29)
+**0.12.0 is the shipped version** (tag `v0.12.0`, commit `0e1af47`): /btw, files-changed review,
+tweak-travel, stop-task, settings schema, 1.21/1.23/1.24, /clear removed. Verifier 7/7 Compatible,
+GitHub asset byte-identical, feed live, `marketplace-upload` green (run 33257914722); Marketplace
+API still listed 0.11.1 at 14:35Z — moderation pending, check `plugins.jetbrains.com/api/plugins/33274/updates`.
+Nothing unreleased on `main`. Change notes now carry exactly the LAST THREE versions + a GitHub
+releases link (rule in build.gradle.kts kdoc and release.md 1b).
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
@@ -43,15 +46,13 @@ bump when the user asks. `verifyPlugin` runs BEFORE the gate, read the per-IDE v
   is gone with the session.
 
 ## Next steps
-- [ ] Likely next: a **release** when the user asks — 0.11.1 is shipped; `docs/release.md`,
-      `verifyPlugin` on EVERY release, read the per-IDE verdict files. Change notes should mention
-      /clear's removal (New button) and 8.11 `/btw`; screenshots + description check on the web page.
-- [ ] After the next release: confirm plugins.jetbrains.com/plugin/33274 shows plugin.xml's updated
-      description (user set the Marketplace to take it from the plugin; the old "hand-synced" note
-      was retired 2026-08-29).
-- [ ] **At the next release** (user, 2026-08-29): upload the five reshot `design/marketplace/*.png`
-      on `plugins.jetbrains.com/plugin/33274/edit` — screenshots are not in the zip. Add it to the
-      release checklist for that release, not before.
+- [ ] Confirm 0.12.0 shows **Approved** on the Marketplace (API above) — nothing to do unless it
+      is rejected (then a patch release through the normal process, release.md § burned numbers).
+- [ ] **User, on the Marketplace page NOW that 0.12.0 is up**: upload the five reshot
+      `design/marketplace/*.png` on `plugins.jetbrains.com/plugin/33274/edit` (not in the zip), and
+      confirm the Description refreshed from plugin.xml (no "Diffs live in the chat" bullet, `/btw`
+      in the commands example). If the description did NOT refresh, release.md's premise is wrong
+      again — paste plugin.xml's text as Markdown, one line per paragraph.
       `design/marketplace/img.png` (879×177, a stray paste committed in `5b50131`) is already gone
       from disk — the deletion rides with the next commit.
 - [x] `vscode/` re-extracted to **2.1.251** on 2026-08-29 (from 2.1.241; 2.1.250 was still on disk —

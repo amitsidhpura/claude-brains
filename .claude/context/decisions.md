@@ -4,6 +4,12 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — Marketplace change notes carry the last THREE versions + a GitHub releases link
+- `changeNotesHtml` had grown to 14 versions (0.4.0 → 0.11.1) under the rule "keep what users update
+  FROM"; the What's New page showed the whole wall. User chose: last three, then a link to
+  `github.com/amitsidhpura/claude-brains/releases` (every tag has full notes). Rule updated in the
+  kdoc and release.md 1b: add at the top, drop the oldest, keep the link.
+
 ## 2026-08-29 — Undo and branching belong to git, not Claude: 8.7 NO, 14.2/14.4 NO, 14.1/14.3 later
 - User's principle: "depend on concrete de facto git for such things rather than Claude". Rewind via
   `rewind_files` needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` (bloats every transcript), only
