@@ -3,6 +3,20 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (second) — §11 closed: 11.5 decline ack, 11.6 declined, 🚫 mark retired
+- Walked the user through 11.5 and 11.6 in plain language; they chose: 11.5 → answer `elicitation`
+  with `{action:"decline"}` now, form deferred (backlog § Someday) until a server they use elicits;
+  11.6 → declined. `ClaudeCli.handleControlRequest` gained an explicit `"elicitation"` branch;
+  compileKotlin + `./gradlew test` green; harness not rerun (Kotlin-only, no webview frame).
+- User asked the difference between ➖ and 🚫 → audit of all 27 closed rows found 7 drifting (9.6 /
+  12.4 / 8.12 were decisions on ➖; 5.5 / 6.6 / 8.9 / 15.2 were deferrals on 🚫). User's call: ONE
+  mark — ➖ "not implemented", the row body says terminal's-half / declined / deferred. Legend,
+  [DECIDE] line, At a glance (`78 ✅ · 3 🟥 · 5 🟧 · 15 ⬜ · 27 ➖`), glossary and state updated.
+  The By design / Declined / Deferred split still governs release PROSE.
+- §11 Extensibility has no open row. One watch: 11.3's `ambient:true` filter is unmeasured —
+  `window.__ambientSeen` in the console is the signal.
+- Committed and pushed at the user's word at the end of the session.
+
 ## 2026-08-29 — 11.3 kill-a-task built and hand-tested; 11.4 measured and declined; §11 assessed
 - 11.3 built in one pass: `stop_task{task_id}` (schema from the binary, field confirmed), hover-✕ on
   roster rows copying the `.hist-del` gutter idiom, `.stopping` dim, REPLACE-only removal. First
@@ -194,30 +208,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   **Approved**, all compatibility checks Success incl. the 2026.2.2 EAP IDE-run check.
 - Nothing unreleased on `main`. Next release is a fresh bump when work lands.
 
-## 2026-08-25 (second) — model-menu polish, and command turns learn to show themselves
-- **Custom model rows got the selection ✓** (user screenshot: no tick on "Opus 4.8 (1M)"). The
-  `.on` class was always right; `renderModels()`'s ternary emitted the remove × INSTEAD of the
-  check span. Now every row gets `.pi-check`; a custom row's × lives INSIDE it, overlaying the
-  ✓'s box — two rounds of hand-derived offsets were falsified by `#inputbar` ID rules (svg 18px;
-  `button {padding:4px}` flex-squeezed the × to 10px, caught only by the user's eye because
-  center asserts pass under symmetric shrink). Fixture 57, three negative controls run.
-- **Chip `set_model` writes a `/model` command trio to the transcript** (measured, CLI 2.1.245)
-  — resume grew `/model haiku` bubbles live never drew, and one became a session TITLE. User
-  chose hide-on-resume (AskUserQuestion): `cleanInjected` drops the wrapper, confirmation stdout
-  stays, titles fall through to the first real message. Verified with `./gradlew probe` on the
-  real session (user bubbles 4 → 1).
-- **/effort reversed by the user**: "show it like a model change." Measured wire ≠ disk (live:
-  synthetic assistant + result, SAME text, nothing else; disk: caveat + wrapper +
-  `system/local_command`). The `effortMuted` gate now draws the synthetic confirmation as a
-  block, still swallowing echo/streams/summary; replay drops the `/effort` wrapper. Supersedes
-  the 2026-07-30 audit-trail acceptance AND corrects 2026-08-24's "model changes leave no
-  transcript record" premise. Fixture 58 (verbatim measured frames) + reworked unit test +
-  real end-to-end `/effort medium` in the sandbox.
-- Baselines now: harness **462** (fixtures to 58), `./gradlew test` **116**.
-- Next: unchanged — seven [DECIDE] rows, `/clear [name]`, backlog order; docs/slash-commands.md
-  still documents 2.1.233 (installed CLI is 2.1.245 now — the sync row aged again).
-
 ## Digest
+- **2026-08-25 (second)** — model-menu polish: custom rows get the ✓ (fixture 57; `#inputbar` ID
+  rules falsified two rounds of hand-derived offsets); chip `set_model` writes a `/model` trio to the
+  transcript → hidden on resume (`cleanInjected`); `/effort` now shows the CLI's confirmation like a
+  model change (fixture 58, supersedes the 2026-07-30 audit-trail acceptance). Harness 462, test 116.
 - **2026-08-25** — 0.10.0 released (`v0.10.0`, `55fdcb1`): model-menu footer switches, 1M
   reconciliation, API-error single-render. `verifyPlugin` BEFORE the gate (7 IDEs Compatible) — the
   user interrupted to ask "was verify done?": keep the verdict table ready. Marketplace Approved after

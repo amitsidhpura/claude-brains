@@ -702,8 +702,8 @@ most of them.
 - **`prompt_suggestion` / `agents_killed` / `session_state_changed`** — suggestion chrome (opt-in
   at initialize), an "agents killed" banner, and an "authoritative turn-over signal" (`idle` fires
   only after held-back results flush) that could harden the queue drain if `onResult` proves racy.
-- **`elicitation`** — MCP elicitation forwarded as a control request; our generic empty-`{}` ack
-  answers it with neither `{action:"decline"}` nor a real answer. No local MCP server elicits.
+- **`elicitation`** — MCP elicitation forwarded as a control request; answered `{action:"decline"}`
+  since 2026-08-29 (the bare `{}` ack was schema-invalid). No form; no local MCP server elicits.
 
 **The by-design list is a decision against EXISTING capability, not a bet on a missing one**
 (2.1.222 sweep): `claude_authenticate` + OAuth callbacks (login), `get_usage` / `get_context_usage`

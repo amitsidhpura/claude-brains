@@ -11,7 +11,7 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-29) — 78 ✅ · 3 🟥 · 6 🟧 · 16 ⬜ · 18 ➖ · 7 🚫 (128 rows)
+**At a glance** (2.1.250, 2026-08-29) — 78 ✅ · 3 🟥 · 5 🟧 · 15 ⬜ · 27 ➖ (128 rows)
 - **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay
 - **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 8.10 Session groups / sessions sidebar · 8.11 Side question · 12.3 Open in editor tab · 12.6 Focus view · 13.2 JSON schema for .claude/settings.json · 14.2 Git actions in the host
 
@@ -24,8 +24,7 @@ one row per feature, measured against both reference clients.
 | 🟥 | open — high: next up, or the strongest candidates awaiting a decision |
 | 🟧 | open — medium: roadmap, worth a pass when its turn comes |
 | ⬜ | open — low: watch / probe first / polish; some lean ➖ |
-| ➖ | by design — the terminal's half, or N/A in JetBrains |
-| 🚫 | declined by the user (revivable; recorded in `.claude/context/`) |
+| ➖ | not implemented — the row says which: the terminal's half / N/A in JetBrains, declined by the user, or deferred. Any of them can be revisited later (decisions in `.claude/context/`) |
 
 **Numbering** — rows are `section.row` (`8.5`); refer to them by that id. Numbers are stable
 between audits: retire a row by striking it, not by deleting it, so ids never shift.
@@ -40,7 +39,7 @@ outlives one event.
 | Tag | Meaning |
 |---|---|
 | **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25) |
-| **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no → re-mark ➖/🚫) |
+| **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
@@ -245,7 +244,7 @@ auto-include selection, voice.
       `pendingPlanMode` and bridge only after the CLI's post-approval mode broadcast
 - **5.4** ✅ **Replay** — plan + quoted feedback footer (`fbQuote`), the note parsed back out of
       `toolUseResult.plan`
-- **5.5** 🚫 **Card keyboard shortcuts** — Enter = keep planning, Shift+Tab = approve; deferred by
+- **5.5** ➖ **Card keyboard shortcuts** — Enter = keep planning, Shift+Tab = approve; deferred by
       the user 2026-08-16, backlog § Next up
 - **5.6** ✅ **Anchored plan comments** — select text in the plan card → floating Comment pill → a
       note row quoting the anchor; rows sit between the plan and the decision surface, decided
@@ -270,7 +269,7 @@ auto-include selection, voice.
 - **6.5** ⬜ [SM] **Insert @-mention from the editor** — VS Code's Alt+K; needs a plugin action.
       The plugin binds no shortcuts today, but an unbound action the user can map is compatible
       with that
-- **6.6** 🚫 **Auto-include current selection** — deferred by the user (do last)
+- **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
 - **6.7** ⬜ [SM] **`list_files_request` / `respectGitIgnore`** [NEW] — our picker is IDE-indexed;
       ➖ unless a real gap shows. (The CLI also answers `file_suggestions {query}` over stdio with
       the TUI's own fuzzy ranking — an alternative source if one ever does)
@@ -332,7 +331,7 @@ auto-include selection, voice.
       probed live — it mutates files). Status: still UNDECIDED — needs an explicit yes / later / no
 - **8.8** ⬜ [MD] **Reopen closed session** — Ctrl+Shift+T; ➖ while the plugin binds no shortcuts
       and has no tabs
-- **8.9** 🚫 **Multiple conversation tabs** — deferred by the user (do last)
+- **8.9** ➖ **Multiple conversation tabs** — deferred by the user (do last)
 - **8.10** ⬜ [LG] **Session groups / sessions sidebar** [NEW · DECIDE] — a
       `claude-sessions-sidebar` view, `get_session_groups` / `update_session_groups`,
       `list_sessions_request`. Take: our history popup already lists per-project sessions;
@@ -391,7 +390,7 @@ auto-include selection, voice.
       `result.modelUsage[].contextWindow` after each model's first turn (`reconcileFromResult`);
       gauge denominator set explicitly on toggle. Built 2026-08-24; fixture 55; decisions
       2026-08-24
-- **9.10** 🚫 **Per-model gating of effort / Thinking** — on the roster's capability flags
+- **9.10** ➖ **Per-model gating of effort / Thinking** — on the roster's capability flags
       (`supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking`); proposed and
       dropped 2026-08-26 on measurement: haiku carries none of the flags yet accepts `/effort max`
       and thinks, and Fable carries `supportsAdaptiveThinking` yet ignores the switch (9.5) — no
@@ -419,7 +418,7 @@ auto-include selection, voice.
       roster frame is the only confirmation). `ambient:true` tasks (2.1.250 schema: "hosts should
       exclude them from activity indicators") are dropped from the roster and the suspend count — UNMEASURED (no live frame yet): the first one seen is kept verbatim as `window.__ambientSeen` + a console warning, read it over CDP the day it appears.
       Fixture 61. Sibling `background_tasks {tool_use_id?}` (Ctrl+B semantics) not taken
-- **11.4** 🚫 **Sub-agent work outcome** — the dot was built and withdrawn 2026-08-13; RE-MEASURED
+- **11.4** ➖ **Sub-agent work outcome** — the dot was built and withdrawn 2026-08-13; RE-MEASURED
       2026-08-29 on 2.1.250: an Explore agent whose Bash returned `is_error:true` and which replied
       "FAILED: could not complete the task." ended `task_updated{status:"completed"}` +
       `task_notification{status:"completed", summary:"FAILED: …"}` — task status is the task's
@@ -428,10 +427,18 @@ auto-include selection, voice.
       2026-08-13. VS Code's `handleTaskNotification` only deletes the task from its map — it shows
       no outcome either. Declined: nothing measurable to build on; the summary already rides the
       Explore line
-- **11.5** ⬜ [SM] **Elicitation** — `elicitation` control request; our empty ack answers it with
-      neither decline nor an answer, no local MCP server elicits today. Probe if one ever does
-- **11.6** 🟧 [MD] **Extensibility status view** — read-only: which MCP servers/plugins are live;
-      roadmap tail, philosophy leans terminal
+- **11.5** ➖ [SM] **Elicitation** — `elicitation` control request (an MCP server asking the user
+      a question) is answered `{action:"decline"}` since 2026-08-29 — the honest no-answer; the
+      earlier bare `{}` ack was schema-invalid (enum `accept|decline|cancel`). No form: no local
+      MCP server elicits, and VS Code registers no `onElicitation` handler either. Deferred — if
+      one ever does, measure the request with a ~30-line stdio MCP probe server before building
+- **11.6** ➖ **Extensibility status view** — declined 2026-08-29: the `system/init` frame
+      already carries `mcp_servers[].status` / agents / skills / plugins, and the panel shows the
+      actionable half (11.2's MCP failure notice, skills + MCP prompts in the / menu); a
+      "everything is fine" list is looked at rarely, is the terminal's half (`/mcp`, `/plugins`,
+      `/agents` can also FIX things), VS Code has no such view, and a second copy drifts per CLI
+      release. Revivable as [SM]: a popup listing `server · status` (+ agents/skills/plugins)
+      from the init frame
 
 ## 12. UI placement, windows, keys
 - **12.1** ✅ **Right-anchored tool window** — JetBrains moves/floats/undocks it natively (covers
@@ -447,7 +454,7 @@ auto-include selection, voice.
 - **12.6** 🟧 [MD] **Focus view** [NEW · DECIDE] — VS Code `toggleFocusView` / `set_focus_view` /
       `focusView` setting, TUI `/focus`, `/brief`: hide tool noise, show prompts + responses. Take:
       worth a mockup pass before building; folded IN/OUT boxes already do half of it
-- **12.7** 🚫 **Light theme / configurable colours** — decided 2026-08-07 (dark only)
+- **12.7** ➖ **Light theme / configurable colours** — decided 2026-08-07 (dark only)
 
 ## 13. Settings
 - **13.1** ➖ **No settings page** — by design. CLI resolution: `-Dclaude.executable` → PATH → VS
@@ -475,7 +482,7 @@ auto-include selection, voice.
 ## 15. Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
-- **15.2** 🚫 **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
+- **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
       (do last)
 - **15.3** ➖ **Small chrome** — message rating + `/feedback` / `/bug`, prompt suggestions, Artifact
       auto-open, "Explored" grouping of consecutive Reads, `/stickers`, `/radio`, `/powerup`;

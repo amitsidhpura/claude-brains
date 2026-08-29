@@ -7,7 +7,8 @@
   2026-08-28).
 - **By design / Declined / Deferred** — three different "we don't have it"s: never will
   (terminal's half), decided against on 2026-08-06 (cost/usage display), wanted-but-later
-  (tabs, voice). Release prose must not blur them.
+  (tabs, voice). Release prose must not blur them. In `docs/feature-checklist.md` all three share
+  ONE mark, ➖ "not implemented" (🚫 retired 2026-08-29) — the row body says which.
 - **Fold vs cut-marker** — the fold (`foldBlock`) hides content the DOM still holds; the marker
   (`.io-cut`/`.cmd-cut`) reports content that is GONE (dropped by a cap). Never nest the marker
   inside the foldable region.

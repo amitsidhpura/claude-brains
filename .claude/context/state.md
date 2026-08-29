@@ -1,9 +1,8 @@
 # State
 
 ## Current focus
-**2026-08-29 (eighteenth session, started 2026-08-28 evening): 11.3 kill-background-task BUILT and
-hand-verified; 11.4 re-measured and DECLINED; §11 assessed row by row — all in the working tree,
-committed and pushed at the end of the session (2026-08-29).**
+**2026-08-29 (nineteenth session): §11 Extensibility CLOSED — 11.5 decline ack shipped, 11.6
+declined, checklist 🚫 mark retired into ➖. Committed and pushed at the end of the session.**
 - **11.3**: roster rows in `webview/js/70-events.js` `renderBgTasks()` carry a hover-✕ (`.bg-x`,
   conversations-list gutter idiom, NO confirm step by user decision) → bridge `stopTask` →
   `ClaudeSessionService.stopTask` → `ClaudeCli.stopTask` = `stop_task{task_id}`. The row dims
@@ -13,18 +12,19 @@ committed and pushed at the end of the session (2026-08-29).**
   `window.__ambientSeen` + a console warning. Fixture 61 (23 asserts). User hand-tested four
   scenarios (§17 MT-7.8): shell, Explore sub-agent (suspended turn resumed cleanly), one-of-two,
   Escape/new-conversation.
-- **11.4** 🚫: measured 2026-08-29 — an Explore agent whose Bash failed and which replied "FAILED: …"
+- **11.4** ➖ (declined): measured 2026-08-29 — an Explore agent whose Bash failed and which replied "FAILED: …"
   still ended `task_notification{status:"completed"}`; task status is lifecycle, never verdict; VS
   Code shows nothing either. Drift fixed on the way: a kill sends `task_updated{killed}` +
   `task_notification{stopped}` — `taskLine` in `50-blocks.js` now paints on `stopped` too (fixture
   45 gained a step, negative control run).
-- **11.6** assessed, awaiting the user's word: recommend 🚫 (init frame already carries
-  `mcp_servers/agents/skills/plugins`; 11.2's failure notice is the actionable half; VS Code has no
-  such view; SM if wanted).
-- **11.5** assessed: our catch-all answers `elicitation` with `{}` — schema-invalid (the enum wants
-  `action:accept|decline|cancel`); recommend `{action:"decline"}` now and a 30-line stdio MCP probe
-  server before ever building a form. VS Code passes NO `onElicitation` handler. Not done yet.
-- Checklist current to **2.1.250** (128 rows; 78 ✅ · 3 🟥 · 6 🟧 · 16 ⬜ · 18 ➖ · 7 🚫).
+- **11.6** ➖ declined by the user 2026-08-29 (terminal's half; 11.2 covers the failure case;
+  VS Code has none). Revivable as [SM] — see decisions.md.
+- **11.5** DONE 2026-08-29: `ClaudeCli.handleControlRequest` answers
+  `elicitation` with `{action:"decline"}` (bare `{}` was schema-invalid); row → ➖, form deferred
+  until a local MCP server actually elicits (then a ~30-line stdio probe server first). Docs
+  updated: checklist 11.5 + At a glance, `docs/ide-mcp-protocol.md` § elicitation. compileKotlin +
+  `./gradlew test` green; harness not rerun (Kotlin-only change).
+- Checklist current to **2.1.250** (128 rows; 78 ✅ · 3 🟥 · 5 🟧 · 15 ⬜ · 27 ➖ — 🚫 mark RETIRED 2026-08-29, everything not implemented is ➖ with the reason in the row).
 - **Checklist rules still in force**: `**id** mark [effort] **Name** — gist; facts`; the **At a
   glance** block is hand-maintained — refresh counts and id lists at every change; `<details>` only
   in the two re-audit paragraphs and the eleven §17 groups.
@@ -43,7 +43,7 @@ Success incl. the 2026.2.2 rc IDE-run). Next release is a fresh bump when work l
   turns; resumed-session Review parked in backlog).
 - **Seven [DECIDE] rows** await the user: 8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2 — plus a
   yes / later / no on **1.25** (grace banner; probe by injecting through `onClaudeEvent`), on
-  **11.6** (recommended 🚫) and on the two 11.5 steps (decline ack; MCP probe server).
+  11.5 and 11.6 both settled 2026-08-29 (decline ack shipped; status view declined). §11 closed.
 - `/clear [name]` decision still open (checklist 7.6).
 - `docs/slash-commands.md` roster prose now records 2.1.233 → 2.1.250 as one change
   (`/workflow-authoring`); the 2.1.233 capture date in its header is history, not staleness.
@@ -63,8 +63,7 @@ Success incl. the 2026.2.2 rc IDE-run). Next release is a fresh bump when work l
   before the gate (gotchas § Build — the 0.11.1 half-applied bump).
 
 ## Next steps
-- [ ] Get yes / later / no on the **seven [DECIDE]** rows (8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2), on **1.25**, on **11.6** (→ 🚫?) and on 11.5's two steps.
-- [ ] If 11.5 step 1 is a yes: `ClaudeCli.handleControlRequest` catch-all answers `elicitation` with `{action:"decline"}` (keep `{}` for the rest).
+- [ ] Get yes / later / no on the **seven [DECIDE]** rows (8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2), and on **1.25**.
 - [ ] Decide `/clear [name]` (checklist 7.6).
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts → reloaded-webview
       log replay (**8.14**).
@@ -81,7 +80,7 @@ Success incl. the 2026.2.2 rc IDE-run). Next release is a fresh bump when work l
   only CDP-driven ones are; unexplained, harmless (gotchas § Testing).
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by user
   decision, stated in the 0.11.1 release notes; do not gate it.
-- **Do not gate UI on roster capability flags** (checklist 9.10 🚫). Only `supportsFastMode` is
+- **Do not gate UI on roster capability flags** (checklist 9.10 ➖, declined). Only `supportsFastMode` is
   gated, and only because delivery was probed.
 - Effort/model conversation MARKERS dropped 2026-08-24 (partly superseded 2026-08-25: /effort
   shows the CLI's confirmation line). Confirm-card path wrapping declined — do not re-propose.

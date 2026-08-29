@@ -276,7 +276,11 @@ class ClaudeCli(
                 val input = request["input"]?.jsonObject ?: JsonObject(emptyMap())
                 onHook(id, input) { out -> writeControlResponse(reqId, out) }
             }
-            // Anything else we don't implement (sdk mcp, elicitation): acknowledge so the CLI won't hang.
+            // MCP elicitation (a server asking the user a question). The panel has no form for
+            // it, so answer with the schema's honest no-answer — the response enum is
+            // `action: accept|decline|cancel` and a bare `{}` is invalid (checklist 11.5, 2026-08-29).
+            "elicitation" -> writeControlResponse(reqId, buildJsonObject { put("action", "decline") })
+            // Anything else we don't implement (sdk mcp): acknowledge so the CLI won't hang.
             else -> writeControlResponse(reqId, buildJsonObject {})
         }
     }

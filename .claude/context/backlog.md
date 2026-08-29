@@ -17,14 +17,6 @@
 ## Next up
 - The seven remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11,
   12.3, 12.6, 13.2, 14.2) need a yes / later / no (9.4 and 9.5 decided + built 2026-08-24).
-- **11.5 Elicitation, two steps** (assessed 2026-08-29, undecided): (1) `ClaudeCli.handleControlRequest`
-  catch-all answers `elicitation` with `{action:"decline"}` — today's `{}` is schema-invalid
-  (enum `accept|decline|cancel`, `content?`); (2) a ~30-line stdio MCP probe server in
-  `~/Sites/claude-brains-testing/.mcp.json` whose one tool calls `elicitation/create` (form mode,
-  two-field schema) — tape whether the CLI forwards the request over stdio at all. VS Code passes
-  no `onElicitation` handler. Build a form (askTabs idiom) only after a used server elicits.
-- **11.6 extensibility status view** — recommended 🚫 2026-08-29; if wanted it is [SM]: a popup
-  listing `mcp_servers[].name · status` (+ agents/skills/plugins) from the `system/init` frame.
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
@@ -101,6 +93,11 @@
   so the `/context` workflow itself does NOT travel to a fresh clone — un-ignore if wanted.
 
 ## Someday / conditional
+- **11.5 Elicitation form** (deferred 2026-08-29; the decline ack shipped that day): only if a
+  server the user actually uses elicits. First a ~30-line stdio MCP probe server in
+  `~/Sites/claude-brains-testing/.mcp.json` whose one tool calls `elicitation/create` (form mode,
+  two-field schema) — tape whether the CLI forwards it over stdio at all; then a form (askTabs
+  idiom). VS Code passes no `onElicitation` handler.
 - Real ES modules for `webview/js/` (CefResourceHandler or file:// base) — only if per-file
   scope ever earns the resource-serving layer + deferred-load rewiring; the 2026-08-19 concat
   splice is the stepping stone.

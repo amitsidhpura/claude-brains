@@ -4,6 +4,25 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — Checklist: 🚫 mark retired; ➖ = "not implemented", the row says why
+- User's call after an audit found the two closed marks drifting: 9.6 / 12.4 / 8.12 sat on ➖
+  while being decisions, and 6.6 / 8.9 / 15.2 / 5.5 sat on 🚫 while being "do last" deferrals.
+  *Why:* one mark, reason in the row — whether it is the terminal's half, declined or deferred is
+  prose, and all three can be revisited later. *Rejected:* a third mark for "deferred" (more
+  taxonomy to keep straight); ⬜ for deferrals (understates "wanted"). The glossary's By design /
+  Declined / Deferred distinction still governs release PROSE, just not the mark.
+
+## 2026-08-29 — 11.6 extensibility status view: declined; 11.5 elicitation: decline ack, form deferred
+- **11.6 ➖ declined** (user, after a plain-language walkthrough). *Why:* it is the terminal's half — looked
+  at while configuring, not many times an hour; the `system/init` frame's `mcp_servers/agents/
+  skills/plugins` are already used for the actionable half (11.2 failure notice, / menu); VS Code
+  has no such view; a second copy drifts per CLI release. *Rejected:* "later" as an [SM] popup
+  listing `server · status` from the init frame — revivable if ever wanted.
+- **11.5**: `ClaudeCli.handleControlRequest` answers `elicitation` with `{action:"decline"}`
+  (the old bare `{}` was schema-invalid — enum `accept|decline|cancel`). *Rejected for now:* an
+  elicitation form; parked in backlog § Someday behind a stdio MCP probe server, only if a server
+  the user uses ever elicits. VS Code passes no `onElicitation` handler.
+
 ## 2026-08-29 — The roster ✕ has no confirm step, and never removes a row itself
 Kill a background task (11.3) from a hover-✕ on the roster row, copying the conversations-list
 gutter idiom WHOLE (fixed popup width, gutter reserved only on hover) but NOT its arm/confirm step
