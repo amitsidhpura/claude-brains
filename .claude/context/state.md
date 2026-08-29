@@ -3,7 +3,7 @@
 ## Current focus
 **2026-08-29 (twenty-second session): the checklist goal (every section ✅ by 2026-08-30) is DONE a
 day early — `docs/feature-checklist.md` = 82 ✅ · 46 ➖ (128 rows), all 17 headings ✅, no
-[DECIDE].** Today: 8.14 declined (pushed as `8152b03`); then **UNCOMMITTED**: `/clear` removed
+[DECIDE].** Today (all pushed, last `d886879`): 8.14 declined; `/clear` removed
 from the panel (7.6 ➖ — `CMD_NATIVE` = `{'btw'}`, header New button is the panel's /clear, typed
 `/clear`/`/new`/`/reset` refused; verified 134/0 + harness 566/0 + live) and 8.7 / §14 decided on
 the user's principle "undo and branching depend on git, not Claude" (8.7 no, 14.2/14.4 no by
