@@ -1223,17 +1223,39 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .ef-label { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .ef-label svg { width: 15px; height: 15px; flex: 0 0 20px; }
 .ef-label b { color: var(--fg); font-weight: 600; }
-.effort { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0; }
-.effort .d { width: 9px; height: 9px; border-radius: 50%; background: #4a4d52; transition: background .1s, transform .1s; }
-.effort .d.on { background: var(--accent); }
-.effort .d.cur { transform: scale(1.5); background: var(--accent); }
-.effort:hover .d { background: #5a5d63; }
-.effort:hover .d.on { background: var(--accent); }
+/* effort slider — the .tgl idiom stretched to five stops (user, 2026-08-29, from a screenshot
+   of a pill track with ticks and a knob): the same 16px pill track and off-colour as .tgl, the
+   accent (::before, width from --ef-fill) filling from the left edge to 2px past the knob — the
+   .tgl knob's inset — and the .cur stop IS the knob (var(--fg), 12px, as .tgl::after). Every
+   stop is a FIXED 12px slot: the tick is a 4px ::before centred in it, the knob is the slot's
+   own background, so the five centres never move with the level and the slots double as the
+   click targets. Same DOM and classes as the old free-standing dots — setEffortUI's .on/.cur
+   still drive it; the fill width is picked per level with :has(), no JS. */
+.effort { display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+  width: 72px; height: 16px; padding: 0 2px; box-sizing: border-box; border-radius: 999px;
+  position: relative; background: color-mix(in srgb, var(--fg) 22%, var(--user-bg)); transition: background .15s; }
+.effort::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; border-radius: 999px;
+  background: var(--accent); width: var(--ef-fill, 44px); transition: width .15s; }
+.effort .d { position: relative; z-index: 1; width: 12px; height: 12px; border-radius: 50%; transition: background .1s; }
+.effort .d::before { content: ''; position: absolute; inset: 4px; border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 45%, transparent); transition: background .1s; }
+.effort .d.on::before { background: color-mix(in srgb, var(--fg) 65%, var(--accent)); }
+.effort .d.cur { background: var(--fg); }
+.effort .d.cur::before { display: none; }
+/* five 12px slots in the 68px content box (2px padding = the .tgl knob inset), 2px gaps: centres
+   8, 22, 36, 50, 64 → fill = knob right + 2, so 2px of accent shows past the knob in every
+   state — Max reaches the track's end */
+.effort:has(.d:nth-child(1).cur) { --ef-fill: 16px; }
+.effort:has(.d:nth-child(2).cur) { --ef-fill: 30px; }
+.effort:has(.d:nth-child(3).cur) { --ef-fill: 44px; }
+.effort:has(.d:nth-child(4).cur) { --ef-fill: 58px; }
+.effort:has(.d:nth-child(5).cur) { --ef-fill: 72px; }
+.effort:hover { background: color-mix(in srgb, var(--fg) 30%, var(--user-bg)); }
 /* model-menu footer: the .popup-f idiom stacked — three label+switch rows plus the effort
    slider behind the footer's one top border. Labels ride the .ef-label rail (20px svg slot) so
    they line up with .pi-title. Effort MOVED here from the mode menu's own .popup-f on
    2026-08-26 (user request): the level belongs with the model it applies to, and #modeMenu now
-   holds nothing but modes. .ef-row is deliberately NOT .tgl-row — it carries a dot slider, not
+   holds nothing but modes. .ef-row is deliberately NOT .tgl-row — it carries a pill slider, not
    a switch, and keeping the two class names apart is what lets fixture 55 go on counting the
    toggle rows while fixture 51 measures this one. */
 .pf-stack { flex-direction: column; align-items: stretch; gap: 10px; }
