@@ -66,6 +66,7 @@
       const m = activeMenu();
       if (m) { if (m.id === 'slashMenu') slashEscaped = true; m.classList.remove('show'); return; }
       if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
+      if (sidePanel.classList.contains('show')) { sideClose(); return; }
       if (activeAsk) { cancelAsk(); return; }
       return;
     }

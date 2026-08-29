@@ -36,7 +36,12 @@
   //  · the mcp__ name prefix — MCP-server prompts (roster-named mcp__<server>__<prompt>)
   // Both classes are prompt expansions the CLI performs on an ordinary turn (verified live with
   // /dummy-cmd, 2026-08-15), which is exactly what "text" means here.
-  const CMD_NATIVE  = new Set(['clear']);     // handled in the IDE, never forwarded
+  const CMD_NATIVE  = new Set(['clear', 'btw']);   // handled in the IDE, never forwarded
+  // Commands the panel supplies ITSELF, shown only when the roster has no entry of that name.
+  // The stdio roster carries no /btw (54 entries, CLI 2.1.251, measured 2026-08-29) — the TUI
+  // registers it locally and so does VS Code (`registerAction({id:"slash-command-btw"…})`).
+  // The hint makes it insert-not-run on click (cmdTakesArg), like every hinted command.
+  const CMD_LOCAL = [{ name: 'btw', description: 'Ask a quick side question without interrupting the conversation', argumentHint: '[question]' }];
   // The IDE-development set (user-picked 2026-08-15, each smoke-verified headless: the CLI
   // accepts and expands every one as a turn — docs/slash-commands.md for the grouping logic).
   const CMD_ALLOWED = new Set([
@@ -82,7 +87,10 @@
     // their description. Array.sort is stable, so ties keep the CLI's original order. An alias
     // scores like the name it stands for, so typing "/review" surfaces /code-review at rank 0 —
     // it used to fall through to the description-only tier or vanish (checklist 7.7).
-    const hits = slashCommands.map(function (c) {
+    const roster = slashCommands.concat(CMD_LOCAL.filter(function (l) {
+      return !slashCommands.some(function (c) { return (c.name || '').toLowerCase() === l.name; });
+    }));
+    const hits = roster.map(function (c) {
       const names = [(c.name || '').toLowerCase()].concat(
         Array.isArray(c.aliases) ? c.aliases.map(function (a) { return String(a).toLowerCase(); }) : []);
       const desc = (c.description || '').toLowerCase();

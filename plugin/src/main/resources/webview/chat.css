@@ -382,7 +382,7 @@ blockquote > *:last-child { margin-bottom: 0; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .think-live { position: relative; padding-left: 22px; --dot-c: var(--dot); }
 .think-live .th { color: var(--muted); font-size: var(--fs-base); }
-.think-live .shimmer { background: linear-gradient(90deg, #797d84 35%, #eceff4 50%, #797d84 65%); background-size: 200% 100%;
+.think-live .shimmer, .side-a.pending .shimmer { background: linear-gradient(90deg, #797d84 35%, #eceff4 50%, #797d84 65%); background-size: 200% 100%;
   -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer var(--pulse-period) linear infinite; }
 .generating { position: relative; display: flex; align-items: baseline; gap: 8px; padding-left: 22px; color: var(--fg); font-size: var(--fs-base); }
 .generating .spin { position: absolute; left: 0; top: 0; width: 14px; text-align: center; color: var(--accent);
@@ -870,6 +870,46 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .hist-item .badge { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
   background: var(--user-raised); color: var(--user-muted); border: 1px solid var(--user-border); }
 .hist-empty { padding: 10px 14px; color: var(--muted); font-size: var(--fs-sm); }
+
+/* ---------- side question (8.11, /btw) ----------
+   A scratch surface over the log, anchored to the composer: the same floating-panel shell as
+   #histPanel (surface, strong border, 12px radius, the one drop shadow), full composer width so a
+   markdown answer has room. Questions wear the user surface exactly as sent messages do; answers
+   are the ordinary .blk prose rules minus the timeline gutter, so the two look like the log they
+   deliberately never enter. Vertical position is set by JS (composer height + 8px); 96px is the
+   static fallback for the mockup and the instant before the observer fires. `margin: 0 auto` with
+   both insets set is what centres an absolutely-positioned box once max-width caps it — without
+   it the box hugged the left inset while #inputcard sat centred (measured on JCEF at 869px:
+   centres 374 vs 435; with the margin 435 vs 435). */
+#sidePanel { position: absolute; left: 14px; right: 14px; bottom: 96px; z-index: 30; max-width: 720px; margin: 0 auto;
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; flex-direction: column; overflow: hidden; }
+#sidePanel.show { display: flex; }
+.side-h { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; color: var(--muted);
+  font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
+.side-title { display: inline-flex; align-items: center; gap: 6px; color: var(--fg); font-size: var(--fs-sm); white-space: nowrap; }
+.side-title svg { width: 14px; height: 14px; color: var(--accent); }
+.side-hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-h .icon-btn svg { width: 15px; height: 15px; }
+.side-list { max-height: 40vh; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column;
+  gap: 10px; font-size: var(--fs-base); }
+.side-empty { color: var(--muted); font-size: var(--fs-sm); }
+.side-q { align-self: flex-end; max-width: 92%; background: var(--user-bg); border: 1px solid var(--user-border);
+  border-radius: var(--radius); padding: 5px 9px; font-size: var(--fs-sm); white-space: pre-wrap; word-break: break-word; }
+.side-a.blk { padding-left: 0; }            /* prose rules, no timeline dot: this is not a turn */
+.side-a.blk::before { display: none; }
+.side-a.pending { color: var(--muted); }
+.side-a.err { color: var(--red); font-size: var(--fs-sm); }
+/* one line at rest, exactly like #input (20px), growing with content to 6 lines; the send button
+   sits centred on that single line and follows the bottom edge as the field grows */
+.side-in { display: flex; align-items: flex-end; gap: 8px; padding: 8px 10px 8px 14px; border-top: 1px solid var(--border); }
+#sideInput { flex: 1; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
+  font: inherit; line-height: 20px; height: 20px; max-height: 120px; padding: 4px 0; box-sizing: content-box; overflow-y: hidden; }
+#sideInput::placeholder { color: var(--muted); }
+#sideSend { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+#sideSend svg { width: 18px; height: 18px; }
+#sideSend:disabled { opacity: .45; cursor: default; }
 
 /* image placeholder (shared by chips + user-message images) */
 .ph-img { position: relative; display: block; background: linear-gradient(135deg, #35486b, #6b3555); }

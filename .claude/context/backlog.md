@@ -15,7 +15,7 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
-- The four remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11, 14.2)
+- The two remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 14.2)
   need a yes / later / no (12.3 / 12.6 declined-deferred and 13.2 built 2026-08-29).
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
@@ -70,9 +70,10 @@
 - @-symbol mentions
 - Worktrees
 - Extensibility status view
+- **15.5 Debugger MCP tools** [LG] (deferred 2026-08-29): expose the live PhpStorm debug session (`XDebuggerManager` → frames, variables, breakpoints) as bridge tools in `IdeTools.kt`, mirroring VS Code's `claude-vscode-extension` MCP server + `ask_debugger_help` hand-off; needs an Xdebug session in the sandbox to test
 
 ## Deferred (user's choice, do last)
-- Conversation tabs
+- Conversation tabs (+ 8.8 reopen-closed-session and 8.10 session groups/sidebar, both deferred 2026-08-29 — only worth it with tabs or worktrees)
 - Auto-include selection / Alt+K insert-mention action (checklist 6.6 / 6.5, 6.5 deferred 2026-08-29)
 - @-mention symbols from the IDE index (checklist 6.4 [MD], deferred 2026-08-29)
 - Focus view — prompts + responses only, tool noise hidden (checklist 12.6 [MD], deferred 2026-08-29; mockup first)

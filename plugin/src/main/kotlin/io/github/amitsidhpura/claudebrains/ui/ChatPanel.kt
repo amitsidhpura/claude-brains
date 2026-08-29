@@ -15,6 +15,7 @@ import io.github.amitsidhpura.claudebrains.EditProposals
 import io.github.amitsidhpura.claudebrains.RenderLimits
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -194,6 +195,28 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "stop" -> session.interrupt()
             // ✕ on a background-task roster row (11.3): kill that one task, not the turn.
             "stopTask" -> msg["id"]?.jsonPrimitive?.content?.let { session.stopTask(it) }
+            // Side question (8.11): the page's own row id rides the request and comes back on the
+            // `__side` frame, so the answer lands on the row that asked — order is not assumed.
+            "side" -> {
+                val id = msg["id"]?.jsonPrimitive?.content ?: return
+                val question = msg["question"]?.jsonPrimitive?.content ?: return
+                val history = msg["history"] as? JsonArray ?: JsonArray(emptyList())
+                session.askSideQuestion(question, history) { response, error ->
+                    pushFrame(buildJsonObject {
+                        put("type", "__side")
+                        put("id", id)
+                        when {
+                            error != null -> put("error", error)
+                            else -> {
+                                // `response` is null when the model returned nothing (the CLI's own
+                                // contract); the page shows its no-answer line for that.
+                                put("response", response?.get("response") ?: JsonNull)
+                                put("synthetic", response?.get("synthetic") ?: JsonPrimitive(false))
+                            }
+                        }
+                    })
+                }
+            }
             // Pre-apply gutter lookup for an auto-approved edit's diff (4.4). The page asks at
             // content_block_stop — before the CLI runs the tool — which is the only moment
             // old_string is still findable. File IO goes to a pooled thread; the answer rides

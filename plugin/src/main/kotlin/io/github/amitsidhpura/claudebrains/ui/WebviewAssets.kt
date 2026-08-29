@@ -32,6 +32,7 @@ object WebviewAssets {
         "55-replay.js",        // transcript replay: replay* builders, renderTranscript, earlier-chunks
         "60-composer.js",      // attachments, queue, send/stop/retry, auto-grow
         "65-slash.js",         // slash menu + @-mentions, JCEF Delete-key workaround
+        "67-side.js",          // side question panel (/btw): off-thread answers, never in the log
         "70-events.js",        // Kotlin -> page: the onClaudeEvent switchboard
         "75-retraction.js",    // uuid stamping + eviction, status/result lines
         "80-gauge.js",         // context gauge

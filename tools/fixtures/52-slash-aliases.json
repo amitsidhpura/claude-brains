@@ -47,8 +47,8 @@
    "expect": [
     {
      "js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length",
-     "equals": 5,
-     "why": "GUARD: all five allowlisted rows render"
+     "equals": 6,
+     "why": "GUARD: all five allowlisted rows render, plus the panel-supplied /btw (CMD_LOCAL, 2026-08-29)"
     },
     {
      "js": "renderSlash('reset'); var r=document.querySelector('#slashList .popup-item'); r ? r.dataset.cmd : null",

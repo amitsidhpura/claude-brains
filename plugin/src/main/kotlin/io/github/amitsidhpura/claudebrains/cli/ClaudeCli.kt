@@ -233,9 +233,23 @@ class ClaudeCli(
         }
     }
 
+    /**
+     * Host requests that want their answer back, keyed by request_id. Everything else the host
+     * sends is fire-and-forget (set_model, interrupt, …) and only its error is surfaced. A
+     * side question is the first request whose SUCCESS carries the payload the user is waiting
+     * for, so its callback is registered before the line is written and consumed exactly once.
+     */
+    private val pending = java.util.concurrent.ConcurrentHashMap<String, (response: JsonObject?, error: String?) -> Unit>()
+
     private fun handleControlResponse(obj: JsonObject) {
         val resp = obj["response"]?.jsonObject ?: return
         val reqId = resp["request_id"]?.jsonPrimitive?.content
+        reqId?.let { pending.remove(it) }?.let { cb ->
+            if (resp["subtype"]?.jsonPrimitive?.content == "error")
+                cb(null, resp["error"]?.jsonPrimitive?.content ?: "control request failed")
+            else cb(resp["response"]?.jsonObject ?: JsonObject(emptyMap()), null)
+            return
+        }
         // A refused host request (e.g. set_permission_mode the CLI won't honour) must reach the
         // user — swallowing it once left the mode chip lying about Auto mode.
         if (resp["subtype"]?.jsonPrimitive?.content == "error") {
@@ -391,10 +405,27 @@ class ClaudeCli(
     })
 
 
-    private fun sendControlRequest(request: JsonObject) {
+    /**
+     * Host-initiated: a side question (checklist 8.11; the TUI's `/btw`). The CLI answers it on a
+     * one-turn fork of the conversation — tools denied, transcript write skipped — so nothing
+     * lands in the thread (measured 2026-08-29: `system/control_request_progress{started}`, then
+     * `control_response{response:{response, synthetic}}`; no record on disk, no turn on the wire).
+     * [history] is the panel's earlier `{question, response}` pairs so a follow-up reads as one;
+     * the CLI keeps none itself. The answer, or the CLI's error text, comes back on [onAnswer].
+     */
+    fun askSideQuestion(question: String, history: JsonArray, onAnswer: (response: JsonObject?, error: String?) -> Unit) =
+        sendControlRequest(buildJsonObject {
+            put("subtype", "side_question")
+            put("question", question)
+            if (history.isNotEmpty()) put("history", history)
+        }, onAnswer)
+
+    private fun sendControlRequest(request: JsonObject, onResponse: ((JsonObject?, String?) -> Unit)? = null) {
+        val id = java.util.UUID.randomUUID().toString()
+        onResponse?.let { pending[id] = it }
         val line = json.encodeToString(JsonObject.serializer(), buildJsonObject {
             put("type", "control_request")
-            put("request_id", java.util.UUID.randomUUID().toString())
+            put("request_id", id)
             put("request", request)
         })
         writeLine(line)
@@ -452,6 +483,9 @@ class ClaudeCli(
 
     fun stop() {
         stopped = true
+        // A question still in flight will never be answered by this process; say so rather than
+        // leave the panel's row pending forever.
+        pending.keys.toList().forEach { id -> pending.remove(id)?.invoke(null, "claude stopped before answering") }
         runCatching { stdin?.close() }
         process?.destroy()
         // Carries the bridge auth token; don't leave it in the temp dir.

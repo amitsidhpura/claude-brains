@@ -50,8 +50,8 @@
       "expect": [
         {
           "js": "renderSlash(''); document.querySelectorAll('#slashList .popup-item').length",
-          "equals": 7,
-          "why": "GUARD: all seven render (allowlisted built-ins + suffix-marked customs)"
+          "equals": 8,
+          "why": "GUARD: all eight render (allowlisted built-ins + suffix-marked customs + the panel-supplied /btw, CMD_LOCAL 2026-08-29)"
         },
         {
           "js": "renderSlash(''); !!document.querySelector('#slashList .popup-item[data-cmd=\"/no-hint-probe\"]').dataset.takesarg",

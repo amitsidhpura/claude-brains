@@ -544,6 +544,15 @@ re-read those before trusting memory here.
   which must NOT be `.done` (whose 22px dot-column indent shifts the whole card).
 - **The mockup links `chat.css` with no cache-buster**, so a `?v=N` on the HTML re-fetches the page and
   serves the STALE stylesheet — a CSS fix measured that way reads as "no effect".
+- **Centring an absolutely-positioned box under a max-width: `margin: 0 auto` with BOTH insets set.**
+  `#sidePanel { left:14px; right:14px; max-width:720px }` hugged the left inset once the cap bit,
+  while `#inputcard` sat centred (JCEF at 869px: centres 374 vs 435). Auto margins resolve the
+  over-constrained case and centre it (435 vs 435). Measured on real JCEF 2026-08-29.
+- **`syncGutter` (composer `paddingRight` = 14 + log scrollbar) only re-runs on a `#log` RESIZE.**
+  A scrollbar that appears because content grew does not resize `#log`, so the inset lags (measured:
+  10px scrollbar, paddingRight still 14px). Anything that must align with the composer should COPY
+  `composerEl.style.paddingRight` (the side panel does) rather than recompute from the scrollbar —
+  recomputing would be "more correct" and visibly disagree with the composer.
 
 ## Testing, probes and sandboxes
 - **`tools/cdp.py` prints its `# target:` line on STDERR.** Piping stdout through `tail -n +2` (to
@@ -722,3 +731,12 @@ re-read those before trusting memory here.
 - **Free pre-fix control, again:** the sandbox serving the OLD bytes is the cheapest negative
   control there is — run the new fixture BEFORE restarting (63's geometry assert, 64's errors[]
   assert, 65 all got theirs this way). Once restarted, the honest fallback is the wrong-value copy.
+- **A page-lifetime counter must not appear as a literal in a fixture.** Fixture 66 asserted row id
+  `sq1`; it passed on the first full run and failed on the second (`sq5`) because the panel is never
+  reloaded between harness runs. Resetting the counter is the wrong fix (a late answer for an old row
+  could then land on a new one) — read the id from the taped bridge payload instead.
+- **A panel-supplied slash entry (`CMD_LOCAL`) is one more rendered row in every fixture that counts
+  `#slashList .popup-item`.** Adding `/btw` broke 46, 50 and 52 (+1 each, noted in their `why`).
+- **Write fixture expects null-safe when the free pre-feature control is planned**: the pre-feature
+  build has none of the new DOM, and a `null.classList` inside an expect ABORTS the whole harness run
+  instead of failing one assert — wrap in `(function(){ var p = …; return p ? … : null; })()`.

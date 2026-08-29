@@ -4,6 +4,34 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — Destructive hover stays red (roster ✕, history delete); everything else white
+- The two hover-revealed DESTRUCTIVE controls (`.bg-x:hover`, `.hist-del:hover`) go `--red`;
+  every other hover-revealed control (`.rm`, `.model-del`, `.t-edit`) goes `--fg`. User asked
+  whether the red was a one-off, was shown it is a deliberate pair, and kept it. Do not
+  re-propose unifying to white.
+
+## 2026-08-29 — 8.11 side question built as a floating panel over the composer, opened by /btw
+- Placement: a full-composer-width box anchored above the composer (not a right-side panel like
+  history, not inline in the log) — the answer needs prose width, and "outside the log" is the
+  whole point. User approved the mockup render before wiring. Bare `/btw` opens, `/btw q` asks;
+  the panel has its own single-line input that grows (Ctrl+Enter; the 2-row first cut left dead space above Send — user, 2026-08-29), ✕ clear, close, Escape; a new/resumed
+  conversation resets it (its answers were about the thread that went away).
+- The roster carries no `/btw` (54 entries, 2.1.251 measured) — the panel supplies the entry
+  (`CMD_LOCAL`), as the TUI and VS Code do; `cmdKind('btw')` = native.
+- History is threaded by the client (`{question, response}` pairs of ANSWERED rows only); the
+  CLI keeps none. Row ids are page-lifetime monotonic so a late answer can never land on a new
+  row — fixture 66 therefore reads ids from its bridge tape, never literals.
+- Rejected: a slash-command that sends the question as a hidden turn (would enter the transcript
+  and burn a turn); rendering answers inline in the log (defeats the purpose).
+
+## 2026-08-29 — §15 closed: 15.5 debugger hand-off later, 15.6 MCP toggles no
+- **15.5** `ask_debugger_help` → ➖ later (backlog "Debugger MCP tools" [LG]). The VS Code message
+  itself is a no-op ack; the substance is a per-debug-session MCP server exposing stack/variables/
+  breakpoints. Buildable on `XDebuggerManager`, but a new tool surface nobody has asked for and
+  untestable without an Xdebug sandbox. Rejected: build now.
+- **15.6** Chrome/Jupyter MCP enable/disable → ➖ no, by design: MCP configuration is the
+  terminal's half (Philosophy). Rejected: later (it is not a queue position, it is a scope rule).
+
 ## 2026-08-29 — Goal: every checklist section ✅ by 2026-08-30 EOD; sections carry one mark
 - `## N. ✅|⬜ Title` in `docs/feature-checklist.md`; ✅ = every row ✅ or ➖. User rejected a
   richer form (a `— ✅ complete` / `⏳ pending (3 🟥 · 2 ⬜)` suffix + At-a-glance section line):

@@ -341,6 +341,7 @@
       const name = canonicalCmd(sc[1]);
       if (name !== sc[1].toLowerCase()) t = '/' + name + (sc[2] != null ? ' ' + sc[2] : '');
       if (name === 'clear') { clearComposer(); bridge({ kind: 'new' }); return; }         // fresh conversation
+      if (name === 'btw') { clearComposer(); sideOpen(sc[2] || ''); return; }             // side question (8.11)
       if (cmdKind(name) === 'tui') {
         clearComposer();
         statusLine("'/" + name + "' isn't available in the IDE.", SVG_ALERT, 'status err');

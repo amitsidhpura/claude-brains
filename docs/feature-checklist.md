@@ -11,9 +11,9 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-29) — 82 ✅ · 3 🟥 · 2 🟧 · 6 ⬜ · 35 ➖ (128 rows)
-- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay
-- **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 8.10 Session groups / sessions sidebar · 8.11 Side question · 14.2 Git actions in the host
+**At a glance** (2.1.250, 2026-08-29) — 83 ✅ · 2 🟥 · 2 🟧 · 2 ⬜ · 39 ➖ (128 rows)
+- **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.14 Reloaded-webview log replay
+- **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 14.2 Git actions in the host
 
 **Status marks**
 
@@ -352,17 +352,24 @@ auto-include selection, voice.
       {user_message_id, dry_run}` → `{canRewind, filesChanged, insertions, deletions}`, plus a
       `file_snapshot` / `files_persisted` record family (2026-08-23; unchanged since 2.1.233, not
       probed live — it mutates files). Status: still UNDECIDED — needs an explicit yes / later / no
-- **8.8** ⬜ [MD] **Reopen closed session** — Ctrl+Shift+T; ➖ while the plugin binds no shortcuts
-      and has no tabs
+- **8.8** ➖ [MD] **Reopen closed session** — Ctrl+Shift+T; the plugin binds no shortcuts and has no
+      tabs — deferred by the user 2026-08-29, follows conversation tabs (8.9)
 - **8.9** ➖ **Multiple conversation tabs** — deferred by the user (do last)
-- **8.10** ⬜ [LG] **Session groups / sessions sidebar** [NEW · DECIDE] — a
-      `claude-sessions-sidebar` view, `get_session_groups` / `update_session_groups`,
-      `list_sessions_request`. Take: our history popup already lists per-project sessions;
-      grouping is only worth it once tabs or worktrees exist. Watch
-- **8.11** 🟥 [MD] **Side question** [NEW · DECIDE] — `side_question` host message (TUI `/btw`):
-      ask without disturbing the main thread. Take: hourly-plausible. Probe DONE 2026-08-23: a
-      stdio control request `{subtype:"side_question", question, history?}` answered `{response,
-      synthetic}` with a real model reply, no turn on the main thread. Ready to build on a yes
+- **8.10** ➖ [LG] **Session groups / sessions sidebar** [NEW] — a `claude-sessions-sidebar` view
+      with user-named folders (`get_session_groups` / `update_session_groups`, stored client-side),
+      hide/delete, `list_sessions_request`. Our history popup already lists per-project sessions;
+      grouping only pays off once tabs or worktrees exist — deferred by the user 2026-08-29 ("not
+      very important"), follows tabs (8.9)
+- **8.11** ✅ [MD] **Side question** [NEW] — `/btw` (bare = open, `/btw question` = ask) opens a
+      panel floating above the composer (`#sidePanel`, `webview/js/67-side.js`); the question goes
+      out as a `side_question` control request and the answer renders there as markdown — never in
+      the log, never on disk (the CLI runs a one-turn fork with the transcript write skipped and
+      tools denied; measured 2026-08-29 on 2.1.251: `system/control_request_progress{started}` →
+      `control_response{response, synthetic}`, follow-ups carry the panel's `{question, response}`
+      pairs as `history`). The roster has no `/btw`; the panel supplies the entry (`CMD_LOCAL`), as
+      VS Code does. Escape closes, ✕ clears, a new/resumed conversation resets. Fixture 66 (25
+      asserts, control run pre-feature: 21 of 23 fail; centring assert -61 pre-fix; right-edge assert
+      copies the composer's scrollbar inset). Built 2026-08-29; live-verified §17 MT-7.9
 - **8.12** ➖ **Remote sessions / teleport / remote control** — `list_remote_sessions`,
       `teleport_session`, `toggle_remote_control` (TUI `/teleport`, `/rc`, `/session`); session
       SOURCES beyond the local disk lean infrastructure; recorded as a judgment call
@@ -510,7 +517,7 @@ auto-include selection, voice.
       newly noticed 2026-08-23 (present since ≤2.1.233). The IDE has native git diff, so this
       leans ➖ unless 14.3 wants the CLI's view of the diff
 
-## 15. ⬜ Onboarding & misc
+## 15. ✅ Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
@@ -519,15 +526,18 @@ auto-include selection, voice.
       auto-open, "Explored" grouping of consecutive Reads, `/stickers`, `/radio`, `/powerup`;
       leaning no
 - **15.4** ➖ **`/share` / `/export` / `/copy`** — the transcript is on disk; the terminal exports it
-- **15.5** ⬜ [LG] **`ask_debugger_help`** [NEW] — VS Code hands the debug console to Claude; no
-      PhpStorm analog probed, ➖ until someone asks
-- **15.6** ⬜ [SM] **Chrome MCP / Jupyter MCP toggles** [NEW] — `ensure_chrome_mcp_enabled`,
-      `enable_jupyter_mcp`; configuration, ➖
+- **15.5** ➖ [LG] **`ask_debugger_help`** [NEW] — VS Code registers a `claude-vscode-extension` MCP
+      server while a debug session is active (stack, variables, breakpoints) and the console offers
+      a hand-off; buildable via `XDebuggerManager` in the bridge's `IdeTools.kt` — deferred by the
+      user 2026-08-29 (backlog, [LG] "debugger MCP tools")
+- **15.6** ➖ [SM] **Chrome MCP / Jupyter MCP toggles** [NEW] — `ensure_chrome_mcp_enabled` /
+      `disable_chrome_mcp`, `enable_jupyter_mcp` / `disable_jupyter_mcp`; MCP configuration is the
+      terminal's half — declined by the user 2026-08-29 (by design)
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (130, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (134, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 60, 490 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 66, 566 assertions,
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
@@ -538,7 +548,7 @@ auto-include selection, voice.
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below
 
-## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 104/104 passed 2026-08-07→08-29)
+## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 105/105 passed 2026-08-07→08-29)
 - Source: `git show 9bd1683:docs/manual-test.md` (deleted 2026-08-28; §16.5). Setup was `cd plugin && ./gradlew runIde`, open the Claude Brains tool window; items were ticked by number ("3.4 done"); **(hard to trigger)** items carry their exact trigger recipe below.
 - Defect markers were exactly two: `ISSUE (date):` = open, `RESOLVED (date) — how:` = closed, *how* ∈ fixed / removed / not a bug; `grep -c '\*\*ISSUE'` was the open count. Final state: 31 RESOLVED, 0 ISSUE.
 - Undated items below were ticked on the first pass (2026-08-07/08); later dates come from the item's own note. Cross-cutting caveat (6.4): grants from 2026-08-07/08 persist in the testing project's `settings.local.json`, so permission cards only reappear for novel commands (the pass used `factor`/`mcookie`/`openssl`/`base32`, never granted).
@@ -635,7 +645,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.7 Context gauge & background tasks</b> — 8 items · 4 RESOLVED</summary>
+<details><summary><b>17.7 Context gauge & background tasks</b> — 9 items · 4 RESOLVED</summary>
 
 - **MT-7.1** Gauge after first turn, plausible %; orange at ≥50% → 9.3 · 2026-08-07
 - **MT-7.2** Clicking the gauge sends /compact → 9.3, 1.16 · 2026-08-07
@@ -645,6 +655,7 @@ auto-include selection, voice.
 - **MT-7.6** bg chip reflects what is actually running across turns AND restarts → 11.2 · 2026-08-15 · RESOLVED 2026-08-15: fixed — "chip said 2 tasks but there were none": the chip was RIGHT (two orphaned `until … sleep 30 … done` waiter loops, 2h34m and 1h31m old); real defect inverse: roster reset sat in `sendTurn` (hid live shells) and `clearLogUI` never cleared it (CLI emits the level only on membership CHANGE, per-process, nothing at startup); reset moved into `clearLogUI`; fixture 04 both directions (5 red pre-fix); real CLI `sleep 120` stayed "1 task" across a second message, new conversation cleared it; the client-parity audit had claimed this since before it was true
 - **MT-7.7** Roster rows leave no lingering hover highlight → 11.2 · 2026-08-15 · RESOLVED 2026-08-15: fixed — `sel` cursor painted by document `mouseover` with no `mouseout`, plus `tg()` seeding row 0; `.bg-row` opt-out (0,3,0) beat `:hover` but only TIED `.popup-item.sel` (0,2,0) and lost on order — stuck colour `rgb(44, 57, 76)`; fix: `nosel` on `#bgMenu` honoured at all three `sel` sites + `.popup-item.bg-row.sel` opt-out; roster deliberately non-interactive; verified with REAL CEF mouse events (`rgba(0,0,0,0)`, `sel` count 0), slash menu still moves its cursor on hover
 - **MT-7.8** Kill a background task from the roster ✕ → 11.3 · 2026-08-28 · real CLI 2.1.250 over CDP: `sleep 240` (`run_in_background`) on the roster as `local_bash` id `bmr1j2ggf` with its ✕; click → row dims, `stop_task` sent; the CLI's empty `background_tasks_changed` arrived within 1s, chip gone, and the `sleep 240` process (pid 518773) was no longer in the process tree — the kill is real, not cosmetic; fixture 61 (23 asserts, two negative controls), harness 490→513; hand-tested by the user 2026-08-28: shell, Explore sub-agent (suspended turn resumed and finished — summary + Send), one-of-two shells (survivor untouched), Escape + new-conversation reset (the surviving shell died with the replaced CLI, no orphan)
+- **MT-7.9** Side question `/btw` → 8.11 · 2026-08-29 · real CLI 2.1.251 over CDP: `/btw In one short sentence: what does git --ff-only do?` opened the panel with the question row + shimmering "Thinking…", the answer rendered as markdown in ~4 s; a follow-up typed in the panel ("And the opposite flag?") was answered in context (`--no-ff`) via the `history` pairs; `#log` gained zero nodes and the testing project's transcript dir gained no file; fixture 66 (25 asserts; control against the pre-feature build: 21 of 23 failed, the later centring assert read -61 against the pre-centring CSS), harness 541→566
 
 </details>
 

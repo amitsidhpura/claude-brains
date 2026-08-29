@@ -114,6 +114,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", on) })
     }
 
+    /** Side question (8.11): answered off-thread by the CLI; see [ClaudeCli.askSideQuestion]. With
+     * no CLI running there is nobody to ask, and the panel needs to hear that too. */
+    fun askSideQuestion(question: String, history: kotlinx.serialization.json.JsonArray,
+                        onAnswer: (response: kotlinx.serialization.json.JsonObject?, error: String?) -> Unit) {
+        val c = cli ?: return onAnswer(null, "claude is not running")
+        c.askSideQuestion(question, history, onAnswer)
+    }
+
     /** Persisted thinking preference (9.5), stored as the exception (off). ON resets the CLI to
      * its session default (max_thinking_tokens null); OFF caps it at 0. */
     fun thinkingOff(): Boolean = props.getBoolean(THINKING_OFF_KEY, false)

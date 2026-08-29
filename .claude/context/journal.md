@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (fourth) — §15 closed, 8.8/8.10 deferred, 8.11 side question built and live-verified
+- §15: 15.5 `ask_debugger_help` later (backlog "Debugger MCP tools" [LG]), 15.6 MCP toggles no (by
+  design). §8: 8.8 later (follows tabs), 8.10 later ("not very important"). User parked 8.7 + §14 last.
+- 8.11 measured BEFORE building: a live probe (panel flags, `initialize` then `side_question`) showed
+  the roster has no `/btw`, the wire is `system/control_request_progress{started}` →
+  `control_response{response, synthetic}`, `history` pairs work, and nothing hits the transcript dir.
+- Built per convention: mockup + CSS first, headless render shown, yes, then wired. Kotlin gained
+  request-id-keyed control callbacks (`ClaudeCli.pending`). Fixture 66 written defensively (null-safe
+  expects) so the FREE pre-feature control could run: 21/23 failed; centring assert read -61 against
+  the pre-centring CSS; right-edge assert added after the user spotted the mockup misalignment.
+- Two slips caught by the harness: fixture 66 hard-coded row ids (`sq1`) and failed on its second
+  run (`sq5`) — ids are page-lifetime monotonic by design, so the fixture now reads them from the
+  tape; and `CMD_LOCAL` added a slash row, so four roster-count fixtures needed +1.
+- User feedback applied: side input one line at rest (was 2 rows — dead space above Send);
+  panel centred on `#inputcard` (`margin: 0 auto`, measured 435 vs 435 on JCEF) and copying the
+  composer's scrollbar inset. Measured on the way: `syncGutter` lags a scrollbar that appears
+  without a `#log` resize (pre-existing; offered, not asked).
+- Red destructive hover (roster ✕ + history delete) asked about, shown deliberate, kept.
+- End: harness **566/0** (fixtures to 66), `./gradlew test` **134/0**, sandbox up on the final
+  build. Committed and pushed.
+
 ## 2026-08-29 (third) — section marks; goal set; §1 closed (1.21/1.23/1.24 built, 1.22/1.25 ➖)
 - User asked for section-level marks: `## N. ✅|⬜ Title`, one glyph, no counts ("let's not complicate
   it"). Then set the goal: every section ✅ by 2026-08-30 EOD, working one section at a time.
@@ -184,38 +205,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Two lessons promoted from the digested 2026-08-21 (second) entry into gotchas (compaction
   record order; gradle stream split + background cwd), plus the extension-dir-deleted trap.
 
-## 2026-08-26 — effort moves into the model menu, and three chip suffixes later it hides
-
-- **Effort slider MOVED from the mode menu's `.popup-f` into `#modelFooter`** as its last row,
-  below the 1M / fast / thinking switches; model popup header renamed "Select a model" → **Models**.
-  `#modeMenu` now holds nothing but modes. Mirrored in `design/mockup.html`.
-- **The level's chip suffix went through three forms in one session** — mode chip `(High)` →
-  model chip `(High)` → model chip `· High` → **no chip at all**. The user rejected two bracket
-  groups from a screenshot (`Default (Opus 5) (High)`), so six candidates were injected as real
-  `.chip-btn` nodes INSIDE `#inputbar` and screenshotted over CDP; the middot won, then was itself
-  rejected — "better is to hide effort". Final: `setModelChip` is byte-identical to its old body,
-  and `syncModelChip`/`currentEffort`/`.chip-sep` are gone. See decisions.
-- `.ef-row` is deliberately NOT `.tgl-row` so fixture 55 keeps counting exactly three TOGGLE rows.
-- **Fixture 51 retargeted + renamed** `51-mode-menu-effort-rail.json` → `51-model-menu-effort-rail.json`.
-  Its old text-delta contract DIED: model rows have no `.pi-ic` to measure against, so it would
-  have been vacuous. Now pins the moved row's icon against the 1M row's and inherits the model-title
-  rail from fixture 55 by transitivity. Step 3 pins the ABSENCE of the level on both chips.
-- **Three negative controls RUN**, each build verified BY CONTENT first: HEAD (10 pass / 7 fail),
-  the rejected middot build (15/2 — only the model-chip asserts), the rejected bracket build.
-  They are complementary: HEAD leaves the model-chip asserts passing, middot leaves the mode-chip
-  one passing. No assert passed in every build. Live 462 → **467**, unit **116**.
-- **Article claim triaged, three ways.** "Model-dependent controls will silently do nothing":
-  (a) the structural half was already satisfied by this session's move; (b) the Haiku half was
-  REFUTED by the user's own screenshot — haiku carries none of `supportsEffort`/
-  `supportedEffortLevels`/`supportsAdaptiveThinking` yet accepts `/effort max` and streams
-  thinking, so the gate I proposed would have broken working controls; (c) the **Fable half was
-  CONFIRMED** by a controlled headless probe — `set_max_thinking_tokens 0` returns success and
-  fable still streams a thinking block, identical to the control run. Documented, not fixed.
-- Gotchas hit: a relaunched sandbox served the PREVIOUS build's bytes while its own sandbox file
-  was already correct — caught only by the by-content check. And `runIde` detaches: gradle exits
-  0/1 while the IDE keeps running, so the task "failing" says nothing about the IDE.
-
 ## Digest
+- **2026-08-26** — effort slider moved into `#modelFooter` (header "Models"); the level's chip suffix went bracket → middot → NOTHING (user: "better is to hide effort"; six candidates rendered as live `.chip-btn` nodes in `#inputbar`). Fixture 51 retargeted to `51-model-menu-effort-rail.json`, three complementary controls run. Article claim triaged: Haiku half REFUTED by the user's screenshot (no gating on capability flags), Fable thinking-switch INERT confirmed by probe — documented, not fixed. Harness 467, unit 116.
 - **2026-08-25 (third)** — 0.11.0 released (`4c8899b`, tag `v0.11.0`): effort confirmation line, custom-model ✓/× fixes, /model-/effort resume parity. verifyPlugin ×7 — the FIRST attempt never ran (masked exit; verdict files still said 0.10.0 → the version in the verdict path is part of the check, gotchas § Build). Marketplace Approved incl. the 2026.2.2 EAP check.
 - **2026-08-25 (second)** — model-menu polish: custom rows get the ✓ (fixture 57; `#inputbar` ID
   rules falsified two rounds of hand-derived offsets); chip `set_model` writes a `/model` trio to the

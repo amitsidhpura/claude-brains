@@ -51,6 +51,7 @@
     c.style.setProperty('--ctx-pct',n); c.lastChild.nodeValue=n+'%'; c.classList.toggle('warn', n>=50);})(document.getElementById('ctxChip'))">ctx</button>
   <button onclick="tgState('histEmpty', 'histFull')">no history</button>
   <button onclick="startRename(event)">rename</button>
+  <button onclick="tgSide(event)">btw</button>
   <button onclick="document.getElementById('convTitle').classList.toggle('unnamed')">unnamed</button>
   <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>
@@ -110,6 +111,33 @@
     </div>
     <div id="histEmpty" class="hist-list" hidden>
       <div class="hist-empty">No past conversations for this project.</div>
+    </div>
+  </div>
+
+  <!-- SIDE QUESTION (checklist 8.11, the TUI's /btw): a scratch surface floating over the log and
+       anchored to the composer (JS keeps its bottom edge tracking the composer's height). Nothing
+       here reaches the conversation — the CLI runs a one-turn fork with the transcript write
+       skipped and tools denied (measured 2026-08-29: no record on disk, no turn on the wire).
+       Questions wear the user surface; answers render through renderMd as a gutterless .blk. -->
+  <div id="sidePanel">
+    <div class="side-h">
+      <span class="side-title"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>Side question</span>
+      <span class="side-hint">stays out of the conversation</span>
+      <button class="icon-btn" id="sideClear" title="Clear side questions"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+      <button class="icon-btn" id="sideClose" title="Close"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <div id="sideList" class="side-list">
+      <div class="side-q">what does --ff-only do?</div>
+      <div class="blk side-a"><p><code>--ff-only</code> tells <code>git merge</code> (or <code>git pull</code>) to only proceed if the merge can be done as a fast-forward, aborting instead of creating a merge commit if the branches have diverged.</p></div>
+      <div class="side-q">and the opposite flag?</div>
+      <!-- in flight: the shared shimmer sweep, same heartbeat as the working line -->
+      <div class="side-a pending"><span class="shimmer">Thinking…</span></div>
+      <!-- an answer that never came (response:null on the wire) or a control error -->
+      <div class="side-a err">Claude didn't return an answer for this side question.</div>
+    </div>
+    <div class="side-in">
+      <textarea id="sideInput" rows="1" placeholder="Ask a quick question…  (Ctrl+Enter to send)"></textarea>
+      <button id="sideSend" title="Send side question"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
     </div>
   </div>
 
@@ -942,6 +970,7 @@ total 196K
       if (document.querySelector('.card-menu.show')) { closeCardMenus(); return; }
       var m = activeMenu();
       if (m) { if (m.id === 'slashMenu') slashEscaped = true; m.classList.remove('show'); return; }
+      if (document.getElementById('sidePanel').classList.contains('show')) { document.getElementById('sidePanel').classList.remove('show'); return; }
       document.getElementById('histPanel').classList.remove('show');
       return;
     }
@@ -984,6 +1013,16 @@ total 196K
     if (e.target === this || e.target.closest('.lb-x')) this.classList.remove('show');
   });
 
+  // side-question panel toggle (bottom edge tracks the real composer height, as in chat.html)
+  function tgSide(e) {
+    if (e) e.stopPropagation();
+    var p = document.getElementById('sidePanel');
+    p.style.bottom = (document.getElementById('composer').offsetHeight + 8) + 'px';
+    p.style.right = composerEl.style.paddingRight || '14px';   // the composer's scrollbar inset, read back
+    p.classList.toggle('show');
+    if (p.classList.contains('show')) document.getElementById('sideInput').focus();
+  }
+  document.getElementById('sideClose').onclick = function (e) { tgSide(e); };
   // history panel toggle (top edge tracks the real header height)
   function tgHist(e) {
     if (e) e.stopPropagation();

@@ -1,0 +1,201 @@
+{
+ "item": "8.11 side question (/btw): a question asked in the side panel goes out as a `side` bridge message with the panel's history, the answer renders in the panel as markdown, and NOTHING reaches the log",
+ "branch": "60-composer.js submit() `/btw` native branch → 67-side.js sideOpen/sideAsk/sideAnswer; 70-events.js `__side` + `__clear` reset; 30-menus.js Escape rung; 65-slash.js CMD_LOCAL",
+ "provenance": "The CLI frames are MEASURED, verbatim from a live probe on 2.1.251 (2026-08-29, tools/ probe in the journal): `system/control_request_progress{request_id,status:'started',uuid,session_id}` precedes every answer, and the control_response carries {response, synthetic:false}; a follow-up with `history:[{question,response}]` was answered in context; nothing was written to the project's transcript dir. `__side` is OURS (ChatPanel's translation of that control_response: {id, response|null, synthetic} or {id, error}) — self-consistency evidence for the page half; the Kotlin half is verified live (§17 MT-7.9). The `side` bridge payload is asserted through a taped window.__bridge (restored in the last step), so nothing here asks the sandbox's CLI anything. The no-answer line for response:null follows the CLI's own contract (askSideQuestion returns null → VS Code shows the same sentence). NEGATIVE CONTROL: run against the sandbox still serving the pre-feature webview (no #sidePanel, no /btw branch) — RUN 2026-08-29, result in the journal; every DISCRIMINATING assert must fail there, the GUARDs (log untouched) pass either way, which is why the guards alone would be vacuous. ROW IDS: the counter is page-lifetime monotonic (never reset, so a late answer for an old row can never land on a new one), which is why every __side frame here takes its id FROM THE TAPE rather than a literal — the first full-harness pass after the fixture was written passed with sq1/sq2, the second failed with sq5/sq6 (2026-08-29). CENTRING CONTROL 2026-08-29: the centre-delta assert was run against the sandbox still serving the pre-centring chat.css (the free pre-fix build) — result in the journal; it reads -61 there at the panel's 869px width and 0 after the restart.",
+ "steps": [
+  {
+   "note": "bare /btw opens the panel, focuses its input, sends nothing",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge66) { window.__realBridge66 = window.__bridge; } window.__tape66 = []; window.__bridge = function(j){ window.__tape66.push(JSON.parse(j)); }; var i = document.getElementById('input'); i.value = '/btw'; i.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', ctrlKey:true, bubbles:true}));",
+   "expect": [
+    {
+     "js": "(function(){ var p = document.getElementById('sidePanel'); return !!(p && p.classList.contains('show')); })()",
+     "equals": true,
+     "why": "DISCRIMINATING: the panel is open"
+    },
+    {
+     "js": "document.activeElement && document.activeElement.id",
+     "equals": "sideInput",
+     "why": "DISCRIMINATING: focus moved to the side input"
+    },
+    {
+     "js": "window.__tape66.length",
+     "equals": 0,
+     "why": "nothing was sent — a bare /btw only opens"
+    },
+    {
+     "js": "document.getElementById('input').value",
+     "equals": "",
+     "why": "the composer was cleared (native branch, not forwarded as text)"
+    },
+    {
+     "js": "(function(){ function c(el){ var r = el.getBoundingClientRect(); return Math.round(r.left + r.width/2); } var sp = document.getElementById('sidePanel'), ic = document.getElementById('inputcard'); return (sp && ic) ? c(sp) - c(ic) : null; })()",
+     "equals": 0,
+     "why": "DISCRIMINATING (geometry, real JCEF): the box is centred on the composer's card — `margin: 0 auto`; pre-centring CSS read 374 vs 435 at 869px, i.e. -61"
+    },
+    {
+     "js": "(function(){ var sp = document.getElementById('sidePanel'), ic = document.getElementById('inputcard'); return (sp && ic) ? Math.round(sp.getBoundingClientRect().right - ic.getBoundingClientRect().right) : null; })()",
+     "equals": 0,
+     "why": "DISCRIMINATING (geometry): right edges coincide — the panel carries the composer's scrollbar inset (syncGutter); pre-fix, with a scrolling log, the panel overhung by the scrollbar width"
+    }
+   ]
+  },
+  {
+   "note": "/btw <question> opens and asks: one question row, one pending answer, one `side` message with empty history",
+   "setup": "var i = document.getElementById('input'); i.value = '/btw what does --ff-only do?'; i.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', ctrlKey:true, bubbles:true}));",
+   "expect": [
+    {
+     "js": "(function(){ var l = document.getElementById('sideList'); return l ? [l.querySelectorAll('.side-q').length, l.querySelectorAll('.side-a.pending').length, (l.querySelector('.side-q')||{}).textContent] : null; })() && JSON.stringify((function(){ var l = document.getElementById('sideList'); return [l.querySelectorAll('.side-q').length, l.querySelectorAll('.side-a.pending').length, l.querySelector('.side-q').textContent]; })())",
+     "equals": "[1,1,\"what does --ff-only do?\"]",
+     "why": "DISCRIMINATING: question row + pending answer"
+    },
+    {
+     "js": "JSON.stringify((function(){ var t = window.__tape66[0]; return t ? [t.kind, /^sq\\d+$/.test(t.id), t.question, t.history] : null; })())",
+     "equals": "[\"side\",true,\"what does --ff-only do?\",[]]",
+     "why": "DISCRIMINATING: the bridge payload — kind, an sqN row id, question, empty history (ids are page-lifetime monotonic, so only the shape is pinned)"
+    },
+    {
+     "js": "document.querySelectorAll('#log > *:not(#welcome)').length",
+     "equals": 0,
+     "why": "GUARD: the log gained nothing — no user bubble, no turn"
+    }
+   ]
+  },
+  {
+   "note": "the CLI's progress frame (verbatim) draws nothing anywhere",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "control_request_progress",
+     "request_id": "2170f254-2738-4db2-b2c3-9dd11c5b73d5",
+     "status": "started",
+     "uuid": "bfb2c4af-3ceb-4815-8c8f-d70ddf6cdfa4",
+     "session_id": "c292c466-fccf-47f5-b391-b02953d37518"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log > *:not(#welcome)').length",
+     "equals": 0,
+     "why": "GUARD: log untouched"
+    },
+    {
+     "js": "(function(){ var l = document.getElementById('sideList'); return l ? l.querySelectorAll('.side-a.pending').length : null; })()",
+     "equals": 1,
+     "why": "still pending — the progress frame is not an answer"
+    }
+   ]
+  },
+  {
+   "note": "the answer lands on its row as markdown; the pair joins the history; the log stays empty",
+   "expect": [
+    {
+     "js": "(function(){ var a = document.querySelector('#sideList .side-a'); return a ? [a.classList.contains('pending'), a.classList.contains('blk'), a.querySelectorAll('code').length] : null; })() && JSON.stringify((function(){ var a = document.querySelector('#sideList .side-a'); return [a.classList.contains('pending'), a.classList.contains('blk'), a.querySelectorAll('code').length]; })())",
+     "equals": "[false,true,3]",
+     "why": "DISCRIMINATING: pending cleared, rendered through renderMd (three inline codes)"
+    },
+    {
+     "js": "document.querySelectorAll('#log > *:not(#welcome)').length",
+     "equals": 0,
+     "why": "GUARD: the answer did not enter the log"
+    }
+   ],
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__side', id: (window.__tape66[0]||{}).id, response: '`--ff-only` tells `git merge` (or `git pull`) to only proceed if the merge can be done as a fast-forward, aborting instead of creating a merge commit if the branches have diverged.', synthetic:false}));"
+  },
+  {
+   "note": "a follow-up typed in the panel's own input (Ctrl+Enter) carries the answered pair as history",
+   "setup": "var s = document.getElementById('sideInput'); if (s) { s.value = 'and the opposite flag?'; s.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', ctrlKey:true, bubbles:true})); }",
+   "expect": [
+    {
+     "js": "JSON.stringify((window.__tape66[1] || {}).history || null)",
+     "equals": "[{\"question\":\"what does --ff-only do?\",\"response\":\"`--ff-only` tells `git merge` (or `git pull`) to only proceed if the merge can be done as a fast-forward, aborting instead of creating a merge commit if the branches have diverged.\"}]",
+     "why": "DISCRIMINATING: history = the one answered pair"
+    },
+    {
+     "js": "(function(){ var a = window.__tape66[0], b = window.__tape66[1]; return !!(a && b && a.id !== b.id && /^sq\\d+$/.test(b.id)); })()",
+     "equals": true,
+     "why": "row ids differ (monotonic counter)"
+    },
+    {
+     "js": "(function(){ var s = document.getElementById('sideInput'); return s ? s.value : null; })()",
+     "equals": "",
+     "why": "the side input was cleared on send"
+    }
+   ]
+  },
+  {
+   "note": "response:null (the CLI's own no-answer) shows the no-answer line and is NOT added to the history",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__side', id:(window.__tape66[1]||{}).id, response:null, synthetic:false})); var s = document.getElementById('sideInput'); if (s) { s.value = 'third'; s.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', ctrlKey:true, bubbles:true})); }",
+   "expect": [
+    {
+     "js": "(function(){ var a = document.querySelectorAll('#sideList .side-a')[1]; return a ? [a.classList.contains('err'), a.textContent] : null; })() && JSON.stringify((function(){ var a = document.querySelectorAll('#sideList .side-a')[1]; return [a.classList.contains('err'), a.textContent]; })())",
+     "equals": "[true,\"Claude didn't return an answer for this side question.\"]",
+     "why": "DISCRIMINATING: the no-answer line"
+    },
+    {
+     "js": "((window.__tape66[2] || {}).history || []).length",
+     "equals": 1,
+     "why": "the unanswered pair is not history (still just the first pair)"
+    }
+   ]
+  },
+  {
+   "note": "a control error (e.g. the CLI stopped) is shown verbatim on its row",
+   "expect": [
+    {
+     "js": "(function(){ var a = document.querySelectorAll('#sideList .side-a')[2]; return a ? [a.classList.contains('err'), a.textContent] : null; })() && JSON.stringify((function(){ var a = document.querySelectorAll('#sideList .side-a')[2]; return [a.classList.contains('err'), a.textContent]; })())",
+     "equals": "[true,\"claude stopped before answering\"]",
+     "why": "DISCRIMINATING: error text on the row"
+    },
+    {
+     "js": "(function(){ var l = document.getElementById('sideList'); return l ? l.querySelectorAll('.side-a.pending').length : null; })()",
+     "equals": 0,
+     "why": "nothing left pending"
+    }
+   ],
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__side', id:(window.__tape66[2]||{}).id, error:'claude stopped before answering'}));"
+  },
+  {
+   "note": "Escape closes the panel (its content is kept); a stray answer for an unknown row is ignored",
+   "setup": "document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); window.onClaudeEvent(JSON.stringify({type:'__side', id:'sq-unknown', response:'late'}));",
+   "expect": [
+    {
+     "js": "(function(){ var p = document.getElementById('sidePanel'); return p ? p.classList.contains('show') : null; })()",
+     "equals": false,
+     "why": "DISCRIMINATING: closed by Escape"
+    },
+    {
+     "js": "(function(){ var l = document.getElementById('sideList'); return l ? l.querySelectorAll('.side-q').length : null; })()",
+     "equals": 3,
+     "why": "rows survive a close; the unknown-id frame added nothing"
+    }
+   ]
+  },
+  {
+   "note": "Clear empties the rows and the history: the next question goes out with history []",
+   "setup": "var b = document.getElementById('sideClear'); if (b) b.click(); var s = document.getElementById('sideInput'); if (s) { s.value = 'fresh'; s.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', ctrlKey:true, bubbles:true})); }",
+   "expect": [
+    {
+     "js": "JSON.stringify(((window.__tape66[3] || {}).history) || null)",
+     "equals": "[]",
+     "why": "DISCRIMINATING: history cleared"
+    },
+    {
+     "js": "(function(){ var l = document.getElementById('sideList'); return l ? l.querySelectorAll('.side-q').length : null; })()",
+     "equals": 1,
+     "why": "only the fresh question remains"
+    }
+   ]
+  },
+  {
+   "note": "a new conversation (__clear) resets and closes the panel; the bridge is restored",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (window.__realBridge66) { window.__bridge = window.__realBridge66; }",
+   "expect": [
+    {
+     "js": "(function(){ var p = document.getElementById('sidePanel'); var l = document.getElementById('sideList'); return (p && l) ? [p.classList.contains('show'), l.querySelectorAll('.side-q').length, !!l.querySelector('.side-empty')] : null; })() && JSON.stringify((function(){ var p = document.getElementById('sidePanel'); var l = document.getElementById('sideList'); return [p.classList.contains('show'), l.querySelectorAll('.side-q').length, !!l.querySelector('.side-empty')]; })())",
+     "equals": "[false,0,true]",
+     "why": "DISCRIMINATING: closed, empty, placeholder back"
+    }
+   ]
+  }
+ ]
+}

@@ -471,7 +471,8 @@
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
-      case '__clear':            return clearLogUI();
+      case '__clear':            sideReset(); return clearLogUI();
+      case '__side':             return sideAnswer(ev);   // side-question answer (8.11)
       case '__title':            return setTitle(ev.text);
       case '__mode':             return applyCliMode(ev.mode);   // persisted mode, at startup
       case '__project':          return setProjectRoot(ev.root); // shortens tool-line paths

@@ -6,8 +6,8 @@ turn. Consequences:
 
 - **Enabled - sent to CLI**: forwarded as a turn; the CLI expands it (skills, prompts,
   custom/project commands, and prompt-style built-ins like `/compact`).
-- **Enabled - native (IDE)**: handled by the plugin itself (`/clear` -> new conversation),
-  never forwarded.
+- **Enabled - native (IDE)**: handled by the plugin itself (`/clear` -> new conversation,
+  `/btw` -> side-question panel), never forwarded.
 - **Enabled - custom (automatic)**: project/user command files, project/user skills, and
   MCP-server prompts — detected from the wire (below), shown with a muted source badge
   ("project" / "user" / "mcp"), and sent as a turn. Never hand-listed.
@@ -121,6 +121,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
+| `/btw` | Enabled - native (IDE) | [x] |  | Ask a quick side question without interrupting the conversation — opens the side-question panel (bare) or asks at once (`/btw question`); answered by a `side_question` control request, never a turn. NOT in the stdio roster (54 entries, 2.1.251, measured 2026-08-29): the panel supplies the entry itself (`CMD_LOCAL` in `65-slash.js`), as the TUI and VS Code do (checklist 8.11) |
 | `/clear` | Enabled - native (IDE) | [x] | `/reset`, `/new` | Start a new session with empty context; previous session stays on disk (resumable with /resume) |
 | `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
 | `/context` | Enabled - sent to CLI | [x] |  | Show current context usage |

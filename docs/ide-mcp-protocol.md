@@ -489,6 +489,18 @@ Accepted MID-TURN: `set_model`, `set_permission_mode`, `interrupt`, `set_max_thi
 `rename_session`, `set_color`, `mcp_authenticate`, `mcp_oauth_callback_url`, `mcp_reconnect`,
 `apply_flag_settings`, `side_question`, `reload_plugins`.
 
+`side_question` (checklist 8.11), measured live 2026-08-29 on 2.1.251 with the panel's own flags:
+request `{subtype:"side_question", question, history?:[{question, response, fallback_notice?}]}`;
+the CLI first emits `{type:"system", subtype:"control_request_progress", request_id, status:"started",
+uuid, session_id}` (the schema's "progress for a long-running client-originated control_request",
+`api_retry` is its other status), then answers `{subtype:"success", request_id, response:{response:
+string|null, synthetic:boolean, refusal_fallback?:{original_model, fallback_model, content}}}`.
+`response:null` is the CLI's own "no answer". It runs as a one-turn fork (`querySource:
+"side_question"`, `maxTurns:1`, `skipTranscript`, `canUseTool` → deny "Side questions cannot use
+tools"), so nothing lands in the transcript and no turn runs on the main thread; `history` is
+threaded by the CLIENT — the CLI keeps none. Errors seen in the binary: "Side question cancelled",
+"Session is shutting down". Accepted mid-turn.
+
 Response envelope: `{subtype:"success", request_id, response?}` / `{subtype:"error", request_id,
 error}` — both may carry `pending_permission_requests` / `pending_user_dialog_requests` on the
 `initialize` response, "so a client joining an already-initialized session learns about in-flight
