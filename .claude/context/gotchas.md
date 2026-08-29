@@ -433,6 +433,14 @@ re-read those before trusting memory here.
   into the page and NEVER pass through IntelliJ's key dispatcher, so a clean CDP result says nothing about
   the IDE stealing focus on a real keypress.
 
+- **Links in an OSR JCEF page must never be left to CEF.** `target="_blank"` → a CEF popup with no
+  surface: a BLANK PhpStorm window (user saw it "many times", 2026-08-29). A MIDDLE-click fires
+  `auxclick`, not `click`, spawns NO popup, and loads the URL in the panel's MAIN frame — the panel
+  becomes jetbrains.com and `cdp.py` can no longer attach (it filters by the chat-panel title; drive
+  the page target raw and `history.back()`, the reload heals chrome but drops the log, 8.14). Guards
+  in ChatPanel: `onBeforePopup` (return true) AND `onBeforeBrowse` (main frame + http(s) → browse
+  externally, return true); the JS delegate is the polite first layer. Fixture 67.
+
 ## Webview / CSS / layout
 
 - **Never do offset/size arithmetic inside `#inputbar`'s popups — ID rules falsify it.**
@@ -755,3 +763,8 @@ re-read those before trusting memory here.
 - **Write fixture expects null-safe when the free pre-feature control is planned**: the pre-feature
   build has none of the new DOM, and a `null.classList` inside an expect ABORTS the whole harness run
   instead of failing one assert — wrap in `(function(){ var p = …; return p ? … : null; })()`.
+- **Never run `live_harness.py` and a `cdp.py` injection at the same time** — fixtures `__clear` the
+  log, so a message injected for the user's hands-on test vanishes (returned 0 anchors, 2026-08-29).
+  Inject after the harness finishes.
+- **A `runIde` background task ends with exit 1 when the IDE is killed by pid** — that is the kill,
+  not a build failure; the log is empty. Check CDP/pgrep, not the task status.

@@ -4,6 +4,24 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — External links open in the system browser; the webview never navigates or pops up
+- Why: the panel is an off-screen JCEF browser. `target="_blank"` asked CEF for a popup window that
+  had no surface to draw on (blank PhpStorm windows, user report); a middle-click, which fires no
+  popup, loaded the URL in the panel's own main frame. Three guards, each covering what the others
+  cannot: JS `click`+`auxclick` delegate → `browse` frame → `BrowserUtil.browse` (honours the IDE's
+  Web Browsers setting); `onBeforePopup` for `window.open` and the like; `onBeforeBrowse` cancelling
+  any main-frame http(s) navigation. Bare URLs autolink while there.
+- Rejected: opening in the webview (no back button, no chrome, kills the panel); a JCEF child
+  window (same OSR problem); `setOpenLinksInExternalBrowser` (not in the 2024.2 platform API used).
+
+## 2026-08-29 — Effort selector is a pill slider in the .tgl idiom (CSS only)
+- Why: it sat under three `.tgl` switches drawn in a different idiom; the user brought a screenshot
+  of a pill track with ticks and a knob. Same DOM/classes, so `setEffortUI` and fixtures 51/55/58
+  are untouched; fill picked per level with `:has()`. Every stop is a fixed 12px slot so centres
+  never move; knob inset 2px and fill 2px past the knob in every state — the switch's own numbers.
+- Rejected: "Effort (High)" bracketed label (bold level kept); a blue track like the screenshot
+  (accent token only, no new colour constants); JS-computed fill (CSS can do it).
+
 ## 2026-08-29 — Marketplace change notes carry the last THREE versions + a GitHub releases link
 - `changeNotesHtml` had grown to 14 versions (0.4.0 → 0.11.1) under the rule "keep what users update
   FROM"; the What's New page showed the whole wall. User chose: last three, then a link to

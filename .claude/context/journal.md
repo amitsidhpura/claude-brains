@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (seventh) — links → system browser; effort pill slider; side hint
+- Side-question placeholder matched to the composer's ("Ctrl+Enter to send, Enter for newline") —
+  the Enter behaviour was already identical, only the hint differed.
+- Effort selector restyled as a pill slider from the user's screenshot (`.tgl` idiom, five stops).
+  Four rounds: label stays "Effort **High**" + accent token (asked); knob inset 3→2px; fill = knob
+  right + 2 so orange shows past the knob in EVERY state; stops made fixed 12px slots (tick = 4px
+  `::before`) because a 12px knob among 4px flex ticks re-spaced the centres. Geometry proven in
+  headless Chrome per round (sandbox was down), then in JCEF. Dead `background: transparent` cut.
+- **Blank PhpStorm windows on link clicks** (user, "many times"): `target=_blank` on an OSR JCEF
+  browser → CEF popup with no surface. Fix in three layers (JS delegate → `browse` frame,
+  `onBeforePopup`, and — after the user's middle-click navigated the panel to jetbrains.com —
+  `onBeforeBrowse` cancelling any main-frame http(s) load). Bare URLs autolink now.
+  Recovery of the navigated panel: raw CDP `Runtime.evaluate history.back()` on the page target
+  (cdp.py can't attach — it filters by the chat-panel title). Page reloads → log lost (8.14).
+- Fixture 67: control 1 (JS stashed, Kotlin kept): 2/6 → all discriminating asserts failed;
+  control 2 free against the running pre-auxclick page: exactly the two new asserts failed.
+  Harness 566 → 575, tests 134/0. User hand-tested all three click routes.
+- Sandbox now started/killed by Claude (user's go); `runIde` background task reports exit 1 when
+  the IDE is killed by pid — expected, not a failure.
+- Committed and pushed on the user's "commit and push" with this save.
+
 ## 2026-08-29 (sixth) — /clear removed (7.6 ➖); 8.7 + §14 decided; EVERY SECTION ✅
 - GOAL REACHED a day early: `docs/feature-checklist.md` is 82 ✅ · 46 ➖ (128 rows), all 17
   section headings ✅, no 🟥/🟧/⬜, no [DECIDE]. Remaining wants live in backlog (worktrees bundle,

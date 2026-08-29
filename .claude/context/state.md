@@ -1,21 +1,28 @@
 # State
 
 ## Current focus
-**2026-08-29 (twenty-second session): the checklist goal (every section ✅ by 2026-08-30) is DONE a
-day early — `docs/feature-checklist.md` = 82 ✅ · 46 ➖ (128 rows), all 17 headings ✅, no
-[DECIDE].** Today (all pushed, last `d886879`): 8.14 declined; `/clear` removed
-from the panel (7.6 ➖ — `CMD_NATIVE` = `{'btw'}`, header New button is the panel's /clear, typed
-`/clear`/`/new`/`/reset` refused; verified 134/0 + harness 566/0 + live) and 8.7 / §14 decided on
-the user's principle "undo and branching depend on git, not Claude" (8.7 no, 14.2/14.4 no by
-design, 14.1/14.3 later as the backlog "Worktrees bundle"). Earlier today §15 closed, 8.11 built.
-- 8.11 side question (`/btw`, `webview/js/67-side.js`, `ClaudeCli.pending` request-id callbacks,
-  fixture 66) — UNMEASURED corners: `synthetic:true`, `refusal_fallback`, the CLI's "Side question
-  cancelled" / "Session is shutting down" errors render verbatim if they ever arrive.
+**2026-08-29 (twenty-third session): post-release polish, UNRELEASED on `main`** — three user-driven
+fixes, all verified live in the sandbox and by harness 575/0 + `./gradlew test` 134/0:
+- **External links open in the system browser** (`webview/js/20-markdown.js` no `target=_blank` +
+  bare-URL autolink; `00-core.js` document `click`/`auxclick` delegate → `browse` bridge frame;
+  `ui/ChatPanel.kt` `"browse"` → `BrowserUtil.browse`, plus `onBeforePopup` AND `onBeforeBrowse`
+  guards). Root cause: OSR JCEF — a `_blank` popup had no surface (blank PhpStorm window), and a
+  middle-click navigated the PANEL itself. Fixture 67, two negative controls recorded in it. User
+  hand-tested left / middle / Ctrl+click → Chrome, panel stays.
+- **Effort selector is a pill slider** (`chat.css` `.effort` block): the `.tgl` idiom at five
+  fixed 12px stops, accent fill from `--ef-fill` via `:has()`, 2px knob inset, fill = knob right
+  + 2. CSS only; fixtures 51/55/58 unchanged. Four user rounds of spacing polish — decisions.md.
+- Side-question placeholder now says "(Ctrl+Enter to send, Enter for newline)" like the composer.
+- Next release (0.12.1 or 0.13.0) carries these; nothing else is pending for it.
+- 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
+  `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
+  down" errors render verbatim if they ever arrive.
 - Checklist rules still in force: `**id** mark [effort] **Name** — gist; facts`; the **At a glance**
   block is hand-maintained (recount with `awk` at every change); `<details>` only in the re-audit
-  paragraphs and §17 groups.
+  paragraphs and §17 groups. Checklist: 82 ✅ · 46 ➖ (128 rows), all 17 headings ✅.
 - Do not re-propose: an effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
-  Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md).
+  Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md); an "Effort (High)"
+  bracketed label or a blue track on the effort slider (2026-08-29).
 
 ## Released — 0.12.0 (2026-08-29)
 **0.12.0 is the shipped version** (tag `v0.12.0`, commit `0e1af47`): /btw, files-changed review,
@@ -23,7 +30,7 @@ tweak-travel, stop-task, settings schema, 1.21/1.23/1.24, /clear removed. Verifi
 GitHub asset byte-identical, feed live, `marketplace-upload` green (run 33257914722); Marketplace
 **Approved** the same day (user's screenshot: JetBrains' verifier Compatible 2025.3 → 2026.2.2 rc, plus an
 IDE-run check with no issues).
-Nothing unreleased on `main`. Change notes now carry exactly the LAST THREE versions + a GitHub
+Unreleased on `main` since: the three fixes above (this session). Change notes now carry exactly the LAST THREE versions + a GitHub
 releases link (rule in build.gradle.kts kdoc and release.md 1b).
 
 ## Open work — ids verified against `docs/feature-checklist.md`
@@ -31,11 +38,13 @@ releases link (rule in build.gradle.kts kdoc and release.md 1b).
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **566** (fixtures to 66); `./gradlew test` **134**.
+- `python3 tools/live_harness.py` baseline **575** (fixtures to 67); `./gradlew test` **134**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
-  nothing; `pgrep -f 'idea.system.pat[h]'`; kill by pid, wait for CDP to vanish.
+  nothing; `pgrep -f 'idea.system.pat[h]'`; kill by pid, wait for CDP to vanish. Claude may start
+  and kill the sandbox on its own (user, 2026-08-29). Never run the harness and a CDP injection
+  concurrently — fixtures `__clear` the log and the injection vanishes.
 - **ALWAYS verify the running build BY CONTENT over CDP before trusting a fixture run.** Control
   builds restore the WHOLE `plugin/src/main/resources/webview/` directory.
 - Fixture ids that a page-lifetime counter produces (`sq1…`) must be read from the bridge tape,
