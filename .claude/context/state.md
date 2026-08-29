@@ -21,7 +21,8 @@ design, 14.1/14.3 later as the backlog "Worktrees bundle"). Earlier today §15 c
 **0.12.0 is the shipped version** (tag `v0.12.0`, commit `0e1af47`): /btw, files-changed review,
 tweak-travel, stop-task, settings schema, 1.21/1.23/1.24, /clear removed. Verifier 7/7 Compatible,
 GitHub asset byte-identical, feed live, `marketplace-upload` green (run 33257914722); Marketplace
-API still listed 0.11.1 at 14:35Z — moderation pending, check `plugins.jetbrains.com/api/plugins/33274/updates`.
+**Approved** the same day (user's screenshot: JetBrains' verifier Compatible 2025.3 → 2026.2.2 rc, plus an
+IDE-run check with no issues).
 Nothing unreleased on `main`. Change notes now carry exactly the LAST THREE versions + a GitHub
 releases link (rule in build.gradle.kts kdoc and release.md 1b).
 
@@ -46,15 +47,9 @@ releases link (rule in build.gradle.kts kdoc and release.md 1b).
   is gone with the session.
 
 ## Next steps
-- [ ] Confirm 0.12.0 shows **Approved** on the Marketplace (API above) — nothing to do unless it
-      is rejected (then a patch release through the normal process, release.md § burned numbers).
-- [ ] **User, on the Marketplace page NOW that 0.12.0 is up**: upload the five reshot
-      `design/marketplace/*.png` on `plugins.jetbrains.com/plugin/33274/edit` (not in the zip), and
-      confirm the Description refreshed from plugin.xml (no "Diffs live in the chat" bullet, `/btw`
-      in the commands example). If the description did NOT refresh, release.md's premise is wrong
-      again — paste plugin.xml's text as Markdown, one line per paragraph.
-      `design/marketplace/img.png` (879×177, a stray paste committed in `5b50131`) is already gone
-      from disk — the deletion rides with the next commit.
+- [x] Marketplace page after 0.12.0 (2026-08-29): screenshots uploaded by the user; description
+      VERIFIED via `api/plugins/33274` to match plugin.xml (`/btw` in, `/clear` and the diffs bullet
+      out) — the "description comes from the plugin on upload" setting is confirmed working.
 - [x] `vscode/` re-extracted to **2.1.251** on 2026-08-29 (from 2.1.241; 2.1.250 was still on disk —
       extension.js +14.5 KB, webview/index.js +2.4 KB between the two). **Re-audit deferred by the
       user: wait a few CLI versions past 2.1.250 before the next checklist re-audit.**

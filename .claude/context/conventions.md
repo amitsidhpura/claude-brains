@@ -6,7 +6,9 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 ## Workflow
 - **Commit only when asked**, one meaningful commit per unit of work. **Authorization does not
   carry forward**: "commit and push" covers THAT save; a later "fix X" ends with the change in the
-  working tree and a report (a release-doc fix was committed unasked 2026-08-23 and reverted).
+  working tree and a report (a release-doc fix was committed unasked 2026-08-23 and reverted; two
+  post-release `state.md` touch-ups were pushed unasked 2026-08-29 — a release's "go" ends at the
+  release itself; even the context save after it needs its own ask).
 - **A release starts only when the user asks.** `docs/release.md` steps 1-5 being "fine to do
   proactively" licenses the mechanics, not the decision — never bump the version, edit
   `updatePlugins.xml` (served live off `main`: a bumped feed without an asset 404s every
