@@ -6,8 +6,9 @@ from release notes. Gotchas § "Auditing the reference clients" has the traps.
 
 1. **Versions on disk**: `claude --version`; `ls ~/.local/share/claude/versions/`;
    `ls ~/.vscode/extensions/ | grep claude`.
-2. **Re-extract `vscode/`** (not in git): `rsync -a --delete --exclude resources/native-binary/
-   --exclude resources/audio-capture/ ~/.vscode/extensions/anthropic.claude-code-<ver>-linux-x64/ vscode/`.
+2. **Re-extract `reference/anthropic-claude-code/`** (not in git; moved from `vscode/` 2026-08-29):
+   `rsync -a --delete --exclude resources/native-binary/ --exclude resources/audio-capture/
+   ~/.vscode/extensions/anthropic.claude-code-<ver>-linux-x64/ reference/anthropic-claude-code/`.
 3. **Baseline no longer on disk?** Download it:
    `https://marketplace.visualstudio.com/_apis/public/gallery/publishers/anthropic/vsextensions/claude-code/<ver>/vspackage?targetPlatform=linux-x64`
    — the response is a gzip-wrapped vsix (`gunzip`, then `unzip`); `extension/extension.js`,

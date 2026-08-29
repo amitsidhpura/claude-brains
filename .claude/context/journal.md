@@ -3,6 +3,25 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (eighth) — Copilot Chat 0.63 audited and dropped; `vscode/` → `reference/anthropic-claude-code/`
+- Landscape survey (web) → user asked for a Copilot extraction like `vscode/`. `github.copilot` is
+  deprecated; Copilot Chat is BUILT IN to VS Code (`/usr/share/code/resources/app/extensions/copilot`,
+  0.63.0); its OSS repo `microsoft/vscode-copilot-chat` stops at 0.44 (May 2026) and its bundled
+  changelog at 0.41 — the shipped manifest is the only truth.
+- Rearranged: `vscode/` moved under `reference/` as `anthropic-claude-code/` (2.1.251); `.gitignore`
+  `/vscode/` line dropped (`/reference/` already covers it); eight path-only doc/context edits.
+  Copilot folders were created, audited by an Explore agent (38 tools, 191+~330 settings, local
+  Claude Code harness REMOVED between 0.44 and 0.63, reads `.claude/skills` + `.claude/settings.json`
+  hooks), then deleted at the user's request. Report stayed in the scratchpad.
+- User verdict: Copilot is bloat; of ten features offered only "terminal last command/output as
+  context" survives → backlog. Everything else (worktree shape, model aliasing, per-phase models,
+  OTel, etc.) not to be re-proposed on Copilot's evidence.
+- Trap: `git mv -k` on an UNTRACKED path exits 0 without moving, so `|| mv` never fires — use plain
+  `mv` for gitignored dirs (gotchas § Build).
+- Checklist References block reworded: audited = 2.1.250; the extraction is "newest installed, the
+  diff base for the NEXT audit" — the 2.1.251 number was read as an audit claim.
+- Committed and pushed on the user's "commit and push" with this save.
+
 ## 2026-08-29 (seventh) — links → system browser; effort pill slider; side hint
 - Side-question placeholder matched to the composer's ("Ctrl+Enter to send, Enter for newline") —
   the Enter behaviour was already identical, only the hint differed.
@@ -219,63 +238,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   use a python `re.finditer` window instead (gotchas § Testing).
 - Changes left in the working tree; nothing committed.
 
-## 2026-08-28 — four docs retired, the checklist reshaped, one detour reverted
-- Doc audit → user deleted `docs/verifier-matrix.md` (parked), `docs/renderer-parity.md` (0 open),
-  `docs/client-parity.md` (all 37 DONE/by-design) and `docs/manual-test.md` (self-contained,
-  102/102 — the "92" in 16.5 undercounted). Knowledge promoted first: verifier DSL traps →
-  gotchas § Build; eight deliberate live/replay divergences → gotchas § Replay; not-taken wire
-  vocabulary → `ide-mcp-protocol.md` § 11; ~40 measured wire facts (agent-extracted from 1587
-  lines, deduped by key against §9/§10/gotchas) → § 12; the manual-test items → checklist § 17
-  (one `MT-n.m` line each, mapped to row ids, RESOLVED "how" + hard-to-trigger recipes kept).
-  Every cross-reference re-pointed; each deleted doc has a `git show 9bd1683:docs/<name>.md` pointer.
-- Learned: the "PhpStorm MCP" the CLI shows is OUR server (`bridge/IdeMcpServer.kt` names itself
-  `"Claude Code <ideName> MCP"`); the CLI is the MCP client.
-- **Detour**: a plan-approved bird's-eye restructure (section table + `<details>` headline per row)
-  went through four one-symptom fixes (uniform ▶, indent, no duplicate bodies, body indent) and was
-  reverted as "complete mess". Lesson → conventions § Docs: reformat = design task, show ONE
-  section first. Also: marked needs a blank line after `</summary>` and around `</details>`.
-- What the user DID like, plain markdown, sample-first: re-audit paragraphs each in its own
-  `<details>` (title only in the summary); every §1–16 row in one shape (`**id** mark [effort]
-  **Name** — gist; facts`, §1 approved before the other 103); an **At a glance** block (counts,
-  🟥 Next up, [DECIDE] ids); §17 groups collapsed with counts; the six long ✅/🚫 rows (5.6, 9.2,
-  9.4, 9.5, 9.9, 9.10) trimmed to name + behaviour with pointers to decisions/gotchas. 802 → 601
-  lines, 229 ids in the same order.
-- Committed and pushed at the user's request at session end.
-
-## 2026-08-26 (third) — 0.11.1 goes out (saved 2026-08-27)
-- **Released 0.11.1** (`979326c`, tag `v0.11.1`) — the effort slider's move into the model menu,
-  the bare mode chip, the "Models" header. PATCH bump: a relocation adds no capability. Full
-  `docs/release.md` run; gate held at step 6 with the complete notes and the 7-IDE verdict table.
-- `verifyPlugin` Compatible ×7 (242.26775.23 → 262.10315.32), 0 warnings, verdict files read by
-  path for 0.11.1; a mid-run peek at the log (verifier 1.410 "0.11.1 against PS-…") ruled out
-  the 0.11.0 silent non-run before waiting on it.
-- Asset 200 + `cmp`-identical; the raw feed served 0.11.1 with NO CDN lag; `marketplace-upload`
-  green in ~5s, response `version "0.11.1"`, update id 1152867; API listed it after exactly
-  300s (the standing ~5-min lag). User's dashboard screenshot: **Approved**, 242.0+, every
-  compatibility check Success incl. the 2026.2.2 rc IDE-run check.
-- Release notes used a **🧭 Changed** section instead of ✨ New / 🐛 Fixes (nothing was either)
-  and surfaced the Fable thinking no-op under ⚠️ Notes — both offered at the gate, both accepted.
-- Near-miss worth the gotcha: the feed-bump script asserted `count('0.11.0') == 2` when the
-  string appears three times (version + twice in the URL) — it aborted AFTER build.gradle.kts
-  was already written, leaving a half-applied bump that only the `git diff` review caught.
-- Nothing unreleased on `main` after this save.
-
-## 2026-08-26 (second) — the checklist meets 2.1.246, and nothing moved
-- **`docs/feature-checklist.md` re-audited 2.1.241 → 2.1.246**, both references diffed rather than
-  assumed: extension `package.json` contributions and the 12-tool IDE-MCP roster byte-identical
-  (diffed against the `vscode/` 2.1.241 extraction — the old extension dir itself was already
-  gone); CLI typed vocabulary +1 (`upload_device_hook_template`, @internal device-hooks); headless
-  `initialize` on BOTH binaries: +`analytics_disabled`, 53→53 commands with no hint changes, same
-  models/flags/agents/output styles/account keys.
-- Header refs → 2.1.246; `[NEW]` legend → "added none"; new re-audit paragraph (newest first);
-  §2 heading "unchanged through 2.1.246"; **new row 9.10 🚫** records the declined roster-flag gate
-  in the register (126 → 127 rows, ids untouched).
-- Side-finding worth acting on: the command roster is unchanged 2.1.233 → 2.1.246 across the two
-  audits, so "sync `docs/slash-commands.md`" is a version-LABEL edit, not a re-verification.
-- Two lessons promoted from the digested 2026-08-21 (second) entry into gotchas (compaction
-  record order; gradle stream split + background cwd), plus the extension-dir-deleted trap.
-
 ## Digest
+- **2026-08-28** — four docs retired (`verifier-matrix`, `renderer-parity`, `client-parity`, `manual-test`; `git show 9bd1683:docs/<name>.md`), knowledge promoted first (gotchas § Build/§ Replay, protocol § 11/§ 12, checklist § 17). Bird's-eye checklist restructure reverted as "complete mess" → conventions § Docs (reformat = show ONE section first); the accepted shape: `**id** mark [effort] **Name** — gist`, At a glance block, re-audit paragraphs in `<details>`. 802 → 601 lines.
+- **2026-08-26 (third)** — 0.11.1 released (`979326c`): effort slider into the model menu, PATCH bump. verifyPlugin ×7 read by path; feed had no CDN lag; Marketplace Approved. Notes used a 🧭 Changed section. Near-miss: the feed-bump script asserted after writing build.gradle.kts (gotchas § Build).
+- **2026-08-26 (second)** — checklist re-audited 2.1.241 → 2.1.246: contributions and 12-tool roster identical, CLI +`upload_device_hook_template`, `initialize` +`analytics_disabled`; row 9.10 🚫 added. Roster unchanged 2.1.233 → 2.1.246, so "sync slash-commands.md" is a label edit.
 - **2026-08-26** — effort slider moved into `#modelFooter` (header "Models"); the level's chip suffix went bracket → middot → NOTHING (user: "better is to hide effort"; six candidates rendered as live `.chip-btn` nodes in `#inputbar`). Fixture 51 retargeted to `51-model-menu-effort-rail.json`, three complementary controls run. Article claim triaged: Haiku half REFUTED by the user's screenshot (no gating on capability flags), Fable thinking-switch INERT confirmed by probe — documented, not fixed. Harness 467, unit 116.
 - **2026-08-25 (third)** — 0.11.0 released (`4c8899b`, tag `v0.11.0`): effort confirmation line, custom-model ✓/× fixes, /model-/effort resume parity. verifyPlugin ×7 — the FIRST attempt never ran (masked exit; verdict files still said 0.10.0 → the version in the verdict path is part of the check, gotchas § Build). Marketplace Approved incl. the 2026.2.2 EAP check.
 - **2026-08-25 (second)** — model-menu polish: custom rows get the ✓ (fixture 57; `#inputbar` ID

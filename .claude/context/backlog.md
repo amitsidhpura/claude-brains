@@ -15,6 +15,11 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
+- **Terminal last command / output as an attachable context** (the one survivor of the 2026-08-29
+  Copilot audit — decisions.md): for commands the USER ran in the IDE terminal (dev-server logs,
+  credentialed or interactive commands). PROBE FIRST: does the JetBrains terminal API expose "last
+  command + output" on the 2024.2.6 floor? Fallback today is select → copy → paste. Low priority
+  until the user notices repeated pasting.
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =

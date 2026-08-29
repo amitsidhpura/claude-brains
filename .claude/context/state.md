@@ -1,8 +1,15 @@
 # State
 
 ## Current focus
-**2026-08-29 (twenty-third session): post-release polish, UNRELEASED on `main`** — three user-driven
-fixes, all verified live in the sandbox and by harness 575/0 + `./gradlew test` 134/0:
+**2026-08-29 (twenty-fourth session): competitor audit closed, reference folder rearranged.** No
+code changed. `vscode/` is now `reference/anthropic-claude-code/` (2.1.251; `/reference/` gitignored);
+a GitHub Copilot Chat 0.63.0 audit (report lived in the session scratchpad only, by request) yielded
+ONE candidate — backlog § Next up: terminal last command/output as attachable context, probe the
+JetBrains terminal API before it becomes a row. The user found Copilot "bloat"; decisions.md
+2026-08-29 says what not to re-propose from it. Docs reference no third-party client other than
+`anthropic-claude-code`.
+**Unreleased on `main` since 0.12.0** — three post-release fixes, all verified live in the sandbox and
+by harness 575/0 + `./gradlew test` 134/0:
 - **External links open in the system browser** (`webview/js/20-markdown.js` no `target=_blank` +
   bare-URL autolink; `00-core.js` document `click`/`auxclick` delegate → `browse` bridge frame;
   `ui/ChatPanel.kt` `"browse"` → `BrowserUtil.browse`, plus `onBeforePopup` AND `onBeforeBrowse`
@@ -23,6 +30,9 @@ fixes, all verified live in the sandbox and by harness 575/0 + `./gradlew test` 
 - Do not re-propose: an effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md); an "Effort (High)"
   bracketed label or a blue track on the effort slider (2026-08-29).
+  Copilot-derived features other than terminal-output context (2026-08-29, decisions.md).
+- Audit state: the checklist is measured against **2.1.250**; 2.1.251 is only the EXTRACTION in
+  `reference/anthropic-claude-code/` (a diff base) — not audited, re-audit deferred by the user.
 
 ## Released — 0.12.0 (2026-08-29)
 **0.12.0 is the shipped version** (tag `v0.12.0`, commit `0e1af47`): /btw, files-changed review,
@@ -59,7 +69,7 @@ releases link (rule in build.gradle.kts kdoc and release.md 1b).
 - [x] Marketplace page after 0.12.0 (2026-08-29): screenshots uploaded by the user; description
       VERIFIED via `api/plugins/33274` to match plugin.xml (`/btw` in, `/clear` and the diffs bullet
       out) — the "description comes from the plugin on upload" setting is confirmed working.
-- [x] `vscode/` re-extracted to **2.1.251** on 2026-08-29 (from 2.1.241; 2.1.250 was still on disk —
+- [x] `reference/anthropic-claude-code/` (moved from `vscode/` 2026-08-29) re-extracted to **2.1.251** on 2026-08-29 (from 2.1.241; 2.1.250 was still on disk —
       extension.js +14.5 KB, webview/index.js +2.4 KB between the two). **Re-audit deferred by the
       user: wait a few CLI versions past 2.1.250 before the next checklist re-audit.**
 - [x] Gist `b2d033439ba4ca5bcd018f4fe5eef773` verified identical to `.claude/skills/context/SKILL.md`

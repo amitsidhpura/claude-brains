@@ -1,5 +1,5 @@
-# Anthropic's extracted VS Code extension — proprietary, personal reference only. NEVER commit.
-/vscode/
+# Third-party reference material under reference/ (see the rule below) — Anthropic's extracted
+# VS Code extension lives at reference/anthropic-claude-code/: proprietary, personal use only. NEVER commit.
 
 # Build & IDE artifacts
 .idea/

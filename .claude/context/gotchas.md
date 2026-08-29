@@ -307,6 +307,9 @@ re-read those before trusting memory here.
   a literal `--` inside an SVG comment kills the parse and the icon silently renders as nothing.
 
 ## Build / toolchain / release
+- **`git mv -k` on an untracked (gitignored) path exits 0 and moves NOTHING**, so a `git mv -k … ||
+  mv …` fallback never fires — the directory is silently left in place (2026-08-29, `vscode/` →
+  `reference/`). Use plain `mv` for anything under `.gitignore`; check `ls` after.
 
 - **A multi-file edit script that asserts AFTER it has already written leaves a half-applied
   change — and a release bump is the worst place for one.** 2026-08-26: the 0.11.1 prep script
@@ -584,9 +587,9 @@ re-read those before trusting memory here.
 - **Sessions the user drives by hand may not be findable in `~/.claude/projects`.** 2026-08-28 three
   hand-test sessions (screenshots in hand) existed in no project dir; only CDP-driven ones did.
   Unexplained — do not spend time hunting; re-run the scenario over CDP and tape it.
-- **The old VS Code extension dir is DELETED on auto-update — the local `vscode/` extraction is the
+- **The old VS Code extension dir is DELETED on auto-update — the local `reference/anthropic-claude-code/` extraction is the
   only diff base you will ever have.** 2026-08-26: `~/.vscode/extensions/` held only 2.1.246; the
-  2.1.241→2.1.246 contributions/tool-roster diff was possible solely because `vscode/` (gitignored)
+  2.1.241→2.1.246 contributions/tool-roster diff was possible solely because the extraction (gitignored; then at `vscode/`)
   still held 2.1.241. Re-extract to the current version right AFTER an audit, so the next one has a
   base. CLI versions, by contrast, stay on disk under `~/.local/share/claude/versions/`.
   (2026-08-28: got lucky — 2.1.246 and 2.1.250 were both installed, so the diff ran dir-to-dir.)

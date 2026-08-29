@@ -35,9 +35,9 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 - `tools/cdp.py` — run JS in the live webview over CDP; `tools/live_harness.py` — live-path
   regression suite (replays recorded wire frames through `onClaudeEvent`); `tools/fixtures/`;
   `tools/marketplace_shots.py` — regenerates `design/marketplace/*.png` headless from the real renderer
-- `vscode/` — NOT in git. Extracted official VS Code extension (from
-  `~/.vscode/extensions/anthropic.claude-code-<ver>/`, minus the binary). Re-extract locally;
-  used to reverse-engineer protocols and styles.
+- `reference/anthropic-claude-code/` — NOT in git (`/reference/` is ignored; was `vscode/` until
+  2026-08-29). Extracted official VS Code extension (from `~/.vscode/extensions/anthropic.claude-code-<ver>/`,
+  minus the binary). Re-extract locally; used to reverse-engineer protocols and styles.
 - `_local/` — personal scratch, not in git.
 
 ## Architecture (all verified working end-to-end)

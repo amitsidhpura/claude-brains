@@ -5,8 +5,8 @@ one row per feature, measured against both reference clients.
 
 **References** (both on 2.1.250, last full re-audit 2026-08-28)
 - VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.250-linux-x64/` (the 2.1.246 dir
-  was still on disk 2026-08-28 and served as the diff base; the local `vscode/` extraction is
-  still 2.1.241 — re-extract when a diff needs it)
+  was still on disk 2026-08-28 and served as the diff base; the local `reference/anthropic-claude-code/`
+  extraction is kept at the newest installed version as the diff base for the NEXT audit — see state.md)
 - Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.250`; headless roster in `docs/slash-commands.md`
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11

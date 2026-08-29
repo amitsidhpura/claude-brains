@@ -81,8 +81,8 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
   setting, 2026-08-29) — edit plugin.xml only, then check the page after the next release.
 
 ## Code & assets
-- **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `vscode/` stays
-  out of git. Personal use only.
+- **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `reference/anthropic-claude-code/`
+  stays out of git. Personal use only.
 - Styles ONLY in `webview/chat.css`; chat.html markup changes are mirrored in `design/mockup.html`.
   No hardcoded colours, sizes or gaps: colours are `:root` tokens (`color-mix()` for tints),
   `font-size` is one of `--fs-base/-sm/-xs/-2xs` (13/12/11/10), spacing is `--block-gap` /

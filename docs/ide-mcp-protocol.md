@@ -1,6 +1,6 @@
 # Claude Code IDE ↔ CLI protocol (reverse-engineered)
 
-Source: `vscode/extension.js` from `anthropic.claude-code` **v2.1.220** (win32-x64), decompiled/minified.
+Source: `reference/anthropic-claude-code/extension.js` from `anthropic.claude-code` **v2.1.220** (win32-x64), decompiled/minified.
 §9 was later enumerated from the **v2.1.222** linux-x64 bundle (binary + both extension halves).
 Purpose: document the "IDE integration" bridge so a PhpStorm/JetBrains plugin can implement the
 IDE side and drive the **official `claude` CLI** unchanged. Symbol names below (e.g. `zG`, `UZt`)
@@ -318,7 +318,7 @@ The webview reuse (§5) is a later, higher-effort enhancement.
 ## 8. Re-extracting after a Claude Code update
 
 1. New version installs to `~/.vscode/extensions/anthropic.claude-code-<ver>-<platform>/`.
-2. Re-copy (excluding the ~266 MB `resources/native-binary/claude.exe`) into `vscode/`.
+2. Re-copy (excluding the ~266 MB `resources/native-binary/claude.exe`) into `reference/anthropic-claude-code/`.
 3. Re-run the greps used to build this doc (search `extension.js` for `x-claude-code-ide-authorization`,
    `.lock`, `a.tool(`, `CLAUDE_CODE_SSE_PORT`) and diff against §2–§4 to catch protocol changes.
 

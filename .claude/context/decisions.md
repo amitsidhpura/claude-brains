@@ -4,6 +4,25 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — GitHub Copilot Chat audited once, adopted nothing but one probe; not a reference client
+- Why: the user used Copilot and found it bloat; the audit (built-in 0.63.0: 9 participants, 38+~20
+  tools, 191 contributed + ~330 hidden settings, four ways to run an agent) confirmed growth is
+  horizontal — surfaces and experiments, not depth on the loop. Its local Claude Code harness was
+  removed between 0.44 and 0.63, so a lean Claude Code panel is a niche it vacated. Copilot now reads
+  `.claude/skills` and `.claude/settings.json` hooks — validates "configure in the terminal".
+- Kept: **terminal last command/output as attachable context** — the only many-times-an-hour gap
+  (only when the USER ran the command; the CLI already sees its own). Probe the JetBrains terminal API
+  first (backlog § Next up). Not to be re-proposed from Copilot: worktree-per-session shape, model
+  family aliasing, per-phase models, tool-result spill/cache probes, OTel traces, NES.
+- Rejected: keeping Copilot extractions under `reference/` (deleted the same session); naming any
+  third-party client other than `anthropic-claude-code` in docs or context procedures.
+
+## 2026-08-29 — Third-party reference material lives under `reference/<vendor-product>/`
+- Why: `vscode/` was a one-off name for Anthropic's extension; a second extraction needed a home and
+  `/reference/` was already gitignored. Now `reference/anthropic-claude-code/`; runbook step 2 and
+  the protocol doc's § 8 point there. Nothing else is kept there today.
+- Rejected: leaving `vscode/` in place next to `reference/` (two conventions for one thing).
+
 ## 2026-08-29 — External links open in the system browser; the webview never navigates or pops up
 - Why: the panel is an off-screen JCEF browser. `target="_blank"` asked CEF for a popup window that
   had no surface to draw on (blank PhpStorm windows, user report); a middle-click, which fires no
