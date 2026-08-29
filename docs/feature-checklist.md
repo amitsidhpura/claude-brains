@@ -11,9 +11,9 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-29) — 78 ✅ · 3 🟥 · 5 🟧 · 15 ⬜ · 27 ➖ (128 rows)
+**At a glance** (2.1.250, 2026-08-29) — 82 ✅ · 3 🟥 · 2 🟧 · 6 ⬜ · 35 ➖ (128 rows)
 - **Next up (🟥):** 8.7 Rewind / checkpoints + fork conversation · 8.11 Side question · 8.14 Reloaded-webview log replay
-- **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 8.10 Session groups / sessions sidebar · 8.11 Side question · 12.3 Open in editor tab · 12.6 Focus view · 13.2 JSON schema for .claude/settings.json · 14.2 Git actions in the host
+- **Awaiting a decision ([DECIDE]):** 8.7 Rewind / checkpoints + fork conversation · 8.10 Session groups / sessions sidebar · 8.11 Side question · 14.2 Git actions in the host
 
 **Status marks**
 
@@ -27,7 +27,8 @@ one row per feature, measured against both reference clients.
 | ➖ | not implemented — the row says which: the terminal's half / N/A in JetBrains, declined by the user, or deferred. Any of them can be revisited later (decisions in `.claude/context/`) |
 
 **Numbering** — rows are `section.row` (`8.5`); refer to them by that id. Numbers are stable
-between audits: retire a row by striking it, not by deleting it, so ids never shift.
+between audits: retire a row by striking it, not by deleting it, so ids never shift. Section
+headings carry ✅ (every row ✅ or ➖) or ⬜ (open rows remain) — refresh when a row changes.
 
 **Effort** (on open and partial rows, after the mark): `[XS]` a few lines through an existing
 idiom · `[SM]` one branch or helper, fits in a sitting · `[MD]` a new renderer, or a change that
@@ -110,7 +111,7 @@ auto-include selection, voice.
 
 ---
 
-## 1. Core chat & streaming
+## 1. ✅ Core chat & streaming
 - **1.1** ✅ **Send a prompt** — reply streams token-by-token (`stream_event` deltas)
 - **1.2** ✅ **User / assistant bubbles** — Ctrl+Enter sends, Enter = newline (VS Code's
       `useCtrlEnterToSend` behaviour, fixed on, no toggle)
@@ -145,14 +146,35 @@ auto-include selection, voice.
 - **1.19** ✅ **Server-side tool blocks** — web search; tool-returned images (`isImage` Bash
       results) open in the lightbox
 - **1.20** ✅ **Local-command output** — `<local-command-stdout>` / `-stderr>` rendered as markdown
-- **1.21** ⬜ [XS] **`redacted_thinking` placeholder** — never seen locally
-- **1.22** ⬜ [SM] **`tool_progress` heartbeat** — "still running · 45s"; not yet emitted to
-      stream-json clients, probe first (ide-mcp-protocol.md § 11)
-- **1.23** ⬜ [SM] **Permission-denied reason** — `permission_denied` / `decision_reason` on the
-      card; P3 polish
-- **1.24** ⬜ [SM] **Turn end reason** — `result.terminal_reason` (19 values) surfaced when a turn
-      ends oddly; P3 polish
-- **1.25** ⬜ [SM] **Usage-limit grace banner** [NEW] — VS Code 2.1.250 (behind
+- **1.21** ✅ **`redacted_thinking` placeholder** — a non-expandable "Thought (redacted)" line,
+      live (`content_block_start`, no deltas) and replay (`SessionStore` → `redacted:true`), both
+      through `thinkBlock`. Shape is the API's; never seen on this wire (fixture 62, INFERRED).
+      Cannot be triggered on demand: the API returns it only on genuine safety redaction, the old
+      magic test string is undocumented now and did nothing on 2.1.251 (three probes, Sonnet 5 /
+      Opus 5, 2026-08-29), and Fable 5 / Mythos 5 never return it at all — they return ordinary
+      `thinking` blocks with an empty body, which is the existing "signature only" no-body line
+- **1.22** ➖ **`tool_progress` heartbeat** — not emitted to stream-json clients: MEASURED
+      2026-08-29 on 2.1.251, a foreground 12 s Bash (`is_backgrounded:false`) produced zero
+      `tool_progress` frames (the binary's own SDK adapter drops the heartbeat kind). Revisit if
+      the wire changes
+- **1.23** ✅ **Permission ask reason** — `can_use_tool.decision_reason` rides the
+      `permission_request` frame as `reason` and draws as a ↳ note under the card header.
+      MEASURED 2026-08-29 over stdio: text arrives only with `decision_reason_type:"other"` (e.g.
+      `echo $(whoami)` → "Contains command_substitution"); `rule` and `subcommandResults` asks
+      carry the type but no text, so they draw nothing. On-demand trigger for a live check: any
+      Bash with `$(…)` — VERIFIED LIVE in the sandbox panel 2026-08-29 (real CLI turn, Kotlin
+      chain end-to-end, note drawn under the header). Fixture 63 pins the JS half. The `system/permission_denied` auto-deny
+      frame is a different, unmeasured shape — not drawn
+- **1.24** ✅ **Turn end reason** — `result.terminal_reason` ≠ completed / aborted_* /
+      background_requested → "Turn ended early · max turns" status line after the summary or
+      error block (fixture 64). MEASURED 2026-08-29 on 2.1.251: `completed` on a normal turn;
+      `--max-turns 1` → `subtype:error_max_turns, is_error:true, terminal_reason:"max_turns",
+      result:null, errors:["Reached maximum number of turns (1)"]` — verbatim in fixture 64. That
+      capture also fixed the error arm: a null-result error now shows `errors[]` text instead of
+      the raw subtype token. Not forceable inside the panel (no `--max-turns` on its CLI), so the
+      live check is the verbatim frame replayed over CDP
+- **1.25** ➖ **Usage-limit grace banner** [NEW] — deferred by the user 2026-08-29: feature-flagged
+      upstream and never seen on this wire; revisit if it shows up. VS Code 2.1.250 (behind
       `tengu_lantern_sconce`) shows "Usage limit reached · a little extra on us, then your credits"
       / "… · finishing up" when `rate_limit_event.rate_limit_info` carries `rateLimitGraceActive:
       true` with `overageStatus` allowed / allowed_warning (dismissable; the CLI has emitted the
@@ -160,7 +182,7 @@ auto-include selection, voice.
       grace window is invisible. Probe first: an inject through `onClaudeEvent` proves the render, a
       real grace window is unforceable by design (MT-9.6 pattern)
 
-## 2. Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.250)
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.250)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -185,7 +207,7 @@ auto-include selection, voice.
 - **2.11** ✅ **Stale lock sweep** — `~/.claude/ide/*.lock` files with a dead pid deleted on every
       lock write (the CLI's own rule; `IdeLockFile.sweepStale`); 17 → 2 on first run, 2026-08-17
 
-## 3. Diffs & edit approval
+## 3. ✅ Diffs & edit approval
 - **3.1** ✅ **Permission gate** — `can_use_tool` via `--permission-prompt-tool stdio`
 - **3.2** ✅ **Accept / Reject card** — diff inline (old→new for Edit/MultiEdit multi-hunk,
       additions for Write); under acceptEdits the diff is built optimistically from the tool input
@@ -219,7 +241,7 @@ auto-include selection, voice.
       line from the transcript (count + names) without Review (backlog). Built and hand-verified
       2026-08-28 (two files in one turn, chain navigation); fixture 60; `TurnChangesTest`
 
-## 4. Permission modes
+## 4. ✅ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
       aliased in the chip), acceptEdits, plan, auto (the safety-classifier mode)
 - **4.2** ➖ **`bypassPermissions`** — removed 2026-08-03 with the relaunch machinery; the CLI
@@ -234,7 +256,7 @@ auto-include selection, voice.
 - **4.6** ➖ **`allowDangerouslySkipPermissions` / `initialPermissionMode`** — the flag turns every
       mode into a bypass (probed); persistence covers the initial-mode need
 
-## 5. Plan mode
+## 5. ✅ Plan mode
 - **5.1** ✅ **Plan card** — enter plan mode from the chip; the plan renders as a card on
       `ExitPlanMode`
 - **5.2** ✅ **Feedback field** — rides whichever button answers: deny → verbatim tool_result;
@@ -258,24 +280,25 @@ auto-include selection, voice.
       fixture 53; history in journal digest 2026-08-23
 - **5.7** ➖ **`/ultraplan`** — cloud-drafted plan; a cloud product surface, not a panel feature
 
-## 6. Context input
+## 6. ✅ Context input
 - **6.1** ✅ **@-mention files** — fuzzy autocomplete, keyboard nav, dismissal contract shared with
       the slash menu, ellipsis at the end
 - **6.2** ✅ **Attachments** — images (`image` blocks) + PDF / text / code (`document` blocks with
       titles); paste; drag-and-drop via an AWT `DropTarget` (JCEF never delivers OS drags); chips
       preview in the lightbox or save via the IDE dialog
 - **6.3** ✅ **Injected IDE context stripped on replay** — `<ide_selection>` etc.
-- **6.4** 🟧 [MD] **@-mention symbols** — roadmap
-- **6.5** ⬜ [SM] **Insert @-mention from the editor** — VS Code's Alt+K; needs a plugin action.
-      The plugin binds no shortcuts today, but an unbound action the user can map is compatible
-      with that
+- **6.4** ➖ **@-mention symbols** — deferred by the user 2026-08-29 (backlog; [MD], a second
+      picker source over the IDE symbol index). Files cover most mentions
+- **6.5** ➖ **Insert @-mention from the editor** — deferred by the user 2026-08-29 (backlog; [SM],
+      VS Code's Alt+K as an unbound plugin action the user can map — compatible with the
+      no-shortcuts stance)
 - **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
-- **6.7** ⬜ [SM] **`list_files_request` / `respectGitIgnore`** [NEW] — our picker is IDE-indexed;
-      ➖ unless a real gap shows. (The CLI also answers `file_suggestions {query}` over stdio with
+- **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
+      our picker is IDE-indexed and no gap has shown. (The CLI also answers `file_suggestions {query}` over stdio with
       the TUI's own fuzzy ranking — an alternative source if one ever does)
 - **6.8** ➖ **`@terminal`** [NEW] — `get_terminal_contents`; the panel does not own a terminal
 
-## 7. Slash commands (`docs/slash-commands.md` is the source of truth)
+## 7. ✅ Slash commands (`docs/slash-commands.md` is the source of truth)
 - **7.1** ✅ **Slash menu** — opens on `/`; keyboard nav, descriptions, source badges (project /
       user / mcp)
 - **7.2** ✅ **Roster** — from the `initialize` control request; refreshed by `commands_changed`
@@ -306,7 +329,7 @@ auto-include selection, voice.
       page load (cleared on a fresh `initialize`); driven live over CDP 2026-08-17, a mid-session
       command survived `location.reload()`
 
-## 8. Sessions / history
+## 8. ⬜ Sessions / history
 - **8.1** ✅ **New / Resume / Refresh** — Resume = history list → `--resume <id>`; Refresh
       re-resumes and recovers a dead CLI (guarded by `SessionStore.exists`)
 - **8.2** ✅ **History list** — from `~/.claude/projects/<enc-cwd>/*.jsonl`; titles from
@@ -348,7 +371,7 @@ auto-include selection, voice.
 - **8.14** 🟥 [LG] **Reloaded-webview log replay** — chrome heals via `seedUi()`, the log does not;
       backlog § Next up, no reload observed in the wild yet
 
-## 9. Model, effort, usage
+## 9. ✅ Model, effort, usage
 - **9.1** ✅ **Model chip** — from `initialize.models`, search + custom id → `set_model`; persisted
       and re-applied on every restart
 - **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, last row of the model-menu
@@ -377,9 +400,12 @@ auto-include selection, voice.
       built-in `/context` is enabled as a turn for the rare look. (`get_context_usage` and
       `get_settings` both answer over stdio — probed 2026-08-23 — so the data is there if this is
       ever revived)
-- **9.7** ⬜ [MD] **Fable overage gate** — `model_consent_fallback`; no `supportedDialogKinds`
-      declared, so the CLI stays silent and the model chip could lie if the gate fires. Probe by
-      exercising it
+- **9.7** ➖ **Fable overage gate** — deferred by the user 2026-08-29 (later + watch): no
+      `supportedDialogKinds` declared, so `model_consent_fallback` never reaches the panel and
+      the CLI takes the silent default — the model chip would keep the old name after a fallback.
+      Cannot be triggered on demand (needs the Fable allowance to run out); never observed. WATCH:
+      the first `system/model_fallback` frame lands in `window.__modelFallbackSeen` + a console
+      warning (70-events.js). Revivable as [MD] once one is captured: consent card + chip update
 - **9.8** ➖ **Subagent model / cloud providers** — `CLAUDE_CODE_SUBAGENT_MODEL`, Bedrock / Vertex /
       Foundry setup; env and terminal configuration
 - **9.9** ✅ **1M-context toggle** [NEW] — a switch in the model-menu footer that appends/strips
@@ -398,13 +424,13 @@ auto-include selection, voice.
       Revive only if a CLI ships a flag proven to track behaviour. Gotchas § Protocol; decisions
       2026-08-26
 
-## 10. Auth & account
+## 10. ✅ Auth & account
 - **10.1** ➖ **Login / logout / account display** — by design: sign in once by running `claude`;
       the panel reports an auth failure with a "sign in from a terminal" line
       (`disableLoginPrompt` is the terminal's). Confirmed a decision, not a missing capability
       (`claude_authenticate` + OAuth callbacks exist in the CLI)
 
-## 11. Extensibility (MCP / plugins / skills / hooks / subagents)
+## 11. ✅ Extensibility (MCP / plugins / skills / hooks / subagents)
 - **11.1** ➖ **Plugin / MCP / hooks / agents management UI** — the terminal's half (`/plugin`,
       `/mcp`, `/hooks`, `/agents`, `~/.claude`)
 - **11.2** ✅ **What the panel shows from this family** — MCP server failure notice at init
@@ -440,35 +466,40 @@ auto-include selection, voice.
       release. Revivable as [SM]: a popup listing `server · status` (+ agents/skills/plugins)
       from the init frame
 
-## 12. UI placement, windows, keys
+## 12. ✅ UI placement, windows, keys
 - **12.1** ✅ **Right-anchored tool window** — JetBrains moves/floats/undocks it natively (covers
       `preferredLocation`, sidebar/panel, new window)
 - **12.2** ✅ **Open DevTools action** — "Claude Brains: Open DevTools" via Find Action; no default
       chord
-- **12.3** ⬜ [MD] **Open in editor tab** [NEW · DECIDE] — `editor.open` / `primaryEditor.open`; a
-      second host for the same webview, only worth it if someone wants a wide chat. Watch
+- **12.3** ➖ **Open in editor tab** [NEW] — declined by the user 2026-08-29 ("not needed"):
+      `editor.open` / `primaryEditor.open` would be a second host for the same webview; the tool
+      window's native Float / Window view modes already give a wide chat
 - **12.4** ➖ **Keyboard shortcuts** — focus/blur input, Ctrl+N new conversation, Ctrl+Shift+T: the
       plugin binds NO keyboard shortcuts (2026-08-09, chords proved unreliable across setups);
       users can map the tool window's own Show action in Keymap
 - **12.5** ➖ **Terminal mode** — `useTerminal`; that is just the terminal
-- **12.6** 🟧 [MD] **Focus view** [NEW · DECIDE] — VS Code `toggleFocusView` / `set_focus_view` /
-      `focusView` setting, TUI `/focus`, `/brief`: hide tool noise, show prompts + responses. Take:
-      worth a mockup pass before building; folded IN/OUT boxes already do half of it
+- **12.6** ➖ **Focus view** [NEW] — deferred by the user 2026-08-29 ("not needed for now"):
+      VS Code `toggleFocusView` / `set_focus_view` / `focusView` setting, TUI `/focus`, `/brief` —
+      a reading mode hiding tool lines / IO boxes / diffs, prompts + responses only (cards always
+      shown). Revivable as [MD], mockup first; folded IN/OUT boxes already do half of it
 - **12.7** ➖ **Light theme / configurable colours** — decided 2026-08-07 (dark only)
 
-## 13. Settings
+## 13. ✅ Settings
 - **13.1** ➖ **No settings page** — by design. CLI resolution: `-Dclaude.executable` → PATH → VS
       Code extension binary; model, mode, effort persist via `PropertiesComponent`. VS Code's
       `claudeCode.*` keys map as: `environmentVariables` / `claudeProcessWrapper` /
       `respectGitIgnore` / `usePythonEnvironment` / `disableLoginPrompt` → terminal & env;
       `useCtrlEnterToSend` → fixed on; `initialPermissionMode` → persistence; `preferredLocation`
       / shortcuts / `hideOnboarding` / `focusView` → see §12; `autosave` → §2 candidate
-- **13.2** 🟧 [SM] **JSON schema for `.claude/settings.json`** [DECIDE] —
-      `claude-code-settings.schema.json` shipped by VS Code; a JetBrains
-      `JsonSchemaProviderFactory` is small and editor-hourly for anyone editing settings. Take:
-      worth doing, unrelated to the panel
+- **13.2** ✅ **JSON schema for `.claude/settings.json`** — `ClaudeSettingsSchemaProviderFactory`
+      maps `.claude/settings.json` AND `.claude/settings.local.json` to Anthropic's published
+      schema on SchemaStore (`json.schemastore.org/claude-code-settings.json`, the `$schema` their
+      docs recommend) — fetched by the IDE, nothing bundled. Built 2026-08-29 because the
+      SchemaStore catalog the IDE already consults matches only `settings.json`; the local file
+      the CLI writes rules into got nothing. Optional depends on `com.intellij.modules.json` for
+      2024.3+ (JCEF pattern). Matcher pinned by `ClaudeSettingsSchemaTest`
 
-## 14. Worktrees & git
+## 14. ⬜ Worktrees & git
 - **14.1** 🟧 [LG] **Create worktree** — `create_worktree`; TUI `/branch`; roadmap
 - **14.2** ⬜ [MD] **Git actions in the host** [NEW · DECIDE] — `checkout_branch`,
       `check_git_status`, `update_skipped_branch`. Take: read the webview flow before deciding;
@@ -479,7 +510,7 @@ auto-include selection, voice.
       newly noticed 2026-08-23 (present since ≤2.1.233). The IDE has native git diff, so this
       leans ➖ unless 14.3 wants the CLI's view of the diff
 
-## 15. Onboarding & misc
+## 15. ⬜ Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
@@ -493,7 +524,7 @@ auto-include selection, voice.
 - **15.6** ⬜ [SM] **Chrome MCP / Jupyter MCP toggles** [NEW] — `ensure_chrome_mcp_enabled`,
       `enable_jupyter_mcp`; configuration, ➖
 
-## 16. Quality gates (not features, but part of "what we have")
+## 16. ✅ Quality gates (not features, but part of "what we have")
 - **16.1** ✅ **Unit tests** — `./gradlew test` (130, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
 - **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 60, 490 assertions,
@@ -507,7 +538,7 @@ auto-include selection, voice.
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below
 
-## 17. Manual verification record (from the retired docs/manual-test.md, 103/103 passed 2026-08-07→08-28)
+## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 104/104 passed 2026-08-07→08-29)
 - Source: `git show 9bd1683:docs/manual-test.md` (deleted 2026-08-28; §16.5). Setup was `cd plugin && ./gradlew runIde`, open the Claude Brains tool window; items were ticked by number ("3.4 done"); **(hard to trigger)** items carry their exact trigger recipe below.
 - Defect markers were exactly two: `ISSUE (date):` = open, `RESOLVED (date) — how:` = closed, *how* ∈ fixed / removed / not a bug; `grep -c '\*\*ISSUE'` was the open count. Final state: 31 RESOLVED, 0 ISSUE.
 - Undated items below were ticked on the first pass (2026-08-07/08); later dates come from the item's own note. Cross-cutting caveat (6.4): grants from 2026-08-07/08 persist in the testing project's `settings.local.json`, so permission cards only reappear for novel commands (the pass used `factor`/`mcookie`/`openssl`/`base32`, never granted).
@@ -653,7 +684,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.10 IDE bridge</b> — 5 items · 3 RESOLVED</summary>
+<details><summary><b>17.10 IDE bridge</b> — 6 items · 3 RESOLVED</summary>
 
 - **MT-10.1** Bridge `openFile` works over MCP-over-WS (editor tab opened 2026-08-08) → 2.1 · 2026-08-09 · RESOLVED 2026-08-09: not a bug, upstream by design, re-scoped to the bridge half — the CLI tools listing applies `!name.startsWith("mcp__ide__") || ["mcp__ide__executeCode","mcp__ide__getDiagnostics"].includes(name)`, IDENTICAL across 2.1.222/223/226 (VS Code models get the same two); sub-agents strip the whole ide client; rejected workaround: a non-"ide" server name dodges the prefix but the CLI finds its IDE client by `name === "ide"` for the TUI diff-in-IDE flow
 - **MT-10.2** Model reads editor diagnostics ("what errors are in this file?") → 2.3 · 2026-08-07
@@ -661,6 +692,7 @@ auto-include selection, voice.
 - **MT-10.4** openDiff shows a diff view — verified 2026-08-08 by `tools/call openDiff` over the bridge WS directly (model cannot call it on 2.1.226) → 2.2 · 2026-08-08
 - **MT-10.5** Accept/reject in the editor diff honoured (accept saves, reject leaves untouched and the model is told) → 2.2, 3.3 · 2026-08-09 · RESOLVED 2026-08-09: fixed, premise corrected — "never writes" was NOT a bug: VS Code 2.1.222 builds both panes as temp-provider documents and returns FILE_SAVED + the right pane's `getText()`; the CLI 2.1.226 maps the verdict to {oldContent, newContent} and writes via its own Edit/Write (TAB_CLOSED → accept-as-proposed, DIFF_REJECTED → keep old); FILE_SAVED is the accept TOKEN; fixed in `DiffReview.kt`: TAB_CLOSED verdict didn't exist (caller blocked forever — now `onAssigned(false)`, debounced 500 ms for side-by-side↔unified switches), accept returned the proposal not the pane text (tweaks now travel), close_tab/closeAllDiffTabs now complete TAB_CLOSED, balloons expire with the future, dismissal no longer auto-rejects, dying WS / shutdown cancels reviews (`IdeMcpServer.onClose`); verified over MCP-over-WS: ["TAB_CLOSED"] / ["FILE_SAVED", pane text] / ["DIFF_REJECTED", tab_name], file untouched on disk each time, no stale balloons
 
+- **MT-10.6** Open `.claude/settings.local.json` in the sandbox: status bar names the "Claude Code settings" schema, `"permissions": {` offers allow / deny / ask / … completions, a bogus key is flagged → 13.2 · 2026-08-29 · passed (user; schema fetched from SchemaStore, nothing bundled)
 </details>
 
 <details><summary><b>17.11 Dev aids</b> — 2 items · 2 RESOLVED</summary>

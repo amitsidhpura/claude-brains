@@ -1,8 +1,9 @@
 # State
 
 ## Current focus
-**2026-08-29 (nineteenth session): §11 Extensibility CLOSED — 11.5 decline ack shipped, 11.6
-declined, checklist 🚫 mark retired into ➖. Committed and pushed at the end of the session.**
+**2026-08-29 (twentieth session): goal = every checklist section ✅ by 2026-08-30 EOD. Today: §1 built
+(1.21/1.23/1.24) and tested, §6/§9/§12 closed by decision, §13 built (13.2). Committed and pushed.**
+Sections still ⬜: **§8, §14, §15** — see Next steps. Previous session (nineteenth): §11 closed.
 - **11.3**: roster rows in `webview/js/70-events.js` `renderBgTasks()` carry a hover-✕ (`.bg-x`,
   conversations-list gutter idiom, NO confirm step by user decision) → bridge `stopTask` →
   `ClaudeSessionService.stopTask` → `ClaudeCli.stopTask` = `stop_task{task_id}`. The row dims
@@ -49,7 +50,7 @@ Success incl. the 2026.2.2 rc IDE-run). Next release is a fresh bump when work l
   (`/workflow-authoring`); the 2.1.233 capture date in its header is history, not staleness.
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **514**; `./gradlew test` **130**.
+- `python3 tools/live_harness.py` baseline **541** (fixtures to 65); `./gradlew test` **134**.
 - Fixture 51 = `51-model-menu-effort-rail.json`; three negative controls in its provenance — read
   before changing any assert.
 - Sandbox **PhpStorm 2024.2.6**; start (must run from `plugin/`; background tasks start in the
@@ -63,7 +64,37 @@ Success incl. the 2026.2.2 rc IDE-run). Next release is a fresh bump when work l
   before the gate (gotchas § Build — the 0.11.1 half-applied bump).
 
 ## Next steps
-- [ ] Get yes / later / no on the **seven [DECIDE]** rows (8.7, 8.10, 8.11, 12.3, 12.6, 13.2, 14.2), and on **1.25**.
+**GOAL (user, 2026-08-29): every checklist section ✅ by 2026-08-30 EOD** — ✅ = every row ✅ or ➖.
+Section headings carry ✅/⬜ (rule in the checklist's Numbering note). Working **one section at a
+time, first to last**: for each, present the open rows with a recommendation, get yes/➖ per row,
+build the yes-rows, mark the rest ➖ with the reason, refresh the heading mark + At a glance.
+- **§1 DONE 2026-08-29** (uncommitted): 1.21 redacted_thinking (`thinkBlock(text, secs, redacted)`
+  in `50-blocks.js`; live branch in `75-retraction.js` content_block_start; `SessionStore` emits
+  `redacted:true`; `55-replay.js` passes it), 1.23 `decision_reason` → `permission_request.reason`
+  → ↳ note under `.card-h` (`85-cards.js`; Kotlin plumbing ClaudeCli → ClaudeSessionService →
+  ChatPanel), 1.24 `turnEndReason()` in `80-gauge.js` (silent for completed / aborted_* /
+  background_requested / while `stopping`). 1.22 ➖ (measured: no `tool_progress` on stream-json,
+  2.1.251), 1.25 ➖ deferred by the user. Fixtures 62/63/64 (19 asserts, wrong-value controls run); 1.23 verified LIVE (trigger: any Bash with `$(…)` → "Contains command_substitution"); spacing fix `.card .card-h + .t-note` (8/8, was 8/0; mockup card added at `design/mockup.html` § permission cards); 1.21 cannot be triggered (docs: safety-only, never on Fable/Mythos 5); 1.24 `max_turns` measured via `--max-turns 1` (verbatim frame in fixture 64; error arm now prefers `errors[]` over the subtype token);
+  SessionStoreTest gained the redacted replay test (pre-fix control run: 0 blocks).
+- **§6 DONE** (6.4, 6.5 ➖ later → backlog; 6.7 ➖ no). **§12 DONE** (12.3 ➖ no; 12.6 ➖ later → backlog).
+- **§13 DONE 2026-08-29**: 13.2 built — `ClaudeSettingsSchema.kt` (`JsonSchemaProviderFactory` →
+  SchemaStore URL, nothing bundled; both `settings.json` and `settings.local.json` under `.claude`);
+  plugin.xml: `JavaScript` ns extension + optional depends `com.intellij.modules.json`
+  (`claude-brains-json.xml`, empty, JCEF pattern). `ClaudeSettingsSchemaTest` (3). `./gradlew test`
+  134. verifyPlugin run 2026-08-29 (result in journal). Hand-checked by the user 2026-08-29 in the sandbox (§17 MT-10.6): schema named, completions, bogus key flagged.
+- **§9 DONE 2026-08-29**: 9.7 ➖ later + WATCH — `system/model_fallback` → `window.__modelFallbackSeen` +
+  one console warning (`70-events.js`), fixture 65 (pre-watch control run). Backlogged.
+- **Remaining ⬜ sections: §8 (8.7, 8.8, 8.10, 8.11, 8.14 — recommended later/later/later/BUILD/later,
+  awaiting the user) · §14 (14.1–14.4) · §15 (15.5, 15.6).**
+- CLI auto-updated to **2.1.251** (2026-08-29); checklist/docs are audited at 2.1.250. Not re-audited.
+- [ ] **§8** — user's yes/later/no on 8.7 (rec. later), 8.8 + 8.10 (rec. later, follow tabs),
+      **8.11 (rec. BUILD — probe pre-paid, `side_question` control)**, 8.14 (rec. later).
+- [ ] **§14** — recommendation given 2026-08-29, awaiting the user: 14.1 / 14.2 / 14.3 later as one
+      "worktrees" backlog bundle, 14.4 no.
+- [ ] **§15** — 15.5 `ask_debugger_help` [LG], 15.6 Chrome/Jupyter MCP toggles [SM]: explain plainly, get
+      the call (both lean ➖: debugger hand-off is a VS Code debug-console feature; MCP toggles are the
+      terminal's half).
+- [ ] After every section: heading mark, At a glance counts (`awk` recount), [DECIDE] list, backlog.
 - [ ] Decide `/clear [name]` (checklist 7.6).
 - [ ] Backlog order (`backlog.md` § Next up): plan-card keyboard shortcuts → reloaded-webview
       log replay (**8.14**).

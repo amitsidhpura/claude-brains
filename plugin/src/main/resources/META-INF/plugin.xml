@@ -57,6 +57,9 @@
          on 2026.2). Optional because the module id doesn't exist on our 2024.2 baseline,
          where JCEF is still in the platform core. -->
     <depends optional="true" config-file="claude-brains-jcef.xml">com.intellij.modules.jcef</depends>
+    <!-- 2024.3+ moved the JSON-schema API (JsonSchemaProviderFactory) into the bundled JSON plugin;
+         same classloader reason as JCEF above. Absent on the 2024.2 baseline, where it is core. -->
+    <depends optional="true" config-file="claude-brains-json.xml">com.intellij.modules.json</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- The sidebar: anchor="right" == VS Code's right sidebar. -->
@@ -70,6 +73,12 @@
 
         <!-- Balloon used by DiffReview for Accept/Reject on proposed changes. -->
         <notificationGroup id="Claude Brains" displayType="BALLOON"/>
+    </extensions>
+
+    <!-- Checklist 13.2: schema for .claude/settings.json and settings.local.json, fetched from
+         SchemaStore (nothing bundled) — see ClaudeSettingsSchema.kt. -->
+    <extensions defaultExtensionNs="JavaScript">
+        <JsonSchema.ProviderFactory implementation="io.github.amitsidhpura.claudebrains.ClaudeSettingsSchemaProviderFactory"/>
     </extensions>
 
     <actions>

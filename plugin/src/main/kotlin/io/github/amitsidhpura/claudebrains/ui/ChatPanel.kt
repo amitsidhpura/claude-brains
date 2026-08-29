@@ -631,13 +631,14 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     pushTitle(session.currentSessionId())
                 }
             },
-            onPermission = { requestId, toolName, inputJson, suggestionsJson ->
+            onPermission = { requestId, toolName, inputJson, suggestionsJson, reason ->
                 val frame = buildJsonObject {
                     put("type", "permission_request")
                     put("id", requestId)
                     put("tool", toolName)
                     put("input", inputJson) // raw JSON string; the page parses/pretty-prints
                     suggestionsJson?.let { put("suggestions", it) } // CLI's don't-ask-again options
+                    reason?.let { put("reason", it) }               // CLI's decision_reason (1.23)
                     editLineStart(toolName, inputJson)?.let { put("lineStart", it) } // for the diff gutter
                 }
                 pushFrame(frame)

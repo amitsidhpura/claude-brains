@@ -182,6 +182,23 @@ re-read those before trusting memory here.
   `completed|failed|killed|paused`, `task_notification.status` ∈ `completed|failed|stopped`; a
   kill sends both, same instant. Check both words in every consumer. And status is LIFECYCLE — an
   agent whose work failed still says `completed` (decisions 2026-08-29).
+- **`redacted_thinking` cannot be forced (2026-08-29).** The once-documented
+  `ANTHROPIC_MAGIC_STRING_TRIGGER_REDACTED_THINKING_…` test string did nothing on 2.1.251 (Sonnet 5 ×2,
+  Opus 5 ×1: plain `thinking` blocks, empty body + signature). Current platform docs: the block
+  appears only on genuine safety redaction, and Fable 5 / Mythos 5 never return it. Don't spend an
+  hour on it again; fixture 62 is the only evidence 1.21 can ever have.
+- **`can_use_tool.decision_reason` carries text ONLY with `decision_reason_type:"other"`** (2.1.251):
+  an `ask` rule match → type `rule`, no text, no `matched_ask_rule`; a compound command → type
+  `subcommandResults`, no text, per-sub-command `permission_suggestions`; `echo $(whoami)` → type
+  `other` + "Contains command_substitution". On-demand trigger for the card's ↳ note: any Bash
+  with `$(…)`.
+- **Error-arm `result` frames have NO `result` key; the sentence is in `errors[]`** —
+  `--max-turns 1` → `{subtype:"error_max_turns", is_error:true, terminal_reason:"max_turns",
+  errors:["Reached maximum number of turns (1)"]}`. Anything that reads `ev.result` for the text
+  falls back to the subtype token; `onResult` prefers `errors[]` since 2026-08-29.
+- **SchemaStore's catalog maps only `**/.claude/settings.json`** ("Claude Code Settings",
+  checked 2026-08-29) — `settings.local.json` gets no schema from the IDE's built-in catalog; the
+  plugin's provider covers both (13.2).
 
 ## Replay / transcript
 - **Compaction records land in the file BEFORE the command that caused them.** The CLI writes the
@@ -363,6 +380,9 @@ re-read those before trusting memory here.
   die on a download-cache race and fall back to install-on-restart. plugin.xml forces nothing; unloading
   live JCEF + the WS server + the claude process would rarely pass the GC check anyway. Accepted
   2026-08-19 — do not engineer around it.
+- **A glob like `**/.claude/settings.json` inside a KDoc/Javadoc comment ends the comment** at
+  `*/` — 20 "Expecting a top level declaration" errors pointing at the line after the comment
+  (2026-08-29, `ClaudeSettingsSchema.kt`). Write "the shared `.claude/settings.json`" instead.
 
 ## JCEF is not a browser (Linux)
 - **JCEF sizes a text flex item's base a hair under its max-content**, so a two-word label wraps with the
@@ -685,3 +705,20 @@ re-read those before trusting memory here.
   or the sibling test repo is machine-scoped — check which box you are on. The sharp edge is fixtures that
   live OUTSIDE the repo (the 3.1 `dummy-cmd.md` is not in git and is absent on whichever machine did not
   create it, while the context files cheerfully say it exists). Verify the file, don't read about it.
+- **A JS throw inside a fixture `expect` ABORTS the whole harness run** (`AssertionError: JS threw`),
+  so every fixture after it silently never runs and the summary line never prints — a
+  `querySelector(...).textContent` on a missing node is enough. Guard with `(x && x.textContent)`
+  in expects, and read the tail of the log for `Traceback` before trusting a partial count.
+- **The `__transcript` frame's key is `items`, not `blocks`** (fixture 08 is the reference) —
+  `{type:'__transcript', more:0, items:[…]}`; a `blocks` array renders nothing and fails silently.
+- **`#log` always holds the permanent `#welcome` node** — "nothing rendered" asserts must count
+  `#log > *:not(#welcome)`, or they read 1 on an empty log (fixture 65's first draft).
+- **Sandbox restart procedure that has worked five times running (2026-08-29):**
+  `kill $(pgrep -f 'idea.system.pat[h]')` (plain SIGTERM keeps the layout, so the tool window
+  comes back OPEN), loop until `curl 127.0.0.1:9222/json/list` fails, then
+  `nohup ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222 --args=… &` from `plugin/`;
+  the panel answers CDP ~3 s after the loop sees it, then verify BY CONTENT (a string the new
+  build must contain) before any fixture.
+- **Free pre-fix control, again:** the sandbox serving the OLD bytes is the cheapest negative
+  control there is — run the new fixture BEFORE restarting (63's geometry assert, 64's errors[]
+  assert, 65 all got theirs this way). Once restarted, the honest fallback is the wrong-value copy.

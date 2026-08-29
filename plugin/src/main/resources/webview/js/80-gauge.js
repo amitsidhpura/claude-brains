@@ -174,6 +174,19 @@
       syncModelFooter();
     }
   }
+  // Checklist 1.24: `result.terminal_reason` (19 values, protocol doc § 6) says WHY the turn ended.
+  // "completed" is the normal case and stays silent; a user stop already reads "Stopped" (the
+  // aborted_* reasons are exactly that); everything else — max_turns, prompt_too_long,
+  // budget_exhausted, stop_hook_prevented, … — is a fact the summary line would otherwise hide.
+  // Wording is the CLI's own token with underscores as spaces: 19 values is too many to rename
+  // by hand, and a reader who greps the protocol doc should find the same word. Measured live
+  // 2026-08-29 (2.1.251): a normal turn carries terminal_reason:"completed".
+  const SILENT_END = { completed: 1, aborted_streaming: 1, aborted_tools: 1, background_requested: 1 };
+  function turnEndReason(ev) {
+    const r = ev.terminal_reason;
+    if (typeof r !== 'string' || !r || SILENT_END[r] || stopping) return;
+    (curTurn || log).appendChild(statusLine('Turn ended early · ' + r.replace(/_/g, ' '), SVG_ALERT, 'status err'));
+  }
   function onResult(ev) {
     msgStreamed = false;   // an interrupted stream must not mark the next message as drawn
     const usage = ev.usage || {};
@@ -200,7 +213,12 @@
     const outTok = reqTokens || (turnTokens + msgTokens);
     setBusy(false);
     if (ev.is_error) {
-      const resultText = (typeof ev.result === 'string' && ev.result) ? ev.result : (ev.subtype || 'error');
+      // error_max_turns / error_max_budget_usd / … arrive with result:null and the readable text
+      // in `errors[]` (measured 2026-08-29, 2.1.251: errors:["Reached maximum number of turns (1)"]);
+      // the subtype token is the last resort, not the first.
+      const errs = Array.isArray(ev.errors) ? ev.errors.filter(function (e) { return typeof e === 'string' && e; }) : [];
+      const resultText = (typeof ev.result === 'string' && ev.result) ? ev.result
+        : errs.length ? errs.join('\n') : (ev.subtype || 'error');
       // drain stashed synthetic texts the result does NOT literally repeat — chronologically first
       syntheticEcho.forEach(function (t) { if (t !== resultText) errorBlock(t); });
       if (stopping) { statusLine('Stopped', SVG_STOP); }
@@ -216,6 +234,7 @@
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
       done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero
     }
+    turnEndReason(ev);
     syntheticEcho = [];   // turn-scoped: a stale echo must not leak into the next result
     // The queue waits for the request to END, not for the stream to go quiet: draining here means
     // a follow-up never lands mid-turn. `stopping` is still true for an interrupted turn, which is

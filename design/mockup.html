@@ -460,6 +460,18 @@ total 196K
         <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Reject</button></div>
       </div>
 
+      <!-- Ask WITH a reason (checklist 1.23): can_use_tool's `decision_reason` — the CLI's own
+           words for why this ask escalated — sits between the header and the preview as a .t-note,
+           the same ↳ caveat idiom a tool line uses. Measured 2026-08-29: a Bash containing `$(…)`
+           arrives with decision_reason "Contains command_substitution"; rule-matched and compound
+           asks carry a type but no text, and draw no line. -->
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Bash</b></div>
+        <div class="t-note">↳ Contains command_substitution</div>
+        <pre class="cmd">echo start &amp;&amp; echo $(whoami) &amp;&amp; echo end</pre>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Accept</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Reject</button></div>
+      </div>
+
       <div class="tool-line"><b>Bash</b><span class="t-desc">Run the production build</span></div>
       <div class="io">
         <div class="io-row"><span class="io-k">IN</span><span class="io-v">npm run build</span></div>

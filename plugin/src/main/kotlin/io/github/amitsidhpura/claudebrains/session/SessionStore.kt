@@ -513,6 +513,7 @@ object SessionStore {
         var resolved: Boolean = false      // a tool_result arrived — without one a plan card is UNDECIDED
         var icon: String? = null           // status glyph key ("stop")
         var durMs: Long? = null            // thinking duration / request wall-clock
+        var redacted: Boolean = false      // an API `redacted_thinking` block: no text, ever (1.21)
         var tokens: Long? = null           // output tokens for the request summary
         // Blocks the window dropped, on the `truncated` head block. The COUNT travels and the
         // wording lives in chat.html, the same split the `auth` status line uses: the panel says
@@ -543,6 +544,7 @@ object SessionStore {
             // (user report 2026-08-23).
             if (plan != null && !resolved) put("undecided", true)
             icon?.let { put("icon", it) }
+            if (redacted) put("redacted", true)
             durMs?.let { put("durMs", it) }
             tokens?.let { put("tokens", it) }
             dropped?.let { put("dropped", it) }
@@ -991,6 +993,12 @@ object SessionStore {
                                         // `think no-body` "Thought for Ns" line, matching live
                                         "thinking" -> out.add(Item("thinking").apply {
                                             text = b["thinking"]?.jsonPrimitive?.content ?: ""
+                                            durMs = sincePrev
+                                        })
+                                        // The API's encrypted variant (`data`, never text): the
+                                        // same line, labelled redacted, so live and replay agree.
+                                        "redacted_thinking" -> out.add(Item("thinking").apply {
+                                            redacted = true
                                             durMs = sincePrev
                                         })
                                         // A web search the API ran server-side. Shaped exactly like

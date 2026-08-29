@@ -182,7 +182,7 @@
           // durMs is record-to-record wall time — an approximation of the live timer — clamped to
           // the same 1s floor live uses, and shown only when a gap exists.
           const secs = it.durMs ? Math.max(1, Math.round(it.durMs / 1000)) : 0;
-          (curTurn || log).appendChild(thinkBlock(it.text || '', secs));
+          (curTurn || log).appendChild(thinkBlock(it.text || '', secs, !!it.redacted));
           break;
         }
         case 'ask':

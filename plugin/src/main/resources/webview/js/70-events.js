@@ -254,6 +254,18 @@
           // consequence of that correction: this can only speak from the first turn onward,
           // because that is when the CLI emits `system/init`.
           mcpNotice(ev.mcp_servers);
+        } else if (ev.subtype === 'model_fallback') {
+          // WATCH (checklist 9.7, deferred 2026-08-29): the CLI switched the turn to its fallback
+          // model — `{trigger: model_not_found|permission_denied|overloaded|server_error|
+          // last_resort|model_blocked, original_model, fallback_model, content}` (schema read from
+          // the 2.1.251 binary; NEVER observed on this wire). The panel declares no
+          // supportedDialogKinds, so the overage consent never reaches it and the chip would keep
+          // the old name. No render until one is seen: the first lands here for CDP
+          // (window.__modelFallbackSeen) and once in the console, exactly like __ambientSeen.
+          if (!window.__modelFallbackSeen) {
+            window.__modelFallbackSeen = ev;
+            console.warn('first model_fallback frame (9.7 watch):', JSON.stringify(ev));
+          }
         } else if (ev.subtype === 'thinking_tokens') {
           // The CLI's own count, replacing our chars/4 guess for as long as it keeps sending them.
           const n = ev.estimated_tokens;

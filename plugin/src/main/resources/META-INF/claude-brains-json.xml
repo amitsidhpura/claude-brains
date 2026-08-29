@@ -1,0 +1,4 @@
+<!-- Intentionally empty: the optional depends on com.intellij.modules.json exists only to put
+     the JSON plugin's classloader on our parent chain on 2024.3+ IDEs (checklist 13.2). -->
+<idea-plugin>
+</idea-plugin>

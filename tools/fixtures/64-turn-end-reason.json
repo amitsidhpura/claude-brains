@@ -1,0 +1,174 @@
+{
+ "item": "turn end reason (1.24): result.terminal_reason other than completed surfaces as a status line after the summary",
+ "branch": "turnEndReason(ev) in 80-gauge.js, called at the end of onResult: silent for completed / aborted_* / background_requested or while `stopping`; otherwise statusLine('Turn ended early · <reason with spaces>', alert, 'status err')",
+ "provenance": "The result frame is fixture 44's real 2026-08-12 capture; terminal_reason on it is MEASURED: a `claude -p --output-format stream-json` run on 2.1.251 (2026-08-29, scratchpad probe-tool-progress.jsonl) ended with result{terminal_reason:'completed', permission_denials:[]}. STEP 2's frame is a second MEASUREMENT (2026-08-29, 2.1.251, `claude -p --max-turns 1 --allowedTools Bash`, Sonnet 5, capture probe-maxturns.jsonl): the turn ended {subtype:'error_max_turns', is_error:true, terminal_reason:'max_turns', result:null, errors:['Reached maximum number of turns (1)']} — trimmed to the top-level keys, values verbatim. It also exposed that the error arm fell back to the subtype token when result is null; onResult now prefers errors[]. The other 17 values are read from the binary's schema (docs/ide-mcp-protocol.md § 6) and stay unmeasured. NEGATIVE CONTROL RUN 2026-08-29, wrong-value form: a temp copy with the two status-line texts set to the raw token ('max_turns') and the counts set to 99 FAILED all five flipped asserts — including step 1's and step 4's silent cases, which proves the ABSENCE asserts are read, not skipped — and passed the rest; deleted after the run. NEGATIVE CONTROL RUN 2026-08-29 against the sandbox still serving the pre-fix 80-gauge.js (the free pre-fix build): 9 passed, 1 failed — exactly the errors[] assert, reading 'error_max_turns'; green after the restart.",
+ "steps": [
+  {
+   "note": "completed: the normal turn stays silent",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 4159,
+     "num_turns": 2,
+     "result": "ok",
+     "usage": {
+      "output_tokens": 40
+     },
+     "terminal_reason": "completed"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status.err').length",
+     "equals": 0,
+     "why": "no line for the normal case"
+    }
+   ]
+  },
+  {
+   "note": "max_turns — the VERBATIM result frame of a `--max-turns 1` run: error block reads the CLI's errors[] text, then the reason line",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "result",
+     "subtype": "error_max_turns",
+     "is_error": true,
+     "duration_ms": 2624,
+     "duration_api_ms": 2959,
+     "num_turns": 2,
+     "stop_reason": "tool_use",
+     "session_id": "fcdfa71d-d7ae-43e8-893c-ee1b4fa700b6",
+     "total_cost_usd": 0.0531472,
+     "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 11403,
+      "cache_read_input_tokens": 28296,
+      "output_tokens": 89,
+      "output_tokens_details": {
+       "thinking_tokens": 14
+      },
+      "server_tool_use": {
+       "web_search_requests": 0,
+       "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+       "ephemeral_1h_input_tokens": 11403,
+       "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+       {
+        "input_tokens": 2,
+        "output_tokens": 89,
+        "cache_read_input_tokens": 28296,
+        "cache_creation_input_tokens": 11403,
+        "cache_creation": {
+         "ephemeral_5m_input_tokens": 0,
+         "ephemeral_1h_input_tokens": 11403
+        },
+        "type": "message"
+       }
+      ],
+      "speed": "standard"
+     },
+     "errors": [
+      "Reached maximum number of turns (1)"
+     ],
+     "terminal_reason": "max_turns",
+     "permission_denials": [],
+     "uuid": "114d9185-0735-49e2-89fc-8823f6471e4d"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status.err').length",
+     "equals": 1,
+     "why": "one reason line"
+    },
+    {
+     "js": "document.querySelector('#log .status.err').textContent",
+     "equals": "Turn ended early · max turns",
+     "why": "the CLI's token, underscores as spaces"
+    },
+    {
+     "js": "document.querySelectorAll('#log .error').length",
+     "equals": 1,
+     "why": "one error block"
+    },
+    {
+     "js": "document.querySelector('#log .error').textContent",
+     "equals": "Reached maximum number of turns (1)",
+     "why": "DISCRIMINATING: errors[] text, not the raw subtype 'error_max_turns' (pre-fix reads the subtype — result is null on this frame)"
+    },
+    {
+     "js": "document.querySelector('#log .error').compareDocumentPosition(document.querySelector('#log .status.err')) & 4",
+     "equals": 4,
+     "why": "error first, reason after"
+    }
+   ]
+  },
+  {
+   "note": "prompt_too_long on an error result: the line still appears, after the error block",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "result",
+     "subtype": "error_during_execution",
+     "is_error": true,
+     "duration_ms": 4159,
+     "num_turns": 2,
+     "result": "Prompt is too long",
+     "usage": {
+      "output_tokens": 40
+     },
+     "terminal_reason": "prompt_too_long"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .error').length",
+     "equals": 1,
+     "why": "the error block as before"
+    },
+    {
+     "js": "document.querySelector('#log .status.err').textContent",
+     "equals": "Turn ended early · prompt too long",
+     "why": "reason line present"
+    },
+    {
+     "js": "document.querySelector('#log .error').compareDocumentPosition(document.querySelector('#log .status.err')) & 4",
+     "equals": 4,
+     "why": "error first, reason after"
+    }
+   ]
+  },
+  {
+   "note": "a result with no terminal_reason at all (older CLIs) draws nothing",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 4159,
+     "num_turns": 2,
+     "result": "ok",
+     "usage": {
+      "output_tokens": 40
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status.err').length",
+     "equals": 0,
+     "why": "absent field, no line"
+    }
+   ]
+  }
+ ]
+}

@@ -49,7 +49,7 @@ class ClaudeCli(
     private val permissionMode: String,
     private val resumeSessionId: String? = null,
     private val onEvent: (String) -> Unit,
-    private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?) -> Unit,
+    private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?, reason: String?) -> Unit,
     private val onInit: (commandsJson: String) -> Unit,
     private val onExit: (Int) -> Unit,
     /** A declared hook fired: [respond] MUST be called (once) or the CLI stalls until its timeout. */
@@ -269,7 +269,11 @@ class ClaudeCli(
                 val suggestions =
                     if (request["blocked_path"] == null) request["permission_suggestions"] as? JsonArray
                     else null
-                onPermission(reqId, tool, input, suggestions)
+                // Why the ask escalated, when the CLI says (schema: "human-readable reason … for the
+                // consent line of the host's dialog"; checklist 1.23). Absent on every ask measured
+                // so far — a plain mode-requires-it prompt carries no reason.
+                val reason = request["decision_reason"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                onPermission(reqId, tool, input, suggestions, reason)
             }
             "hook_callback" -> {
                 val id = request["callback_id"]?.jsonPrimitive?.content ?: ""

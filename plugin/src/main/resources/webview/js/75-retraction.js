@@ -166,6 +166,10 @@
           curBubble = null; // text after a tool starts a fresh block
         } else if (cb.type === 'web_search_tool_result') {
           serverToolResult(cb);
+        } else if (cb.type === 'redacted_thinking') {
+          // no deltas follow and nothing streams — the finished block is the whole event (1.21)
+          flushMd(); curBubble = null;
+          (curTurn || log).appendChild(track(thinkBlock('', 0, true))); maybeScroll();
         } else if (cb.type === 'thinking') {
           curThink = track(el('think-live', ''));
           curThink.innerHTML = '<div class="th"><span class="shimmer">Thinking…</span>' +

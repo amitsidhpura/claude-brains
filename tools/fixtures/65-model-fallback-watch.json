@@ -1,0 +1,62 @@
+{
+ "item": "model_fallback watch (9.7, deferred 2026-08-29): the first system/model_fallback frame is captured for CDP and logged once; nothing is rendered",
+ "branch": "70-events.js case 'system' → subtype 'model_fallback': window.__modelFallbackSeen = ev on first sight only; console.warn once; no DOM change (no render exists yet, by decision)",
+ "provenance": "INFERRED, not measured. The frame shape {type:'system', subtype:'model_fallback', trigger ∈ model_not_found|permission_denied|overloaded|server_error|last_resort|model_blocked, original_model, fallback_model, content, uuid, session_id} is the CLI's typed schema read from the 2.1.251 binary (strings); no local transcript or capture holds one and it cannot be triggered on demand (needs the Fable allowance to run out). What is asserted is only the watch's contract: capture first, capture once, draw nothing — the same contract fixture 61's __ambientSeen carries. NEGATIVE CONTROL: run against the sandbox still serving the pre-watch 70-events.js (the free pre-fix build) — RUN 2026-08-29: 2 passed, 2 failed — both DISCRIMINATING asserts read None (no watch, nothing stashed), both GUARDs passed (the pre-watch build renders nothing for the frame either). A first draft of the GUARD counted `#log > *` and read 1 — that is the permanent #welcome node, hence the `:not(#welcome)` selector.",
+ "steps": [
+  {
+   "note": "first frame is captured whole; the log gains no node",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); delete window.__modelFallbackSeen;",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "model_fallback",
+     "trigger": "overloaded",
+     "original_model": "claude-fable-5",
+     "fallback_model": "claude-opus-5",
+     "content": "Switched to fallback model claude-opus-5",
+     "uuid": "mf-1",
+     "session_id": "s-1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__modelFallbackSeen && [window.__modelFallbackSeen.trigger, window.__modelFallbackSeen.original_model, window.__modelFallbackSeen.fallback_model])",
+     "equals": "[\"overloaded\",\"claude-fable-5\",\"claude-opus-5\"]",
+     "why": "DISCRIMINATING: the frame is stashed verbatim (pre-watch: null)"
+    },
+    {
+     "js": "document.querySelectorAll('#log > *:not(#welcome)').length",
+     "equals": 0,
+     "why": "GUARD: nothing rendered — a render is deliberately absent until a real frame is seen"
+    }
+   ]
+  },
+  {
+   "note": "a second frame does not overwrite the first (the watch records the FIRST sighting)",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "model_fallback",
+     "trigger": "server_error",
+     "original_model": "claude-fable-5",
+     "fallback_model": "claude-opus-5",
+     "content": "Switched to fallback model claude-opus-5",
+     "uuid": "mf-2",
+     "session_id": "s-1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "window.__modelFallbackSeen && window.__modelFallbackSeen.trigger",
+     "equals": "overloaded",
+     "why": "first sighting kept"
+    },
+    {
+     "js": "document.querySelectorAll('#log > *:not(#welcome)').length",
+     "equals": 0,
+     "why": "GUARD: still nothing rendered"
+    }
+   ]
+  }
+ ]
+}

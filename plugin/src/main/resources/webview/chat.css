@@ -576,6 +576,10 @@ blockquote > *:last-child { margin-bottom: 0; }
    note gets under a tool line and the card's own header→content step (.card-h) — so the note sits
    at one distance from a diff wherever it appears; 2px nudges ↳ in from the box's border. */
 .card .t-note { margin: var(--attach-gap) 0 0 2px; }
+/* The ask-reason note (1.23) sits ABOVE the preview, right under the header: the header's own
+   margin-bottom already gives the gap above, so this one moves the gap below — measured 8/0 live
+   before this rule, 8/8 after (2026-08-29). */
+.card .card-h + .t-note { margin: 0 0 var(--attach-gap) 2px; }
 /* align-items is load-bearing: a column flex container defaults to STRETCH, which blew every image
    out to the full panel width — a 64x64 icon measured 474x320, a mostly-empty bordered box with the
    picture pinned into its top-left corner by object-position. flex-start lets each image size to

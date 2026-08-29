@@ -294,6 +294,12 @@
     // middle-ellipsised, with the ABSOLUTE path on dataset.path + title (which is what keeps the
     // click and the tooltip whole once the text is no longer openable).
     if (file) { const c = card.querySelector('.card-h code'); if (c) fillPath(c, file); }
+    // WHY the CLI is asking (checklist 1.23): can_use_tool's `decision_reason` — "the human-readable
+    // reason the ask escalated, for the consent line of the host's dialog" (its own schema text) —
+    // e.g. a matched ask-rule or a compound command's nested safety warning. Absent on the plain
+    // "mode requires it" ask, which is every card measured so far; present → one amber note line,
+    // the same ↳ idiom as a tool's caveat.
+    if (ev.reason) { const h = card.querySelector('.card-h'), n = noteLine(ev.reason); if (h && n) h.after(n); }
     (curTurn || log).appendChild(card); maybeScroll();
     foldBlock(card.querySelector('.cmd'));   // whole scripts land here
     foldBlock(card.querySelector('.diff'));  // long edits fold too (was a 240px scroll box)

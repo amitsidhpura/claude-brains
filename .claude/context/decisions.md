@@ -4,6 +4,46 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-29 — Goal: every checklist section ✅ by 2026-08-30 EOD; sections carry one mark
+- `## N. ✅|⬜ Title` in `docs/feature-checklist.md`; ✅ = every row ✅ or ➖. User rejected a
+  richer form (a `— ✅ complete` / `⏳ pending (3 🟥 · 2 ⬜)` suffix + At-a-glance section line):
+  "let's not complicate it". Work order: one section at a time, first to last, each row explained
+  in plain language, user says build / later / no.
+- Closed by decision this way: 1.25 later · 6.4, 6.5 later · 6.7 no · 12.3 no ("not needed") ·
+  12.6 later ("not needed for now", mockup first if revived) · 9.7 later + WATCH.
+
+## 2026-08-29 — 1.22 tool_progress declined on measurement, not opinion
+- A foreground 12 s Bash under `-p --output-format stream-json` (2.1.251) emitted zero
+  `tool_progress` frames; the binary's own SDK adapter drops the heartbeat kind. ➖ with the
+  measurement in the row; revisit only if the wire changes.
+
+## 2026-08-29 — 13.2 settings schema: point at SchemaStore, bundle nothing
+- `ClaudeSettingsSchemaProviderFactory` maps `.claude/settings.json` + `settings.local.json` to
+  `https://json.schemastore.org/claude-code-settings.json` (the `$schema` Anthropic's docs recommend).
+  Why: bundling VS Code's `claude-code-settings.schema.json` would breach the never-redistribute
+  rule; a hand-written schema (the first plan) would rot against 150+ keys per release. Rejected:
+  doing nothing — the IDE's SchemaStore catalog matches only `settings.json`, never the local file.
+- Packaging: optional depends on `com.intellij.modules.json` (2024.3+ split; core on 2024.2), the
+  JCEF pattern. verifyPlugin Compatible ×7.
+
+## 2026-08-29 — 9.7 Fable overage gate: watch first, build after a real frame
+- No `supportedDialogKinds` declared → the consent never reaches the panel and the chip could
+  keep the old model name after a fallback. Cannot be triggered on demand. Rejected: building the
+  consent card from the binary's schema alone. Instead `system/model_fallback` → `window.__modelFallbackSeen`
+  + one console warning (fixture 65); the build starts when one has been captured.
+
+## 2026-08-29 — Error results: `errors[]` text before the subtype token
+- Measured `--max-turns 1`: `result{subtype:error_max_turns, is_error:true, terminal_reason:max_turns,
+  errors:[…]}` with NO `result` key. `onResult` now shows `errors.join('\n')` when `result` is absent;
+  the raw subtype is the last resort. Found while testing 1.24, fixed under it.
+
+## 2026-08-29 — Wrong-value negative controls accepted for fixtures 62–64's JS halves
+- The sandbox had been relaunched after the edits, so no free pre-fix build existed and a stash
+  control would have cost two restarts. Per conventions (either form is valid) the flipped-
+  expectation copies were run (10/10 flipped asserts failed) and each fixture's provenance says
+  exactly that. Later additions (63's geometry assert, 64's errors[] assert, 65) got true pre-fix
+  controls because the sandbox happened to still serve the old bytes.
+
 ## 2026-08-29 — Checklist: 🚫 mark retired; ➖ = "not implemented", the row says why
 - User's call after an audit found the two closed marks drifting: 9.6 / 12.4 / 8.12 sat on ➖
   while being decisions, and 6.6 / 8.9 / 15.2 / 5.5 sat on 🚫 while being "do last" deferrals.

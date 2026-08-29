@@ -1,0 +1,139 @@
+{
+ "item": "redacted_thinking placeholder (1.21): the API's encrypted thinking block renders as a labelled no-body thought line, live and on replay",
+ "branch": "content_block_start{content_block.type:'redacted_thinking'} in 75-retraction.js → thinkBlock('',0,true) appended at once (no deltas ever follow); thinkBlock's `redacted` arm in 50-blocks.js; SessionStore emits {role:'thinking',redacted:true} and 55-replay.js passes it through",
+ "provenance": "INFERRED, not measured. No local transcript or wire capture holds a redacted_thinking block (checked 2026-08-29, 21 transcripts on disk). The content-block shape {type:'redacted_thinking', data:<base64>} is the Anthropic Messages API's documented one, and the CLI binary (2.1.251) lists redacted_thinking among the block types it forwards (strings). The stream_event framing is fixture 40's / 45's. What is asserted is only what the renderer must do with that shape; that the CLI emits it on this wire is unproven. NEGATIVE CONTROL RUN 2026-08-29, wrong-value form (the sandbox was launched after the edit, so no free pre-fix build existed): a temp copy with the .think.redacted count flipped to 0 and the summary text to 'Thought' FAILED all four flipped asserts (live count, live text, replay count, replay text) and passed the rest; deleted after the run. The redacted line did not exist in any earlier build (thinkBlock had no third parameter), so a pre-fix build reads 0 for every count here. TRIGGER ATTEMPTS 2026-08-29: the once-documented ANTHROPIC_MAGIC_STRING_TRIGGER_REDACTED_THINKING_… test string was sent in the user turn on three headless runs (Sonnet 5 ×2, Opus 5 ×1, CLI 2.1.251, panel flags) — every run returned a plain `thinking` block (empty body + signature) and no redacted_thinking; the current platform docs (platform.claude.com/docs/en/build-with-claude/thinking, 2026-08-29) no longer list the string, state the block appears only on genuine safety redaction, and state Fable 5 / Mythos 5 never return it. So this fixture stays the only evidence for 1.21, by necessity.",
+ "steps": [
+  {
+   "note": "live: a redacted_thinking block between two text blocks draws as one 'Thought (redacted)' line, non-expandable, and text keeps flowing after it",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "redacted_thinking",
+       "data": "EqQBCkYIBRgCKkB"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 1,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "after the redaction"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 1
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .think.redacted').length",
+     "equals": 1,
+     "why": "one redacted thought line"
+    },
+    {
+     "js": "document.querySelector('#log .think.redacted').tagName",
+     "equals": "DIV",
+     "why": "not a <details>: nothing to expand"
+    },
+    {
+     "js": "document.querySelector('#log .think.redacted summary').textContent",
+     "equals": "Thought (redacted)",
+     "why": "labelled, and no duration for an instantaneous block"
+    },
+    {
+     "js": "document.querySelectorAll('#log .think-live').length",
+     "equals": 0,
+     "why": "no live thinking shimmer was ever opened for it"
+    },
+    {
+     "js": "document.querySelector('#log').textContent",
+     "contains": "after the redaction",
+     "why": "the following text block still renders"
+    }
+   ]
+  },
+  {
+   "note": "replay: a transcript block {role:'thinking',redacted:true} draws the same line",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "__transcript",
+     "items": [
+      {
+       "role": "user",
+       "text": "q"
+      },
+      {
+       "role": "thinking",
+       "text": "",
+       "redacted": true,
+       "durMs": 1500
+      },
+      {
+       "role": "assistant",
+       "text": "answer"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .think.redacted').length",
+     "equals": 1,
+     "why": "replayed as redacted"
+    },
+    {
+     "js": "document.querySelector('#log .think.redacted summary').textContent",
+     "equals": "Thought (redacted) for 2s",
+     "why": "replay keeps the record-gap duration, as a plain thought does"
+    }
+   ]
+  }
+ ]
+}

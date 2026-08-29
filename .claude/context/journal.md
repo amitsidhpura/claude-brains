@@ -3,6 +3,28 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-29 (third) — section marks; goal set; §1 closed (1.21/1.23/1.24 built, 1.22/1.25 ➖)
+- User asked for section-level marks: `## N. ✅|⬜ Title`, one glyph, no counts ("let's not complicate
+  it"). Then set the goal: every section ✅ by 2026-08-30 EOD, working one section at a time.
+- Measured before building: `tool_progress` is NOT on stream-json (12 s foreground Bash, 2.1.251, zero
+  frames) → 1.22 ➖; `result.terminal_reason:"completed"` confirmed live → 1.24 buildable.
+- Built 1.21 (redacted_thinking line, live + replay), 1.23 (decision_reason note on the permission
+  card, Kotlin plumbing), 1.24 (turn-end-reason status line). Harness 533/0, tests 131/0.
+- Fixture slip worth remembering: the `__transcript` frame's key is `items`, not `blocks` — and a
+  null `.textContent` in an expect ABORTS the whole harness run (fixtures after it never run).
+- CLI auto-updated to 2.1.251 mid-session; the checklist stays audited at 2.1.250.
+- Tested the three builds properly: 1.23 triggered on demand (`echo $(whoami)` →
+  decision_reason "Contains command_substitution"; rule / subcommandResults asks carry a TYPE but no
+  text) and verified live end-to-end; spacing bug found by the user (note sat 8/0 on the preview) →
+  `.card .card-h + .t-note`; 1.24 measured with `--max-turns 1` (result:null + errors[] — the error
+  block now shows errors[] text); 1.21 unforceable (docs: safety-only, never on Fable/Mythos 5).
+- §6, §9 and §12 closed by decision (9.7 = later + a `system/model_fallback` watch, fixture 65);
+  §13 closed by building 13.2 as a SchemaStore-URL provider (nothing bundled) covering
+  `settings.local.json`, which the IDE's own catalog misses — verifyPlugin Compatible ×7, user
+  hand-checked in the sandbox (§17 MT-10.6). Sandbox restarted five times, each verified by content.
+- End of session: harness **541/0** (fixtures to 65), `./gradlew test` **134/0**. Sections left:
+  §8 (user's calls pending), §14 (all-➖ recommendation pending), §15. Committed and pushed.
+
 ## 2026-08-29 (second) — §11 closed: 11.5 decline ack, 11.6 declined, 🚫 mark retired
 - Walked the user through 11.5 and 11.6 in plain language; they chose: 11.5 → answer `elicitation`
   with `{action:"decline"}` now, form deferred (backlog § Someday) until a server they use elicits;
@@ -193,22 +215,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   was already correct — caught only by the by-content check. And `runIde` detaches: gradle exits
   0/1 while the IDE keeps running, so the task "failing" says nothing about the IDE.
 
-## 2026-08-25 (third) — 0.11.0 goes out
-- **Released 0.11.0** (`4c8899b`, tag `v0.11.0`): effort confirmation line (new), custom-model
-  checkmark + ×-overlay fixes, /model-/effort resume parity + title fix. Minor bump: one new
-  visible capability. Full release.md run; gate held at step 6 with the complete notes and the
-  verdict table.
-- `verifyPlugin` Compatible ×7 (242.26775.23 → 262.10315.32), 0 warnings — but the FIRST attempt
-  never ran: a background compound command's `cd plugin` failed (cwd already there from an
-  earlier call) and the trailing `echo VERIFY-DONE` masked exit 0. Caught by reading the verdict
-  FILES, which still said 0.10.0 — the version in the verdict path is part of the check
-  (gotchas § Build).
-- Asset 200 + `cmp`-identical; feed serving 0.11.0; `marketplace-upload` run green in 13s;
-  Marketplace API listed 0.11.0 after ~5 min lag; user's dashboard screenshot confirms
-  **Approved**, all compatibility checks Success incl. the 2026.2.2 EAP IDE-run check.
-- Nothing unreleased on `main`. Next release is a fresh bump when work lands.
-
 ## Digest
+- **2026-08-25 (third)** — 0.11.0 released (`4c8899b`, tag `v0.11.0`): effort confirmation line, custom-model ✓/× fixes, /model-/effort resume parity. verifyPlugin ×7 — the FIRST attempt never ran (masked exit; verdict files still said 0.10.0 → the version in the verdict path is part of the check, gotchas § Build). Marketplace Approved incl. the 2026.2.2 EAP check.
 - **2026-08-25 (second)** — model-menu polish: custom rows get the ✓ (fixture 57; `#inputbar` ID
   rules falsified two rounds of hand-derived offsets); chip `set_model` writes a `/model` trio to the
   transcript → hidden on resume (`cleanInjected`); `/effort` now shows the CLI's confirmation like a

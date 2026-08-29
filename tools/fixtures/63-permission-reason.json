@@ -1,0 +1,66 @@
+{
+ "item": "permission-denied / ask reason (1.23): can_use_tool's decision_reason shows as a ↳ note under the card header",
+ "branch": "ClaudeCli.handleControlRequest forwards request.decision_reason → ClaudeSessionService → ChatPanel puts `reason` on the permission_request frame → renderPermission (85-cards.js) inserts noteLine(reason) after .card-h",
+ "provenance": "The permission_request frame is ChatPanel's own synthetic shape (fixture 11); `reason` is new on it. The FIELD is the CLI's: can_use_tool's request schema (2.1.251 binary, strings) declares decision_reason as 'Human-readable reason the ask escalated, for the consent line of the host's dialog', beside decision_reason_type ('classifier' | 'asyncAgent' | 'mode' | 'rule' | 'subcommandResults'). No local capture carries one — every measured ask is the plain mode-requires-it kind, which the schema says omits it — so the Kotlin forwarding is proven only by compileKotlin and this fixture pins the JS half. NEGATIVE CONTROL RUN 2026-08-29, wrong-value form: a temp copy expecting '↳ nothing' for the note text FAILED that assert and passed the other four; deleted after the run. Pre-fix, `.card-h + .t-note` is null (renderPermission never drew a note under the header), so the same assert throws there. GEOMETRY ASSERT ADDED 2026-08-29 after the user compared the note's spacing in DevTools: `.card .t-note` (margin attach-gap 0 0 2px, written for the note UNDER the diff) left 0px between the note and the command box. Fix: `.card .card-h + .t-note { margin: 0 0 var(--attach-gap) 2px }`. NEGATIVE CONTROL: the sandbox still serving the pre-fix chat.css read '8/0' against the expected '8/8' (the free pre-fix build); green after restart.",
+ "steps": [
+  {
+   "note": "a Bash ask with a reason: header, then the ↳ reason line, then the command preview",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pr1",
+     "tool": "Bash",
+     "input": "{\"command\":\"git push --force\"}",
+     "reason": "Matched ask rule: git push --force *"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "equals": 1,
+     "why": "one card"
+    },
+    {
+     "js": "document.querySelector('#log .card.warn .card-h + .t-note').textContent",
+     "equals": "↳ Matched ask rule: git push --force *",
+     "why": "the reason sits directly under the header, in the caveat idiom"
+    },
+    {
+     "js": "document.querySelector('#log .card.warn').textContent.indexOf('Matched ask rule') < document.querySelector('#log .card.warn').textContent.indexOf('git push --force')",
+     "equals": true,
+     "why": "reason before the preview"
+    },
+    {
+     "js": "(function(){var c=document.querySelector('#log .card.warn');var h=c.querySelector('.card-h'),n=c.querySelector('.t-note'),p=c.querySelector('.cmd');var r=function(e){return e.getBoundingClientRect()};return Math.round(r(n).top-r(h).bottom)+'/'+Math.round(r(p).top-r(n).bottom)})()",
+     "equals": "8/8",
+     "why": "DISCRIMINATING: --attach-gap above AND below the note (user screenshot 2026-08-29 showed 8/0 — the bottom-of-card note rule has no bottom margin). Pre-fix reads '8/0'."
+    }
+   ]
+  },
+  {
+   "note": "the same ask without a reason (every ask measured so far) draws no note line at all",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pr2",
+     "tool": "Bash",
+     "input": "{\"command\":\"ls\"}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "equals": 1,
+     "why": "one card"
+    },
+    {
+     "js": "document.querySelectorAll('#log .card.warn .t-note').length",
+     "equals": 0,
+     "why": "no reason, no line"
+    }
+   ]
+  }
+ ]
+}

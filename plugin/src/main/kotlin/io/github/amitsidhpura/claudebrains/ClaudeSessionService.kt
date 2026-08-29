@@ -72,7 +72,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** UI callbacks, kept so we can restart the CLI (new/resume) without re-registering. */
     private var onEventCb: ((String) -> Unit)? = null
-    private var onPermissionCb: ((String, String, String, String?) -> Unit)? = null
+    private var onPermissionCb: ((String, String, String, String?, String?) -> Unit)? = null
     private var onInitCb: ((String) -> Unit)? = null
     private var onExitCb: ((Int) -> Unit)? = null
 
@@ -124,12 +124,13 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /**
      * @param onEvent sink for raw stream-json conversation lines
-     * @param onPermission (requestId, toolName, inputJson, suggestionsJson?) when the CLI asks
-     *   to run a tool; suggestionsJson is its permission_suggestions array, when present
+     * @param onPermission (requestId, toolName, inputJson, suggestionsJson?, reason?) when the CLI
+     *   asks to run a tool; suggestionsJson is its permission_suggestions array, when present;
+     *   reason is its `decision_reason`, when present (1.23)
      */
     fun start(
         onEvent: (String) -> Unit,
-        onPermission: (requestId: String, toolName: String, inputJson: String, suggestionsJson: String?) -> Unit,
+        onPermission: (requestId: String, toolName: String, inputJson: String, suggestionsJson: String?, reason: String?) -> Unit,
         onInit: (commandsJson: String) -> Unit,
         onExit: (Int) -> Unit,
     ) {
@@ -171,10 +172,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
                 fileSync.onLine(line)
                 onEventCb?.invoke(line)
             },
-            onPermission = { requestId, toolName, input, suggestions ->
+            onPermission = { requestId, toolName, input, suggestions, reason ->
                 pendingPermissions[requestId] = input
                 suggestions?.let { pendingSuggestions[requestId] = it }
-                onPermissionCb?.invoke(requestId, toolName, input.toString(), suggestions?.toString())
+                onPermissionCb?.invoke(requestId, toolName, input.toString(), suggestions?.toString(), reason)
             },
             onInit = { commandsJson -> onInitCb?.invoke(commandsJson) },
             onExit = { code -> onExitCb?.invoke(code) },

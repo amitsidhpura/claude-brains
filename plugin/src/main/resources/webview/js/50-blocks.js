@@ -559,11 +559,15 @@
   // Finished thinking block: an empty body (the CLI often persists only a signature) renders as a
   // non-expandable `think no-body` line, a real one as a collapsible <details>. secs 0 hides the
   // duration ("Thought", not "Thought for 0s").
-  function thinkBlock(text, secs) {
-    const empty = !(text || '').trim();
+  // redacted (checklist 1.21): an API `redacted_thinking` block — encrypted `data`, no text, ever.
+  // Same no-body line, labelled so it is not mistaken for "the CLI persisted only a signature".
+  // Never seen locally (2026-08-29); the shape is the API's documented one.
+  function thinkBlock(text, secs, redacted) {
+    const empty = redacted || !(text || '').trim();
     const det = document.createElement(empty ? 'div' : 'details');
-    det.className = empty ? 'think no-body' : 'think';
-    det.innerHTML = '<summary>Thought' + (secs ? ' for ' + fmtDur(secs * 1000) : '') +
+    det.className = empty ? 'think no-body' + (redacted ? ' redacted' : '') : 'think';
+    det.innerHTML = '<summary>' + (redacted ? 'Thought (redacted)' : 'Thought') +
+      (secs ? ' for ' + fmtDur(secs * 1000) : '') +
       (empty ? '' : SVG_CHEVRON) + '</summary>' + (empty ? '' : '<div class="body"></div>');
     if (!empty) det.querySelector('.body').textContent = text;
     return det;

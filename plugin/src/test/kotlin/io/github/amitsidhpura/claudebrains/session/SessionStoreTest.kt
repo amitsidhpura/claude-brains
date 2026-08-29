@@ -315,6 +315,33 @@ class SessionStoreTest {
      * belongs to the boundary before it — linked by `parentUuid`, not by adjacency — folded under
      * the marker. Both orphan directions are covered because either can fall at a file boundary.
      */
+    /** 1.21: the API's `redacted_thinking` block has encrypted `data` and no text; it must replay as a
+     *  labelled no-body thinking line, not vanish and not become an empty "Thought". */
+    @Test
+    fun `a redacted_thinking block replays as a redacted thinking line`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-08-29T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"q"}]}}""",
+            """{"type":"assistant","uuid":"a1","timestamp":"2026-08-29T10:00:02.000Z","message":{"role":"assistant","model":"claude-sonnet-5","content":[{"type":"redacted_thinking","data":"EqQBCkYIBRgCKkB"}]}}""",
+            """{"type":"assistant","uuid":"a2","timestamp":"2026-08-29T10:00:03.000Z","message":{"role":"assistant","model":"claude-sonnet-5","content":[{"type":"text","text":"answer"}]}}""",
+        ).joinToString("\n")
+        val tmpHome = File.createTempFile("claude-home-redacted", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "redacted.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+            val out = SessionStore.readTranscript(CWD, "redacted")
+            val th = out.filter { it["role"]?.jsonPrimitive?.content == "thinking" }
+            assertEquals(1, th.size, "one thinking block")
+            assertEquals(true, th[0]["redacted"]?.jsonPrimitive?.boolean, "flagged redacted")
+            assertEquals("", th[0]["text"]?.jsonPrimitive?.content, "no text leaks from data")
+            assertTrue(out.any { it["role"]?.jsonPrimitive?.content == "assistant" && it["text"]?.jsonPrimitive?.content == "answer" })
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
     @Test
     fun `a compaction replays as one marker with its summary, never as a user message`() {
         val jsonl = listOf(

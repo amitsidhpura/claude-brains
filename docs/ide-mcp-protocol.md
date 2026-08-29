@@ -686,18 +686,31 @@ most of them.
   `supersedes`/`retracted_message_uuids`. `@internal`, zero records; the uuid→DOM map exists, so
   one branch if it ever reaches our wire.
 - **`tool_progress`** (top-level) — `{tool_use_id, tool_name, elapsed_time_seconds, heartbeat?,
-  subagent_retry?}`; not emitted to stream-json clients as of 2.1.222 (checklist 1.22).
+  subagent_retry?}`; not emitted to stream-json clients as of 2.1.222, re-measured 2.1.251
+  (2026-08-29): a foreground 12 s Bash under `-p --output-format stream-json` sent none
+  (checklist 1.22 ➖).
 - **`conversation_reset`** — emitted by `/clear`, plan-mode exit, fresh-session flows; "mount a
   fresh transcript under `new_conversation_id`". Our `/clear` is native, but probe plan-mode exit.
 - **Effort via `apply_flag_settings` / `--effort`** — no `set_effort` control request exists (hence
   the `/effort` turn); but a spawn flag `--effort <v>` and a live `apply_flag_settings` control
   request ("merges into the flag settings layer"; `effortLevel` is a settings key) both exist.
   Probing `apply_flag_settings{effortLevel}` mid-session could retire the muted turn.
-- **`permission_denied`** subtype carries the auto-deny *reason*; `can_use_tool` also carries
-  `display_name`, `decision_reason`, `matched_ask_rule{source, rule_content}` (checklist 1.23).
-- **`result` extras** — `terminal_reason` (19 values: `prompt_too_long`, `stop_hook_prevented`,
-  `blocking_limit`, …); error subtypes `error_max_turns` / `error_max_budget_usd` /
-  `error_max_structured_output_retries` all render as a generic error block today.
+- **`system/permission_denied`** `{tool_name, tool_use_id, agent_id?, decision_reason_type?,
+  decision_reason?, …}` carries the auto-deny *reason* — unmeasured, not drawn. `can_use_tool`
+  also carries `display_name`, `decision_reason` ("human-readable reason the ask escalated, for
+  the consent line of the host's dialog"), `decision_reason_type` (classifier | asyncAgent | mode
+  | rule | subcommandResults | other), `matched_ask_rule{source, rule_content}` — `decision_reason`
+  is DRAWN since 2026-08-29 (checklist 1.23 ✅). MEASURED 2026-08-29 (2.1.251, stdio prompt tool,
+  Sonnet 5): an `ask` rule match → `decision_reason_type:"rule"`, NO `decision_reason`, no
+  `matched_ask_rule`; a compound command with a redirect → `"subcommandResults"`, no text, but
+  `permission_suggestions` (addRules for each sub-command); `echo $(whoami)` →
+  `decision_reason_type:"other"` + `decision_reason:"Contains command_substitution"` — the one
+  shape that carries text, and the on-demand trigger for the card's note.
+- **`result` extras** — `terminal_reason` (19 values, § 6) is DRAWN when ≠ completed since
+  2026-08-29 (checklist 1.24 ✅). MEASURED `--max-turns 1` (2.1.251): `{subtype:"error_max_turns",
+  is_error:true, terminal_reason:"max_turns", num_turns:2, errors:["Reached maximum number of
+  turns (1)"]}` with NO `result` key — the error subtypes carry their text in `errors[]`, which the
+  error block now shows (subtype token only as the last resort).
 - **`redacted_thinking`** — live renders nothing; VS Code shows a placeholder (checklist 1.21).
 - **`prompt_suggestion` / `agents_killed` / `session_state_changed`** — suggestion chrome (opt-in
   at initialize), an "agents killed" banner, and an "authoritative turn-over signal" (`idle` fires

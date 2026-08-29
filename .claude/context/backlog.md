@@ -15,8 +15,8 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
-- The seven remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11,
-  12.3, 12.6, 13.2, 14.2) need a yes / later / no (9.4 and 9.5 decided + built 2026-08-24).
+- The four remaining **[DECIDE]** rows in `docs/feature-checklist.md` (8.7, 8.10, 8.11, 14.2)
+  need a yes / later / no (12.3 / 12.6 declined-deferred and 13.2 built 2026-08-29).
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
@@ -73,7 +73,10 @@
 
 ## Deferred (user's choice, do last)
 - Conversation tabs
-- Auto-include selection / Alt+K
+- Auto-include selection / Alt+K insert-mention action (checklist 6.6 / 6.5, 6.5 deferred 2026-08-29)
+- @-mention symbols from the IDE index (checklist 6.4 [MD], deferred 2026-08-29)
+- Focus view — prompts + responses only, tool noise hidden (checklist 12.6 [MD], deferred 2026-08-29; mockup first)
+- Fable overage consent card + chip update on fallback (checklist 9.7 [MD], deferred 2026-08-29) — build only after `window.__modelFallbackSeen` has captured a real frame
 - Voice input
 
 ## Housekeeping (one line each, do opportunistically)
