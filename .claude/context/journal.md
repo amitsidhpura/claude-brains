@@ -3,6 +3,22 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-30 (third) — first-paint flash + dumb-mode placeholder fixed
+- User's screenshot: on project open the panel paints for a fraction of a second at ~300×180
+  (header + composer squashed top-left) then snaps to width. Cause: `ChatPanel` called `loadHTML`
+  in its constructor, before `ClaudeToolWindowFactory` added the component to the tool window, so
+  CEF laid the page out against its default surface (gotchas § JCEF).
+- Fix in `ui/ChatPanel.kt`: `component` is a `JPanel(BorderLayout)` wrapper painted `PAGE_BG`
+  (`#1a1a1a`, mirrors `--bg`), JCEF child starts hidden, `loadUi()` runs on the wrapper's first
+  non-empty `componentResized`, the child is shown at `onLoadEnd` (invokeLater + revalidate).
+  Side effect: the CLI spawns when the panel is first SHOWN, not at project open.
+- Second screenshot: "This view is not available until indexes are built" — the platform's
+  dumb-mode placeholder for a non-`DumbAware` factory; pre-existing, the deferred load just made it
+  visible. `ClaudeToolWindowFactory` now implements `DumbAware` (gotchas § IDE platform).
+- Verified: compile, viewport at load 730×871 over CDP (not the default surface), harness 586/0,
+  `./gradlew test` 134/0, and the user's hands-on run: both the flash and the placeholder gone.
+- Unreleased on `main` after this commit: these two Kotlin-only fixes.
+
 ## 2026-08-30 (later) — Marketplace screenshots 04/05 regenerated
 - `design/marketplace/05-sessions-models.png` (effort pill slider replaced the five dots) and
   `04-commands-agents.png` (new side-question placeholder) re-rendered with
@@ -206,57 +222,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Tooling: `cdp.py` prints the `# target` line on stderr — piping through `tail -n +2` eats the
   first line of the JSON result (gotchas § Testing).
 
-## 2026-08-28 (fourth) — 3.6 files-changed review built
-- Probe first (`probe36.py`): `get_workspace_diff` answers a full git working-tree diff (stats +
-  structuredPatch hunks per file) — but HEAD vs working tree, user edits included → documented in
-  ide-mcp-protocol, not used. Baselines instead from the autosave PreToolUse hook (`Autosave.handle`
-  gained a `snapshot` callback), settled at `result` in `CliFileSync.onTurnEnd` → `TurnChanges`.
-- UI: `.files` line under `.done` (mockup + chat.css), whole line is the Review action live;
-  replay draws it from `done.files` without the action. `DiffReview.openChain` = one
-  `ChainDiffVirtualFile` with N read-only requests ("Before this turn"/"Now").
-- Hand-verified with the user: two Edits in one turn (both pane-tweaked → both notes correct —
-  I first misread the notes as a bug; the transcript showed the "v2" tweaks), the line read
-  "2 files changed · README.md +1−0, test-code.js +1−0 · Review", the chain tab navigated
-  README → test-code.js with the → arrow. Tests 130, harness 490 (fixture 60).
-- Fixture 60's bridge tap failed only in the FULL run (a wrapper around whatever `__bridge` was at
-  that moment); switched to fixture 48's tape-and-restore idiom with its own restore step.
-- Replay fixture swapped to the full hand-test session cad0a74e (the 2-record fragment produced no
-  done item, so `files` could not be pinned on it).
-- Mockup caught up: tweak-travel card, files line, a still-running Bash (`.generating`) and two
-  `.t-prog.run` examples. User asked how the card note's 6px was derived — it wasn't → `--attach-gap`
-  (decision). Then "how many font sizes?" → 13/12/11/10 + three one-offs, all literals →
-  `--fs-base/-sm/-xs/-2xs` tokens replace 63 literals (`.blk code .92em` → `--fs-sm`, 11.96→12px);
-  computed sizes verified over CDP, harness 490 unchanged. Rule → conventions § Code & assets.
-
-## 2026-08-28 (third) — 3.5 tweak-travel built; 3.6 analysed
-- User asked for an analysis of 3.5/3.6, then "go ahead with the recommended way" (3.5 first).
-- Measured VS Code 2.1.250: its tweak-travel is `rf(…,"single")` = a unified diff with 1e5 context →
-  ONE whole-file hunk → `accept({old_string: whole file, new_string: whole pane})`; Write → content;
-  MultiEdit goes to the card. Probed our stdio path headlessly (scratchpad `probe35.py`, session
-  f63143c3): the CLI applied a whole-file updatedInput, one-line tool_result, transcript keeps the
-  ORIGINAL tool_use, `toolUseResult` has what ran, `userModified:false` (= disk drift, not ours).
-- Built: `EditProposals.tweakedInput/tweaked`, `DiffReview.open(current=)`, ChatPanel passes the
-  final pane text as updatedInput + `__perm_answered{tweaked,oldStr,newStr}`, SessionStore item
-  `tweaked`, `RenderLimits.TWEAK_NOTE` → `LIMITS.tweakNote`; JS: card redraw + note (85-cards),
-  replay note under the structuredPatch card (55-replay). Tests 116→124 (EditProposalsTest ×6,
-  SessionStoreTweakTest ×2 on the real transcript pair); harness 467→478 (fixture 59).
-- Control run: stashed `webview/`, restarted, verified by content (`ev.tweaked` absent) → 7/4 with
-  exactly the four discriminating asserts failing; pop, restart → 15/15. Trap: `LIM.tweakNote` is
-  spliced from KOTLIN, so it is not a webview-build witness (first check passed on the stale
-  page); also the `control.sh` runIde call BLOCKED on the gradle client (no detach from a script).
-- 3.6 analysis: VS Code's session diffs come from a `file_updated` MCP notification to its
-  in-process `claude-vscode` sdkMcpServer + a checkpoint store on load; `open_file_diffs` →
-  `vscode.changes`. Ours would snapshot baselines in the Autosave PreToolUse hook and open a
-  `SimpleDiffRequestChain`; resume case needs a `get_workspace_diff` probe. Not started.
-- Hand test with the user, one step at a time: first attempt FAILED — "Failed to make diff.md
-  writable": `DiffContentFactory.create(text)` is read-only; fixed with
-  `DiffContentFactoryEx.createEditable`. Second attempt: pane editable, Accept → file had the
-  pane text; card showed all 19 file rows (renderEditDiff on whole-file old/new) and could not
-  fold (innerHTML swap kept foldBlock's stale verdict) → new `wholeFileHunk` (3-line context
-  through patchRows), a NEW `.diff` element re-folded, `.card .t-note` caption margin. Third
-  attempt: card correct; resume of the session drew the identical card. Harness 480.
-
 ## Digest
+- **2026-08-28 (fourth)** — 3.6 files-changed review built: baselines from the autosave PreToolUse hook (`Autosave.handle` `snapshot` callback) → `TurnChanges` at `result`; `get_workspace_diff` probed and documented but NOT used (HEAD vs working tree, user edits included). `.files` line + `DiffReview.openChain`. Fixture 60 tap uses fixture 48's tape-and-restore idiom (a wrapper around whatever `__bridge` was at that moment fails in the FULL run). Font-size literals (63) → `--fs-*` tokens, card note 6px → `--attach-gap` (conventions § Code & assets). Tests 130, harness 490.
+- **2026-08-28 (third)** — 3.5 tweak-travel built (VS Code = whole-file `accept({old_string, new_string})`; probed our stdio path: CLI applies a whole-file updatedInput, transcript keeps the ORIGINAL tool_use, `userModified:false`). `EditProposals.tweakedInput`, `DiffReview.open(current=)`, `RenderLimits.TWEAK_NOTE`. Hand test failed first on read-only `DiffContentFactory.create` → `DiffContentFactoryEx.createEditable`; whole-file card could not fold → `wholeFileHunk`. Trap: `LIM.tweakNote` is spliced from KOTLIN so it is no webview-build witness; `control.sh`'s runIde BLOCKED on the gradle client. Tests 124, harness 480.
 - 2026-08-28 (second) — re-audit 2.1.246→2.1.250: only new row 1.25 (usage-limit grace banner, later deferred); `/workflow-authoring` joined the roster; four @internal cloud-worker subtypes ignored; runbook's re-audit procedure extended.
 - **2026-08-28** — four docs retired (`verifier-matrix`, `renderer-parity`, `client-parity`, `manual-test`; `git show 9bd1683:docs/<name>.md`), knowledge promoted first (gotchas § Build/§ Replay, protocol § 11/§ 12, checklist § 17). Bird's-eye checklist restructure reverted as "complete mess" → conventions § Docs (reformat = show ONE section first); the accepted shape: `**id** mark [effort] **Name** — gist`, At a glance block, re-audit paragraphs in `<details>`. 802 → 601 lines.
 - **2026-08-26 (third)** — 0.11.1 released (`979326c`): effort slider into the model menu, PATCH bump. verifyPlugin ×7 read by path; feed had no CDN lag; Marketplace Approved. Notes used a 🧭 Changed section. Near-miss: the feed-bump script asserted after writing build.gradle.kts (gotchas § Build).

@@ -278,6 +278,10 @@ re-read those before trusting memory here.
   usually the reference. Windowed replay also means browser find only sees loaded blocks.
 
 ## IDE platform / VFS
+- **A tool window whose factory is not `DumbAware` is REPLACED by "This view is not available until
+  indexes are built" for the whole indexing pass** — on every project open. It reads like our panel
+  failed to load; it is the platform's placeholder. `ClaudeToolWindowFactory : ToolWindowFactory,
+  DumbAware` (2026-08-30); the panel never touches indexes, so nothing needs guarding.
 - **`LocalFileSystem.findFileByPath` reads the VFS SNAPSHOT, never the disk.** A file written behind the
   IDE's back doesn't resolve until something refreshes its PARENT — measured ~2 minutes to self-heal at a
   project root, and never for a directory the IDE doesn't index (`_local/`). This is what made a `Read`
@@ -404,6 +408,12 @@ re-read those before trusting memory here.
   (2026-08-29, `ClaudeSettingsSchema.kt`). Write "the shared `.claude/settings.json`" instead.
 
 ## JCEF is not a browser (Linux)
+- **`loadHTML` before the component has bounds paints the page at CEF's default surface (~300×180)**,
+  visible for a frame on project open as a squashed header + composer before the tool window's layout
+  arrives. The JBCef component gets no size from being constructed — only from Swing layout after
+  `addContent`. `ChatPanel.component` is a wrapper: JCEF child hidden, load on the wrapper's first
+  non-empty `componentResized`, show at `onLoadEnd` (2026-08-30). Consequence: the CLI now spawns
+  when the panel is first shown, not at project open.
 - **JCEF sizes a text flex item's base a hair under its max-content**, so a two-word label wraps with the
   row half empty ("Very High" needed 55px, got a 53px base). Desktop Chrome on the SAME markup+CSS keeps
   one line — mockup.html and headless can NEVER reproduce this class, only the live panel over CDP.

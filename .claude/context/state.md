@@ -7,7 +7,13 @@ when a `PreModelSwitch` hook refuses `set_model`) was built, harness-verified an
 by the user in four hands-on steps (§17 MT-9.11). The settings-schema warning the user saw in
 `settings.local.json` is SchemaStore lag (synced to 2.1.220 on 2026-07-27, ~monthly) — decision:
 wait, no code (decisions 2026-08-30). **Then 0.12.1 was released the same session** (below).
-**Nothing unreleased on `main`** — 0.12.1 shipped everything since 0.12.0 (see Released).
+**Third 2026-08-30 session: two loading fixes, UNRELEASED on `main`** — (1) the first-paint flash
+(page painted at CEF's ~300×180 default before the tool window sized it) → `ui/ChatPanel.kt`
+`component` wrapper: JCEF child hidden, `loadUi()` on first non-empty `componentResized`, shown at
+`onLoadEnd`; (2) `ClaudeToolWindowFactory` is `DumbAware` (the IDE hid the panel behind "not
+available until indexes are built" during indexing). Both hand-confirmed by the user; harness 586,
+tests 134. Side effect: the CLI spawns when the panel is first shown. Candidate 0.12.2 content —
+release only when asked (conventions § Workflow).
 - 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
   `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
   down" errors render verbatim if they ever arrive.
@@ -73,6 +79,7 @@ carry exactly the LAST THREE versions (0.12.1 / 0.12.0 / 0.11.1) + the GitHub re
 - [x] Marketplace screenshots 04 (side-question placeholder) and 05 (effort pill slider) regenerated
       2026-08-30 with `python3 tools/marketplace_shots.py 4 5`; committed. **User errand**: upload
       the two PNGs to the listing (`plugins.jetbrains.com/plugin/33274`, manual step).
+- [ ] 0.12.2 (when the user asks): the two loading fixes above; `docs/release.md` process.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check.

@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains.ui
 
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
@@ -9,8 +10,14 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.ui.content.ContentFactory
 
-/** Registers the right-side sidebar tool window and hosts the chat panel. */
-class ClaudeToolWindowFactory : ToolWindowFactory {
+/**
+ * Registers the right-side sidebar tool window and hosts the chat panel.
+ *
+ * DumbAware: the panel never touches indexes (it drives the CLI over stdio), and without it the
+ * platform swaps the whole tool window for "This view is not available until indexes are built"
+ * on every project open while indexing runs.
+ */
+class ClaudeToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val panel = ChatPanel(project, toolWindow.disposable)

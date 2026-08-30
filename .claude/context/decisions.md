@@ -4,6 +4,19 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-30 — Defer the webview load until the tool window has bounds; factory DumbAware
+- Why: the first frame on project open was the page laid out at CEF's default ~300×180 surface
+  (`loadHTML` ran in the `ChatPanel` constructor, before `addContent`). Loading on the wrapper's
+  first non-empty resize and showing the JCEF child only at `onLoadEnd` makes the first visible
+  frame the right one; the wrapper's `PAGE_BG` (= `--bg`) covers the gap. `DumbAware` because the
+  platform otherwise hides the whole tool window behind an "indexes are built" placeholder — the
+  panel never reads indexes.
+- Accepted cost: the CLI process starts when the panel is first shown rather than at project open
+  (a collapsed tool window loads nothing until clicked).
+- Rejected: `JBCefBrowser.createBuilder().setOffScreenRendering/…` background tricks (the flash is
+  a LAYOUT-size problem, not a colour one); keeping the constructor-time load and re-layout after
+  attach (the wrong-size frame would still paint once).
+
 ## 2026-08-30 — Settings-schema staleness: wait for SchemaStore, no code
 - Why: the IDE fetches Anthropic's schema from `json.schemastore.org/claude-code-settings.json`
   (13.2, nothing bundled); SchemaStore is hand-synced ~monthly and sat at 2.1.220, so 2.1.251's
