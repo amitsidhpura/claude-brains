@@ -458,7 +458,9 @@ flag settings layer"), `stop_task` (`{task_id}` from the `background_tasks_chang
 `rename_session`, `submit_feedback`, `side_question`, `ultrareview_launch`, `message_rated`,
 `remote_control`, `claude_authenticate`, `claude_oauth_callback`,
 `claude_oauth_wait_for_completion`, `log_otel_event`, plus loopback arms for `hook_callback`,
-`can_use_tool`, `request_user_dialog`, `elicitation`.
+`can_use_tool`, `request_user_dialog`, `elicitation`. Agent-originated subtypes a host may NOT send
+(rejected "is agent-originated and cannot be sent by a host"): the four `remote_*` cloud-worker
+calls plus `remote_control_work_secret` (new 2.1.251, `@internal`).
 
 No `set_effort` / `set_output_style` / `list_sessions` subtypes exist. Effort is a spawn flag
 (`--effort <v>`) and possibly `apply_flag_settings{effortLevel}` (unprobed).
@@ -472,7 +474,15 @@ No `set_effort` / `set_output_style` / `list_sessions` subtypes exist. Effort is
   `result` events repeat `fast_mode_state`.
 - `set_model` NEVER rejects — even `haiku[1m]` returns success; an invalid combination fails on
   the next turn with the API's error ("400 The long context beta is not yet available for this
-  subscription"). Valid `[1m]` aliases per the binary: `sonnet[1m]`, `opus[1m]`, `fable[1m]`.
+  subscription"). **Exception since 2.1.251 (measured 2026-08-30):** `PreModelSwitch` hooks run for
+  an SDK `set_model` (`source:"sdk"`; input `{from_model, to_model, requested_model,
+  context_tokens, prompt_cache_warm, cache_ttl, estimated_cache_write_usd, pricing}`) and a
+  `permissionDecision:"deny"` answers `{subtype:"error", error:"Model switch blocked by a
+  PreModelSwitch hook: <reason>"}`; allow → success + `PostModelSwitch` (same input). Also since
+  2.1.251 the `<local-command-stdout>Set model to …</local-command-stdout>` user echo
+  (`isReplay:true`) is NOT emitted for an SDK `set_model` sent BEFORE the session's first turn
+  (2.1.250 emitted it there); after a turn it still arrives (hands-on, 2026-08-30). Checklist 9.1,
+  9.11. Valid `[1m]` aliases per the binary: `sonnet[1m]`, `opus[1m]`, `fable[1m]`.
   `set_model "sonnet[1m]"` verified: `get_settings.applied.model = "claude-sonnet-5[1m]"`, and a
   real turn reports `modelUsage["claude-sonnet-5[1m]"].contextWindow = 1000000`.
 - `apply_flag_settings {settings:{fastMode:true}}` clears the SDK fast-mode gate AND
@@ -835,7 +845,9 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
 - The `initialize` control response's keys are exactly `account, agents, available_output_styles,
   commands, fast_mode_disabled_reason, fast_mode_state, ide_rc_auto_enable_gate, models,
   output_style, pid, remote_control_auto_enable, remote_control_auto_on_by_default` — no MCP data,
-  no context window (13a, 17a).
+  no context window (13a, 17a). Later additions: `analytics_disabled`, `current_permission_mode`,
+  `session_state` (≤ 2.1.250); `remote_control_available:bool` (2.1.251, `@internal`); `agents[]`
+  entries carry `model:"inherit"` from 2.1.251.
 - `TodoWrite` is retired from 2.1.222's roster (every local record is 2.1.178); replaced by
   `TaskCreate`/`TaskList`/`TaskGet`/`TaskUpdate`. `TaskCreate` result text: `Task #3 created
   successfully: …`; `TaskList` result: the full list as `#1 [completed] …` (14).

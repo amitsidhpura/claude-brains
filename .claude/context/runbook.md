@@ -1,7 +1,7 @@
 # Runbook
 
 ## Re-audit `docs/feature-checklist.md` against a new CLI / extension version
-Used 2026-08-17 (2.1.222→233) and 2026-08-23 (233→241). Everything is measured, nothing read
+Used 2026-08-17 (2.1.222→233), 2026-08-23 (233→241), 2026-08-28 (246→250), 2026-08-30 (250→251). Everything is measured, nothing read
 from release notes. Gotchas § "Auditing the reference clients" has the traps.
 
 1. **Versions on disk**: `claude --version`; `ls ~/.local/share/claude/versions/`;
@@ -13,6 +13,11 @@ from release notes. Gotchas § "Auditing the reference clients" has the traps.
    `https://marketplace.visualstudio.com/_apis/public/gallery/publishers/anthropic/vsextensions/claude-code/<ver>/vspackage?targetPlatform=linux-x64`
    — the response is a gzip-wrapped vsix (`gunzip`, then `unzip`); `extension/extension.js`,
    `extension/package.json`, and `extension/resources/native-binary/claude` (the CLI binary).
+   Worked 2026-08-30 for 2.1.250 (~99 MB gunzipped; unzip only `extension/extension.js`,
+   `extension/package.json`, `extension/webview/*`, `extension/claude-code-settings.schema.json`).
+   Extra cheap diffs that catch what the `case` diff misses: `tool("…")` registrations, `tengu_*`
+   gates, the settings schema (`jq -S` both sides), and the webview's readable sentences (a
+   `comm` of quoted strings ≥ 25 chars with ≥ 3 words — minifier renames drown a plain string diff).
 4. **Extension diff**: package.json `contributes` (commands/configuration/keybindings/views)
    old-vs-new; `grep -o 'case"[a-z_0-9]*"' extension.js | sort -u` both sides, `comm -13` under
    `LC_ALL=C`. New labels get context reads (`grep -o '.\{120\}case"<w>".\{160\}'`) — most are

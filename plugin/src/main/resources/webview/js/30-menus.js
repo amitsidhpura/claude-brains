@@ -310,7 +310,10 @@
     modelChip.innerHTML = SVG_SPARK + ' ' + esc(label);
     modelChip.title = title;
   }
-  function setModel(v, keepOpen) {
+  // Display half of a model change: selection, chip, gauge denominator, menu, footer — and NO
+  // bridge. setModel adds the bridge; __model_rejected (9.11) uses this half alone to FOLLOW the
+  // CLI back to the model it kept, the same rule the retraction fallback obeys.
+  function showModel(v) {
     currentModel = v; oneMFromCli = null;   // new selection: tag-derived until its first result
     const m = allModels().find(function (x) { return x.value === v; });
     // custom carries the same {value, displayName, description} shape as built-in, so both draw the
@@ -320,7 +323,11 @@
     // switching between a 1M model and a 200k one changes the denominator; when we have no built-in
     // metadata, infer 1M from a [1m] tag on the value
     { const w = (m && !m.custom) ? windowOf(m) : (/\[1m\]/i.test(v) ? CTX_1M : 0); if (w) { ctxWindowFromCli = w; renderContext(); } }
-    bridge({ kind: 'model', model: v }); renderModels(); syncModelFooter();
+    renderModels(); syncModelFooter();
+  }
+  function setModel(v, keepOpen) {
+    showModel(v);
+    bridge({ kind: 'model', model: v });
     if (!keepOpen) closeMenus();   // the footer's 1M switch re-selects in place; row clicks still close
   }
   modelChip.onclick = function (e) { tg('modelMenu', e); };

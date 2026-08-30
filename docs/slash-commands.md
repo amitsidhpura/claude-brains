@@ -104,7 +104,8 @@ custom entries are excluded - they are auto-enabled, not listed. 51 rows: 50 fro
 capture plus the built-in `/context`, restored from the testing-repo capture because this repo's
 own /context project skill shadows it (see the shadowing note above); 52 since 2026-08-28, when
 the 2.1.250 roster added `/workflow-authoring` (the only roster change from 2.1.233 to 2.1.250 —
-re-probed headlessly at 2.1.241, 2.1.246 and 2.1.250: no drops, no hint or description changes).
+re-probed headlessly at 2.1.241, 2.1.246, 2.1.250 and 2.1.251: no drops, no hint changes; the only
+description change is `/dataviz`'s text at 2.1.251).
 Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
 relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
 are visible in the menu; every other built-in is hidden.

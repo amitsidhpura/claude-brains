@@ -4,6 +4,30 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-30 — Settings-schema staleness: wait for SchemaStore, no code
+- Why: the IDE fetches Anthropic's schema from `json.schemastore.org/claude-code-settings.json`
+  (13.2, nothing bundled); SchemaStore is hand-synced ~monthly and sat at 2.1.220, so 2.1.251's
+  `PreModelSwitch`/`PostModelSwitch` show as a warning in `settings.local.json`. A warning, not an
+  error; the hook works.
+- Rejected: bundling the extension's `claude-code-settings.schema.json` (redistribution + a plugin
+  release per CLI release, reversing 13.2's design); preferring the locally installed VS Code
+  extension's copy with SchemaStore fallback ([SM], offered as the recommendation — user chose to wait;
+  revisit if the lag becomes a nuisance).
+
+## 2026-08-30 — 9.11 built the day it was found; optimistic switch kept, revert on error
+- Why: a `PreModelSwitch` hook can now refuse the chip's `set_model` and the chip would lie. Kept
+  the optimistic flip (instant chip, as before) and added the revert on the error answer instead of
+  waiting for the response before flipping — no perceived latency in the common case.
+- Rejected: pessimistic switch (chip waits for the control_response); a "model change silent"
+  confirmation line of our own (the 2026-08-24 marker decision stands; the CLI's own echo still
+  draws after the first turn).
+
+## 2026-08-30 — Re-audit run at 2.1.251 on the user's ask, one version after 2.1.250
+- Why: the user asked; the "wait a few versions" deferral (2026-08-29) was a plan, not a rule.
+  Outcome justified it: a real behaviour change (`set_model` rejection) surfaced.
+- Lesson recorded in gotchas § Protocol: a headless probe with no turn is not the panel's usual
+  state — measure post-turn too before calling a frame "gone".
+
 ## 2026-08-29 — GitHub Copilot Chat audited once, adopted nothing but one probe; not a reference client
 - Why: the user used Copilot and found it bloat; the audit (built-in 0.63.0: 9 participants, 38+~20
   tools, 191 contributed + ~330 hidden settings, four ways to run an agent) confirmed growth is

@@ -1,0 +1,80 @@
+{
+  "item": "9.11 — chip revert when the CLI rejects set_model (2026-08-30)",
+  "branch": "__model_rejected frame (Kotlin -> webview, sent when the set_model control_response is an error) reverts the chip, the selection and the gauge to `previous` WITHOUT re-sending a model bridge, and draws the CLI's error text as an error block",
+  "provenance": "The error text is the CLI's own, measured 2026-08-30 over stdio (CLI 2.1.251, panel flags) with a PreModelSwitch hook answering permissionDecision:deny: control_response {subtype:'error', error:'Model switch blocked by a PreModelSwitch hook: probe deny'}. The __model_rejected frame itself is OUR Kotlin->webview frame (self-consistency only). The roster is whatever the live panel holds; the fixture picks a target that differs from the current selection and restores the pre-fixture selection through the same revert path at the end (setModel is NOT called for the restore, so nothing is persisted or sent). The bridge is taped for the fixture's duration and restored in the last step. NEGATIVE CONTROL RUN 2026-08-30 against the sandbox still serving the pre-change webview (started before the edit; build verified BY CONTENT: typeof showModel === 'undefined'): 6 passed, 6 failed — every DISCRIMINATING assert (selection/title not reverted, no error block, restore step) failed; the step-1 optimistic-switch asserts and the no-second-bridge assert are GUARDs that pass on both builds. The 'null previous -> roster head' assert passed vacuously in the control (the target happened to be the roster head) — it discriminates only together with the restore assert. First fixed-build run: 9/3, the three failures were the fixture's own selector slip (.blk for what errorBlock emits, .error) — corrected, then 12/12. LIVE END-TO-END 2026-08-30: a real PreModelSwitch deny hook in the testing repo's settings.local.json (removed afterwards), setModel('haiku') through the REAL bridge: hook input to_model claude-haiku-4-5-20251001 source:sdk, chip back to `default`, one .error block 'Model switch blocked by a PreModelSwitch hook: probe deny'; the persisted `sonnet` was refused on the restart re-apply too (previous:null path) and the chip came up on the roster head.",
+  "steps": [
+    {
+      "note": "setModel('<other>') switches the chip optimistically and sends exactly one model bridge",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge68) { window.__realBridge68 = window.__bridge; } window.__tape68 = []; window.__bridge = function(j){ window.__tape68.push(JSON.parse(j)); }; window.__m68 = { before: currentModel, errs: document.querySelectorAll('#log .error').length }; var all = allModels(); var other = all.find(function(m){ return m.value !== currentModel; }); window.__m68.target = other ? other.value : 'haiku'; setModel(window.__m68.target);",
+      "expect": [
+        {
+          "js": "window.__tape68.length",
+          "equals": 1,
+          "why": "one bridge call"
+        },
+        {
+          "js": "JSON.stringify([window.__tape68[0].kind, window.__tape68[0].model === window.__m68.target])",
+          "equals": "[\"model\",true]",
+          "why": "the bridge is kind:model with the target"
+        },
+        {
+          "js": "currentModel === window.__m68.target && document.getElementById('modelChip').title === window.__m68.target",
+          "equals": true,
+          "why": "chip and selection show the target before the CLI answers"
+        }
+      ]
+    },
+    {
+      "note": "__model_rejected reverts chip + selection to `previous`, draws the CLI's error, sends NO bridge",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__model_rejected', model: window.__m68.target, previous: window.__m68.before, error: 'Model switch blocked by a PreModelSwitch hook: probe deny'}));",
+      "expect": [
+        {
+          "js": "currentModel === window.__m68.before",
+          "equals": true,
+          "why": "selection reverted"
+        },
+        {
+          "js": "document.getElementById('modelChip').title === (window.__m68.before || '')",
+          "equals": true,
+          "why": "chip title reverted"
+        },
+        {
+          "js": "document.querySelectorAll('#log .error').length - window.__m68.errs",
+          "equals": 1,
+          "why": "exactly one new error block (errorBlock -> .error, inserted by el())"
+        },
+        {
+          "js": "(function(){ var b = document.querySelectorAll('#log .error'); var l = b[b.length-1]; return l ? l.textContent : null; })()",
+          "contains": "Model switch blocked by a PreModelSwitch hook: probe deny",
+          "why": "the error block carries the CLI's text verbatim"
+        },
+        {
+          "js": "window.__tape68.length",
+          "equals": 1,
+          "why": "the revert FOLLOWS the CLI — no second model bridge"
+        }
+      ]
+    },
+    {
+      "note": "previous:null (a rejected restart re-apply) falls back to the roster's first model; then restore the bridge",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__model_rejected', model: window.__m68.target, previous: null, error: 'Model switch blocked by a PreModelSwitch hook: probe deny'})); window.__m68.after = currentModel; window.__m68.first = (models[0] || {}).value || null; window.onClaudeEvent(JSON.stringify({type:'__model_rejected', model: 'x', previous: window.__m68.before, error: 'restore'})); window.__bridge = window.__realBridge68;",
+      "expect": [
+        {
+          "js": "window.__m68.after === window.__m68.first",
+          "equals": true,
+          "why": "null previous -> roster head (the __models rule)"
+        },
+        {
+          "js": "currentModel === window.__m68.before",
+          "equals": true,
+          "why": "pre-fixture selection restored"
+        },
+        {
+          "js": "window.__bridge === window.__realBridge68",
+          "equals": true,
+          "why": "bridge restored"
+        }
+      ]
+    }
+  ]
+}

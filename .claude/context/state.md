@@ -1,15 +1,14 @@
 # State
 
 ## Current focus
-**2026-08-29 (twenty-fourth session): competitor audit closed, reference folder rearranged.** No
-code changed. `vscode/` is now `reference/anthropic-claude-code/` (2.1.251; `/reference/` gitignored);
-a GitHub Copilot Chat 0.63.0 audit (report lived in the session scratchpad only, by request) yielded
-ONE candidate — backlog § Next up: terminal last command/output as attachable context, probe the
-JetBrains terminal API before it becomes a row. The user found Copilot "bloat"; decisions.md
-2026-08-29 says what not to re-propose from it. Docs reference no third-party client other than
-`anthropic-claude-code`.
-**Unreleased on `main` since 0.12.0** — three post-release fixes, all verified live in the sandbox and
-by harness 575/0 + `./gradlew test` 134/0:
+**2026-08-30 (twenty-fifth session): 2.1.251 re-audit run early, 9.11 built and hand-tested.** The
+user asked for the audit despite the "wait a few versions" plan; its single row (9.11, chip revert
+when a `PreModelSwitch` hook refuses `set_model`) was built, harness-verified and walked through
+by the user in four hands-on steps (§17 MT-9.11). The settings-schema warning the user saw in
+`settings.local.json` is SchemaStore lag (synced to 2.1.220 on 2026-07-27, ~monthly) — decision:
+wait, no code (decisions 2026-08-30). Everything committed and pushed with this save.
+**Unreleased on `main` since 0.12.0** — three post-release fixes + 9.11, all verified live in the sandbox
+and by harness 586/0 + `./gradlew test` 134/0:
 - **External links open in the system browser** (`webview/js/20-markdown.js` no `target=_blank` +
   bare-URL autolink; `00-core.js` document `click`/`auxclick` delegate → `browse` bridge frame;
   `ui/ChatPanel.kt` `"browse"` → `BrowserUtil.browse`, plus `onBeforePopup` AND `onBeforeBrowse`
@@ -20,19 +19,30 @@ by harness 575/0 + `./gradlew test` 134/0:
   fixed 12px stops, accent fill from `--ef-fill` via `:has()`, 2px knob inset, fill = knob right
   + 2. CSS only; fixtures 51/55/58 unchanged. Four user rounds of spacing polish — decisions.md.
 - Side-question placeholder now says "(Ctrl+Enter to send, Enter for newline)" like the composer.
-- Next release (0.12.1 or 0.13.0) carries these; nothing else is pending for it.
+- Next release (0.12.1 or 0.13.0) carries these plus 9.11 (chip revert on a refused `set_model`);
+  nothing else is pending for it.
+- Model switch is silent on 2.1.251 only BEFORE the first turn (no echo then); after a turn the
+  confirmation line still draws — 9.1 fact.
 - 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
   `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
   down" errors render verbatim if they ever arrive.
 - Checklist rules still in force: `**id** mark [effort] **Name** — gist; facts`; the **At a glance**
   block is hand-maintained (recount with `awk` at every change); `<details>` only in the re-audit
-  paragraphs and §17 groups. Checklist: 82 ✅ · 46 ➖ (128 rows), all 17 headings ✅.
+  paragraphs and §17 groups. Checklist: 83 ✅ · 46 ➖ (129 rows), all 17 headings ✅.
 - Do not re-propose: an effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md); an "Effort (High)"
   bracketed label or a blue track on the effort slider (2026-08-29).
   Copilot-derived features other than terminal-output context (2026-08-29, decisions.md).
-- Audit state: the checklist is measured against **2.1.250**; 2.1.251 is only the EXTRACTION in
-  `reference/anthropic-claude-code/` (a diff base) — not audited, re-audit deferred by the user.
+- Audit state: the checklist is measured against **2.1.251** (re-audit 2026-08-30, run early at the
+  user's request; checklist header `<details>` block has the findings). Its one row, **9.11**, was
+  BUILT the same day (user's yes): `set_model` carries a response callback, an error reverts the
+  persisted model and pushes `__model_rejected` → webview `showModel` (display-only half of
+  `setModel`) + error block. Files: `cli/ClaudeCli.kt`, `ClaudeSessionService.kt` (`revertModel`),
+  `webview/js/30-menus.js`, `70-events.js`, fixture 68. Verified: harness **586/0**, `./gradlew
+  test` 134/0, live with a real deny hook. Also measured: the `Set model to …` echo after an SDK
+  `set_model` is gone at 2.1.251 ONLY before the first turn (a post-turn switch still draws it —
+  corrected by the user's hands-on test).
+  Docs touched: `feature-checklist`, `ide-mcp-protocol`, `slash-commands`.
 
 ## Released — 0.12.0 (2026-08-29)
 **0.12.0 is the shipped version** (tag `v0.12.0`, commit `0e1af47`): /btw, files-changed review,
@@ -48,7 +58,7 @@ releases link (rule in build.gradle.kts kdoc and release.md 1b).
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **575** (fixtures to 67); `./gradlew test` **134**.
+- `python3 tools/live_harness.py` baseline **586** (fixtures to 68); `./gradlew test` **134**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
@@ -74,6 +84,9 @@ releases link (rule in build.gradle.kts kdoc and release.md 1b).
       user: wait a few CLI versions past 2.1.250 before the next checklist re-audit.**
 - [x] Gist `b2d033439ba4ca5bcd018f4fe5eef773` verified identical to `.claude/skills/context/SKILL.md`
       on 2026-08-29 (push again after any SKILL.md edit: `gh gist edit <id> -f SKILL.md <path>`).
+- [x] 9.11 built, verified, hand-tested and committed 2026-08-30.
+- [ ] SchemaStore watch (no action until it syncs past 2.1.251):
+      `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check.
 
 ## Known gaps (deliberately left)

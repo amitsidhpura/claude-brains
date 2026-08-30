@@ -477,6 +477,13 @@
       case '__mode':             return applyCliMode(ev.mode);   // persisted mode, at startup
       case '__project':          return setProjectRoot(ev.root); // shortens tool-line paths
       case '__ctl_error':        return errorBlock(ev.error || 'control request failed');
+      case '__model_rejected': {
+        // The CLI refused set_model (a PreModelSwitch hook, 2.1.251 — checklist 9.11). The chip
+        // flipped optimistically; put it back to what the CLI kept. `previous` absent = a refused
+        // restart re-apply: the CLI is on its default, shown as the roster head (the __models rule).
+        showModel(ev.previous || (models[0] && models[0].value) || '');
+        return errorBlock(ev.error || 'model switch refused');
+      }
       case '__exit': {
         setBusy(false);
         const line = statusLine('claude process exited (' + ev.code + ')', SVG_ALERT, 'status err');

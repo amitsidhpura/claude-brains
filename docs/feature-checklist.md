@@ -3,15 +3,16 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.250, last full re-audit 2026-08-28)
-- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.250-linux-x64/` (the 2.1.246 dir
-  was still on disk 2026-08-28 and served as the diff base; the local `reference/anthropic-claude-code/`
-  extraction is kept at the newest installed version as the diff base for the NEXT audit — see state.md)
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.250`; headless roster in `docs/slash-commands.md`
+**References** (both on 2.1.251, last full re-audit 2026-08-30)
+- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.251-linux-x64/` (the 2.1.250 base was
+  no longer on disk 2026-08-30 and was downloaded from the Marketplace vsix, runbook step 3; the local
+  `reference/anthropic-claude-code/` extraction is kept at the newest installed version as the diff base
+  for the NEXT audit — see state.md)
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.251`; headless roster in `docs/slash-commands.md`
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.250, 2026-08-29) — 82 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (128 rows) — every section ✅
+**At a glance** (2.1.251, 2026-08-30) — 83 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (129 rows) — every section ✅
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
 - **Awaiting a decision ([DECIDE]):** none
 
@@ -39,11 +40,48 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
+
+<details><summary><b>Re-audit 2026-08-30 (2.1.250 → 2.1.251)</b></summary>
+
+Run early at the user's request (the standing plan was to wait a few CLI versions). Surface: the
+extension side is flat — `package.json` contributions identical (only `version`/`size`/timestamp),
+no `case"…"` label added or removed in `extension.js`, the same twelve `tool("…")` registrations,
+no new `tengu_*` gate; the settings schema adds the two new hook events. The WEBVIEW's only change
+is a Remote Control status *pill* (`pill_jamplw`: "Remote Control is active · Click to open
+claude.ai/code · Run /remote-control to turn off") — 8.12 ➖ territory, no row. The 2.1.250 base
+came from the Marketplace vsix (runbook step 3 works). CLI typed control vocabulary: one new
+`@internal` subtype, `remote_control_work_secret` — agent-originated, in the host-rejected list
+beside `remote_tool_call`; not host-facing. A headless `initialize` on both binaries: the same
+5-model roster and flags; one new top-level key, `remote_control_available:true` ("@internal
+Whether Remote Control can be offered at all in this deployment"); `agents[]` entries gain
+`model:"inherit"`; the command roster is the same 54 names and hints (only the bundled `/dataviz`
+description text differs). Behaviour (upstream CHANGELOG 2.1.251): `PreModelSwitch` /
+`PostModelSwitch` hook events, `/usage` spend-limit bar, `/cost` prompt-cache line, `claude
+attach|logs|stop|respawn|rm`, a symlink-swap fix in the file tools, a `--input-format stream-json`
+fix for client-INJECTED assistant tool calls (the panel injects none) — all the terminal's half or
+CLI-internal. **Two measured `set_model` changes, both probed live over stdio with the panel's
+flags:** (1) the hooks run for an SDK `set_model` (`source:"sdk"`, input `{from_model, to_model,
+requested_model, context_tokens, prompt_cache_warm, cache_ttl, estimated_cache_write_usd,
+pricing}`), and a `permissionDecision:"deny"` answers the request with a `control_response`
+ERROR — "Model switch blocked by a PreModelSwitch hook: <reason>" — so 9.9's "`set_model` never
+rejects" no longer holds when the user has such a hook; the chip switches before the request is
+sent and only a generic error block appears → new row 9.11 [DECIDE]. (2) before the
+session's first turn, 2.1.250 answered an SDK `set_model` with a `type:"user"`
+`<local-command-stdout>Set model to …</local-command-stdout>` echo (`isReplay:true`) that the panel
+drew as the chip's confirmation line (`onUserEvent`); 2.1.251 sends only the `control_response`
+there — two headless runs each side. AFTER a turn the echo is still emitted on 2.1.251 (the user's
+hands-on switch drew the line the same day), so a pre-turn switch is silent and a later one is
+not; no row, fact on 9.1. Not
+re-measured: whether 2.1.251 still writes the `/model` command trio to disk (gotchas § Protocol;
+a headless session with no turn writes no transcript). Probe outputs in the 2026-08-30 session
+scratchpad.
+
+</details>
 
 <details><summary><b>Re-audit 2026-08-28 (2.1.246 → 2.1.250)</b></summary>
 
@@ -182,7 +220,7 @@ auto-include selection, voice.
       grace window is invisible. Probe first: an inject through `onClaudeEvent` proves the render, a
       real grace window is unforceable by design (MT-9.6 pattern)
 
-## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.250)
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.251)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -371,7 +409,8 @@ auto-include selection, voice.
       copies the composer's scrollbar inset). Built 2026-08-29; live-verified §17 MT-7.9
 - **8.12** ➖ **Remote sessions / teleport / remote control** — `list_remote_sessions`,
       `teleport_session`, `toggle_remote_control` (TUI `/teleport`, `/rc`, `/session`); session
-      SOURCES beyond the local disk lean infrastructure; recorded as a judgment call
+      SOURCES beyond the local disk lean infrastructure; recorded as a judgment call. 2.1.251:
+      `initialize.remote_control_available` and a webview status pill — still ➖
 - **8.13** ➖ **`generate_session_title`** [NEW] — the CLI names threads itself (`ai-title`) and we
       show it
 - **8.14** ➖ [LG] **Reloaded-webview log replay** — chrome heals via `seedUi()`, the log does not;
@@ -380,7 +419,11 @@ auto-include selection, voice.
 
 ## 9. ✅ Model, effort, usage
 - **9.1** ✅ **Model chip** — from `initialize.models`, search + custom id → `set_model`; persisted
-      and re-applied on every restart
+      and re-applied on every restart. The CLI echoes `Set model to …` as a `<local-command-stdout>`
+      user frame that the panel draws as a confirmation line — since 2.1.251 only AFTER the
+      session's first turn (headless probe: no echo before any turn, 2.1.250 echoed there too; the
+      user's hands-on switch after a turn drew the line — both 2026-08-30). Rejection by a
+      `PreModelSwitch` hook: 9.11
 - **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, last row of the model-menu
       footer (moved out of the mode menu 2026-08-26; the level shows only on the footer's own
       "Effort" label, on no chip — decisions 2026-08-26). Sends a muted `/effort` turn because no
@@ -418,7 +461,8 @@ auto-include selection, voice.
 - **9.9** ✅ **1M-context toggle** [NEW] — a switch in the model-menu footer that appends/strips
       `[1m]` on the selection and re-selects through `setModel` (persistence rides
       `claudeCode.selectedModel`; `default` resolves to `claude-opus-5[1m]`). **No client-side
-      validity logic** (user decision 2026-08-24): `set_model` never rejects, an unsupported combo
+      validity logic** (user decision 2026-08-24): `set_model` never rejects (until 2.1.251's
+      `PreModelSwitch` hooks — 9.11), an unsupported combo
       fails on the next turn with the API's own 400. The switch reconciles to the REAL window from
       `result.modelUsage[].contextWindow` after each model's first turn (`reconcileFromResult`);
       gauge denominator set explicitly on toggle. Built 2026-08-24; fixture 55; decisions
@@ -430,7 +474,20 @@ auto-include selection, voice.
       flag tracks behaviour in either direction. Only `supportsFastMode` gates anything (9.4).
       Revive only if a CLI ships a flag proven to track behaviour. Gotchas § Protocol; decisions
       2026-08-26
-
+- **9.11** ✅ **Chip revert when a `PreModelSwitch` hook rejects `set_model`** [NEW] — built
+      2026-08-30 (user's "yes" the same day). New at 2.1.251: a user-configured `PreModelSwitch`
+      hook (`~/.claude/settings.json` — the terminal's half) runs for the chip's `set_model` with
+      `source:"sdk"`; `permissionDecision:"deny"` answers a `control_response` error "Model switch
+      blocked by a PreModelSwitch hook: <reason>" and `PostModelSwitch` does not fire. The panel
+      still switches optimistically (chip + persisted `claudeCode.selectedModel` before the request,
+      as before), but `set_model` now carries a response callback (`ClaudeCli.setModel(model,
+      onResponse)`): on error `ClaudeSessionService.revertModel` puts the persisted value back and
+      pushes `__model_rejected {model, previous?, error}`; the webview's handler calls `showModel`
+      (the display half split out of `setModel` — no bridge, the retraction rule) and draws the
+      CLI's text as an error block. `previous` absent = a refused restart re-apply: the persisted
+      choice is dropped and the chip falls back to the roster head. Fixture 68 (negative control
+      6/6 discriminating fails on the pre-change build; live end-to-end with a real deny hook in the
+      testing repo, chip `haiku` → `default`). The `/effort` path has no hook and is unaffected
 ## 10. ✅ Auth & account
 - **10.1** ➖ **Login / logout / account display** — by design: sign in once by running `claude`;
       the panel reports an auth failure with a "sign in from a terminal" line
@@ -539,7 +596,7 @@ auto-include selection, voice.
 ## 16. ✅ Quality gates (not features, but part of "what we have")
 - **16.1** ✅ **Unit tests** — `./gradlew test` (134, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 67, 575 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 68, 586 assertions,
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
@@ -550,7 +607,7 @@ auto-include selection, voice.
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below
 
-## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 105/105 passed 2026-08-07→08-29)
+## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 106/106 passed 2026-08-07→08-30)
 - Source: `git show 9bd1683:docs/manual-test.md` (deleted 2026-08-28; §16.5). Setup was `cd plugin && ./gradlew runIde`, open the Claude Brains tool window; items were ticked by number ("3.4 done"); **(hard to trigger)** items carry their exact trigger recipe below.
 - Defect markers were exactly two: `ISSUE (date):` = open, `RESOLVED (date) — how:` = closed, *how* ∈ fixed / removed / not a bug; `grep -c '\*\*ISSUE'` was the open count. Final state: 31 RESOLVED, 0 ISSUE.
 - Undated items below were ticked on the first pass (2026-08-07/08); later dates come from the item's own note. Cross-cutting caveat (6.4): grants from 2026-08-07/08 persist in the testing project's `settings.local.json`, so permission cards only reappear for novel commands (the pass used `factor`/`mcookie`/`openssl`/`base32`, never granted).
@@ -682,7 +739,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.9 Resilience & notices</b> — 10 items · 2 RESOLVED</summary>
+<details><summary><b>17.9 Resilience & notices</b> — 11 items · 2 RESOLVED</summary>
 
 - **MT-9.1** API retry storm: "… — retrying (n/m)" lines, not a silent stall **(hard to trigger:** disconnect the network mid-turn; a real network-off storm was user-verified) → 1.15 · 2026-08-09 · RESOLVED 2026-08-09: fixed, premise corrected — `api_retry`'s `error` is a five-code enum (529→`overloaded`, 429→`rate_limit`, 401|403→`authentication_failed`, ≥408→`server_error`, else `unknown` = no-status network failure); rich text is TUI-in-process only; `RETRY_REASONS` in chat.html ("API error — retrying (1/10)" for unknown), unknown codes degrade to raw; duplicate "(1/10)" = raw `api_error` + `api_retry` twin per attempt, deduped by consecutive attempt/max key (`retrySeen`, last-key not a Set so a restarted storm shows); fixture 09 (8 fail pre-fix, 11/11 after; 71/71 headless AND on real JCEF); live: ten "API error — retrying (n/10)" lines, then "Unable to connect to API (ENOTIMP)", Retry seeded, resend succeeded · replay half same day: CLI persists the concluding error BEFORE the buffered `api_error` records (session `afe39ca0…`: error at position 21 / 09:47:24, retries 24–33 / 09:44:20–09:46:45) — SessionStore inserts a retry timestamped before the last error item ahead of it (and its auth status), younger-than-error guard; replay wording richer by design (`error.formatted` persisted); pinned by `late-flushed retry records replay before the error that ended their storm`, `./gradlew probe`: user → retries 1–10 → error → resend
 - **MT-9.2** Auth failure (bad `ANTHROPIC_API_KEY` in the sandbox env) → "sign in from a terminal" → 1.15, 10.1 · 2026-08-07
@@ -694,6 +751,7 @@ auto-include selection, voice.
 - **MT-9.8** Model refusal with fallback: retracted content withdrawn with a notice; session model NOT silently changed **(hard to trigger:** inject a scope:'local' `system/model_refusal_fallback` frame — the VS-Code-bundle wire shape — via `cdp.py` against a REAL stamped assistant block) → 1.15 · 2026-08-08 · block evicted, both notices rendered, chip unchanged; render path only, no real refusal ever captured
 - **MT-9.9** Editing a file yourself while Claude edits it → tool line notes the file changed underneath, not bare ✓ Applied **(hard to trigger:** modify the target in the editor between the Edit's read and its apply) → 3.4 · 2026-08-07
 - **MT-9.10** Commands discovered mid-session refresh the / roster → 7.2 · 2026-08-15 · RESOLVED 2026-08-15: fixed — CLI 2.1.228 WATCHES the project commands dir and pushes `commands_changed` itself (~2.5s after a file drop, ~1s after deletion, 45s quiet wait measured) — no longer hard to trigger; `/reload-skills` (now Enabled) is the manual fallback; user pass: dropped `fresh-cmd.md` appeared badged "project" without `/reload-skills`, deletion removed it; watch is PROJECT-dir only — `~/.claude/commands/` needed `/reload-skills` ("user" badge correct); payload carries the same suffixes as initialize so roster REPLACE re-syncs enablement; corrected the 2026-08-08 "no roster change" and a same-day probe that sent `/reload-skills` inside the debounce window
+- **MT-9.11** `set_model` refused by a `PreModelSwitch` hook → 9.11 · 2026-08-30 · user's hands-on pass in the sandbox (CLI 2.1.251, a deny hook in the testing repo's `settings.local.json`, removed after): (1) chip Fable 5 → Haiku: chip snapped back, red "Model switch blocked by a PreModelSwitch hook: probe deny", hook input `to_model haiku source sdk`, persisted value reverted; (2) hook off, Haiku accepted and persisted; hook on, New conversation: the refusal line is the first block of the new conversation and the chip falls back to Default (Opus 5), the turn runs on it; (3) hook off: Sonnet accepted with no line, turn on Sonnet, next New conversation comes up on Sonnet 5. Also observed: a switch BEFORE the first turn draws no `Set model to` line, one AFTER a turn does (9.1)
 
 </details>
 

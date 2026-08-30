@@ -383,11 +383,18 @@ class ClaudeCli(
         put("task_id", taskId)
     })
 
-    /** Host-initiated: switch the model for this session (e.g. "sonnet", "opus[1m]", "default"). */
-    fun setModel(model: String) = sendControlRequest(buildJsonObject {
-        put("subtype", "set_model")
-        put("model", model)
-    })
+    /**
+     * Host-initiated: switch the model for this session (e.g. "sonnet", "opus[1m]", "default").
+     * Answered — not fire-and-forget since 2.1.251: a user's `PreModelSwitch` hook runs for this
+     * request (`source:"sdk"`) and a deny comes back as `{subtype:"error", error:"Model switch
+     * blocked by a PreModelSwitch hook: …"}` (measured 2026-08-30). [onResponse] gets that error
+     * so the caller can revert what it changed optimistically (checklist 9.11).
+     */
+    fun setModel(model: String, onResponse: ((JsonObject?, String?) -> Unit)? = null) =
+        sendControlRequest(buildJsonObject {
+            put("subtype", "set_model")
+            put("model", model)
+        }, onResponse)
 
     /** Host-initiated: merge settings into the CLI's per-process flag layer (probed 2026-08-24:
      * {"fastMode": true} clears the SDK fast-mode gate, false reverts — get_settings.effective

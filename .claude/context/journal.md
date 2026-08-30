@@ -3,6 +3,28 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-30 — re-audit 2.1.251 (early, user's ask); 9.11 built + hand-tested; SchemaStore lag
+- Audit per runbook: 2.1.250 base downloaded from the Marketplace vsix (step 3 works); extension flat
+  (contributions, case labels, 12 tools, gates); webview gained only a Remote Control pill; CLI: one
+  @internal host-rejected subtype, `initialize.remote_control_available`, agents `model:"inherit"`,
+  roster unchanged. Two `set_model` findings, both probed live: a `PreModelSwitch` hook (`source:"sdk"`)
+  can REJECT it (→ 9.11), and the `Set model to …` echo is absent before the first turn.
+- 9.11 built the same day: `ClaudeCli.setModel(model, onResponse)`, `ClaudeSessionService.revertModel`
+  → `__model_rejected` → webview `showModel` (display half split out of `setModel`) + error block.
+  Fixture 68 (control 6/6 discriminating fails on the free pre-change sandbox; live end-to-end with a
+  deny hook via `--settings` headless and via the testing repo's `settings.local.json` in the
+  sandbox). Harness 575→586, tests 134.
+- User walked four hands-on steps (§17 MT-9.11): refusal + revert, accepted switch, refused restart
+  re-apply (chip → roster head, error line survives into the new conversation), no-hook regression.
+  Their screenshot CORRECTED the audit: the echo still draws after a turn — docs fixed.
+- Traps: `compileKotlin` failed in 2 s (`json.encodeToString` in a class without a `json` — use
+  `buildJsonObject{}.toString()`) and a port-poll waiter hid it: waiters must also grep `BUILD FAILED`.
+  Fixture asserted `.blk` for what `errorBlock` emits (`.error`); running the harness in the same batch
+  as a CDP injection `__clear`ed the evidence (known rule, re-learned).
+- Settings-schema warning on `PreModelSwitch`: nothing bundled (13.2); SchemaStore is at 2.1.220.
+  Options laid out (local VS Code copy / wait / bundle); user chose wait. URLs in state.md.
+- Committed and pushed on the user's "commit and push" with this save.
+
 ## 2026-08-29 (eighth) — Copilot Chat 0.63 audited and dropped; `vscode/` → `reference/anthropic-claude-code/`
 - Landscape survey (web) → user asked for a Copilot extraction like `vscode/`. `github.copilot` is
   deprecated; Copilot Chat is BUILT IN to VS Code (`/usr/share/code/resources/app/extensions/copilot`,
@@ -222,23 +244,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   through patchRows), a NEW `.diff` element re-folded, `.card .t-note` caption margin. Third
   attempt: card correct; resume of the session drew the identical card. Harness 480.
 
-## 2026-08-28 (second) — re-audit 2.1.246 → 2.1.250
-- Both 2.1.250 builds were already installed (CLI under `~/.local/share/claude/versions/`, extension
-  beside the still-present 2.1.246 dir). Method as before: `package.json` JSON-diff; `tool("…")`
-  registrations for the IDE-MCP roster; `strings` diff of `subtype:"…"`; headless `initialize` on
-  both binaries (scratchpad `probe.py`), field-by-field diff; string-literal diff of `webview/index.js`
-  and `extension.js`; upstream CHANGELOG via WebFetch (2.1.249 has no heading; 2.1.250 = "bug fixes").
-- Result: surfaces identical except roster +`/workflow-authoring` and four `@internal` `remote_*`
-  cloud-worker subtypes. One [NEW] row, **1.25** grace banner — the CLI has emitted
-  `rateLimitGraceActive`/`overageStatus` since ≤ 2.1.246; only the VS Code webview caught up
-  (gate `tengu_lantern_sconce`). CLI 2.1.250 changed the `/model` confirmation copy to
-  `Set model to …` — moot for us.
-- `./gradlew test` now 116 (16.1 said 115). Row recount by mark matches At a glance (128).
-- Gotcha: ugrep's `-oE '.{0,200}key.{0,200}'` fails "exceeds complexity limits" on the binary —
-  use a python `re.finditer` window instead (gotchas § Testing).
-- Changes left in the working tree; nothing committed.
-
 ## Digest
+- 2026-08-28 (second) — re-audit 2.1.246→2.1.250: only new row 1.25 (usage-limit grace banner, later deferred); `/workflow-authoring` joined the roster; four @internal cloud-worker subtypes ignored; runbook's re-audit procedure extended.
 - **2026-08-28** — four docs retired (`verifier-matrix`, `renderer-parity`, `client-parity`, `manual-test`; `git show 9bd1683:docs/<name>.md`), knowledge promoted first (gotchas § Build/§ Replay, protocol § 11/§ 12, checklist § 17). Bird's-eye checklist restructure reverted as "complete mess" → conventions § Docs (reformat = show ONE section first); the accepted shape: `**id** mark [effort] **Name** — gist`, At a glance block, re-audit paragraphs in `<details>`. 802 → 601 lines.
 - **2026-08-26 (third)** — 0.11.1 released (`979326c`): effort slider into the model menu, PATCH bump. verifyPlugin ×7 read by path; feed had no CDN lag; Marketplace Approved. Notes used a 🧭 Changed section. Near-miss: the feed-bump script asserted after writing build.gradle.kts (gotchas § Build).
 - **2026-08-26 (second)** — checklist re-audited 2.1.241 → 2.1.246: contributions and 12-tool roster identical, CLI +`upload_device_hook_template`, `initialize` +`analytics_disabled`; row 9.10 🚫 added. Roster unchanged 2.1.233 → 2.1.246, so "sync slash-commands.md" is a label edit.

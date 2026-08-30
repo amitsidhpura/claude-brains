@@ -193,8 +193,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             },
         ).apply { start() }
 
-        // Re-apply the persisted model on every (re)start.
-        selectedModel()?.takeIf { it.isNotBlank() && it != "default" }?.let { cli?.setModel(it) }
+        // Re-apply the persisted model on every (re)start. A refusal here (9.11) has no previous
+        // value to fall back to: the CLI stays on its default, so the persisted choice is dropped
+        // and the chip falls back to the roster head (`previous` absent).
+        selectedModel()?.takeIf { it.isNotBlank() && it != "default" }?.let { m ->
+            cli?.setModel(m) { _, err -> if (err != null) revertModel(m, null, err) }
+        }
         // …and the footer-switch preferences, which live in per-process CLI state (flag layer /
         // thinking cap). Only the non-default states are worth a request.
         if (fastMode()) cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", true) })
@@ -434,9 +438,26 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     fun stopTask(taskId: String) = cli?.stopTask(taskId)
 
+    /**
+     * Optimistic: the chip has already flipped and the choice is persisted before the CLI answers,
+     * because through 2.1.250 `set_model` never refused. Since 2.1.251 a `PreModelSwitch` hook can
+     * (checklist 9.11), so an error answer puts the persisted value back and sends the webview a
+     * `__model_rejected` frame that reverts the chip WITHOUT bridging a model message back.
+     */
     fun setModel(model: String) {
+        val previous = selectedModel()
         props.setValue(MODEL_KEY, model)
-        cli?.setModel(model)
+        cli?.setModel(model) { _, err -> if (err != null) revertModel(model, previous, err) }
+    }
+
+    private fun revertModel(model: String, previous: String?, error: String) {
+        if (selectedModel() == model) props.setValue(MODEL_KEY, previous)
+        onEventCb?.invoke(buildJsonObject {
+            put("type", "__model_rejected")
+            put("model", model)
+            previous?.let { put("previous", it) }
+            put("error", error)
+        }.toString())
     }
 
     /** Relative paths of project content files, for @-mention autocomplete (capped). */

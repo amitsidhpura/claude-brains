@@ -13,6 +13,17 @@ re-read those before trusting memory here.
   session title. (Directly contradicts the 2026-08-24 "model changes leave no transcript record"
   measurement — re-measure per CLI version.) Replay drops {`/model`,`/effort`} wrappers in
   `cleanInjected` by user decision.
+- **`set_model` is no longer silent-success-only, and no longer echoes (2.1.251, measured 2026-08-30
+  over stdio with the panel's flags, two runs each side):** before the session's first turn, 2.1.250
+  answered an SDK `set_model` with a `type:"user"` `<local-command-stdout>Set model to …</local-command-stdout>`
+  frame (`isReplay:true`) that `onUserEvent` draws as the chip's confirmation line; 2.1.251 sends
+  only the `control_response` there — but AFTER a turn the echo still comes (user's hands-on switch
+  2026-08-30 drew the line). A headless probe with no turn is NOT the panel's usual state:
+  measure post-turn too before calling a frame "gone". And a `PreModelSwitch` hook runs for the SDK request (`source:"sdk"`) — a
+  `permissionDecision:"deny"` returns `{subtype:"error", error:"Model switch blocked by a
+  PreModelSwitch hook: …"}` while the panel has already switched the chip (checklist 9.11). Probe
+  recipe: `--settings <json>` with a `hooks.PreModelSwitch` command that prints the deny JSON —
+  no need to touch the testing repo's settings.
 - **/effort: the live wire and the disk record disagree** (measured 2026-08-25, CLI 2.1.245,
   panel flags): live = `init` → assistant `model:"<synthetic>"` carrying "Set effort level to …"
   → `result` success with the SAME text — no user frames, no stream_events; disk = caveat +
@@ -307,6 +318,11 @@ re-read those before trusting memory here.
   a literal `--` inside an SVG comment kills the parse and the icon silently renders as nothing.
 
 ## Build / toolchain / release
+
+- **A port-poll waiter hides a 2-second compile failure** (2026-08-30: `compileKotlin` died on
+  `json.encodeToString` in a class with no `json` instance — use `buildJsonObject{}.toString()`, the
+  file's idiom — and the "until CDP answers" loop just sat there). Waiters on `runIde` must also
+  grep the log for `BUILD FAILED` and exit.
 - **`git mv -k` on an untracked (gitignored) path exits 0 and moves NOTHING**, so a `git mv -k … ||
   mv …` fallback never fires — the directory is silently left in place (2026-08-29, `vscode/` →
   `reference/`). Use plain `mv` for anything under `.gitignore`; check `ls` after.
