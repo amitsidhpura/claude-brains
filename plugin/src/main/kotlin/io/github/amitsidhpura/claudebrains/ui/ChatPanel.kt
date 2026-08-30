@@ -40,12 +40,9 @@ import java.awt.dnd.DropTargetDropEvent
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JComponent
-import javax.swing.JPanel
 
 /**
  * JCEF host for the chat UI. Bridges the web UI to the session service.
@@ -69,33 +66,31 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     private val permDiffs =
         java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<List<String>>>()
 
-    /**
-     * Host panel around the JCEF component. The page is NOT loaded in the constructor: at that
-     * point the browser has no real bounds, CEF lays the page out against its default surface
-     * (~300x180) and the first frame shows the header and composer squashed into the top-left
-     * corner before the tool window's layout arrives. So the browser starts hidden, the page is
-     * loaded on the wrapper's first non-empty resize, and the browser is shown at onLoadEnd —
-     * by then it has been sized to the tool window, and the first painted frame is the right one.
-     * The wrapper's background is the page's `--bg` (webview/chat.css) so the gap is not white.
-     */
-    val component: JComponent = JPanel(BorderLayout()).apply {
-        isOpaque = true
-        background = PAGE_BG
-        add(browser.component, BorderLayout.CENTER)
-        browser.component.isVisible = false
-        addComponentListener(object : ComponentAdapter() {
-            override fun componentResized(e: ComponentEvent) {
-                if (width <= 0 || height <= 0 || loadRequested) return
-                loadRequested = true
-                removeComponentListener(this)
-                loadUi()
-            }
-        })
-    }
+    val component: JComponent get() = browser.component
     private var loadRequested = false
 
     init {
         Disposer.register(parent, browser)
+
+        // The page is NOT loaded here: the browser has no real bounds yet, CEF would lay it out
+        // against its default surface (~300x180) and the first frame would show the header and
+        // composer squashed into the top-left corner until the tool window's layout arrived. So
+        // the load waits for the browser component's first non-empty resize — the CEF surface
+        // tracks that component, so by then the viewport is the tool window's and the first
+        // painted frame is the right one. The component must stay VISIBLE meanwhile: 0.12.2 hid
+        // it until onLoadEnd, an invisible BorderLayout child gets no bounds, so CEF kept its
+        // default surface and the flash happened on every open. The pre-load frame is dark
+        // because CEF paints PAGE_BG, not white.
+        browser.setPageBackgroundColor(PAGE_BG)
+        browser.component.addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) {
+                val c = e.component
+                if (c.width <= 0 || c.height <= 0 || loadRequested) return
+                loadRequested = true
+                c.removeComponentListener(this)
+                loadUi()
+            }
+        })
 
         jsToKotlin.addHandler { raw ->
             handleFromWeb(raw)
@@ -142,13 +137,6 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 // the DOM back at its defaults with a live CLI still attached. See seedUi().
                 startSession()
                 seedUi()
-                ApplicationManager.getApplication().invokeLater {
-                    if (!browser.component.isVisible) {
-                        browser.component.isVisible = true
-                        component.revalidate()
-                        component.repaint()
-                    }
-                }
             }
         }, browser.cefBrowser)
 
@@ -855,7 +843,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
 
     companion object {
         /** Mirrors `--bg: #1a1a1a` in webview/chat.css — keep the two in step. */
-        private val PAGE_BG = Color(0x1a1a1a)
+        private const val PAGE_BG = "#1a1a1a"
         private const val INITIAL_BLOCKS = 250
         /** Per-file cap for drag-dropped attachments: protects the JVM + JS bridge from an
          *  accidental ISO drop; generous vs the API's own image limits, same spirit as the

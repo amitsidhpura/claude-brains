@@ -1,15 +1,17 @@
 # State
 
 ## Current focus
-**2026-08-30 (twenty-fifth session): 2.1.251 re-audit run early, 9.11 built and hand-tested.** The
-user asked for the audit despite the "wait a few versions" plan; its single row (9.11, chip revert
-when a `PreModelSwitch` hook refuses `set_model`) was built, harness-verified and walked through
-by the user in four hands-on steps (§17 MT-9.11). The settings-schema warning the user saw in
-`settings.local.json` is SchemaStore lag (synced to 2.1.220 on 2026-07-27, ~monthly) — decision:
-wait, no code (decisions 2026-08-30). **Then 0.12.1 was released the same session** (below).
-**Fourth 2026-08-30 session: 0.12.2 released** — the two loading fixes (first-paint flash
-→ `ui/ChatPanel.kt` wrapper/deferred load; `ClaudeToolWindowFactory : DumbAware`) shipped. **Nothing
-unreleased on `main`** (see Released).
+**2026-08-30 (fifth session): the first-paint flash is fixed for real — UNRELEASED on `main`.**
+0.12.2's fix had made the flash deterministic (it hid the JCEF child until `onLoadEnd`; an
+invisible `BorderLayout` child gets no bounds, so the page loaded at CEF's ~300×180 default). Now
+`ui/ChatPanel.kt` keeps the browser visible, runs `loadUi()` on the BROWSER component's first
+non-empty `componentResized`, and `setPageBackgroundColor("#1a1a1a")` keeps the pre-load frame
+dark; the wrapper/hide/show leftovers were removed at the user's ask. The user tested the zip in
+the real IDE ("working fine"). Decisions 2026-08-30 (fifth), gotchas § JCEF.
+- **Next release (0.12.3, PATCH) carries only this fix** — starts only when the user asks;
+  `docs/release.md` steps 1-5 may be done proactively then, stop at the approval gate. Notes should
+  say plainly that 0.12.2's fix had made the flash happen on every open.
+- Earlier the same day: 2.1.251 re-audit, 9.11 built + hand-tested, 0.12.1 and 0.12.2 released.
 - 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
   `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
   down" errors render verbatim if they ever arrive.
@@ -18,22 +20,17 @@ unreleased on `main`** (see Released).
   paragraphs and §17 groups. Checklist: 83 ✅ · 46 ➖ (129 rows), all 17 headings ✅.
 - Do not re-propose: an effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md); an "Effort (High)"
-  bracketed label or a blue track on the effort slider (2026-08-29).
-  Copilot-derived features other than terminal-output context (2026-08-29, decisions.md).
-- Audit state: the checklist is measured against **2.1.251** (re-audit 2026-08-30, run early at the
-  user's request; checklist header `<details>` block has the findings). Its one row, **9.11**, was
-  BUILT the same day (user's yes): `set_model` carries a response callback, an error reverts the
-  persisted model and pushes `__model_rejected` → webview `showModel` (display-only half of
-  `setModel`) + error block. Files: `cli/ClaudeCli.kt`, `ClaudeSessionService.kt` (`revertModel`),
-  `webview/js/30-menus.js`, `70-events.js`, fixture 68. Verified: harness **586/0**, `./gradlew
-  test` 134/0, live with a real deny hook. Also measured: the `Set model to …` echo after an SDK
-  `set_model` is gone at 2.1.251 ONLY before the first turn (a post-turn switch still draws it —
-  corrected by the user's hands-on test).
-  Docs touched: `feature-checklist`, `ide-mcp-protocol`, `slash-commands`.
+  bracketed label or a blue track on the effort slider (2026-08-29); Copilot-derived features other
+  than terminal-output context (2026-08-29, decisions.md).
+- Audit state: the checklist is measured against **2.1.251** (re-audit 2026-08-30; checklist header
+  `<details>` block has the findings). 9.11 (chip revert on a refused `set_model`) shipped in 0.12.1:
+  `cli/ClaudeCli.kt`, `ClaudeSessionService.kt` (`revertModel`), `webview/js/30-menus.js`,
+  `70-events.js`, fixture 68.
 
 ## Released — 0.12.2 (2026-08-30)
-**0.12.2 is the shipped version** (tag `v0.12.2`, commit `50ac66c`): no first-paint flash on project
-open (page loads once the tool window has bounds), panel available during indexing (DumbAware).
+**0.12.2 is the shipped version** (tag `v0.12.2`, commit `50ac66c`): panel available during indexing
+(DumbAware) and a first-paint "fix" that in fact made the flash deterministic (corrected on `main`,
+unreleased — see Current focus).
 Side effect: the CLI spawns when the panel is first shown. Verifier 7/7 Compatible, asset
 byte-identical, feed live, `marketplace-upload` green (run 33298655547, Marketplace update id
 1157011), **Approved** the same day (user's screenshot: 2025.3.6.1 → 2026.2.2 rc Compatible, IDE run
@@ -77,6 +74,9 @@ notes carry exactly the LAST THREE versions (0.12.2 / 0.12.1 / 0.12.0) + the Git
       2026-08-30 with `python3 tools/marketplace_shots.py 4 5`; committed. **User errand**: upload
       the two PNGs to the listing (`plugins.jetbrains.com/plugin/33274`, manual step).
 - [x] 0.12.2 released and Marketplace-approved 2026-08-30.
+- [x] First-paint flash fixed for real in `ui/ChatPanel.kt`, user-tested from a zip, committed and
+      pushed 2026-08-30 (fifth session).
+- [ ] Release 0.12.3 with that fix — on the user's ask only.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check.

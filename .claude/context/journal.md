@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-30 (fifth) — first-paint flash fixed for real (0.12.2's fix had made it deterministic)
+- User's real-IDE screenshot: the ~300×180 squashed frame STILL showing, now on every open. Root
+  cause read straight from `4b62367`: `browser.component.isVisible = false` → an invisible
+  `BorderLayout` child gets no bounds → CEF keeps its default surface → page loads small → shown
+  and resized at `onLoadEnd`. The deferral was right; hiding the child broke it.
+- Fix in `ui/ChatPanel.kt`: browser stays visible, `loadUi()` on the BROWSER component's first
+  non-empty `componentResized`, `setPageBackgroundColor("#1a1a1a")` (API present in 2024.2.6's
+  `JBCefBrowserBase`). Then, on the user's "is it optimized?", the `JPanel` wrapper + hide/show +
+  `Color` mirror were removed — the diff vs pre-0.12.2 is one listener and one call.
+- Verified each round: compileKotlin, `./gradlew test` 134/0, sandbox viewport 730×871 with body bg
+  `rgb(26,26,26)` over CDP, harness 586/0; the first native frame itself cannot be seen over CDP —
+  the user tested BOTH zips in the real IDE ("working fine"). Zip kept the 0.12.2 name (no bump).
+- Process: the user wanted a zip to test BEFORE any release — no bump/notes/feed touched. Commit +
+  push authorized with this save. Unreleased on `main` after it: this one Kotlin fix.
+
 ## 2026-08-30 (fourth) — 0.12.2 released
 - User's "let's release it" → steps 1–5 done proactively (bump, notes now 0.12.2/0.12.1/0.12.0,
   feed), `test buildPlugin` 134/0, zip audited, `verifyPlugin` 7/7 Compatible from the verdict files;
@@ -195,44 +210,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - End of session: harness **541/0** (fixtures to 65), `./gradlew test` **134/0**. Sections left:
   §8 (user's calls pending), §14 (all-➖ recommendation pending), §15. Committed and pushed.
 
-## 2026-08-29 (second) — §11 closed: 11.5 decline ack, 11.6 declined, 🚫 mark retired
-- Walked the user through 11.5 and 11.6 in plain language; they chose: 11.5 → answer `elicitation`
-  with `{action:"decline"}` now, form deferred (backlog § Someday) until a server they use elicits;
-  11.6 → declined. `ClaudeCli.handleControlRequest` gained an explicit `"elicitation"` branch;
-  compileKotlin + `./gradlew test` green; harness not rerun (Kotlin-only, no webview frame).
-- User asked the difference between ➖ and 🚫 → audit of all 27 closed rows found 7 drifting (9.6 /
-  12.4 / 8.12 were decisions on ➖; 5.5 / 6.6 / 8.9 / 15.2 were deferrals on 🚫). User's call: ONE
-  mark — ➖ "not implemented", the row body says terminal's-half / declined / deferred. Legend,
-  [DECIDE] line, At a glance (`78 ✅ · 3 🟥 · 5 🟧 · 15 ⬜ · 27 ➖`), glossary and state updated.
-  The By design / Declined / Deferred split still governs release PROSE.
-- §11 Extensibility has no open row. One watch: 11.3's `ambient:true` filter is unmeasured —
-  `window.__ambientSeen` in the console is the signal.
-- Committed and pushed at the user's word at the end of the session.
-
-## 2026-08-29 — 11.3 kill-a-task built and hand-tested; 11.4 measured and declined; §11 assessed
-- 11.3 built in one pass: `stop_task{task_id}` (schema from the binary, field confirmed), hover-✕ on
-  roster rows copying the `.hist-del` gutter idiom, `.stopping` dim, REPLACE-only removal. First
-  CDP run: `sleep 240` on the roster → ✕ → roster empty in ~1s and the `sleep` pid gone.
-- User hand-tested four scenarios (MT-7.8): shell; Explore sub-agent — the SUSPENDED turn resumed and
-  finished (summary + Send back), the case that could have hung; one-of-two shells (survivor
-  untouched); Escape + new conversation (the surviving shell died with the replaced CLI, no orphan).
-  Findings: none. User declined a confirm step. Stopping-id memory pruned per roster frame after the
-  test showed a killed id lingering.
-- 2.1.250 roster schema grew `ambient` ("hosts should exclude from activity indicators") — filtered
-  from roster + suspend count on the schema's word; user asked for measurement → first ambient task
-  kept as `window.__ambientSeen` + console warning. Harness 490 → 513.
-- 11.4 re-measured with a wire tape: an agent told to `exit 3` and reply FAILED ended
-  `task_notification{completed}`. Lifecycle ≠ verdict; VS Code's `handleTaskNotification` only
-  deletes from a map. Row → 🚫. Kill vocabulary drift found on the same tape (`task_updated{killed}`
-  + `task_notification{stopped}`); `taskLine` now paints `stopped`; fixture 45 +1 step, negative
-  control (`paused` must not paint) failed as required. Harness 514.
-- Probe trap: the sub-agent's Bash raised the ordinary permission card on the parent and the probe
-  waited 3 min for a notification that could not come until the card was answered (gotchas).
-- 11.6 and 11.5 assessed (see state.md); user has not decided. 11.5's `{}` ack is schema-invalid.
-- Tooling: `cdp.py` prints the `# target` line on stderr — piping through `tail -n +2` eats the
-  first line of the JSON result (gotchas § Testing).
-
 ## Digest
+- **2026-08-29 (second)** — §11 closed: 11.5 `elicitation` answered `{action:"decline"}` (form deferred, backlog § Someday), 11.6 declined. 🚫 mark retired after 7 of 27 closed rows drifted between ➖/🚫 — ONE mark ➖, the row body says terminal's-half / declined / deferred; the By design / Declined / Deferred split still governs release prose.
+- **2026-08-29** — 11.3 kill-a-task built (`stop_task{task_id}`, hover-✕ via the `.hist-del` idiom, REPLACE-only removal) and hand-tested ×4 incl. a suspended Explore sub-agent resuming; stopping-id memory pruned per roster frame. 2.1.250 roster `ambient` filtered, `window.__ambientSeen` as the measurement hook. 11.4 declined on a wire tape (`task_notification{completed}` for a FAILED agent — lifecycle ≠ verdict); kill vocabulary drift (`killed`/`stopped`) fixed, fixture 45. Traps: a sub-agent's Bash raises the parent's permission card and a probe waits on it; `cdp.py` prints `# target` on stderr so `tail -n +2` eats the first JSON line. Harness 514.
 - **2026-08-28 (fourth)** — 3.6 files-changed review built: baselines from the autosave PreToolUse hook (`Autosave.handle` `snapshot` callback) → `TurnChanges` at `result`; `get_workspace_diff` probed and documented but NOT used (HEAD vs working tree, user edits included). `.files` line + `DiffReview.openChain`. Fixture 60 tap uses fixture 48's tape-and-restore idiom (a wrapper around whatever `__bridge` was at that moment fails in the FULL run). Font-size literals (63) → `--fs-*` tokens, card note 6px → `--attach-gap` (conventions § Code & assets). Tests 130, harness 490.
 - **2026-08-28 (third)** — 3.5 tweak-travel built (VS Code = whole-file `accept({old_string, new_string})`; probed our stdio path: CLI applies a whole-file updatedInput, transcript keeps the ORIGINAL tool_use, `userModified:false`). `EditProposals.tweakedInput`, `DiffReview.open(current=)`, `RenderLimits.TWEAK_NOTE`. Hand test failed first on read-only `DiffContentFactory.create` → `DiffContentFactoryEx.createEditable`; whole-file card could not fold → `wholeFileHunk`. Trap: `LIM.tweakNote` is spliced from KOTLIN so it is no webview-build witness; `control.sh`'s runIde BLOCKED on the gradle client. Tests 124, harness 480.
 - 2026-08-28 (second) — re-audit 2.1.246→2.1.250: only new row 1.25 (usage-limit grace banner, later deferred); `/workflow-authoring` joined the roster; four @internal cloud-worker subtypes ignored; runbook's re-audit procedure extended.

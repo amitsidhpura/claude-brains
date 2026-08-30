@@ -415,9 +415,15 @@ re-read those before trusting memory here.
 - **`loadHTML` before the component has bounds paints the page at CEF's default surface (~300×180)**,
   visible for a frame on project open as a squashed header + composer before the tool window's layout
   arrives. The JBCef component gets no size from being constructed — only from Swing layout after
-  `addContent`. `ChatPanel.component` is a wrapper: JCEF child hidden, load on the wrapper's first
-  non-empty `componentResized`, show at `onLoadEnd` (2026-08-30). Consequence: the CLI now spawns
-  when the panel is first shown, not at project open.
+  `addContent`. Fix: `loadUi()` runs on `browser.component`'s first non-empty `componentResized`
+  (one-shot), with `browser.setPageBackgroundColor("#1a1a1a")` so the pre-load frame is dark
+  (`ChatPanel.init`, 2026-08-30). Consequence: the CLI spawns when the panel is first shown, not at
+  project open.
+- **Never hide the JCEF component to "wait for the load" — an invisible `BorderLayout` child gets NO
+  bounds**, so CEF keeps its default surface, the page loads at ~300×180 and is resized only when
+  shown: 0.12.2 did exactly this and turned the occasional flash into a guaranteed one. Size must be
+  driven from the VISIBLE browser component; the native paint of the first frame is not visible over
+  CDP (the viewport reads 730×871 either way) — only the real IDE, by eye, catches it.
 - **JCEF sizes a text flex item's base a hair under its max-content**, so a two-word label wraps with the
   row half empty ("Very High" needed 55px, got a 53px base). Desktop Chrome on the SAME markup+CSS keeps
   one line — mockup.html and headless can NEVER reproduce this class, only the live panel over CDP.

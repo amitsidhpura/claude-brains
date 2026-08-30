@@ -4,7 +4,26 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-08-30 (fifth) — First-paint flash, second attempt: visible browser, load on ITS first bounds, CEF paints the dark bg
+- Why: 0.12.2's fix made the flash DETERMINISTIC. It hid the JCEF child (`isVisible=false`) until
+  `onLoadEnd`, but an invisible `BorderLayout` child gets NO bounds, so CEF kept its default
+  ~300×180 surface, the page loaded at that size and was resized only when shown — the squashed
+  frame on every open (user's screenshot in the real IDE). The correct mechanism: keep
+  `browser.component` visible and laid out, run `loadUi()` on the BROWSER component's own first
+  non-empty `componentResized` (the CEF surface tracks that component, so the viewport is the tool
+  window's before the page lays out), and `browser.setPageBackgroundColor("#1a1a1a")` so the
+  pre-load frame is dark instead of white.
+- Simplified at the user's ask ("optimized to remove unnecessary last fix?"): the `JPanel` wrapper,
+  the hide/show in `onLoadEnd`, the `java.awt.Color` mirror and three imports are gone;
+  `component` is `get() = browser.component` again, `PAGE_BG` is a `const val "#1a1a1a"`. Net
+  change vs pre-0.12.2: `loadUi()` moved from the constructor into a one-shot listener + one
+  `setPageBackgroundColor` call. Verified by the user in the real IDE from a zip, twice (with and
+  without the wrapper).
+- Rejected: an opaque wrapper behind the browser (only a dark ground for a HIDDEN child; with the
+  child visible, JCEF is heavyweight and covers it anyway).
+
 ## 2026-08-30 — Defer the webview load until the tool window has bounds; factory DumbAware
+**SUPERSEDED (same day, below): the hidden-child half was the bug; the deferral and DumbAware stand.**
 - Why: the first frame on project open was the page laid out at CEF's default ~300×180 surface
   (`loadHTML` ran in the `ChatPanel` constructor, before `addContent`). Loading on the wrapper's
   first non-empty resize and showing the JCEF child only at `onLoadEnd` makes the first visible
