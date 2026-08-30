@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.12.1"
+version = "0.12.2"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,13 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.12.2</b>
+            <ul>
+              <li>The panel no longer flashes a squashed, corner-sized layout for a moment when a
+                  project opens — the page now loads only once the tool window has its real size</li>
+              <li>The panel stays available while the IDE is indexing — it used to be replaced by
+                  "This view is not available until indexes are built" on every project open</li>
+            </ul>
             <b>0.12.1</b>
             <ul>
               <li>Links in Claude's replies open in your system browser — a click used to open a
@@ -135,15 +142,6 @@ val changeNotesHtml = """
               <li><code>/clear</code> is gone from the panel: the New-conversation button in the
                   header does the same thing (typed <code>/clear</code>, <code>/new</code>,
                   <code>/reset</code> are refused, like <code>/model</code>)</li>
-            </ul>
-            <b>0.11.1</b>
-            <ul>
-              <li>The effort slider moved into the model menu, as the last row under the 1M
-                  context, Fast mode and Thinking switches — every model-dependent control in one
-                  place. The Modes menu now holds only the four modes</li>
-              <li>The mode chip shows just the mode name — the effort level no longer trails it
-                  as "(High)"; it is read off the slider, one click away in the model menu</li>
-              <li>The model menu is titled "Models"</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
