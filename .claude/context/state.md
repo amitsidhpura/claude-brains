@@ -7,13 +7,9 @@ when a `PreModelSwitch` hook refuses `set_model`) was built, harness-verified an
 by the user in four hands-on steps (§17 MT-9.11). The settings-schema warning the user saw in
 `settings.local.json` is SchemaStore lag (synced to 2.1.220 on 2026-07-27, ~monthly) — decision:
 wait, no code (decisions 2026-08-30). **Then 0.12.1 was released the same session** (below).
-**Third 2026-08-30 session: two loading fixes, UNRELEASED on `main`** — (1) the first-paint flash
-(page painted at CEF's ~300×180 default before the tool window sized it) → `ui/ChatPanel.kt`
-`component` wrapper: JCEF child hidden, `loadUi()` on first non-empty `componentResized`, shown at
-`onLoadEnd`; (2) `ClaudeToolWindowFactory` is `DumbAware` (the IDE hid the panel behind "not
-available until indexes are built" during indexing). Both hand-confirmed by the user; harness 586,
-tests 134. Side effect: the CLI spawns when the panel is first shown. Candidate 0.12.2 content —
-release only when asked (conventions § Workflow).
+**Fourth 2026-08-30 session: 0.12.2 released** — the two loading fixes (first-paint flash
+→ `ui/ChatPanel.kt` wrapper/deferred load; `ClaudeToolWindowFactory : DumbAware`) shipped. **Nothing
+unreleased on `main`** (see Released).
 - 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
   `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
   down" errors render verbatim if they ever arrive.
@@ -35,14 +31,15 @@ release only when asked (conventions § Workflow).
   corrected by the user's hands-on test).
   Docs touched: `feature-checklist`, `ide-mcp-protocol`, `slash-commands`.
 
-## Released — 0.12.1 (2026-08-30)
-**0.12.1 is the shipped version** (tag `v0.12.1`, commit `793639d`): links → system browser (+ bare
-URL autolink), model chip follows a refused `set_model` (9.11), effort pill slider, side-question
-hint. Verifier 7/7 Compatible, GitHub asset byte-identical, feed live, `marketplace-upload` green
-(run 33295856635), Marketplace **Approved** the same day (user's screenshot: JetBrains' verifier
-Compatible 2025.3 → 2026.2.2 rc, IDE run with no issues). 0.12.0 (2026-08-29, `0e1af47`) before it:
-/btw, files-changed review, tweak-travel, stop-task, settings schema, /clear removed. Change notes
-carry exactly the LAST THREE versions (0.12.1 / 0.12.0 / 0.11.1) + the GitHub releases link.
+## Released — 0.12.2 (2026-08-30)
+**0.12.2 is the shipped version** (tag `v0.12.2`, commit `50ac66c`): no first-paint flash on project
+open (page loads once the tool window has bounds), panel available during indexing (DumbAware).
+Side effect: the CLI spawns when the panel is first shown. Verifier 7/7 Compatible, asset
+byte-identical, feed live, `marketplace-upload` green (run 33298655547, Marketplace update id
+1157011), **Approved** the same day (user's screenshot: 2025.3.6.1 → 2026.2.2 rc Compatible, IDE run
+no issues). Before it: 0.12.1 (`793639d`: links → system browser, chip follows refused `set_model`,
+effort slider) and 0.12.0 (`0e1af47`: /btw, files-changed review, tweak-travel, stop-task). Change
+notes carry exactly the LAST THREE versions (0.12.2 / 0.12.1 / 0.12.0) + the GitHub releases link.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
@@ -79,7 +76,7 @@ carry exactly the LAST THREE versions (0.12.1 / 0.12.0 / 0.11.1) + the GitHub re
 - [x] Marketplace screenshots 04 (side-question placeholder) and 05 (effort pill slider) regenerated
       2026-08-30 with `python3 tools/marketplace_shots.py 4 5`; committed. **User errand**: upload
       the two PNGs to the listing (`plugins.jetbrains.com/plugin/33274`, manual step).
-- [ ] 0.12.2 (when the user asks): the two loading fixes above; `docs/release.md` process.
+- [x] 0.12.2 released and Marketplace-approved 2026-08-30.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check.

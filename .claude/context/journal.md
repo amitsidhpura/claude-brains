@@ -3,6 +3,16 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-30 (fourth) — 0.12.2 released
+- User's "let's release it" → steps 1–5 done proactively (bump, notes now 0.12.2/0.12.1/0.12.0,
+  feed), `test buildPlugin` 134/0, zip audited, `verifyPlugin` 7/7 Compatible from the verdict files;
+  STOPPED at the approval gate with the full notes; released on the user's "go ahead".
+- `50ac66c`, tag `v0.12.2`, asset `cmp`-identical, feed served 0.12.2 immediately,
+  `marketplace-upload` run 33298655547 green → Marketplace update 1157011 (`approve:false` on
+  upload, **Approved** within the hour — the public `updates` API lists approved versions only, so
+  its silence right after upload is normal; read the run log's JSON instead).
+- Notes carried a ⚠️ line for the behaviour change (CLI starts on first show of the panel).
+
 ## 2026-08-30 (third) — first-paint flash + dumb-mode placeholder fixed
 - User's screenshot: on project open the panel paints for a fraction of a second at ~300×180
   (header + composer squashed top-left) then snaps to width. Cause: `ChatPanel` called `loadHTML`

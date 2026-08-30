@@ -322,6 +322,10 @@ re-read those before trusting memory here.
   a literal `--` inside an SVG comment kills the parse and the icon silently renders as nothing.
 
 ## Build / toolchain / release
+- **Right after a Marketplace upload, `api/plugins/33274/updates` does NOT list the new version** — it
+  returns approved updates only; the upload itself is proven by the `marketplace-upload` run log's
+  JSON (`"version":"0.12.2","approve":false`, update id). Approval followed within the hour on
+  0.12.1 and 0.12.2 (2026-08-30). Don't re-upload.
 
 - **A port-poll waiter hides a 2-second compile failure** (2026-08-30: `compileKotlin` died on
   `json.encodeToString` in a class with no `json` instance — use `buildJsonObject{}.toString()`, the
