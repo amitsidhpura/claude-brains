@@ -3,6 +3,19 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-30 (sixth) — 0.12.3 released
+- User's "lets release it" → steps 1–5 proactively (bump, notes now 0.12.3/0.12.2/0.12.1, feed),
+  `test buildPlugin` 134/0, zip audited, `verifyPlugin` 7/7 Compatible from the verdict files;
+  STOPPED at the approval gate with the full notes; released on "Go ahead".
+- `1277ad7`, tag `v0.12.3`, asset `cmp`-identical, feed served 0.12.3 immediately,
+  `marketplace-upload` run 33302608925 green → Marketplace update 1157030, **Approved** within the
+  hour (verifier Success on 2025.3.6.1 / 2026.1.5 / 2026.2.2 rc, IDE run no issues).
+- Notes said plainly that 0.12.2's fix had made the flash happen on every open — the honest line
+  the user approved unchanged.
+- User tested the released update in the real IDE: working fine. Nothing unreleased on `main`.
+- Stray `plugin/verify.log` from redirecting `verifyPlugin` output — deleted, never commit it
+  (redirect into the scratchpad next time).
+
 ## 2026-08-30 (fifth) — first-paint flash fixed for real (0.12.2's fix had made it deterministic)
 - User's real-IDE screenshot: the ~300×180 squashed frame STILL showing, now on every open. Root
   cause read straight from `4b62367`: `browser.component.isVisible = false` → an invisible

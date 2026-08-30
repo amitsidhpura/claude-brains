@@ -1,17 +1,13 @@
 # State
 
 ## Current focus
-**2026-08-30 (fifth session): the first-paint flash is fixed for real — UNRELEASED on `main`.**
-0.12.2's fix had made the flash deterministic (it hid the JCEF child until `onLoadEnd`; an
-invisible `BorderLayout` child gets no bounds, so the page loaded at CEF's ~300×180 default). Now
-`ui/ChatPanel.kt` keeps the browser visible, runs `loadUi()` on the BROWSER component's first
-non-empty `componentResized`, and `setPageBackgroundColor("#1a1a1a")` keeps the pre-load frame
-dark; the wrapper/hide/show leftovers were removed at the user's ask. The user tested the zip in
-the real IDE ("working fine"). Decisions 2026-08-30 (fifth), gotchas § JCEF.
-- **Next release (0.12.3, PATCH) carries only this fix** — starts only when the user asks;
-  `docs/release.md` steps 1-5 may be done proactively then, stop at the approval gate. Notes should
-  say plainly that 0.12.2's fix had made the flash happen on every open.
-- Earlier the same day: 2.1.251 re-audit, 9.11 built + hand-tested, 0.12.1 and 0.12.2 released.
+**2026-08-30 (sixth session): 0.12.3 released and Marketplace-approved — nothing unreleased on
+`main`.** 0.12.3 carries only the real first-paint fix (`ui/ChatPanel.kt`: browser stays visible,
+`loadUi()` on the BROWSER component's first non-empty `componentResized`,
+`setPageBackgroundColor("#1a1a1a")`); 0.12.2's fix had hidden the JCEF child and made the flash
+deterministic (decisions 2026-08-30 (fifth), gotchas § JCEF). User-tested from a zip AND from the
+released update ("working fine"). No open work; pick from backlog § Next up / § Deferred.
+- Earlier the same day: 2.1.251 re-audit, 9.11 built + hand-tested, 0.12.1 / 0.12.2 / 0.12.3 released.
 - 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
   `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
   down" errors render verbatim if they ever arrive.
@@ -27,16 +23,16 @@ the real IDE ("working fine"). Decisions 2026-08-30 (fifth), gotchas § JCEF.
   `cli/ClaudeCli.kt`, `ClaudeSessionService.kt` (`revertModel`), `webview/js/30-menus.js`,
   `70-events.js`, fixture 68.
 
-## Released — 0.12.2 (2026-08-30)
-**0.12.2 is the shipped version** (tag `v0.12.2`, commit `50ac66c`): panel available during indexing
-(DumbAware) and a first-paint "fix" that in fact made the flash deterministic (corrected on `main`,
-unreleased — see Current focus).
-Side effect: the CLI spawns when the panel is first shown. Verifier 7/7 Compatible, asset
-byte-identical, feed live, `marketplace-upload` green (run 33298655547, Marketplace update id
-1157011), **Approved** the same day (user's screenshot: 2025.3.6.1 → 2026.2.2 rc Compatible, IDE run
-no issues). Before it: 0.12.1 (`793639d`: links → system browser, chip follows refused `set_model`,
-effort slider) and 0.12.0 (`0e1af47`: /btw, files-changed review, tweak-travel, stop-task). Change
-notes carry exactly the LAST THREE versions (0.12.2 / 0.12.1 / 0.12.0) + the GitHub releases link.
+## Released — 0.12.3 (2026-08-30)
+**0.12.3 is the shipped version** (tag `v0.12.3`, commit `1277ad7`): the first-paint flash fixed
+for real. Verifier 7/7 Compatible, asset byte-identical, feed live, `marketplace-upload` run
+33302608925 green → Marketplace update id 1157030, **Approved** within the hour (user's screenshot:
+2025.3.6.1 → 2026.2.2 rc Compatible, IDE run no issues). Before it, all the same day: 0.12.2
+(`50ac66c`: DumbAware factory + the flash "fix" that made it deterministic), 0.12.1 (`793639d`:
+links → system browser, chip follows refused `set_model`, effort slider), 0.12.0 (`0e1af47`: /btw,
+files-changed review, tweak-travel, stop-task). The CLI spawns when the panel is first shown
+(since 0.12.2). Change notes carry exactly the LAST THREE versions (0.12.3 / 0.12.2 / 0.12.1) +
+the GitHub releases link.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
@@ -74,9 +70,8 @@ notes carry exactly the LAST THREE versions (0.12.2 / 0.12.1 / 0.12.0) + the Git
       2026-08-30 with `python3 tools/marketplace_shots.py 4 5`; committed. **User errand**: upload
       the two PNGs to the listing (`plugins.jetbrains.com/plugin/33274`, manual step).
 - [x] 0.12.2 released and Marketplace-approved 2026-08-30.
-- [x] First-paint flash fixed for real in `ui/ChatPanel.kt`, user-tested from a zip, committed and
-      pushed 2026-08-30 (fifth session).
-- [ ] Release 0.12.3 with that fix — on the user's ask only.
+- [x] First-paint flash fixed for real in `ui/ChatPanel.kt`; 0.12.3 released and Marketplace-approved
+      2026-08-30.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check.
