@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.12.0"
+version = "0.12.1"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,19 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.12.1</b>
+            <ul>
+              <li>Links in Claude's replies open in your system browser — a click used to open a
+                  blank IDE window, and a middle-click navigated the panel itself. Bare URLs are
+                  now links too</li>
+              <li>The model chip follows the CLI: when a <code>PreModelSwitch</code> hook
+                  (Claude Code 2.1.251+) refuses a model switch, the chip and the saved choice
+                  snap back to the model the CLI kept and the hook's reason is shown — the chip
+                  used to show the refused model</li>
+              <li>The effort level is a slider in the model menu</li>
+              <li>The side-question panel's input hints "Ctrl+Enter to send", like the
+                  composer</li>
+            </ul>
             <b>0.12.0</b>
             <ul>
               <li>Side questions: type <code>/btw</code> (or <code>/btw your question</code>) to
@@ -131,18 +144,6 @@ val changeNotesHtml = """
               <li>The mode chip shows just the mode name — the effort level no longer trails it
                   as "(High)"; it is read off the slider, one click away in the model menu</li>
               <li>The model menu is titled "Models"</li>
-            </ul>
-            <b>0.11.0</b>
-            <ul>
-              <li>Effort changes show themselves: sliding the effort level now prints the CLI's
-                  own confirmation ("Set effort level to …") in the chat — it used to happen
-                  silently</li>
-              <li>Custom models get the selection checkmark in the model menu, with the remove
-                  button sitting exactly where the checkmark is, at its proper size — a selected
-                  custom model used to look unselected</li>
-              <li>Model and effort changes no longer replay as typed commands when a
-                  conversation is resumed — the confirmation line is what both views show, and a
-                  conversation can no longer be titled "/model haiku"</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
