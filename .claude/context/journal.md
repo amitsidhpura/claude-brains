@@ -23,7 +23,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   as a CDP injection `__clear`ed the evidence (known rule, re-learned).
 - Settings-schema warning on `PreModelSwitch`: nothing bundled (13.2); SchemaStore is at 2.1.220.
   Options laid out (local VS Code copy / wait / bundle); user chose wait. URLs in state.md.
-- Committed and pushed on the user's "commit and push" with this save.
+- Committed and pushed on the user's "commit and push" with the first save; then the user asked for
+  the release: **0.12.1** cut per `docs/release.md` (verifier 7/7, asset byte-identical, feed live,
+  upload run 33295856635 green, Marketplace Approved within the hour). Release notes drafted while the
+  verifier ran; approval gate held. Post-release context save on its own ask (this one).
 
 ## 2026-08-29 (eighth) — Copilot Chat 0.63 audited and dropped; `vscode/` → `reference/anthropic-claude-code/`
 - Landscape survey (web) → user asked for a Copilot extraction like `vscode/`. `github.copilot` is

@@ -6,23 +6,8 @@ user asked for the audit despite the "wait a few versions" plan; its single row 
 when a `PreModelSwitch` hook refuses `set_model`) was built, harness-verified and walked through
 by the user in four hands-on steps (§17 MT-9.11). The settings-schema warning the user saw in
 `settings.local.json` is SchemaStore lag (synced to 2.1.220 on 2026-07-27, ~monthly) — decision:
-wait, no code (decisions 2026-08-30). Everything committed and pushed with this save.
-**Unreleased on `main` since 0.12.0** — three post-release fixes + 9.11, all verified live in the sandbox
-and by harness 586/0 + `./gradlew test` 134/0:
-- **External links open in the system browser** (`webview/js/20-markdown.js` no `target=_blank` +
-  bare-URL autolink; `00-core.js` document `click`/`auxclick` delegate → `browse` bridge frame;
-  `ui/ChatPanel.kt` `"browse"` → `BrowserUtil.browse`, plus `onBeforePopup` AND `onBeforeBrowse`
-  guards). Root cause: OSR JCEF — a `_blank` popup had no surface (blank PhpStorm window), and a
-  middle-click navigated the PANEL itself. Fixture 67, two negative controls recorded in it. User
-  hand-tested left / middle / Ctrl+click → Chrome, panel stays.
-- **Effort selector is a pill slider** (`chat.css` `.effort` block): the `.tgl` idiom at five
-  fixed 12px stops, accent fill from `--ef-fill` via `:has()`, 2px knob inset, fill = knob right
-  + 2. CSS only; fixtures 51/55/58 unchanged. Four user rounds of spacing polish — decisions.md.
-- Side-question placeholder now says "(Ctrl+Enter to send, Enter for newline)" like the composer.
-- Next release (0.12.1 or 0.13.0) carries these plus 9.11 (chip revert on a refused `set_model`);
-  nothing else is pending for it.
-- Model switch is silent on 2.1.251 only BEFORE the first turn (no echo then); after a turn the
-  confirmation line still draws — 9.1 fact.
+wait, no code (decisions 2026-08-30). **Then 0.12.1 was released the same session** (below).
+**Nothing unreleased on `main`** — 0.12.1 shipped everything since 0.12.0 (see Released).
 - 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
   `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
   down" errors render verbatim if they ever arrive.
@@ -44,14 +29,14 @@ and by harness 586/0 + `./gradlew test` 134/0:
   corrected by the user's hands-on test).
   Docs touched: `feature-checklist`, `ide-mcp-protocol`, `slash-commands`.
 
-## Released — 0.12.0 (2026-08-29)
-**0.12.0 is the shipped version** (tag `v0.12.0`, commit `0e1af47`): /btw, files-changed review,
-tweak-travel, stop-task, settings schema, 1.21/1.23/1.24, /clear removed. Verifier 7/7 Compatible,
-GitHub asset byte-identical, feed live, `marketplace-upload` green (run 33257914722); Marketplace
-**Approved** the same day (user's screenshot: JetBrains' verifier Compatible 2025.3 → 2026.2.2 rc, plus an
-IDE-run check with no issues).
-Unreleased on `main` since: the three fixes above (this session). Change notes now carry exactly the LAST THREE versions + a GitHub
-releases link (rule in build.gradle.kts kdoc and release.md 1b).
+## Released — 0.12.1 (2026-08-30)
+**0.12.1 is the shipped version** (tag `v0.12.1`, commit `793639d`): links → system browser (+ bare
+URL autolink), model chip follows a refused `set_model` (9.11), effort pill slider, side-question
+hint. Verifier 7/7 Compatible, GitHub asset byte-identical, feed live, `marketplace-upload` green
+(run 33295856635), Marketplace **Approved** the same day (user's screenshot: JetBrains' verifier
+Compatible 2025.3 → 2026.2.2 rc, IDE run with no issues). 0.12.0 (2026-08-29, `0e1af47`) before it:
+/btw, files-changed review, tweak-travel, stop-task, settings schema, /clear removed. Change notes
+carry exactly the LAST THREE versions (0.12.1 / 0.12.0 / 0.11.1) + the GitHub releases link.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
