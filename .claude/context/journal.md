@@ -3,6 +3,15 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-08-30 (later) — Marketplace screenshots 04/05 regenerated
+- `design/marketplace/05-sessions-models.png` (effort pill slider replaced the five dots) and
+  `04-commands-agents.png` (new side-question placeholder) re-rendered with
+  `python3 tools/marketplace_shots.py 4 5` — no scene edits needed; the script composes from the live
+  webview sources, so a UI change only needs a rerun.
+- Observed, left as-is: at the 394 px panel width the side-question placeholder clips after "Enter"
+  (`chat.html:51`); faithful to the IDE. Shorten the hint if the listing should read clean.
+- Committed and pushed on the user's "commit and push".
+
 ## 2026-08-30 — re-audit 2.1.251 (early, user's ask); 9.11 built + hand-tested; SchemaStore lag
 - Audit per runbook: 2.1.250 base downloaded from the Marketplace vsix (step 3 works); extension flat
   (contributions, case labels, 12 tools, gates); webview gained only a Remote Control pill; CLI: one

@@ -70,6 +70,9 @@ carry exactly the LAST THREE versions (0.12.1 / 0.12.0 / 0.11.1) + the GitHub re
 - [x] Gist `b2d033439ba4ca5bcd018f4fe5eef773` verified identical to `.claude/skills/context/SKILL.md`
       on 2026-08-29 (push again after any SKILL.md edit: `gh gist edit <id> -f SKILL.md <path>`).
 - [x] 9.11 built, verified, hand-tested and committed 2026-08-30.
+- [x] Marketplace screenshots 04 (side-question placeholder) and 05 (effort pill slider) regenerated
+      2026-08-30 with `python3 tools/marketplace_shots.py 4 5`; committed. **User errand**: upload
+      the two PNGs to the listing (`plugins.jetbrains.com/plugin/33274`, manual step).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check.
