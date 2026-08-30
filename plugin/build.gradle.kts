@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.12.2"
+version = "0.12.3"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,14 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.12.3</b>
+            <ul>
+              <li>The squashed, corner-sized first frame on project open is really gone. 0.12.2's
+                  fix made it show on EVERY open: it hid the browser until the page had loaded,
+                  and a hidden browser has no size, so the page still laid out small and was only
+                  resized when shown. The browser now stays visible and the page loads once the
+                  browser itself has the tool window's size</li>
+            </ul>
             <b>0.12.2</b>
             <ul>
               <li>The panel no longer flashes a squashed, corner-sized layout for a moment when a
@@ -123,25 +131,6 @@ val changeNotesHtml = """
               <li>The effort level is a slider in the model menu</li>
               <li>The side-question panel's input hints "Ctrl+Enter to send", like the
                   composer</li>
-            </ul>
-            <b>0.12.0</b>
-            <ul>
-              <li>Side questions: type <code>/btw</code> (or <code>/btw your question</code>) to
-                  ask something on the side — the answer appears in a small panel above the
-                  composer and never enters the conversation or its transcript</li>
-              <li>Review every file a turn changed: a "N files changed · Review" line under the
-                  turn summary opens one diff tab that walks through each file, before and after</li>
-              <li>Edit a proposed change before accepting it — the right pane of the permission
-                  diff is editable, and what you accept is what gets written</li>
-              <li>Stop a background task from the roster — hover a row and click its ✕</li>
-              <li><code>.claude/settings.json</code> and <code>settings.local.json</code> get
-                  completion and validation from Anthropic's published schema</li>
-              <li>Permission cards say why the CLI is asking when it has a reason, a turn cut short
-                  by a max-turns limit says so under the summary, and redacted thinking shows a
-                  placeholder line instead of nothing</li>
-              <li><code>/clear</code> is gone from the panel: the New-conversation button in the
-                  header does the same thing (typed <code>/clear</code>, <code>/new</code>,
-                  <code>/reset</code> are refused, like <code>/model</code>)</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
