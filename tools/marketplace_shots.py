@@ -106,7 +106,6 @@ function clampPopups(){ const st = document.createElement('style'); st.textConte
 S1_LEFT = COMMON + r"""
 window.onClaudeEvent(JSON.stringify({type:'__title', text:'Rate limiting for the API'}));
 user('Rate-limit /api/search to 60 requests per minute.');
-(curTurn||log).appendChild(thinkBlock('The router already has a middleware chain; a token bucket keyed by client IP fits without touching the handlers.', 6));
 tool('Read', '/home/you/shop/src/api/router.js', true);
 tool('Bash', 'Run the rate-limit tests').after(ioBox([['IN','npm test -- --grep "rate limit"'],['OUT','✓ 60/min allowed · 429 above the limit']]));
 md('Added a token-bucket limiter — over the limit is a **429**:\n\n```js\nconst limiter = rateLimit({ windowMs: 60_000, max: 60 });\n```');
@@ -181,8 +180,7 @@ user('Approved — go ahead with the plan.');
 tool('Edit', '/home/you/shop/src/api/reports.js', true);
 tool('Write', '/home/you/shop/src/api/csv.js', true);
 tool('Bash', 'Run the CSV tests').after(ioBox([['IN','npm test -- --grep csv'],['OUT','✓ quotes fields with commas\n✓ empty report → header only\n2 passing (96ms)']]));
-md('Both routes share the limiter; the serializer streams rows, so a 200k-line report never sits in memory.');
-done(83000, 2900);
+md('The serializer streams rows — a 200k-line report never sits in memory.');
 window.onClaudeEvent(JSON.stringify({type:'__files_changed', turn:1, files:[
   {path:'/home/you/shop/src/api/reports.js', added:1, removed:0, isNew:false},
   {path:'/home/you/shop/src/api/csv.js', added:38, removed:0, isNew:true},

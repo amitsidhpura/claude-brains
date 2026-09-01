@@ -617,14 +617,22 @@ re-read those before trusting memory here.
   paint). The earlier "lag" reading was synchronous. No fix needed; a synchronous read after a DOM
   change is not a measurement of what the user sees.
 
-- **Marketplace screenshots (`tools/marketplace_shots.py`) — two traps** (2026-08-29). (1) The panel
-  pins the user message at the top and the log stays scrolled to the bottom, so a scene taller than
-  the 600px capture silently hides whatever sits just under the pinned message (the thinking block,
-  an ask card's tab strip) — the DOM has it, the PNG doesn't; trim the scene until it fits rather
-  than scrolling. (2) `.popup` is anchored to its chip with `min-width:330px`; in a 394px capture the
-  model menu overflows the panel — the tool injects a fixed-position clamp for the shot only.
-  Parsing `JS_FILES` out of WebviewAssets.kt must stop at the list's own `)` line, not the first
-  `)\n` — a comment in the manifest ends with one and silently truncated the splice to 6 files.
+- **Marketplace screenshots (`tools/marketplace_shots.py`) — three traps** (2026-08-29, third added
+  2026-09-01). (1) The panel pins the user message at the top and the log stays scrolled to the
+  bottom, so a scene taller than the 600px capture silently hides whatever sits just under the
+  pinned message (the thinking block, an ask card's tab strip) — the DOM has it, the PNG doesn't;
+  trim the scene until it fits rather than scrolling. (2) `.popup` is anchored to its chip with
+  `min-width:330px`; in a 394px capture the model menu overflows the panel — the tool injects a
+  fixed-position clamp for the shot only. Parsing `JS_FILES` out of WebviewAssets.kt must stop at
+  the list's own `)` line, not the first `)\n` — a comment in the manifest ends with one and
+  silently truncated the splice to 6 files. (3) Because the log is BOTTOM-anchored, the capture's
+  top cut line moves ONLY when VISIBLE content changes height — trimming a block that is already
+  above the fold shifts content and scrollTop equally, pixel-identical PNG. Measure first in a
+  headless probe iframe (`#log` scrollHeight − clientHeight): ≤3px of residual scroll dies in the
+  log's top whitespace; more clips the first visible row mid-line (the 0.12.4 files-block rows
+  clipped 01's think row and pushed 03's Bash tool line off — fixed by trimming visible rows in
+  the scenes). Early probe reads are transient (same log: scrollH 1191 at 300ms, 686 settled) —
+  measure after layout settles, and treat the final PNG as the only verdict.
 
 ## Testing, probes and sandboxes
 - **`tools/cdp.py` prints its `# target:` line on STDERR.** Piping stdout through `tail -n +2` (to

@@ -1,8 +1,11 @@
 # State
 
 ## Current focus
-**2026-09-01 (seventh session): 0.12.4 RELEASED and Marketplace-approved — nothing unreleased on
-`main`.** The three batches it carries, all fixes-only:
+**2026-09-01: 0.12.4 RELEASED and Marketplace-approved; marketplace screenshots 01+03 refreshed
+(fifth session) to show the new files-changed rows** — scene trims in `tools/marketplace_shots.py`
+(S1_LEFT lost its think row, S3_RIGHT its done row + a shorter md line) so the taller block fits
+the 600px capture; 02/04/05 verified unaffected (no files block, no scene opens `#bgMenu`).
+The three batches 0.12.4 carries, all fixes-only:
 - `5cf280d` — tool-result `(note: …)` caveat hardening: `NOTE_MAX = 400` (an over-bound collapsed
   capture is DROPPED, not truncated) + a position-0 guard (a match starting the trimmed result is
   output; every real CLI note template is APPENDED after other text, measured in the 2.1.252
@@ -72,7 +75,8 @@ rc all Success, IDE run no issues). Change notes carry the LAST THREE versions
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots
-      04+05 (regenerated 2026-08-30) to `plugins.jetbrains.com/plugin/33274`.
+      01+03 (regenerated 2026-09-01, new files-changed rows) and 04+05 (regenerated 2026-08-30)
+      to `plugins.jetbrains.com/plugin/33274`.
 
 ## Known gaps (deliberately left)
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by decision.

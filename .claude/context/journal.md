@@ -3,6 +3,22 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-01 (fifth) — Marketplace shots 01+03 refreshed for the files-changed rows
+- User asked to update `design/marketplace/01-conversation.png` for the 0.12.4 files-changed
+  review change. The script composes from the live webview sources, so a plain rerun rendered the
+  new block — but its extra height overflowed the 600px panel and the capture clipped the left
+  scene's "Thought for 6s" mid-row. Measured headless (`#log` scrollHeight − clientHeight = 41px),
+  then dropped S1_LEFT's thinkBlock (the right panel keeps a think row); the residual 3px of
+  scroll dies in top whitespace.
+- `03-control.png` was stale the same way (its caption sells the per-turn review). Regenerating
+  pushed the "Bash Run the CSV tests" header off the top — the log is bottom-anchored, so only
+  trimming VISIBLE content moves the cut line (promoted to gotchas § Webview). Dropped S3_RIGHT's
+  done row and shortened its md sentence; header back, all three file rows clean.
+- 02/04/05 confirmed unaffected: no files block, and no scene opens `#bgMenu`, so the 0.12.4
+  popup fixes change none of their pixels.
+- The standing screenshot-upload errand now covers 01+03+04+05 on `plugins.jetbrains.com/plugin/33274`.
+- Committed and pushed on the user's ask (this save included).
+
 ## 2026-09-01 (fourth) — 0.12.4 released and approved
 - User's "Please release it" → full gate: bump to 0.12.4, notes rewritten (0.12.4/0.12.3/0.12.2,
   0.12.1 dropped), `test buildPlugin` green with the own-version notes guard passing, zip audited
@@ -135,32 +151,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   (`chat.html:51`); faithful to the IDE. Shorten the hint if the listing should read clean.
 - Committed and pushed on the user's "commit and push".
 
-## 2026-08-30 — re-audit 2.1.251 (early, user's ask); 9.11 built + hand-tested; SchemaStore lag
-- Audit per runbook: 2.1.250 base downloaded from the Marketplace vsix (step 3 works); extension flat
-  (contributions, case labels, 12 tools, gates); webview gained only a Remote Control pill; CLI: one
-  @internal host-rejected subtype, `initialize.remote_control_available`, agents `model:"inherit"`,
-  roster unchanged. Two `set_model` findings, both probed live: a `PreModelSwitch` hook (`source:"sdk"`)
-  can REJECT it (→ 9.11), and the `Set model to …` echo is absent before the first turn.
-- 9.11 built the same day: `ClaudeCli.setModel(model, onResponse)`, `ClaudeSessionService.revertModel`
-  → `__model_rejected` → webview `showModel` (display half split out of `setModel`) + error block.
-  Fixture 68 (control 6/6 discriminating fails on the free pre-change sandbox; live end-to-end with a
-  deny hook via `--settings` headless and via the testing repo's `settings.local.json` in the
-  sandbox). Harness 575→586, tests 134.
-- User walked four hands-on steps (§17 MT-9.11): refusal + revert, accepted switch, refused restart
-  re-apply (chip → roster head, error line survives into the new conversation), no-hook regression.
-  Their screenshot CORRECTED the audit: the echo still draws after a turn — docs fixed.
-- Traps: `compileKotlin` failed in 2 s (`json.encodeToString` in a class without a `json` — use
-  `buildJsonObject{}.toString()`) and a port-poll waiter hid it: waiters must also grep `BUILD FAILED`.
-  Fixture asserted `.blk` for what `errorBlock` emits (`.error`); running the harness in the same batch
-  as a CDP injection `__clear`ed the evidence (known rule, re-learned).
-- Settings-schema warning on `PreModelSwitch`: nothing bundled (13.2); SchemaStore is at 2.1.220.
-  Options laid out (local VS Code copy / wait / bundle); user chose wait. URLs in state.md.
-- Committed and pushed on the user's "commit and push" with the first save; then the user asked for
-  the release: **0.12.1** cut per `docs/release.md` (verifier 7/7, asset byte-identical, feed live,
-  upload run 33295856635 green, Marketplace Approved within the hour). Release notes drafted while the
-  verifier ran; approval gate held. Post-release context save on its own ask (this one).
-
 ## Digest
+- **2026-08-30** — re-audit 2.1.251 per runbook (extension flat, webview +Remote Control pill; CLI: `PreModelSwitch` hook can REJECT `set_model` → 9.11, `Set model to …` echo absent before the first turn — user's screenshot corrected the audit: it draws after a turn). 9.11 built + four hand-test steps green (fixture 68, harness 586, tests 134); SchemaStore lag noted, user chose wait. **0.12.1 released** same day (gate walked, Approved within the hour). Traps re-learned: waiters must grep `BUILD FAILED`; harness + CDP injection never in one batch.
 - **2026-08-29 (eighth)** — Copilot Chat 0.63 audited (built into VS Code; its OSS repo stops at 0.44, so the shipped manifest is the only truth) and DROPPED as bloat — only "terminal last command/output as context" survived, to backlog; the extracted folders were deleted after the audit. `vscode/` moved to `reference/anthropic-claude-code/` (2.1.251) with eight path-only doc edits. Trap promoted: `git mv -k` on an untracked path exits 0 without moving.
 - **2026-08-29 (seventh)** — links open in the SYSTEM browser (blank PhpStorm windows were `target=_blank` on an OSR JCEF browser); fixed in three layers (JS delegate → `browse`, `onBeforePopup`, `onBeforeBrowse` cancelling main-frame http(s)), bare URLs autolink. Effort selector became a pill slider over four geometry rounds (fixed 12px stop slots; proven headless then in JCEF). Side-question hint matched to the composer. Fixture 67 with two controls, harness 575, tests 134.
 - **2026-08-29 (sixth)** — goal reached a day early: checklist 82 ✅ · 46 ➖, all 17 headings ✅. 7.6 `/clear` REMOVED from the panel (user pick C; typed `/clear`/`/new`/`/reset` refused like `/model`), 8.7 + §14 decided by the git-owns-undo principle (14.1/14.3 later as a worktrees bundle). Fixtures 46/52 re-pointed; harness 566, tests 134. Marketplace: plugin.xml description fixed, five screenshots reshot via the new committed `tools/marketplace_shots.py`, hand-synced copy removed (the Marketplace takes the description from the plugin now). **0.12.0 released** (`0e1af47`) — full gate walk, marketplace-upload green. Later same day: reference re-extracted to 2.1.251, change notes trimmed to last-three-versions.
