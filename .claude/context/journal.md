@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-01 (second) — files-changed rows + bg-popup one-line title (Windows screenshots)
+- User's office-Windows screenshots: (1) the files-changed line was a full-path blob — REAL BUG,
+  `filesLine`'s basename used `lastIndexOf('/')` which never matches `D:\…`; (2) hovering a bg
+  roster row rewrapped a long title to two lines — the ✕ hover gutter narrowed a title with no
+  nowrap, and `#bgMenu` had no fixed width.
+- User picked (from three previews) one row per file with PROJECT-RELATIVE paths. Rows reuse the
+  shared `fillPath()` (both separators, middle-ellipsis keeps the filename, abs path on tooltip);
+  counts right-aligned. Popup completed the conversations-list idiom: nowrap+ellipsis title,
+  tooltip, FIXED 330px width. Mockup-first per convention (headless renders shown).
+- Controls sequenced free against the still-running pre-change sandbox: fixture 60 (reshaped, +
+  a Windows `D:\sites\mcnplumbing` step) 8 FAIL / 11 PASS; fixture 04 long-title step 3 FAIL.
+  First control attempt hit the known null-`textContent` harness abort → row asserts null-safe.
+  HONEST NOTE recorded: the 330px width assert passes pre-fix too (wrapping never pushed past the
+  `.popup` min-width floor) — a regression pin, not a discriminator.
+- Suites: harness **605/0** (was 592), Kotlin 134. Real-wire: a CLI turn editing README.md +
+  docs/notes.md rendered the row block in the live panel (screenshot shown). Checklist 3.6 gist
+  updated. LSP4IJ NPE the user hit at the office diagnosed as NOT ours (their dispose bug during
+  dynamic plugin update; zero lsp4ij refs in this repo).
+- Committed and pushed on the user's ask (this save included). /verify was interrupted by the
+  user — the changes were already live-verified above.
+
 ## 2026-09-01 — the giant-yellow-note misfire found, fixed, hardened twice
 - User's 2026-08-30 "yellow text with large output" (no screenshot) diagnosed by measurement:
   the `.t-note` caveat line — `resultNote`'s end-anchored regex captured from any literal
@@ -150,48 +171,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   the IDE is killed by pid — expected, not a failure.
 - Committed and pushed on the user's "commit and push" with this save.
 
-## 2026-08-29 (sixth) — /clear removed (7.6 ➖); 8.7 + §14 decided; EVERY SECTION ✅
-- GOAL REACHED a day early: `docs/feature-checklist.md` is 82 ✅ · 46 ➖ (128 rows), all 17
-  section headings ✅, no 🟥/🟧/⬜, no [DECIDE]. Remaining wants live in backlog (worktrees bundle,
-  tabs, debugger tools).
-- 8.7 / §14: explained the relation (theme = undo vs isolation; TUI `/branch` fuses fork + worktree;
-  rewind dry-run has a diff shape). User's principle: undo/branching depend on GIT (+ Local History),
-  not Claude checkpoints → 8.7 no, 14.2/14.4 no (by design), 14.1/14.3 later as a worktrees bundle.
-- 7.6 explained (A pass-name / B pin-pick-runs / C remove); user picked C. `65-slash.js`
-  `CMD_NATIVE` → `{'btw'}`, `60-composer.js` native `/clear` branch deleted; typed `/clear`,
-  `/new`, `/reset` now refused like `/model`. Docs: slash-commands row → Hidden, checklist 7.6 ➖,
-  At a glance 82 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 41 ➖, limits.md / ide-mcp-protocol.md / mockup `SLASH_ON` touched.
-- Fixtures 46 and 52 re-pointed (row counts −1; 52's alias assertions moved from /clear to
-  /code-review, `cmdKind('new')` → 'tui'); 36 and 50 unaffected (no /clear in their rosters).
-- Verified: `./gradlew test` 134/0; sandbox restarted, build confirmed by content over CDP
-  (`cmdKind('clear')` = 'tui', `CMD_NATIVE.size` = 1); harness **566/0**; live typed `/clear` → 0
-  bridge sends + refusal status line.
-- Gotcha hit again: a `cd` that fails inside a compound command leaves the shell cwd wherever the
-  previous call left it — the first JS edit silently applied nothing; use absolute paths.
-- Three optional items taken up: (1) `syncGutter` "lag" did NOT reproduce — catches up by the
-  next rAF; recorded in gotchas § Testing, no code change. (2) `conventions.md` trimmed 161 → ~95
-  lines, rules + pointers, stories stay in gotchas. (3) Marketplace text: plugin.xml description
-  fixed (`/clear` → `/btw`, stale "Diffs live in the chat" bullet dropped — 2.2/3.5/3.6 open real
-  diff tabs). A paste-ready Markdown copy was added then REMOVED: the user had set the Marketplace
-  to take the description from the plugin for future releases, so release.md's "hand-synced" note
-  was the stale premise; corrected, verify on the next upload.
-- **Marketplace screenshots reshot** (user: "outdated"): new `tools/marketplace_shots.py` (kept in the
-  repo — the 2026-08-16 script died with its scratchpad) splices chat.html exactly as `loadUi` does,
-  drives five two-panel scenes through the real builders in headless Chrome at 2400×1520. Traps hit:
-  manifest parse truncated at a `)` inside a comment; the pinned user message hides overflow under
-  it (thinking block, ask tabs) — trim scenes to fit; popups need a fixed clamp at 394px. Files:
-  01-conversation, 02-plan-and-questions, 03-control, 04-commands-agents, 05-sessions-models
-  (02-plan-approval / 05-sessions-modes removed). Upload is the user's manual step.
-- User: screenshots go up with the next release. Committed and pushed (`d886879`, `a0cec7b`).
-- Later: `vscode/` re-extracted to 2.1.251 (re-audit deferred a few versions by the user); gist
-  verified identical to SKILL.md; change notes trimmed to the LAST THREE versions + GitHub releases
-  link (user's call — the block had grown to 14).
-- **Released 0.12.0** on the user's go: bump + notes, tests 134/0, `buildPlugin`, zip audited,
-  `verifyPlugin` 7/7 Compatible (verdict files read), approval gate with the full notes, commit
-  `0e1af47` + tag, GitHub release with byte-identical asset, feed live, `marketplace-upload` green.
-  Marketplace moderation pending at save time. User's manual steps: screenshots + description check.
-
 ## Digest
+- **2026-08-29 (sixth)** — goal reached a day early: checklist 82 ✅ · 46 ➖, all 17 headings ✅. 7.6 `/clear` REMOVED from the panel (user pick C; typed `/clear`/`/new`/`/reset` refused like `/model`), 8.7 + §14 decided by the git-owns-undo principle (14.1/14.3 later as a worktrees bundle). Fixtures 46/52 re-pointed; harness 566, tests 134. Marketplace: plugin.xml description fixed, five screenshots reshot via the new committed `tools/marketplace_shots.py`, hand-synced copy removed (the Marketplace takes the description from the plugin now). **0.12.0 released** (`0e1af47`) — full gate walk, marketplace-upload green. Later same day: reference re-extracted to 2.1.251, change notes trimmed to last-three-versions.
 - **2026-08-29 (fifth)** — 8.14 (page-reload transcript heal) declined by the user: `refresh`/reopen covers the renderer-crash case; checklist 8.14 ➖, Next up narrowed to 8.7.
 - **2026-08-29 (fourth)** — §15 closed (15.5 debugger tools → backlog [LG], 15.6 by design), 8.8/8.10 deferred; 8.11 side question measured FIRST (live probe: no `/btw` in roster, `control_request_progress{started}` → `control_response{response, synthetic}`, nothing persisted) then built mockup-first; fixture 66's free pre-feature control ran 21/23 red; side input one line at rest, panel centred on `#inputcard`. Harness 566, tests 134.
 - **2026-08-29 (third)** — section marks (`## N. ✅|⬜`, one glyph, no counts) + the 2026-08-30 all-✅ goal; 1.21/1.23/1.24 built, 1.22 ➖ (`tool_progress` measured absent on stream-json), 1.25 ➖; §6/§9/§12 closed by decision, §13 via the SchemaStore-URL provider (nothing bundled) hand-checked; 1.23's 8/0 spacing bug → `.card .card-h + .t-note`. Harness 541, tests 134.

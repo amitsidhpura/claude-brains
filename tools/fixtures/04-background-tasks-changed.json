@@ -1,211 +1,249 @@
 {
-  "item": "4",
-  "branch": "system/background_tasks_changed",
-  "provenance": "Shape from the schema line quoted in chat.html's handler — 'Every live background task after the change. REPLACE semantics: swap your set for this payload.' The REPLACE rule is the whole point of the fixture: merging would leave a finished task on the roster forever. STEPS 4-5 ADDED 2026-08-15: the CLI's own schema for this frame says the level is PER-PROCESS — \"nothing is emitted at startup, so consumers must reset to the empty set whenever the session's CLI process (re)starts and let the next membership change repopulate it\" (read verbatim from 2.1.233). The panel had that exactly inverted: sendTurn wiped the roster on every ordinary message, where a background shell survives by design, while clearLogUI — the __clear that ChatPanel pushes on new conversation / resume / CLI restart / delete-current, i.e. every actual process restart — left it populated. Found while investigating a user report of a '2 tasks' chip; the count turned out to be CORRECT (two orphaned waiter shells were genuinely alive), and this was the real defect underneath. NEGATIVE CONTROL RUN against the pre-fix build: 5 assertions failed — 3 on the turn boundary and 2 on the restart. The restart step had to repopulate the roster inside itself: on the first attempt the previous step's sendTurn had already emptied it and the assertion passed for the wrong reason, which is the vacuous pass conventions.md warns about. STEPS 6-7 ADDED 2026-08-15 from a user report: hovering a roster row showed a DARK background and leaving the popup left it LIGHTER and stuck. Both halves measured: chat.css's .bg-row opt-out wins against .popup-item:hover (0,3,0 vs 0,2,0) so hover is correctly suppressed — the dark — but only TIES with .popup-item.sel (0,2,0 each) which is declared later and therefore wins on mouseout — the lighter. The .sel itself comes from a document-level mouseover painter that has no mouseout counterpart, plus tg()'s generic branch seeding row 0 on open. The roster is display-only, so it takes no cursor at all now. NEGATIVE CONTROL RUN against the pre-fix build: the 3 roster assertions failed, the slash-menu GUARD passed in both phases.",
-  "steps": [
+ "item": "4",
+ "branch": "system/background_tasks_changed",
+ "provenance": "Shape from the schema line quoted in chat.html's handler — 'Every live background task after the change. REPLACE semantics: swap your set for this payload.' The REPLACE rule is the whole point of the fixture: merging would leave a finished task on the roster forever. STEPS 4-5 ADDED 2026-08-15: the CLI's own schema for this frame says the level is PER-PROCESS — \"nothing is emitted at startup, so consumers must reset to the empty set whenever the session's CLI process (re)starts and let the next membership change repopulate it\" (read verbatim from 2.1.233). The panel had that exactly inverted: sendTurn wiped the roster on every ordinary message, where a background shell survives by design, while clearLogUI — the __clear that ChatPanel pushes on new conversation / resume / CLI restart / delete-current, i.e. every actual process restart — left it populated. Found while investigating a user report of a '2 tasks' chip; the count turned out to be CORRECT (two orphaned waiter shells were genuinely alive), and this was the real defect underneath. NEGATIVE CONTROL RUN against the pre-fix build: 5 assertions failed — 3 on the turn boundary and 2 on the restart. The restart step had to repopulate the roster inside itself: on the first attempt the previous step's sendTurn had already emptied it and the assertion passed for the wrong reason, which is the vacuous pass conventions.md warns about. STEPS 6-7 ADDED 2026-08-15 from a user report: hovering a roster row showed a DARK background and leaving the popup left it LIGHTER and stuck. Both halves measured: chat.css's .bg-row opt-out wins against .popup-item:hover (0,3,0 vs 0,2,0) so hover is correctly suppressed — the dark — but only TIES with .popup-item.sel (0,2,0 each) which is declared later and therefore wins on mouseout — the lighter. The .sel itself comes from a document-level mouseover painter that has no mouseout counterpart, plus tg()'s generic branch seeding row 0 on open. The roster is display-only, so it takes no cursor at all now. NEGATIVE CONTROL RUN against the pre-fix build: the 3 roster assertions failed, the slash-menu GUARD passed in both phases. LONG-TITLE STEP ADDED 2026-09-01 from the user's screenshot (real IDE, 0.12.3): hovering a bg row made 'Download and unpack Android command-line tools' rewrap to two lines — the hover gutter (padding-right 36px) narrowed a title that had no nowrap, and the popup had no fixed width so nowrap alone would have widened it instead. The step pins all three halves: computed nowrap/hidden on .pi-title, the full text on its title attr, and #bgMenu's computed 330px width; plus a shown-state height measure under 1.9 line-heights. CONTROL RUN 2026-09-01 against the pre-fix build: the nowrap/overflow, tooltip and height asserts FAILED ('normal/visible', '', two lines tall); the 330px width assert PASSED there too — pre-fix the wrapping title never pushed past the .popup min-width floor — so that assert is a regression PIN for the nowrap+fixed-width pair, not a discriminator.",
+ "steps": [
+  {
+   "note": "two tasks open the roster chip",
+   "frames": [
     {
-      "note": "two tasks open the roster chip",
-      "frames": [
-        {
-          "type": "system",
-          "subtype": "background_tasks_changed",
-          "tasks": [
-            {
-              "task_id": "bg1",
-              "description": "Indexing words.txt"
-            },
-            {
-              "task_id": "bg2",
-              "description": "Fetching docs"
-            }
-          ]
-        }
-      ],
-      "expect": [
-        {
-          "js": "document.getElementById('bgChip').hidden",
-          "equals": false,
-          "why": "chip visible"
-        },
-        {
-          "js": "document.getElementById('bgChip').textContent",
-          "equals": "2 tasks",
-          "why": "counts both"
-        },
-        {
-          "js": "document.getElementById('bgList').textContent",
-          "contains": "Indexing words.txt",
-          "why": "names the task"
-        }
-      ]
-    },
-    {
-      "note": "a smaller payload REPLACES, it does not merge",
-      "frames": [
-        {
-          "type": "system",
-          "subtype": "background_tasks_changed",
-          "tasks": [
-            {
-              "task_id": "bg2",
-              "description": "Fetching docs"
-            }
-          ]
-        }
-      ],
-      "expect": [
-        {
-          "js": "document.getElementById('bgChip').textContent",
-          "equals": "1 task",
-          "why": "singular, and bg1 is gone"
-        },
-        {
-          "js": "document.getElementById('bgList').textContent.includes('Indexing')",
-          "equals": false,
-          "why": "finished task left the roster"
-        }
-      ]
-    },
-    {
-      "note": "empty payload hides the chip — computed display, not the hidden property: manual-test 7.3 was exactly the case where hidden=true yet .chip-btn{display:inline-flex} kept the chip (and its pulsing dot) rendered, and the property assertion could never catch it",
-      "frames": [
-        {
-          "type": "system",
-          "subtype": "background_tasks_changed",
-          "tasks": []
-        }
-      ],
-      "expect": [
-        {
-          "js": "document.getElementById('bgChip').hidden",
-          "equals": true,
-          "why": "chip hidden"
-        },
-        {
-          "js": "getComputedStyle(document.getElementById('bgChip')).display",
-          "equals": "none",
-          "why": "and ACTUALLY not rendered (7.3 regression pin)"
-        },
-        {
-          "js": "document.getElementById('bgMenu').classList.contains('show')",
-          "equals": false,
-          "why": "an open roster must not outlive its last task"
-        }
-      ]
-    },
-    {
-      "note": "a background shell survives an ordinary message — sending one must NOT hide a task that is still running",
-      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
-      "frames": [
-        {
-          "type": "system",
-          "subtype": "background_tasks_changed",
-          "tasks": [
-            {
-              "task_id": "bkzbro3ds",
-              "task_type": "local_bash",
-              "description": "Sleep for 90 seconds"
-            }
-          ]
-        }
-      ],
-      "expect": [
-        {
-          "js": "(function(){ sendTurn('what is the status?', []); return document.getElementById('bgChip').hidden; })()",
-          "equals": false,
-          "why": "DISCRIMINATING: the chip stays up across a turn boundary (hidden=true pre-fix — sendTurn wiped a level signal it does not own)"
-        },
-        {
-          "js": "document.getElementById('bgChip').textContent",
-          "equals": "1 task",
-          "why": "DISCRIMINATING: and it still names the right count, so a long shell stays visible for the whole session"
-        },
-        {
-          "js": "document.querySelectorAll('#bgList .bg-row').length",
-          "equals": 1,
-          "why": "the roster popup keeps its row too"
-        }
-      ]
-    },
-    {
-      "note": "a CLI restart is the one thing that DOES invalidate the roster — repopulated in this step first, so the assertion cannot pass on a roster the previous step emptied",
-      "frames": [
-        {
-          "type": "system",
-          "subtype": "background_tasks_changed",
-          "tasks": [
-            {
-              "task_id": "bkzbro3ds",
-              "task_type": "local_bash",
-              "description": "Sleep for 90 seconds"
-            }
-          ]
-        },
-        {
-          "type": "__clear"
-        }
-      ],
-      "expect": [
-        {
-          "js": "document.getElementById('bgChip').hidden",
-          "equals": true,
-          "why": "DISCRIMINATING: __clear (new conversation / resume / restart) empties the roster — nothing cleared it pre-fix, so a dead task could sit there with no frame ever coming to correct it"
-        },
-        {
-          "js": "getComputedStyle(document.getElementById('bgChip')).display",
-          "equals": "none",
-          "why": "DISCRIMINATING (computed-display form): hidden must ACTUALLY take effect — .chip-btn[hidden] beating display:inline-flex is the manual-test 7.3 pin, and this reads 'flex' pre-fix because nothing cleared the roster at all"
-        }
-      ]
-    },
-    {
-      "note": "the roster is display-only: opening it seeds no cursor, and hovering a row leaves nothing behind",
-      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
-      "frames": [
-        {
-          "type": "system",
-          "subtype": "background_tasks_changed",
-          "tasks": [
-            {
-              "task_id": "t1",
-              "task_type": "local_bash",
-              "description": "Block until sweep completes"
-            },
-            {
-              "task_id": "t2",
-              "task_type": "local_bash",
-              "description": "Wait for batch fan-out"
-            }
-          ]
-        }
-      ],
-      "expect": [
-        {
-          "js": "(function(){ document.getElementById('bgChip').click(); return document.querySelectorAll('#bgList .popup-item.sel').length; })()",
-          "equals": 0,
-          "why": "DISCRIMINATING: opening the roster seeds no selection (1 pre-fix — tg()'s generic branch put it on row 0 before the pointer moved)"
-        },
-        {
-          "js": "(function(){ var r=document.querySelectorAll('#bgList .popup-item')[1]; r.dispatchEvent(new MouseEvent('mouseover',{bubbles:true})); return document.querySelectorAll('#bgList .popup-item.sel').length; })()",
-          "equals": 0,
-          "why": "DISCRIMINATING: hovering a row paints no persistent cursor (1 pre-fix — the document mouseover painter, which has no mouseout counterpart)"
-        },
-        {
-          "js": "getComputedStyle(document.querySelectorAll('#bgList .popup-item')[1]).backgroundColor",
-          "equals": "rgba(0, 0, 0, 0)",
-          "why": "DISCRIMINATING (the visible symptom): the row stays transparent after the pointer has moved on — rgb(44, 57, 76) pre-fix, the stuck lighter highlight the user reported"
-        }
-      ]
-    },
-    {
-      "note": "GUARD — the slash menu's cursor is a real keyboard cursor and MUST still follow the pointer",
-      "expect": [
-        {
-          "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'compact',description:'a'},{name:'reload-skills',description:'b'}]})); renderSlash(''); var m=document.getElementById('slashMenu'); m.classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it[1].dispatchEvent(new MouseEvent('mouseover',{bubbles:true})); var n=document.querySelectorAll('#slashList .popup-item.sel').length; var second=it[1].classList.contains('sel'); m.classList.remove('show'); return n + ':' + second; })()",
-          "equals": "1:true",
-          "why": "GUARD (both phases): hovering the slash list still moves the single cursor onto the hovered row — this is what stops the fix from becoming 'delete the mouseover handler'"
-        }
-      ]
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg1",
+       "description": "Indexing words.txt"
+      },
+      {
+       "task_id": "bg2",
+       "description": "Fetching docs"
+      }
+     ]
     }
-  ]
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('bgChip').hidden",
+     "equals": false,
+     "why": "chip visible"
+    },
+    {
+     "js": "document.getElementById('bgChip').textContent",
+     "equals": "2 tasks",
+     "why": "counts both"
+    },
+    {
+     "js": "document.getElementById('bgList').textContent",
+     "contains": "Indexing words.txt",
+     "why": "names the task"
+    }
+   ]
+  },
+  {
+   "note": "a smaller payload REPLACES, it does not merge",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg2",
+       "description": "Fetching docs"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('bgChip').textContent",
+     "equals": "1 task",
+     "why": "singular, and bg1 is gone"
+    },
+    {
+     "js": "document.getElementById('bgList').textContent.includes('Indexing')",
+     "equals": false,
+     "why": "finished task left the roster"
+    }
+   ]
+  },
+  {
+   "note": "empty payload hides the chip — computed display, not the hidden property: manual-test 7.3 was exactly the case where hidden=true yet .chip-btn{display:inline-flex} kept the chip (and its pulsing dot) rendered, and the property assertion could never catch it",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": []
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('bgChip').hidden",
+     "equals": true,
+     "why": "chip hidden"
+    },
+    {
+     "js": "getComputedStyle(document.getElementById('bgChip')).display",
+     "equals": "none",
+     "why": "and ACTUALLY not rendered (7.3 regression pin)"
+    },
+    {
+     "js": "document.getElementById('bgMenu').classList.contains('show')",
+     "equals": false,
+     "why": "an open roster must not outlive its last task"
+    }
+   ]
+  },
+  {
+   "note": "a background shell survives an ordinary message — sending one must NOT hide a task that is still running",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bkzbro3ds",
+       "task_type": "local_bash",
+       "description": "Sleep for 90 seconds"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ sendTurn('what is the status?', []); return document.getElementById('bgChip').hidden; })()",
+     "equals": false,
+     "why": "DISCRIMINATING: the chip stays up across a turn boundary (hidden=true pre-fix — sendTurn wiped a level signal it does not own)"
+    },
+    {
+     "js": "document.getElementById('bgChip').textContent",
+     "equals": "1 task",
+     "why": "DISCRIMINATING: and it still names the right count, so a long shell stays visible for the whole session"
+    },
+    {
+     "js": "document.querySelectorAll('#bgList .bg-row').length",
+     "equals": 1,
+     "why": "the roster popup keeps its row too"
+    }
+   ]
+  },
+  {
+   "note": "a CLI restart is the one thing that DOES invalidate the roster — repopulated in this step first, so the assertion cannot pass on a roster the previous step emptied",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bkzbro3ds",
+       "task_type": "local_bash",
+       "description": "Sleep for 90 seconds"
+      }
+     ]
+    },
+    {
+     "type": "__clear"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('bgChip').hidden",
+     "equals": true,
+     "why": "DISCRIMINATING: __clear (new conversation / resume / restart) empties the roster — nothing cleared it pre-fix, so a dead task could sit there with no frame ever coming to correct it"
+    },
+    {
+     "js": "getComputedStyle(document.getElementById('bgChip')).display",
+     "equals": "none",
+     "why": "DISCRIMINATING (computed-display form): hidden must ACTUALLY take effect — .chip-btn[hidden] beating display:inline-flex is the manual-test 7.3 pin, and this reads 'flex' pre-fix because nothing cleared the roster at all"
+    }
+   ]
+  },
+  {
+   "note": "the roster is display-only: opening it seeds no cursor, and hovering a row leaves nothing behind",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "t1",
+       "task_type": "local_bash",
+       "description": "Block until sweep completes"
+      },
+      {
+       "task_id": "t2",
+       "task_type": "local_bash",
+       "description": "Wait for batch fan-out"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ document.getElementById('bgChip').click(); return document.querySelectorAll('#bgList .popup-item.sel').length; })()",
+     "equals": 0,
+     "why": "DISCRIMINATING: opening the roster seeds no selection (1 pre-fix — tg()'s generic branch put it on row 0 before the pointer moved)"
+    },
+    {
+     "js": "(function(){ var r=document.querySelectorAll('#bgList .popup-item')[1]; r.dispatchEvent(new MouseEvent('mouseover',{bubbles:true})); return document.querySelectorAll('#bgList .popup-item.sel').length; })()",
+     "equals": 0,
+     "why": "DISCRIMINATING: hovering a row paints no persistent cursor (1 pre-fix — the document mouseover painter, which has no mouseout counterpart)"
+    },
+    {
+     "js": "getComputedStyle(document.querySelectorAll('#bgList .popup-item')[1]).backgroundColor",
+     "equals": "rgba(0, 0, 0, 0)",
+     "why": "DISCRIMINATING (the visible symptom): the row stays transparent after the pointer has moved on — rgb(44, 57, 76) pre-fix, the stuck lighter highlight the user reported"
+    }
+   ]
+  },
+  {
+   "note": "GUARD — the slash menu's cursor is a real keyboard cursor and MUST still follow the pointer",
+   "expect": [
+    {
+     "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'compact',description:'a'},{name:'reload-skills',description:'b'}]})); renderSlash(''); var m=document.getElementById('slashMenu'); m.classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it[1].dispatchEvent(new MouseEvent('mouseover',{bubbles:true})); var n=document.querySelectorAll('#slashList .popup-item.sel').length; var second=it[1].classList.contains('sel'); m.classList.remove('show'); return n + ':' + second; })()",
+     "equals": "1:true",
+     "why": "GUARD (both phases): hovering the slash list still moves the single cursor onto the hovered row — this is what stops the fix from becoming 'delete the mouseover handler'"
+    }
+   ]
+  },
+  {
+   "note": "a LONG title stays ONE line — fixed-width popup + nowrap ellipsis + full text on the tooltip (user screenshot 2026-09-01: the hover gutter used to rewrap it to two lines)",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "background_tasks_changed",
+     "tasks": [
+      {
+       "task_id": "bg_long1",
+       "task_type": "local_bash",
+       "description": "Download and unpack the Android command-line tools and accept every license"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){var t=document.querySelector('#bgList .bg-row .pi-title');return getComputedStyle(t).whiteSpace + '/' + getComputedStyle(t).overflow})()",
+     "equals": "nowrap/hidden",
+     "why": "DISCRIMINATING: the one-line rule really reached the element — pre-fix reads 'normal/visible' and the hover gutter rewrapped a long title to two lines"
+    },
+    {
+     "js": "(function(){var t=document.querySelector('#bgList .bg-row .pi-title');return t.title})()",
+     "equals": "Download and unpack the Android command-line tools and accept every license",
+     "why": "the ellipsised name stays readable — the full text rides the tooltip (pre-fix: empty)"
+    },
+    {
+     "js": "(function(){var m=document.getElementById('bgMenu');return getComputedStyle(m).width})()",
+     "equals": "330px",
+     "why": "the idiom's other half: a FIXED width like #histPanel/.card-menu — without it nowrap makes a long title WIDEN the popup instead of ellipsising"
+    },
+    {
+     "js": "(function(){var m=document.getElementById('bgMenu'),shown=m.classList.contains('show');m.classList.add('show');var t=document.querySelector('#bgList .bg-row .pi-title'),h=t.getBoundingClientRect().height,fs=parseFloat(getComputedStyle(t).fontSize);if(!shown)m.classList.remove('show');return h > 0 && h < fs * 1.9})()",
+     "equals": true,
+     "why": "the rendered title box is genuinely one text line tall (measured shown), not two"
+    }
+   ]
+  }
+ ]
 }

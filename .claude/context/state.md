@@ -1,18 +1,22 @@
 # State
 
 ## Current focus
-**2026-09-01 (seventh session): the tool-result `(note: …)` caveat hardening is committed on
-`main` — UNRELEASED (0.12.3 is the shipped version and lacks it).** The user's 2026-08-30 "giant
-yellow text" sighting was `resultNote` misreading large output as a caveat: the end-anchored regex
-(`RenderLimits.kt` + its `50-blocks.js` mirror) captured everything from a literal `(note:` in the
-output to a final `)`. Two guards added, each landed test-first with its negative control watched
-failing: `NOTE_MAX = 400` (a longer collapsed capture is DROPPED, not truncated) and a position-0
-guard (a match that starts the trimmed result is output — every real CLI note template is APPENDED
-after other text, measured in the 2.1.252 binary). Full conditions list in `docs/limits.md` row
-"tool-result `(note:)` caveat"; evidence trail in `tools/fixtures/69-result-note-cap.json`
-provenance (two control runs + real-wire reproduction on CLI 2.1.252).
-- Accepted residual: a sub-400 parenthetical appended mid-result and ending it is byte-identical
-  to a real caveat and still renders — irreducible without structural marking from the CLI.
+**2026-09-01 (seventh session): TWO unreleased batches on `main` — 0.12.3 is the shipped version
+and lacks both.** Batch 1 (commit `5cf280d`): the tool-result `(note: …)` caveat hardening —
+`NOTE_MAX = 400` (an over-bound collapsed capture is DROPPED, not truncated) + a position-0 guard
+(a match that starts the trimmed result is output; every real CLI note template is APPENDED after
+other text, measured in the 2.1.252 binary with `strings`). Fix for the user's 2026-08-30 "giant
+yellow text": the end-anchored regex (`RenderLimits.kt` + its `50-blocks.js` mirror) captured from
+a literal `(note:` in large output to a final `)`. Conditions list in `docs/limits.md`; evidence
+trail (two control runs + real-wire repro) in `tools/fixtures/69-result-note-cap.json` provenance.
+Batch 2 (committed at this save): two Windows-screenshot UI fixes — (a) the files-changed block
+(3.6) is now header + ONE ROW PER FILE with project-relative paths via the shared `fillPath()`
+(`75-retraction.js` `filesLine`); root cause was `lastIndexOf('/')` never matching backslash
+paths, so full `D:\…` paths rendered; (b) the bg-tasks popup title is one-line ellipsised with
+the full name on the tooltip and `#bgMenu` got the idiom's FIXED width (330px) — the hover ✕
+gutter no longer rewraps a long title (chat.css, `70-events.js` `renderBgTasks`).
+- Accepted residual (batch 1): a sub-400 parenthetical appended mid-result and ending it is
+  byte-identical to a real caveat and still renders — irreducible without structural marking.
 - The CLI is now **2.1.252** locally (2.1.251 audit still stands; 2.1.252 changelog is bugfix-only
   incl. "background task notifications with very large failure output" — unrelated to our misfire,
   that one is CLI-side API-payload, the panel never renders task-notification content).
@@ -34,7 +38,8 @@ versions + the GitHub releases link.
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **592** (fixtures to **69**); `./gradlew test` **134**.
+- `python3 tools/live_harness.py` baseline **605** (fixtures to **69**; 60 and 04 reshaped/extended
+  2026-09-01); `./gradlew test` **134**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
@@ -55,8 +60,8 @@ versions + the GitHub releases link.
   there for real wire shapes; the 2026-08-28 "not findable" cases stay unexplained (gotchas).
 
 ## Next steps
-- [ ] Release the note-caveat hardening in the next version bump (bundle with whatever comes
-      next; nothing urgent — the bug needs output containing `(note:` AND ending with `)`).
+- [ ] Release both unreleased batches (note-caveat hardening + the two Windows UI fixes) in the
+      next version bump — a natural 0.12.4 whenever the user says go.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots

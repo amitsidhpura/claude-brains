@@ -1,12 +1,16 @@
 {
- "item": "files changed (3.6): a per-turn 'N files changed · Review' line under the summary",
- "branch": "__files_changed{turn,files[{path,added,removed,isNew}]} → filesLine() as a clickable .files.click line whose Review sends bridge{kind:'review',turn}; replay draws the same line from the done item's `files` (paths only) WITHOUT the action or counts.",
- "provenance": "__files_changed is OUR OWN Kotlin→JS frame (ClaudeSessionService's CliFileSync turn-end → TurnChanges.endTurn); the replay `done.files` is what SessionStore serializes (pinned against the real probe transcript in SessionStoreTweakTest). Self-consistency evidence only. What the IDE opens on Review (DiffReview.openChain) is Swing and out of this harness's reach — hand-verified 2026-08-28 in the sandbox. NEGATIVE CONTROLS: step 2 (empty list draws nothing), step 4 (replay done without files draws nothing).",
+ "item": "files changed (3.6): a per-turn reviewable block — header + one row per file, project-relative paths",
+ "branch": "__files_changed{turn,files[{path,added,removed,isNew}]} → filesLine() as a clickable .files.click block: header 'N files changed · Review' + one .f-row per file, each path drawn by the SHARED fillPath() (project-relative, .p-head/.p-tail middle-ellipsis, abs path on title); Review sends bridge{kind:'review',turn}; replay draws the same block from the done item's `files` (paths only) WITHOUT the action or counts.",
+ "provenance": "__files_changed is OUR OWN Kotlin→JS frame (ClaudeSessionService's CliFileSync turn-end → TurnChanges.endTurn); the replay `done.files` is what SessionStore serializes (pinned against the real probe transcript in SessionStoreTweakTest). Self-consistency evidence only. What the IDE opens on Review (DiffReview.openChain) is Swing and out of this harness's reach — hand-verified 2026-08-28 in the sandbox. NEGATIVE CONTROLS: step 2 (empty list draws nothing), step 4 (replay done without files draws nothing). RESHAPED 2026-09-01 (user pick from three candidates: one row per file, relative paths): the old single comma-run wrapped into a blob, worst on Windows where the basename came from lastIndexOf('/') and a backslash path never matched — the user's screenshot showed four FULL D:\\sites\\… paths. Paths now route through fillPath(), the same helper fixture 40 pins for tool lines, so the Windows step here exercises the SHARED root-strip/backslash handling rather than a second copy. CONTROL RUN 2026-09-01 against the pre-reshape build: 8 of 19 asserts FAILED — every row-shape and Windows one (.f-row counts read 0, the Windows step's text still carried 'D:'), while the count, click→review bridge, old tooltip and both negative controls passed. First attempt ABORTED the harness on `[0].textContent` of a missing row (the known null-textContent trap) — the row asserts are null-safe (`||{}` + 'NO-ROW') for exactly that reason, fixture 66's idiom.",
  "steps": [
   {
    "note": "live: a turn that changed two files gets a Review line; Review bridges the turn index",
    "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge60) { window.__realBridge60 = window.__bridge; } window.__tape60 = []; window.__bridge = function(j){ window.__tape60.push(JSON.parse(j)); };",
    "frames": [
+    {
+     "type": "__project",
+     "root": "/p"
+    },
     {
      "type": "__files_changed",
      "turn": 7,
@@ -33,9 +37,24 @@
      "why": "the count"
     },
     {
-     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.textContent})()",
-     "contains": "README.md +1−1, new.php +4−0 · Review",
-     "why": "basenames with per-file counts, then the action"
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.querySelectorAll('.f-row').length})()",
+     "equals": 2,
+     "why": "one row per file"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return (f.querySelectorAll('.f-row')[0]||{}).textContent||'NO-ROW'})()",
+     "equals": "README.md+1−1",
+     "why": "relative path (root stripped) + per-file counts in the row"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return (f.querySelectorAll('.f-row')[1]||{}).textContent||'NO-ROW'})()",
+     "equals": "src/new.php+4−0",
+     "why": "second row"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();var h=f.textContent;return h.indexOf('Review') < h.indexOf('README')})()",
+     "equals": true,
+     "why": "Review lives in the header line, above the rows"
     },
     {
      "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();f.click();return JSON.stringify(window.__tape60.filter(function(o){return o.kind==='review'}).map(function(o){return o.turn}))})()",
@@ -45,7 +64,7 @@
     {
      "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.querySelector('.f-name').title})()",
      "equals": "/p/README.md",
-     "why": "the full path rides the tooltip"
+     "why": "the full path rides the tooltip (fillPath's title)"
     }
    ]
   },
@@ -71,6 +90,10 @@
    "frames": [
     {
      "type": "__clear"
+    },
+    {
+     "type": "__project",
+     "root": "/p"
     },
     {
      "type": "__transcript",
@@ -102,8 +125,18 @@
    "expect": [
     {
      "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f?f.textContent:null})()",
-     "equals": "1 file changed · a.txt",
-     "why": "count + name, no Review"
+     "contains": "1 file changed",
+     "why": "count, no Review on replay"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.textContent.indexOf('Review')})()",
+     "equals": -1,
+     "why": "not an action on replay — no Review affordance"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();var r=f.querySelectorAll('.f-row');return r.length + ':' + ((r[0]||{}).textContent||'NO-ROW')})()",
+     "equals": "1:a.txt",
+     "why": "one row, path only — replay carries no counts"
     },
     {
      "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.classList.contains('click')})()",
@@ -145,6 +178,70 @@
      "js": "document.querySelectorAll('.files').length",
      "equals": 0,
      "why": "no files, no line"
+    }
+   ]
+  },
+  {
+   "note": "THE WINDOWS BLOB (user screenshot 2026-09-01): backslash paths strip the root and split like any other — no full D:\\ path on screen",
+   "frames": [
+    {
+     "type": "__clear"
+    },
+    {
+     "type": "__project",
+     "root": "D:\\sites\\mcnplumbing"
+    },
+    {
+     "type": "__files_changed",
+     "turn": 11,
+     "files": [
+      {
+       "path": "D:\\sites\\mcnplumbing\\.claude\\context\\overview.md",
+       "added": 46,
+       "removed": 0,
+       "isNew": false
+      },
+      {
+       "path": "D:\\sites\\mcnplumbing\\.claude\\context\\state.md",
+       "added": 32,
+       "removed": 0,
+       "isNew": false
+      },
+      {
+       "path": "D:\\sites\\mcnplumbing\\.claude\\context\\decisions.md",
+       "added": 15,
+       "removed": 0,
+       "isNew": false
+      },
+      {
+       "path": "D:\\sites\\mcnplumbing\\.claude\\context\\journal.md",
+       "added": 17,
+       "removed": 0,
+       "isNew": false
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.querySelectorAll('.f-row').length})()",
+     "equals": 4,
+     "why": "DISCRIMINATING: pre-reshape there were no rows at all (comma-run)"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return (f.querySelectorAll('.f-row')[0]||{}).textContent||'NO-ROW'})()",
+     "equals": ".claude\\context\\overview.md+46−0",
+     "why": "root stripped on the backslash branch, filename intact — pre-reshape the FULL D:\\ path rendered (lastIndexOf('/') never matched)"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.textContent.indexOf('D:')})()",
+     "equals": -1,
+     "why": "the blob's signature, gone"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.querySelector('.f-name').title})()",
+     "equals": "D:\\sites\\mcnplumbing\\.claude\\context\\overview.md",
+     "why": "the absolute path survives on the tooltip"
     }
    ]
   },

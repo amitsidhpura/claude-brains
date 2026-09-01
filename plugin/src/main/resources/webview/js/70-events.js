@@ -55,6 +55,9 @@
       const title = document.createElement('div'); title.className = 'pi-title';
       // `description` is the human-readable one; task_id is opaque and only useful as a fallback.
       title.textContent = (t && (t.description || t.task_id)) || 'background task';
+      // The CSS ellipsises this to one line (fixed-width popup, hover gutter) — the tooltip is
+      // where the full name lives.
+      title.title = title.textContent;
       body.appendChild(title);
       const type = t && t.task_type;
       if (type) {

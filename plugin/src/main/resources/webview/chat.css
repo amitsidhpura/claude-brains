@@ -404,6 +404,15 @@ blockquote > *:last-child { margin-bottom: 0; }
 .files .f-name { color: var(--fg); }
 .files .f-add { color: var(--green); margin-left: 4px; }
 .files .f-rem { color: var(--red); margin-left: 2px; }
+/* One row per file (user pick 2026-09-01 over the old comma-run, which wrapped into a blob —
+   worst on Windows, where a basename bug showed FULL paths). The path wears fillPath's
+   .p-head/.p-tail middle-ellipsis dress (same rules as .t-desc.path); the counts sit in a
+   right-aligned column, so rows scan like a table. */
+.files .f-row { display: flex; align-items: baseline; margin-top: 2px; }
+.files .f-row .f-name { display: inline-flex; align-items: baseline; min-width: 0; overflow: hidden; }
+.files .f-row .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files .f-row .p-tail { flex: 0 0 auto; white-space: nowrap; }
+.files .f-row .f-add { margin-left: auto; padding-left: 12px; }
 .done .star { position: absolute; left: 1px; top: 0; color: var(--accent); }
 .done svg { width: 12px; height: 12px; vertical-align: -2px; margin: 0 1px 0 3px; }
 
@@ -1105,6 +1114,14 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    width is fixed, so nothing jiggles. A row whose ✕ was clicked dims until the CLI's next roster
    frame drops it (or keeps it — the stop is the CLI's to honour). */
 .popup-item.bg-row:hover:has(.bg-x) { padding-right: 36px; }
+/* One line, like the conversations list's .t-txt — the half of the idiom this row had missed:
+   without it the hover gutter above NARROWS the title and a long one reflowed to two lines
+   (user screenshot 2026-09-01). The full text rides the row's title attr (renderBgTasks).
+   The FIXED width is the other half (the idiom's stability comes from it — #histPanel and
+   .card-menu are both fixed): without it nowrap makes a long title WIDEN the popup instead of
+   ellipsising. 330px = the popup family's min-width, so nothing shrinks. */
+#bgMenu { width: 330px; }
+.popup-item.bg-row .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bg-x { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); display: none;
   background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 3px; }
 .popup-item.bg-row:hover .bg-x { display: block; }

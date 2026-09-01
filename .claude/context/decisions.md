@@ -4,6 +4,18 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-01 (second) — files-changed block: one row per file, PROJECT-RELATIVE paths; bg popup gets the idiom's fixed width
+- Why: the single comma-run wrapped into an unreadable blob (worst on Windows, where a basename
+  bug showed full `D:\…` paths). User picked per-row + relative paths from three rendered
+  candidates (compact filename line, per-row basenames, per-row relative). Rows draw through the
+  SHARED `fillPath()` so tool lines and file rows cannot drift; counts right-aligned.
+- Bg-tasks popup: long titles now one-line ellipsised with the full name on the tooltip, and
+  `#bgMenu` is FIXED at 330px — the conversations-list idiom's stability comes from its fixed
+  width (#histPanel/.card-menu are both fixed); nowrap without it would WIDEN the popup.
+- Alternatives rejected: keeping the compact line with just the Windows fix (user preferred
+  scannable rows); always-reserved ✕ gutter (standing 2026-08-09 rule: never reserve space for
+  hover affordances); a second path-shortener for file rows (fillPath exists, fixture 40 pins it).
+
 ## 2026-09-01 — `(note: …)` caveat: bound by every structural property the real emitter has; over the bound, DROP, never truncate
 - Why: the end-anchored regex alone misread large output containing a literal `(note:` and ending
   `)` as a caveat — the whole tail rendered as one giant amber `.t-note` (user sighting

@@ -446,20 +446,32 @@
     if (tokens > 0) s += ' · ' + SVG_DOWN + fmtTok(tokens) + ' tokens';
     return s;
   }
-  // "Files changed" line under the summary (3.6). [turn] non-null = live, reviewable: the
-  // whole line is the action. Replay passes null (no baselines survive a resume) and the line
+  // "Files changed" block under the summary (3.6). [turn] non-null = live, reviewable: the
+  // whole block is the action. Replay passes null (no baselines survive a resume) and the block
   // is informational — the count is real (from the transcript), the diff is not available.
+  // One row per file (user pick 2026-09-01): the old comma-run wrapped into a blob, worst on
+  // Windows where a `lastIndexOf('/')` basename never matched a backslash path and the FULL
+  // `D:\…` path rendered for every file. Paths draw through fillPath — the same
+  // project-relative + .p-head/.p-tail middle-ellipsis dress the tool lines wear, both
+  // separators handled — so the two surfaces cannot drift. fillPath's `.path` class carries no
+  // click here: the delegated open handler matches only `.t-desc.path` and `.card-h code`.
   function filesLine(files, turn) {
     if (!files || !files.length) return null;
     const d = el('files' + (turn != null ? ' click' : ''), '');
-    const names = files.map(function (f) {
-      const p = String(f.path || ''), i = p.lastIndexOf('/');
-      const s = (typeof f.added === 'number' && typeof f.removed === 'number' && (f.added || f.removed))
-        ? ' <span class="f-add">+' + f.added + '</span><span class="f-rem">−' + f.removed + '</span>' : '';
-      return '<span class="f-name" title="' + escA(p) + '">' + esc(i >= 0 ? p.slice(i + 1) : p) + '</span>' + s;
-    });
     d.innerHTML = SVG_PENCIL + files.length + (files.length === 1 ? ' file changed' : ' files changed') +
-      ' · ' + names.join(', ') + (turn != null ? ' · <span class="f-review">Review</span>' : '');
+      (turn != null ? ' · <span class="f-review">Review</span>' : '');
+    files.forEach(function (f) {
+      const row = document.createElement('div'); row.className = 'f-row';
+      const name = document.createElement('span'); name.className = 'f-name';
+      fillPath(name, String(f.path || ''));
+      row.appendChild(name);
+      if (typeof f.added === 'number' && typeof f.removed === 'number' && (f.added || f.removed)) {
+        const a = document.createElement('span'); a.className = 'f-add'; a.textContent = '+' + f.added;
+        const r = document.createElement('span'); r.className = 'f-rem'; r.textContent = '−' + f.removed;
+        row.appendChild(a); row.appendChild(r);
+      }
+      d.appendChild(row);
+    });
     if (turn != null) { d.title = 'Open a diff of every file this turn changed'; d.onclick = function () { bridge({ kind: 'review', turn: turn }); }; }
     else d.title = 'Changed in this turn — the diff is only available while the session is live';
     return d;
