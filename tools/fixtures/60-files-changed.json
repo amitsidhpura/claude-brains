@@ -1,7 +1,7 @@
 {
  "item": "files changed (3.6): a per-turn reviewable block — header + one row per file, project-relative paths",
- "branch": "__files_changed{turn,files[{path,added,removed,isNew}]} → filesLine() as a clickable .files.click block: header 'N files changed · Review' + one .f-row per file, each path drawn by the SHARED fillPath() (project-relative, .p-head/.p-tail middle-ellipsis, abs path on title); Review sends bridge{kind:'review',turn}; replay draws the same block from the done item's `files` (paths only) WITHOUT the action or counts.",
- "provenance": "__files_changed is OUR OWN Kotlin→JS frame (ClaudeSessionService's CliFileSync turn-end → TurnChanges.endTurn); the replay `done.files` is what SessionStore serializes (pinned against the real probe transcript in SessionStoreTweakTest). Self-consistency evidence only. What the IDE opens on Review (DiffReview.openChain) is Swing and out of this harness's reach — hand-verified 2026-08-28 in the sandbox. NEGATIVE CONTROLS: step 2 (empty list draws nothing), step 4 (replay done without files draws nothing). RESHAPED 2026-09-01 (user pick from three candidates: one row per file, relative paths): the old single comma-run wrapped into a blob, worst on Windows where the basename came from lastIndexOf('/') and a backslash path never matched — the user's screenshot showed four FULL D:\\sites\\… paths. Paths now route through fillPath(), the same helper fixture 40 pins for tool lines, so the Windows step here exercises the SHARED root-strip/backslash handling rather than a second copy. CONTROL RUN 2026-09-01 against the pre-reshape build: 8 of 19 asserts FAILED — every row-shape and Windows one (.f-row counts read 0, the Windows step's text still carried 'D:'), while the count, click→review bridge, old tooltip and both negative controls passed. First attempt ABORTED the harness on `[0].textContent` of a missing row (the known null-textContent trap) — the row asserts are null-safe (`||{}` + 'NO-ROW') for exactly that reason, fixture 66's idiom.",
+ "branch": "__files_changed{turn,files[{path,added,removed,isNew}]} → filesLine() as a .files block: header 'N files changed · Review' + one .f-row per file — ONLY the .f-review span is clickable (user request 2026-09-01), each path drawn by the SHARED fillPath() (project-relative, .p-head/.p-tail middle-ellipsis, abs path on title); Review sends bridge{kind:'review',turn}; replay draws the same block from the done item's `files` (paths only) WITHOUT the action or counts.",
+ "provenance": "__files_changed is OUR OWN Kotlin→JS frame (ClaudeSessionService's CliFileSync turn-end → TurnChanges.endTurn); the replay `done.files` is what SessionStore serializes (pinned against the real probe transcript in SessionStoreTweakTest). Self-consistency evidence only. What the IDE opens on Review (DiffReview.openChain) is Swing and out of this harness's reach — hand-verified 2026-08-28 in the sandbox. NEGATIVE CONTROLS: step 2 (empty list draws nothing), step 4 (replay done without files draws nothing). RESHAPED 2026-09-01 (user pick from three candidates: one row per file, relative paths): the old single comma-run wrapped into a blob, worst on Windows where the basename came from lastIndexOf('/') and a backslash path never matched — the user's screenshot showed four FULL D:\\sites\\… paths. Paths now route through fillPath(), the same helper fixture 40 pins for tool lines, so the Windows step here exercises the SHARED root-strip/backslash handling rather than a second copy. CONTROL RUN 2026-09-01 against the pre-reshape build: 8 of 19 asserts FAILED — every row-shape and Windows one (.f-row counts read 0, the Windows step's text still carried 'D:'), while the count, click→review bridge, old tooltip and both negative controls passed. First attempt ABORTED the harness on `[0].textContent` of a missing row (the known null-textContent trap) — the row asserts are null-safe (`||{}` + 'NO-ROW') for exactly that reason, fixture 66's idiom. REVIEW-ONLY CLICK 2026-09-01 (user request from a live screenshot): the whole-block action became the .f-review span alone — block cursor auto, span pointer, row/block clicks send nothing. CONTROL RUN against the pre-change build: the row-click assert read [7,7,7] and the cursor assert read 'pointer/pointer'; both FAILED as predicted.",
  "steps": [
   {
    "note": "live: a turn that changed two files gets a Review line; Review bridges the turn index",
@@ -57,9 +57,19 @@
      "why": "Review lives in the header line, above the rows"
     },
     {
-     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();f.click();return JSON.stringify(window.__tape60.filter(function(o){return o.kind==='review'}).map(function(o){return o.turn}))})()",
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();f.querySelector('.f-review').click();return JSON.stringify(window.__tape60.filter(function(o){return o.kind==='review'}).map(function(o){return o.turn}))})()",
      "equals": "[7]",
-     "why": "clicking sends review for THIS turn's index"
+     "why": "clicking REVIEW (and only Review) sends review for THIS turn's index"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();f.querySelector('.f-name').click();f.click();return JSON.stringify(window.__tape60.filter(function(o){return o.kind==='review'}).map(function(o){return o.turn}))})()",
+     "equals": "[7]",
+     "why": "DISCRIMINATING: clicking a file row or the block itself sends NOTHING — pre-change the whole block was the action and this read [7,7,7] (user request 2026-09-01: link Review only)"
+    },
+    {
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return getComputedStyle(f).cursor + '/' + getComputedStyle(f.querySelector('.f-review')).cursor})()",
+     "equals": "auto/pointer",
+     "why": "DISCRIMINATING: the pointer affordance lives on Review alone — pre-change the block computed 'pointer/pointer'"
     },
     {
      "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.querySelector('.f-name').title})()",
@@ -139,9 +149,9 @@
      "why": "one row, path only — replay carries no counts"
     },
     {
-     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.classList.contains('click')})()",
+     "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return !!f.querySelector('.f-review')})()",
      "equals": false,
-     "why": "not an action on replay"
+     "why": "no Review span at all on replay — the action does not exist, not merely unstyled"
     },
     {
      "js": "(function(){var f=[...document.querySelectorAll('.files')].pop();return f.previousElementSibling.classList.contains('done')})()",

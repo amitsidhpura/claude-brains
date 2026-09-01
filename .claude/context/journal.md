@@ -3,6 +3,20 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-01 (third) — Review span becomes the sole click target on the files block
+- User (screenshot): "Can we just link the Review and not whole block?" — done; the whole-block
+  action had made stray clicks on file rows open the review, and the block-wide pointer oversold
+  what was clickable. Handler + tooltip moved to `.f-review`; block cursor auto.
+- Fixture-first with the free control against the still-running pre-change sandbox: the two new
+  discriminating asserts (row/block click sends nothing — read [7,7,7] pre-change; block/span
+  cursor 'auto/pointer' — read 'pointer/pointer') FAILED there, green after. Harness **607/0**,
+  Kotlin 134. Mockup + checklist 3.6 mirrored.
+- User confirmed live that fillPath's boundary rule reads right on real turns: project files
+  relative, files outside the root shown absolute — same as the Read/Write tool lines, because
+  the rows and the tool lines share the one helper.
+- Committed and pushed on the user's ask (this save included). Three batches now sit unreleased
+  on `main` → a natural 0.12.4.
+
 ## 2026-09-01 (second) — files-changed rows + bg-popup one-line title (Windows screenshots)
 - User's office-Windows screenshots: (1) the files-changed line was a full-path blob — REAL BUG,
   `filesLine`'s basename used `lastIndexOf('/')` which never matches `D:\…`; (2) hovering a bg

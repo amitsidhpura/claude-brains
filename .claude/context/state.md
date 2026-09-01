@@ -15,6 +15,10 @@ Batch 2 (committed at this save): two Windows-screenshot UI fixes — (a) the fi
 paths, so full `D:\…` paths rendered; (b) the bg-tasks popup title is one-line ellipsised with
 the full name on the tooltip and `#bgMenu` got the idiom's FIXED width (330px) — the hover ✕
 gutter no longer rewraps a long title (chat.css, `70-events.js` `renderBgTasks`).
+Batch 3 (committed at this save): on the files block, the `Review` span ALONE is the click
+target (user request) — block cursor auto, row clicks send nothing; fixture 60 pins it with the
+control run in provenance. User confirmed the fillPath consistency live: project files relative,
+external files (e.g. `/home/syncroze/user-tasks.txt`) absolute, same as the tool lines.
 - Accepted residual (batch 1): a sub-400 parenthetical appended mid-result and ending it is
   byte-identical to a real caveat and still renders — irreducible without structural marking.
 - The CLI is now **2.1.252** locally (2.1.251 audit still stands; 2.1.252 changelog is bugfix-only
@@ -38,7 +42,7 @@ versions + the GitHub releases link.
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **605** (fixtures to **69**; 60 and 04 reshaped/extended
+- `python3 tools/live_harness.py` baseline **607** (fixtures to **69**; 60 and 04 reshaped/extended
   2026-09-01); `./gradlew test` **134**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
@@ -60,8 +64,8 @@ versions + the GitHub releases link.
   there for real wire shapes; the 2026-08-28 "not findable" cases stay unexplained (gotchas).
 
 ## Next steps
-- [ ] Release both unreleased batches (note-caveat hardening + the two Windows UI fixes) in the
-      next version bump — a natural 0.12.4 whenever the user says go.
+- [ ] Release the three unreleased batches (note-caveat hardening, the two Windows UI fixes,
+      Review-only click) in the next version bump — a natural 0.12.4 whenever the user says go.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots

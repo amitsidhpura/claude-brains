@@ -268,7 +268,8 @@ auto-include selection, voice.
 - **3.6** ✅ **Multi-file change review** — a per-turn "✎ N files changed · Review" block under the
       ✻ summary, one row per file (project-relative path via the shared `fillPath`, per-file +a −r
       counts right-aligned; reshaped 2026-09-01 from the comma-run, which on Windows showed FULL
-      `D:\…` paths — `lastIndexOf('/')` never matched backslashes); Review opens ONE diff tab holding a chain of every file the turn
+      `D:\…` paths — `lastIndexOf('/')` never matched backslashes; the `Review` span alone is the
+      click target, same day); Review opens ONE diff tab holding a chain of every file the turn
       changed ("Before this turn" / "Now", read-only, prev/next between files —
       `DiffReview.openChain`). Baselines come from the PreToolUse autosave hook the CLI already
       blocks on (`Autosave` → `TurnChanges.snapshot`, first touch per turn) and settle at `result`

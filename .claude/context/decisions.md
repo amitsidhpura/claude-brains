@@ -4,6 +4,13 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-01 (third) — files block: the `Review` span alone is the click target
+- Why: user request from a live screenshot — the whole-block action meant any stray click on a
+  file row opened the review, and the block-wide pointer cursor oversold what was clickable.
+- Alternatives rejected: keeping whole-block click with rows opting out (inverted logic for the
+  same result); making file rows open their FILE on click (would overload the block with two
+  different actions and was not asked for — the abs path already rides the tooltip).
+
 ## 2026-09-01 (second) — files-changed block: one row per file, PROJECT-RELATIVE paths; bg popup gets the idiom's fixed width
 - Why: the single comma-run wrapped into an unreadable blob (worst on Windows, where a basename
   bug showed full `D:\…` paths). User picked per-row + relative paths from three rendered

@@ -398,9 +398,10 @@ blockquote > *:last-child { margin-bottom: 0; }
    action on live turns (.click), plain text on replay. Counts wear the diff colours. */
 .files { position: relative; padding-left: 22px; font-size: var(--fs-sm); color: var(--muted); }
 .files svg { position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; }
-.files.click { cursor: pointer; }
-.files.click:hover .f-review { text-decoration: underline; }
-.files .f-review { color: var(--accent); }
+/* Review alone is the action (2026-09-01) — the whole-block .files.click target meant any stray
+   click on a file row opened the review, and the block-wide pointer oversold what was clickable. */
+.files .f-review { color: var(--accent); cursor: pointer; }
+.files .f-review:hover { text-decoration: underline; }
 .files .f-name { color: var(--fg); }
 .files .f-add { color: var(--green); margin-left: 4px; }
 .files .f-rem { color: var(--red); margin-left: 2px; }

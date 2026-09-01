@@ -447,8 +447,10 @@
     return s;
   }
   // "Files changed" block under the summary (3.6). [turn] non-null = live, reviewable: the
-  // whole block is the action. Replay passes null (no baselines survive a resume) and the block
-  // is informational — the count is real (from the transcript), the diff is not available.
+  // .f-review span ALONE is the action (user request 2026-09-01 — a whole-block target made every
+  // stray click on a row open the review). Replay passes null (no baselines survive a resume) and
+  // the block is informational — the count is real (from the transcript), the diff is not
+  // available.
   // One row per file (user pick 2026-09-01): the old comma-run wrapped into a blob, worst on
   // Windows where a `lastIndexOf('/')` basename never matched a backslash path and the FULL
   // `D:\…` path rendered for every file. Paths draw through fillPath — the same
@@ -457,7 +459,7 @@
   // click here: the delegated open handler matches only `.t-desc.path` and `.card-h code`.
   function filesLine(files, turn) {
     if (!files || !files.length) return null;
-    const d = el('files' + (turn != null ? ' click' : ''), '');
+    const d = el('files', '');
     d.innerHTML = SVG_PENCIL + files.length + (files.length === 1 ? ' file changed' : ' files changed') +
       (turn != null ? ' · <span class="f-review">Review</span>' : '');
     files.forEach(function (f) {
@@ -472,8 +474,11 @@
       }
       d.appendChild(row);
     });
-    if (turn != null) { d.title = 'Open a diff of every file this turn changed'; d.onclick = function () { bridge({ kind: 'review', turn: turn }); }; }
-    else d.title = 'Changed in this turn — the diff is only available while the session is live';
+    if (turn != null) {
+      const rv = d.querySelector('.f-review');
+      rv.title = 'Open a diff of every file this turn changed';
+      rv.onclick = function () { bridge({ kind: 'review', turn: turn }); };
+    } else d.title = 'Changed in this turn — the diff is only available while the session is live';
     return d;
   }
   // Timeline status line with an optional leading glyph that hangs in the dot column
