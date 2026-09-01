@@ -599,171 +599,24 @@ source file.
 resource-serving layer and deferred-load timing — `window.onClaudeEvent` would need explicit global
 wiring before Kotlin's first push); leaving the file whole; splitting the markup too.
 
-## 2026-08-17 — A slash alias IS its command: filter, row, gate and wire all resolve it
-`canonicalCmd()` maps any roster alias to its command; the menu ranks aliases like names, rows show them
-muted, `cmdKind()`/`submit()` see the canonical name, and the turn is sent under it.
-**Why:** the CLI advertises the aliases (`/review`, `/peers`, `/reset`, `/new`) so users type them;
-refusing one as "not available" was the plugin contradicting the roster it displays. Sending the
-canonical name removes any dependence on the CLI's own alias expansion.
-**Rejected:** display-only aliases (the previous state, which failed the first person to type
-`/review`); hand-maintaining an alias allowlist (drifts with every CLI update).
+## Digest — decisions before 2026-08-18
 
-## 2026-08-17 — Autosave rides the SDK hook lane, always on, four tools only
-ONE host hook declared on `initialize` — `PreToolUse Edit|Write|MultiEdit|Read → autosave` — answered
-after saving a dirty document. No toggle.
-**Why:** it is the reference's exact mechanism (`saveFileIfNeeded`), the only pre-tool moment that
-fires under acceptEdits/auto/saved rules AND for Read (no `can_use_tool` there), and the plugin has no
-settings page by design; the IDE already saves on frame deactivation.
-**Rejected:** saving from the permission card (misses pre-approved tools and Read); a Bash matcher (a
-command names no file the host can save — the reference does not try either); a settings toggle.
+- **2026-08-17** — a slash alias IS its command: `canonicalCmd()` resolves every roster alias for filter, row, gate and wire, and the turn is sent under the canonical name. Why: the CLI advertises `/review`, `/peers`, `/reset`, `/new`, so refusing one was the plugin contradicting the roster it displays; sending canonical removes any dependence on the CLI's alias expansion. Rejected: display-only aliases (the state that failed the first person to type `/review`); a hand-maintained allowlist (drifts every CLI update).
+- **2026-08-17** — autosave rides the SDK hook lane, always on, four tools: ONE host hook on `initialize` (`PreToolUse Edit|Write|MultiEdit|Read → autosave`), answered after saving a dirty document, no toggle. Why: the reference's exact mechanism, and the only pre-tool moment that fires under acceptEdits/auto/saved rules AND for Read (no `can_use_tool` there); the plugin has no settings page by design. Rejected: saving from the permission card (misses pre-approved tools and Read); a Bash matcher (a command names no file); a toggle.
+- **2026-08-17** — stale IDE locks are swept on every lock write, dead pid only: `IdeLockFile.write` deletes each `~/.claude/ide/*.lock` whose pid is not running (never its own, never an unreadable one). Why: `delete()` only runs on an orderly dispose, so killed sandboxes left 15 corpses, and the CLI applies the same rule only while enumerating IDEs — which our `--mcp-config` route never triggers. Rejected: matching `ideName`; a port probe; deleting unreadable locks (the CLI's lane).
+- **2026-08-17** — the feature checklist is a numbered, colour-tiered register with STABLE `section.row` ids (retire by striking, never renumber), marks ✅/🟥/🟧/⬜/➖/🚫, `[XS|SM|MD|LG]` effort on open rows, meta in the header, measured against BOTH reference clients on one version. Why: the user refers to rows by id and wants importance at a glance with cost before choosing; the old file duplicated state and buried the key. Rejected: a separate open-decisions list (folded into **[DECIDE]**); a priority table (prose rows wrap badly); 🟨 for low. (Marks later simplified to ONE mark ➖ on 2026-08-29; 🚫 retired.)
+- **2026-08-17** — `close_tab` closes the ONE review opened under that `tab_name` and replies `TAB_CLOSED` regardless; `closeAllDiffTabs` replies `CLOSED_<n>_DIFF_TABS`. Why: our sweep closed every diff, so with two proposals open closing one resolved both; reference-exact replies keep the CLI's consumer on its written path. Rejected: erroring on an unknown name (reference treats a miss as a benign no-op).
+- **2026-08-16** — a menu click asks "does it TAKE an argument", not "does it REQUIRE one": any non-empty `argumentHint` inserts `/name ` and waits. Why: `[init | load | save]` is a menu of sub-modes — a command advertising choices is one you clicked in order to choose (the user picked `/context` to run `/context save` and it fired bare); only `/compact`, `/context`, `/goal` of 16 built-ins change behaviour. Rejected: respelling the skill's hint (makes the roster lie); a click/Shift-click split (a new idiom).
+- **2026-08-16** — approve-with-notes rides `updatedInput.plan` under `PLAN_NOTES_MARKER`, not a steered message. Why: the ExitPlanMode tool_result echoes the approved plan, so the model reads the note in the SAME message as the approval, before its first implementation call; also recorded durably in the plan file. Rejected: a `feedback` field on the allow response (schema-whitelisted away, silently); stdin steering (raced the model call cycle in a real run); a queued turn (arrives after the whole turn).
+- **2026-08-16** — plan-card mode rows PARK the switch in `pendingPlanMode` until the CLI's post-approval `permissionMode` broadcast. Why: the CLI restores `prePlanMode` when the approved ExitPlanMode executes, always after our immediate request, so an eager switch was overwritten every time. Rejected: immediate bridge (deterministic loss); sending at turn end (too late to cover the implementation).
+- **2026-08-16** — the panel's two type-on-a-card fields share one dress (`--warn-field`), and the plan card gained a full-bleed `.plan-sep` hairline removed with the input on decide. Why: one control idiom (the `fillPath` argument applied to fields); colour user-picked over three mockup rounds. Rejected en route: `#1b1b1b` on `--panel`; a fully transparent field.
+- **2026-08-16** — the chip aliases the broadcast `default` → Manual before the unknown-mode guard, and `attachment` (`queued_command`) records replay as user bubbles unless a plain user record carries the same text. Why: restoring a manual pre-plan mode broadcasts the CLI's internal `default`, which the guard dropped, stranding the chip on Plan; and measured across transcripts, a MID-TURN steered message persists only as the attachment record (queued-to-next-turn persists as both) — so replay otherwise lost text the model demonstrably acted on, or drew it twice.
+- **2026-08-15** — ONE path renderer for every surface: both permission-card headers fill their `<code>` through `fillPath()`, absolute path on `dataset.path` + `title`. Why: the decision surface and the timeline named the same file two different ways, and a second renderer is a second thing to drift. Supersedes the backlog note that card paths were deliberately unclamped. Rejected: a card-only shortener; CSS-only clamping (flex shrinks proportionally, nibbling the parent on short paths).
+- **2026-08-15** — `msgStreamed` is a TURN-level fact: set at `message_start`, cleared only at result/sendTurn/clearLogUI. Why: the CLI emits an `assistant` frame per CONTENT BLOCK, so clearing mid-turn let the second re-draw text the deltas had already rendered — every message after the first appeared twice in a `/security-review` run. Rejected: clearing at `message_stop` (tried, reverted the same hour — frames straddle the stop in both directions); a rendered-uuid set (the duplicate carries the drawing frame's uuid).
+- **2026-08-15** — a failed local command is surfaced, not swallowed: `onUserEvent` handles STRING `content`, routing `<local-command-stderr>` → error block and `<local-command-stdout>` → answer block, live and on replay. Why: `/security-review` without `origin/HEAD` reports only through such a frame, which the `!Array.isArray(content)` guard dropped — a completed turn with nothing in it. Rejected: extending `cleanInjected`'s drop list (wrong in both directions).
+- **2026-08-15** — custom commands are detected by the description SUFFIX (`… (project|user)`), not a disk scan. Why: the entry schema has no type field, but the suffix is a measured wire marker (present on every custom entry, absent from all 107 built-ins across two captures); webview-only, and covers plugin-sourced commands free. Rejected: the PLAN-APPROVED Kotlin disk scan (more moving parts, a rescan per `commands_changed`, blind to unscanned sources) — user approved the pivot mid-plan. Accepted risk: a future respelling hides custom commands (fail-closed).
+- **2026-08-14** — the IDE is kept in step with the CLI's writes twice over: `CliFileSync` refreshes the one path when a write tool's `tool_use`/`tool_result` pair completes, then sweeps the project root at every `result` (async refresh; a newly created file walks up to the nearest VFS-known directory, recursively). Why measured, not designed: a real turn answered "create one file and overwrite another" with a SINGLE `Bash` call, so the per-file half the backlog scoped caught nothing — Bash names no file, and the sweep costs about what IntelliJ pays on window focus. Rejected: deriving paths from the Bash command (guesswork); sweeping per Bash call; refreshing at `tool_use` (not written yet); keying off the permission card (pre-approved tools produce none).
 
-## 2026-08-17 — Stale IDE locks are swept on every lock write, dead pid only
-`IdeLockFile.write` first deletes every `~/.claude/ide/*.lock` whose `pid` is not running (never its
-own, never an unreadable one).
-**Why:** `delete()` only runs on an orderly dispose, so killed sandboxes left 15 corpses. The CLI has
-the same rule but only applies it while enumerating IDEs, which our `--mcp-config` route never asks for
-— so we are the only sweeper on this path. Dead-pid is the CLI's own test.
-**Rejected:** matching `ideName` (a dead pid is dead whoever wrote it); a port probe; deleting
-unreadable locks (the CLI does that; we stay in our lane).
-
-## 2026-08-17 — The feature checklist is a numbered, colour-tiered register with stable ids
-`docs/feature-checklist.md` rows are `- **N.n** <mark> [effort] …`: ids are `section.row` and STABLE
-(retire by striking, never renumber); marks ✅ / 🟥 high / 🟧 medium / ⬜ low / ➖ by design / 🚫
-declined; effort `[XS|SM|MD|LG]` on open rows; **[NEW]** / **[DECIDE]** tags; all meta in the header.
-Measured against BOTH reference clients on one version.
-**Why:** the user refers to rows by id, wants importance at a glance and cost before choosing; the old
-file duplicated state (checkbox + emoji) and buried the key. Two clients on one version because the TUI
-has commands VS Code lacks and the philosophy sorts them differently.
-**Rejected:** a separate "open decisions" list (duplicated rows — folded into **[DECIDE]**); a priority
-table (rows are prose-length and would wrap badly); 🟨 for low (indistinguishable from 🟧 at a glance —
-the user picked ⬜ over 🟦/🟩, amending this entry's original "no ⬜" ban for the low tier only).
-
-## 2026-08-17 — `close_tab` closes one review by name; both close tools reply reference-exact
-`DiffReview.completeTabClosed(tabName)` resolves only the review opened under that `tab_name`;
-`close_tab` replies `TAB_CLOSED` whether or not it found one; `closeAllDiffTabs` replies
-`CLOSED_<n>_DIFF_TABS`.
-**Why:** the reference closes the single tab whose label equals `tab_name` and always answers
-TAB_CLOSED; ours swept every diff, so with two proposals open, closing one resolved both. Matching the
-reply strings keeps the CLI's consumer on the path it was written for.
-**Rejected:** erroring on an unknown name (the reference does not; a miss is a benign no-op).
-
-## 2026-08-16 — A menu click asks "does it TAKE an argument", not "does it REQUIRE one"
-`cmdTakesArg(c)` is `!!(c.argumentHint||'').trim()`: any non-empty hint — `<required>` and `[optional]`
-alike — inserts `/name ` into the composer and waits; only a hint-less command runs on click.
-**Why:** the user picked `/context` from the menu to run `/context save` and it fired the bare form. A
-hint like `[init | load | save]` is a MENU OF SUB-MODES — "optional" is technically true and
-practically wrong, because a command that advertises choices is one you clicked in order to choose.
-Matches the terminal, where picking completes into the prompt. Blast radius measured on 2.1.233: of 16
-allowlisted built-ins only `/compact`, `/context`, `/goal` change behaviour. Bonus: hints with neither
-bracket nor angle (`key=value`) used to fire bare.
-**Rejected:** changing the skill's own hint to `<…>` (makes the roster lie — bare `/context` is valid);
-a click/Shift-click split (a new idiom the panel does not have). **Cost accepted by the user:**
-`/compact` and friends need one extra Ctrl+Enter.
-
-## 2026-08-16 — Approve-with-notes rides `updatedInput.plan`, not a steered message
-The plan card's typed note, on ANY approve path, is appended to the approved plan under
-`PLAN_NOTES_MARKER` and sent via `updatedInput`; SessionStore parses it back out of `toolUseResult.plan`.
-**Why:** the ExitPlanMode tool_result echoes the approved plan, so the model reads the note in the SAME
-message as the approval — before its first implementation call, deterministically. Timing-equivalent to
-the terminal's shift+tab (which pushes acceptFeedback as an extra text block on that same tool_result,
-an internal path the schema does not expose). Bonus: the note is recorded durably in the plan file.
-**Rejected:** a `feedback` field on the allow response (probed: schema-whitelisted away, silently);
-stdin steering (worked ONCE, then raced the model call cycle in a real run — the note arrived after
-implementation started); a queued user turn (delivered only after the whole turn).
-
-## 2026-08-16 — Plan-card mode rows park their switch until the CLI's restore broadcast
-"Approve, auto-edit"/"auto mode" parks the wish in `pendingPlanMode` and sends it when the
-post-approval `permissionMode` broadcast arrives (cleared on sendTurn/clearLogUI).
-**Why:** the CLI restores `prePlanMode` when the approved ExitPlanMode EXECUTES — always after our
-immediate request is processed — so the restore overwrote the user's pick every time. Plan→X is always
-a change, so the broadcast always fires and the parked switch releases after the restore, before the
-first implementation edit.
-**Rejected:** immediate bridge (deterministic loss, not a race); sending at turn end (too late — the
-implementation is what the user wanted covered).
-
-## 2026-08-16 — Card text fields share one dress, and the plan card gains a separator
-`.plan-fb` and `.ask-other input` both render `background: var(--warn-field)` on the warn card, and the
-plan card gains `.plan-sep`, a full-bleed hairline between plan body and decision surface. `done()`
-removes it with the input so a decided card matches the replayed one.
-**Why:** the panel's two type-your-answer-on-a-card surfaces must read as one control (the same
-argument `fillPath` made for paths), and the plan/field boundary was hard to see. Final colour
-user-picked over three mockup iterations.
-**Rejected en route:** `#1b1b1b` on `--panel`, and a fully transparent field (matched ask exactly but
-the user wanted the well back).
-
-## 2026-08-16 — The chip reads the broadcast `default` as Manual; steered messages replay as bubbles
-`applyCliMode` aliases `default` → `manual` before the unknown-mode guard. Separately, SessionStore maps
-`attachment` records (`{type:"queued_command", commandMode:"prompt"}`) to user blocks unless a plain
-user record carries the same text.
-**Why:** restoring a `manual` pre-plan mode broadcasts the LITERAL `default` (the CLI's internal name),
-the guard dropped it, and the chip stayed on Plan while the real mode was manual. And measured across
-transcripts: a message consumed MID-TURN persists ONLY as the attachment record, while one queued to
-the next turn persists as both — so without the mapping replay lost text the model demonstrably acted
-on, and without the dedupe queued messages rendered twice.
-
-## 2026-08-15 — One path renderer for every surface, cards included
-Both permission-card headers (live `renderPermission`, replay `fillAppliedCard`) fill their `<code>`
-through `fillPath()`, the same helper the tool line uses: project-relative, split into an ellipsised
-`.p-head` and a fixed `.p-tail`, with the ABSOLUTE path on `dataset.path` + `title`.
-**Why:** the decision surface and the timeline sat one above the other naming the same file two
-different ways. A second renderer is also a second thing to drift.
-**Supersedes** the backlog note that card paths were deliberately unclamped ("that surface asks you to
-approve a write to a specific file") — the concern is met without the full string, since the click
-handler reads `dataset.path` and `title` reveals the whole path on hover. What you approve is
-unchanged; only what you read is shorter.
-**Rejected:** a card-only shortener (the drift this removes); clamping via CSS alone (flex shrinks
-proportionally, so any factor that saves the filename on a long path nibbles the parent on a short one).
-
-## 2026-08-15 — `msgStreamed` is a TURN-level fact, never cleared mid-turn
-Set at `message_start`, cleared only at `result` / `sendTurn` / `clearLogUI`.
-**Why:** the CLI emits an `assistant` frame per CONTENT BLOCK, so a message that thinks first sends
-two, and clearing the flag on the first let the second re-draw text the deltas had already rendered —
-every message after the first appeared twice in a `/security-review` run. A local command's turn never
-streams at all, which is what leaves the flag false and lets its whole message draw itself.
-**Rejected:** clearing at `message_stop` (tried and reverted the same hour — assistant frames straddle
-the stop in BOTH directions, so the fixture immediately caught it double-rendering the other way); a
-rendered-uuid set (the duplicate carries the uuid of the frame that drew it).
-
-## 2026-08-15 — A failed local command is surfaced, not swallowed
-`onUserEvent` handles a STRING `content`: `<local-command-stderr>` → error block,
-`<local-command-stdout>` → answer block. Replay routes the same two shapes through the same mapping.
-**Why:** `/security-review` in a repo with no `origin/HEAD` reports only through a `user` frame whose
-content is a string, which the `!Array.isArray(content)` guard dropped before any rendering ran — a
-completed turn with nothing in it, and the CLI's own reason lost.
-**Rejected:** extending `cleanInjected`'s drop list, already wrong in both directions (it swallowed the
-stdout spelling and let stderr through as raw XML). Dropping an error blob violates the no-silent-drops
-rule.
-
-## 2026-08-15 — Custom commands are detected by the description SUFFIX, not a disk scan
-`markCustom()` parses `^([\s\S]*) \((project|user)\)$` off every roster entry's description, strips it
-for display, and records the source; `cmdKind` returns 'text' for map hits and `mcp__` names, after the
-native/allowlist checks so a custom `clear.md` cannot shadow the IDE's /clear.
-**Why:** the entry schema has no type field, but the suffix is a measured wire marker — present for
-every custom entry, absent from all 107 built-ins across two captures. It makes the feature
-webview-only and covers plugin-sourced commands for free.
-**Rejected:** the PLAN-APPROVED Kotlin disk scan — more moving parts, a rescan round-trip on every
-`commands_changed`, blind to sources off the two scanned paths, and it duplicates what the CLI already
-sends. The user approved the pivot mid-plan after the Phase-0 probes. Accepted risk: a future respelling
-hides custom commands (fail-closed, one-line fix).
-
-## 2026-08-14 — The IDE is kept in step with the CLI's writes, per file and per turn
-`CliFileSync` sits on the event stream before the UI callback: it pairs a write tool's `tool_use` with
-its `tool_result` and refreshes that one path, then sweeps the project root at every `result`.
-`refreshFromDisk` refreshes ASYNC and, for a newly CREATED file the VFS does not know, walks up to the
-nearest known directory — recursively if it must climb past directories the CLI also created, since the
-VFS only discovers a new child when its parent is refreshed.
-**Why two mechanisms, and this is the part measured rather than designed:** the per-file half covers
-Write/Edit/MultiEdit/NotebookEdit, which is what the backlog scoped — but driving a real turn showed the
-CLI answering "create one file and overwrite another" with a SINGLE `Bash` call, so the scoped fix caught
-nothing at all. Bash's input names no file, so the turn-end sweep is what covers it, at roughly the cost
-IntelliJ already pays on window focus.
-**Rejected:** deriving paths from the Bash command (guesswork over an open-ended string); sweeping per
-Bash call (same cost, many more times); refreshing at `tool_use` (the file is not written yet); keying
-off the permission card (a pre-approved tool never produces one).
-
----
-
-## Digest — decisions before 2026-08-14
 Outcome · why · key rejection. Full prose is in git history; these are the parts that still steer work.
 
 **2026-08-13 — Sub-agent and in-flight state.** A running tool's dot is white and breathing and the

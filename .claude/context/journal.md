@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-01 (fourth) — 0.12.4 released and approved
+- User's "Please release it" → full gate: bump to 0.12.4, notes rewritten (0.12.4/0.12.3/0.12.2,
+  0.12.1 dropped), `test buildPlugin` green with the own-version notes guard passing, zip audited
+  (our jar + OSS deps only), `verifyPlugin` **7/7 Compatible** read from the verdict files,
+  feed + README checked. STOPPED at the approval gate with the complete notes; shipped on
+  "Go ahead please".
+- `e644dce`, tag `v0.12.4`; GitHub release created, asset HTTP 200 and `cmp`-identical to the
+  local zip, `raw.githubusercontent.com` feed served 0.12.4 immediately, `marketplace-upload`
+  run 33518632052 green in 9s.
+- Marketplace API still listed 0.12.3 as newest approved right after upload (normal moderation
+  window) — the user's screenshot minutes later showed **0.12.4 Approved**, verifier Success on
+  2025.3.6.1 / 2026.1.5 / 2026.2.2 rc plus a clean IDE run.
+- Notes framing that worked: the three fixes stated as what now works, with the old behaviour in
+  a trailing dash-clause (Windows full-path run, two-line task name, giant yellow caveat line).
+
 ## 2026-09-01 (third) — Review span becomes the sole click target on the files block
 - User (screenshot): "Can we just link the Review and not whole block?" — done; the whole-block
   action had made stray clicks on file rows open the review, and the block-wide pointer oversold
@@ -145,47 +160,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   upload run 33295856635 green, Marketplace Approved within the hour). Release notes drafted while the
   verifier ran; approval gate held. Post-release context save on its own ask (this one).
 
-## 2026-08-29 (eighth) — Copilot Chat 0.63 audited and dropped; `vscode/` → `reference/anthropic-claude-code/`
-- Landscape survey (web) → user asked for a Copilot extraction like `vscode/`. `github.copilot` is
-  deprecated; Copilot Chat is BUILT IN to VS Code (`/usr/share/code/resources/app/extensions/copilot`,
-  0.63.0); its OSS repo `microsoft/vscode-copilot-chat` stops at 0.44 (May 2026) and its bundled
-  changelog at 0.41 — the shipped manifest is the only truth.
-- Rearranged: `vscode/` moved under `reference/` as `anthropic-claude-code/` (2.1.251); `.gitignore`
-  `/vscode/` line dropped (`/reference/` already covers it); eight path-only doc/context edits.
-  Copilot folders were created, audited by an Explore agent (38 tools, 191+~330 settings, local
-  Claude Code harness REMOVED between 0.44 and 0.63, reads `.claude/skills` + `.claude/settings.json`
-  hooks), then deleted at the user's request. Report stayed in the scratchpad.
-- User verdict: Copilot is bloat; of ten features offered only "terminal last command/output as
-  context" survives → backlog. Everything else (worktree shape, model aliasing, per-phase models,
-  OTel, etc.) not to be re-proposed on Copilot's evidence.
-- Trap: `git mv -k` on an UNTRACKED path exits 0 without moving, so `|| mv` never fires — use plain
-  `mv` for gitignored dirs (gotchas § Build).
-- Checklist References block reworded: audited = 2.1.250; the extraction is "newest installed, the
-  diff base for the NEXT audit" — the 2.1.251 number was read as an audit claim.
-- Committed and pushed on the user's "commit and push" with this save.
-
-## 2026-08-29 (seventh) — links → system browser; effort pill slider; side hint
-- Side-question placeholder matched to the composer's ("Ctrl+Enter to send, Enter for newline") —
-  the Enter behaviour was already identical, only the hint differed.
-- Effort selector restyled as a pill slider from the user's screenshot (`.tgl` idiom, five stops).
-  Four rounds: label stays "Effort **High**" + accent token (asked); knob inset 3→2px; fill = knob
-  right + 2 so orange shows past the knob in EVERY state; stops made fixed 12px slots (tick = 4px
-  `::before`) because a 12px knob among 4px flex ticks re-spaced the centres. Geometry proven in
-  headless Chrome per round (sandbox was down), then in JCEF. Dead `background: transparent` cut.
-- **Blank PhpStorm windows on link clicks** (user, "many times"): `target=_blank` on an OSR JCEF
-  browser → CEF popup with no surface. Fix in three layers (JS delegate → `browse` frame,
-  `onBeforePopup`, and — after the user's middle-click navigated the panel to jetbrains.com —
-  `onBeforeBrowse` cancelling any main-frame http(s) load). Bare URLs autolink now.
-  Recovery of the navigated panel: raw CDP `Runtime.evaluate history.back()` on the page target
-  (cdp.py can't attach — it filters by the chat-panel title). Page reloads → log lost (8.14).
-- Fixture 67: control 1 (JS stashed, Kotlin kept): 2/6 → all discriminating asserts failed;
-  control 2 free against the running pre-auxclick page: exactly the two new asserts failed.
-  Harness 566 → 575, tests 134/0. User hand-tested all three click routes.
-- Sandbox now started/killed by Claude (user's go); `runIde` background task reports exit 1 when
-  the IDE is killed by pid — expected, not a failure.
-- Committed and pushed on the user's "commit and push" with this save.
-
 ## Digest
+- **2026-08-29 (eighth)** — Copilot Chat 0.63 audited (built into VS Code; its OSS repo stops at 0.44, so the shipped manifest is the only truth) and DROPPED as bloat — only "terminal last command/output as context" survived, to backlog; the extracted folders were deleted after the audit. `vscode/` moved to `reference/anthropic-claude-code/` (2.1.251) with eight path-only doc edits. Trap promoted: `git mv -k` on an untracked path exits 0 without moving.
+- **2026-08-29 (seventh)** — links open in the SYSTEM browser (blank PhpStorm windows were `target=_blank` on an OSR JCEF browser); fixed in three layers (JS delegate → `browse`, `onBeforePopup`, `onBeforeBrowse` cancelling main-frame http(s)), bare URLs autolink. Effort selector became a pill slider over four geometry rounds (fixed 12px stop slots; proven headless then in JCEF). Side-question hint matched to the composer. Fixture 67 with two controls, harness 575, tests 134.
 - **2026-08-29 (sixth)** — goal reached a day early: checklist 82 ✅ · 46 ➖, all 17 headings ✅. 7.6 `/clear` REMOVED from the panel (user pick C; typed `/clear`/`/new`/`/reset` refused like `/model`), 8.7 + §14 decided by the git-owns-undo principle (14.1/14.3 later as a worktrees bundle). Fixtures 46/52 re-pointed; harness 566, tests 134. Marketplace: plugin.xml description fixed, five screenshots reshot via the new committed `tools/marketplace_shots.py`, hand-synced copy removed (the Marketplace takes the description from the plugin now). **0.12.0 released** (`0e1af47`) — full gate walk, marketplace-upload green. Later same day: reference re-extracted to 2.1.251, change notes trimmed to last-three-versions.
 - **2026-08-29 (fifth)** — 8.14 (page-reload transcript heal) declined by the user: `refresh`/reopen covers the renderer-crash case; checklist 8.14 ➖, Next up narrowed to 8.7.
 - **2026-08-29 (fourth)** — §15 closed (15.5 debugger tools → backlog [LG], 15.6 by design), 8.8/8.10 deferred; 8.11 side question measured FIRST (live probe: no `/btw` in roster, `control_request_progress{started}` → `control_response{response, synthetic}`, nothing persisted) then built mockup-first; fixture 66's free pre-feature control ran 21/23 red; side input one line at rest, panel centred on `#inputcard`. Harness 566, tests 134.

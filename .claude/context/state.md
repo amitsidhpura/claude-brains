@@ -1,26 +1,26 @@
 # State
 
 ## Current focus
-**2026-09-01 (seventh session): TWO unreleased batches on `main` — 0.12.3 is the shipped version
-and lacks both.** Batch 1 (commit `5cf280d`): the tool-result `(note: …)` caveat hardening —
-`NOTE_MAX = 400` (an over-bound collapsed capture is DROPPED, not truncated) + a position-0 guard
-(a match that starts the trimmed result is output; every real CLI note template is APPENDED after
-other text, measured in the 2.1.252 binary with `strings`). Fix for the user's 2026-08-30 "giant
-yellow text": the end-anchored regex (`RenderLimits.kt` + its `50-blocks.js` mirror) captured from
-a literal `(note:` in large output to a final `)`. Conditions list in `docs/limits.md`; evidence
-trail (two control runs + real-wire repro) in `tools/fixtures/69-result-note-cap.json` provenance.
-Batch 2 (committed at this save): two Windows-screenshot UI fixes — (a) the files-changed block
-(3.6) is now header + ONE ROW PER FILE with project-relative paths via the shared `fillPath()`
-(`75-retraction.js` `filesLine`); root cause was `lastIndexOf('/')` never matching backslash
-paths, so full `D:\…` paths rendered; (b) the bg-tasks popup title is one-line ellipsised with
-the full name on the tooltip and `#bgMenu` got the idiom's FIXED width (330px) — the hover ✕
-gutter no longer rewraps a long title (chat.css, `70-events.js` `renderBgTasks`).
-Batch 3 (committed at this save): on the files block, the `Review` span ALONE is the click
-target (user request) — block cursor auto, row clicks send nothing; fixture 60 pins it with the
-control run in provenance. User confirmed the fillPath consistency live: project files relative,
-external files (e.g. `/home/syncroze/user-tasks.txt`) absolute, same as the tool lines.
-- Accepted residual (batch 1): a sub-400 parenthetical appended mid-result and ending it is
-  byte-identical to a real caveat and still renders — irreducible without structural marking.
+**2026-09-01 (seventh session): 0.12.4 RELEASED and Marketplace-approved — nothing unreleased on
+`main`.** The three batches it carries, all fixes-only:
+- `5cf280d` — tool-result `(note: …)` caveat hardening: `NOTE_MAX = 400` (an over-bound collapsed
+  capture is DROPPED, not truncated) + a position-0 guard (a match starting the trimmed result is
+  output; every real CLI note template is APPENDED after other text, measured in the 2.1.252
+  binary with `strings`). Fixes the user's 2026-08-30 "giant yellow text": the end-anchored regex
+  (`RenderLimits.kt` + its `50-blocks.js` mirror) captured from a literal `(note:` in large output
+  to a final `)`. Conditions list in `docs/limits.md`; evidence (two control runs + real-wire
+  repro) in `tools/fixtures/69-result-note-cap.json` provenance.
+- `f4aa732` — two Windows-screenshot UI fixes: (a) the files-changed block (3.6) is header + ONE
+  ROW PER FILE with project-relative paths via the shared `fillPath()` (`75-retraction.js`
+  `filesLine`) — root cause was `lastIndexOf('/')` never matching backslash paths, so full `D:\…`
+  paths rendered; (b) the bg-tasks popup title is one-line ellipsised with the full name on the
+  tooltip and `#bgMenu` got the idiom's FIXED width (330px) — the hover ✕ gutter no longer
+  rewraps a long title (chat.css, `70-events.js` `renderBgTasks`).
+- `82da0c5` — on the files block the `Review` span ALONE is the click target; block cursor auto,
+  row clicks send nothing (fixture 60 pins it). User confirmed live that `fillPath`'s boundary
+  rule reads right: project files relative, external files absolute, same as the tool lines.
+- Accepted residual: a sub-400 parenthetical appended mid-result and ending it is byte-identical
+  to a real caveat and still renders — irreducible without structural marking from the CLI.
 - The CLI is now **2.1.252** locally (2.1.251 audit still stands; 2.1.252 changelog is bugfix-only
   incl. "background task notifications with very large failure output" — unrelated to our misfire,
   that one is CLI-side API-payload, the panel never renders task-notification content).
@@ -31,11 +31,15 @@ external files (e.g. `/home/syncroze/user-tasks.txt`) absolute, same as the tool
   slider track (2026-08-29); Copilot-derived features other than terminal-output context
   (2026-08-29, decisions.md).
 
-## Released — 0.12.3 (2026-08-30)
-**0.12.3 is the shipped version** (tag `v0.12.3`): first-paint flash fixed for real
-(`ui/ChatPanel.kt`), Marketplace-approved same day. The note-caveat hardening above is on `main`
-only — releasing it is a separate, user-initiated call. Change notes carry the LAST THREE
-versions + the GitHub releases link.
+## Released — 0.12.4 (2026-09-01)
+**0.12.4 is the shipped version** (tag `v0.12.4`, commit `e644dce`): files-changed rows +
+Review-only link, one-line bg-task titles, the `(note:)` caveat misfire capped. Gate walked in
+full — `test buildPlugin` green, zip audited (our jar + OSS deps only), `verifyPlugin` **7/7
+Compatible** read from the verdict files, approval gate held for the user's "Go ahead". Asset
+`cmp`-identical to the local zip, feed live, `marketplace-upload` run 33518632052 green in 9s →
+**Approved** the same evening (user's screenshot: IntelliJ IDEA 2025.3.6.1 / 2026.1.5 / 2026.2.2
+rc all Success, IDE run no issues). Change notes carry the LAST THREE versions
+(0.12.4 / 0.12.3 / 0.12.2) + the GitHub releases link.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
@@ -64,8 +68,7 @@ versions + the GitHub releases link.
   there for real wire shapes; the 2026-08-28 "not findable" cases stay unexplained (gotchas).
 
 ## Next steps
-- [ ] Release the three unreleased batches (note-caveat hardening, the two Windows UI fixes,
-      Review-only click) in the next version bump — a natural 0.12.4 whenever the user says go.
+- [x] 0.12.4 released and Marketplace-approved 2026-09-01 (all three batches).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots
