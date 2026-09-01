@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.12.3"
+version = "0.12.4"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,19 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.12.4</b>
+            <ul>
+              <li>The "files changed" summary lists one file per row — project-relative path,
+                  per-file +added −removed counts, full path on hover; on Windows it used to
+                  print every file's full absolute path in one wrapped run. The Review link
+                  alone opens the review, not the whole block</li>
+              <li>A long background-task name stays on one line in the tasks popup — hovering
+                  its stop button used to rewrap the name to two lines</li>
+              <li>Large tool output that happens to contain "(note:" and end with a closing
+                  parenthesis is no longer repeated under the tool as one giant yellow caveat
+                  line — genuine short caveats from Claude Code (like "the file had been
+                  modified on disk") still show</li>
+            </ul>
             <b>0.12.3</b>
             <ul>
               <li>The squashed, corner-sized first frame on project open is really gone. 0.12.2's
@@ -118,19 +131,6 @@ val changeNotesHtml = """
                   project opens — the page now loads only once the tool window has its real size</li>
               <li>The panel stays available while the IDE is indexing — it used to be replaced by
                   "This view is not available until indexes are built" on every project open</li>
-            </ul>
-            <b>0.12.1</b>
-            <ul>
-              <li>Links in Claude's replies open in your system browser — a click used to open a
-                  blank IDE window, and a middle-click navigated the panel itself. Bare URLs are
-                  now links too</li>
-              <li>The model chip follows the CLI: when a <code>PreModelSwitch</code> hook
-                  (Claude Code 2.1.251+) refuses a model switch, the chip and the saved choice
-                  snap back to the model the CLI kept and the hook's reason is shown — the chip
-                  used to show the refused model</li>
-              <li>The effort level is a slider in the model menu</li>
-              <li>The side-question panel's input hints "Ctrl+Enter to send", like the
-                  composer</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
