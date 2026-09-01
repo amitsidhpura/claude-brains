@@ -6,6 +6,16 @@ re-read those before trusting memory here.
 
 ## Protocol / wire
 
+- **A textual marker parsed out of free tool output WILL eventually occur IN the output — anchor
+  on every structural property the real emitter has, not just position.** `resultNote`'s
+  end-anchored `(note: …)` regex rendered a ~1300-char grep-style tail as one giant amber caveat
+  (user sighting 2026-08-30; real-wire repro 2026-09-01): any output containing the literal
+  `(note:` and ending `)` matched. End-anchoring alone had been the whole defense. The durable
+  guards came from measuring the emitter (`strings` on the CLI binary): real notes are
+  sentence-sized → `NOTE_MAX`; real notes are appended after text → position-0 reject. Same class
+  as the `<persisted-output>` both-tags-required rule and `isInternalResult`'s first-line-only
+  rule — when adding the next text-marker parser, write down which structural properties of the
+  real emitter it checks, and test the marker occurring inside ordinary output.
 - **A `set_model` control request writes a `/model` COMMAND TRIO to the transcript** (measured
   2026-08-25, CLI 2.1.245): `isMeta` caveat + `<command-name>/model</command-name>` wrapper +
   `<local-command-stdout>Set model to …</local-command-stdout>`, all `type:"user"` string-content
@@ -623,6 +633,9 @@ re-read those before trusting memory here.
 - **Sessions the user drives by hand may not be findable in `~/.claude/projects`.** 2026-08-28 three
   hand-test sessions (screenshots in hand) existed in no project dir; only CDP-driven ones did.
   Unexplained — do not spend time hunting; re-run the scenario over CDP and tape it.
+  BUT do look first: 2026-09-01 both a CDP-driven `sendTurn` turn AND the user's hand-typed one
+  persisted normally under `…-claude-brains-testing/` — the raw `tool_result` there settled what
+  the wire really carried before any fix was trusted.
 - **The old VS Code extension dir is DELETED on auto-update — the local `reference/anthropic-claude-code/` extraction is the
   only diff base you will ever have.** 2026-08-26: `~/.vscode/extensions/` held only 2.1.246; the
   2.1.241→2.1.246 contributions/tool-roster diff was possible solely because the extraction (gitignored; then at `vscode/`)

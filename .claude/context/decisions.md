@@ -4,6 +4,26 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-01 — `(note: …)` caveat: bound by every structural property the real emitter has; over the bound, DROP, never truncate
+- Why: the end-anchored regex alone misread large output containing a literal `(note:` and ending
+  `)` as a caveat — the whole tail rendered as one giant amber `.t-note` (user sighting
+  2026-08-30, reproduced on the real wire). Two guards, licensed by measuring every note template
+  in the 2.1.252 binary with `strings`: `NOTE_MAX = 400` (all real notes ≤ ~200 chars, collapsed)
+  and reject a match at position 0 of the trimmed result (all real notes are APPENDED after other
+  text — three join with a leading space, Edit's escape-swap with `\n`). One copy each, in
+  `RenderLimits.kt`, spliced as `LIM.noteMax`; JS mirrors the predicate.
+- Alternatives rejected: TRUNCATING an over-bound capture (a slice of misread output shown in
+  amber is noise dressed as a warning — the output is already in the OUT box, so drop is lossless
+  on screen); a single-line-note rule (RenderLimitsTest pins multi-line notes as valid — the
+  collapse exists for them); capping the permission-card `reason` (a dedicated field, never
+  parsed from output, never observed large).
+- Accepted residual, explicitly: a sub-400 parenthetical appended after text at the very end of a
+  result is byte-identical to a real caveat and still renders — irreducible without the CLI
+  marking notes structurally. Failure mode is one plausible-looking amber line, not a wall.
+- If a future CLI ships a genuine note > 400 chars the panel silently drops its display (the
+  model still receives it); the `strings` sweep of each CLI re-audit is the tripwire, and the fix
+  is bumping `NOTE_MAX`.
+
 ## 2026-08-30 (fifth) — First-paint flash, second attempt: visible browser, load on ITS first bounds, CEF paints the dark bg
 - Why: 0.12.2's fix made the flash DETERMINISTIC. It hid the JCEF child (`isVisible=false`) until
   `onLoadEnd`, but an invisible `BorderLayout` child gets NO bounds, so CEF kept its default

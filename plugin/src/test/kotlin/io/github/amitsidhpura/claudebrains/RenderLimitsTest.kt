@@ -90,8 +90,8 @@ class RenderLimitsTest {
         ).forEach {
             assertTrue(!html.contains(it), "the webview JS hardcodes `$it` — read it from LIM instead")
         }
-        listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.descKeys", "LIM.pathKeys",
-            "LIM.resultSkip", "LIM.plumbingTags").forEach {
+        listOf("LIM.descMax", "LIM.cmdMax", "LIM.outMax", "LIM.noteMax", "LIM.descKeys",
+            "LIM.pathKeys", "LIM.resultSkip", "LIM.plumbingTags").forEach {
             assertTrue(html.contains(it), "the webview JS no longer uses $it")
         }
     }
@@ -107,7 +107,7 @@ class RenderLimitsTest {
     @Test
     fun `js literal round-trips the values`() {
         assertEquals(
-            "{descMax:140,cmdMax:4000,outMax:2000,pathTailMax:40," +
+            "{descMax:140,cmdMax:4000,outMax:2000,noteMax:400,pathTailMax:40," +
                 "descKeys:[\"description\",\"file_path\",\"path\",\"notebook_path\",\"pattern\"," +
                 "\"query\",\"url\",\"element\",\"filename\",\"target\",\"skill\",\"status\"," +
                 "\"taskId\",\"task_id\",\"uri\"]," +
@@ -284,6 +284,27 @@ class RenderLimitsTest {
         assertNull(RenderLimits.resultNote("(NOTE: uppercase is not the CLI's spelling)"))
         assertNull(RenderLimits.resultNote("done. (note:   )"), "an empty caveat is not a caveat")
         assertNull(RenderLimits.resultNote(""))
+
+        // The misfire shape (seen live 2026-08-30): large output that CONTAINS the literal
+        // "(note:" — this repo's own sources and docs carry it — and happens to END with ")".
+        // The capture then spans from that "(note:" to the final paren, and the whole tail
+        // rendered as one giant amber .t-note under the tool line. Real CLI notes are all
+        // sentence-sized (measured from the 2.1.251/2.1.252 binaries), so a length bound tells
+        // the two apart where anchoring alone cannot.
+        val big = "src grep: RESULT_NOTE = Regex(\"(note: …)\")\n" +
+            "x".repeat(RenderLimits.NOTE_MAX + 200) + "\ntail line (ends with a paren)"
+        assertNull(RenderLimits.resultNote(big), "an over-noteMax capture is output, not a caveat")
+        // ... and the bound is on the note alone, not the whole result
+        val atCap = "y".repeat(RenderLimits.NOTE_MAX)
+        assertEquals(atCap, RenderLimits.resultNote("z".repeat(5000) + " done. (note: $atCap)"))
+
+        // The SMALL misfire (user repro 2026-09-01, a 3-line awk): when the ENTIRE result is
+        // "(note: …)" the capture ducks under NOTE_MAX and the size bound alone lets it through.
+        // A real caveat is never the whole result — every template in the 2.1.252 binary is
+        // APPENDED after other text (three join with a leading space, the Edit escape-swap one
+        // with '\n' after the mismatch error) — so a note at position 0 is output, not a caveat.
+        assertNull(RenderLimits.resultNote("(note: begin\nfiller\nend of the output)"),
+            "a whole-result 'note' is output pretending to be a caveat")
     }
 
     @Test

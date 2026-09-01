@@ -1,92 +1,79 @@
 # State
 
 ## Current focus
-**2026-08-30 (sixth session): 0.12.3 released and Marketplace-approved — nothing unreleased on
-`main`.** 0.12.3 carries only the real first-paint fix (`ui/ChatPanel.kt`: browser stays visible,
-`loadUi()` on the BROWSER component's first non-empty `componentResized`,
-`setPageBackgroundColor("#1a1a1a")`); 0.12.2's fix had hidden the JCEF child and made the flash
-deterministic (decisions 2026-08-30 (fifth), gotchas § JCEF). User-tested from a zip AND from the
-released update ("working fine"). No open work; pick from backlog § Next up / § Deferred.
-- Earlier the same day: 2.1.251 re-audit, 9.11 built + hand-tested, 0.12.1 / 0.12.2 / 0.12.3 released.
-- 8.11 side question (`/btw`, `webview/js/67-side.js`, fixture 66) — UNMEASURED corners:
-  `synthetic:true`, `refusal_fallback`, the CLI's "Side question cancelled" / "Session is shutting
-  down" errors render verbatim if they ever arrive.
-- Checklist rules still in force: `**id** mark [effort] **Name** — gist; facts`; the **At a glance**
-  block is hand-maintained (recount with `awk` at every change); `<details>` only in the re-audit
-  paragraphs and §17 groups. Checklist: 83 ✅ · 46 ➖ (129 rows), all 17 headings ✅.
-- Do not re-propose: an effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
-  Claude-side rewind/checkpoints or host git actions (2026-08-29, decisions.md); an "Effort (High)"
-  bracketed label or a blue track on the effort slider (2026-08-29); Copilot-derived features other
-  than terminal-output context (2026-08-29, decisions.md).
-- Audit state: the checklist is measured against **2.1.251** (re-audit 2026-08-30; checklist header
-  `<details>` block has the findings). 9.11 (chip revert on a refused `set_model`) shipped in 0.12.1:
-  `cli/ClaudeCli.kt`, `ClaudeSessionService.kt` (`revertModel`), `webview/js/30-menus.js`,
-  `70-events.js`, fixture 68.
+**2026-09-01 (seventh session): the tool-result `(note: …)` caveat hardening is committed on
+`main` — UNRELEASED (0.12.3 is the shipped version and lacks it).** The user's 2026-08-30 "giant
+yellow text" sighting was `resultNote` misreading large output as a caveat: the end-anchored regex
+(`RenderLimits.kt` + its `50-blocks.js` mirror) captured everything from a literal `(note:` in the
+output to a final `)`. Two guards added, each landed test-first with its negative control watched
+failing: `NOTE_MAX = 400` (a longer collapsed capture is DROPPED, not truncated) and a position-0
+guard (a match that starts the trimmed result is output — every real CLI note template is APPENDED
+after other text, measured in the 2.1.252 binary). Full conditions list in `docs/limits.md` row
+"tool-result `(note:)` caveat"; evidence trail in `tools/fixtures/69-result-note-cap.json`
+provenance (two control runs + real-wire reproduction on CLI 2.1.252).
+- Accepted residual: a sub-400 parenthetical appended mid-result and ending it is byte-identical
+  to a real caveat and still renders — irreducible without structural marking from the CLI.
+- The CLI is now **2.1.252** locally (2.1.251 audit still stands; 2.1.252 changelog is bugfix-only
+  incl. "background task notifications with very large failure output" — unrelated to our misfire,
+  that one is CLI-side API-payload, the panel never renders task-notification content).
+- Checklist rules still in force: `**id** mark [effort] **Name** — gist; facts`; **At a glance**
+  hand-maintained (recount with `awk` on change). Checklist: 83 ✅ · 46 ➖ (129 rows).
+- Do not re-propose: effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
+  Claude-side rewind/checkpoints or host git actions (2026-08-29); "Effort (High)" label / blue
+  slider track (2026-08-29); Copilot-derived features other than terminal-output context
+  (2026-08-29, decisions.md).
 
 ## Released — 0.12.3 (2026-08-30)
-**0.12.3 is the shipped version** (tag `v0.12.3`, commit `1277ad7`): the first-paint flash fixed
-for real. Verifier 7/7 Compatible, asset byte-identical, feed live, `marketplace-upload` run
-33302608925 green → Marketplace update id 1157030, **Approved** within the hour (user's screenshot:
-2025.3.6.1 → 2026.2.2 rc Compatible, IDE run no issues). Before it, all the same day: 0.12.2
-(`50ac66c`: DumbAware factory + the flash "fix" that made it deterministic), 0.12.1 (`793639d`:
-links → system browser, chip follows refused `set_model`, effort slider), 0.12.0 (`0e1af47`: /btw,
-files-changed review, tweak-travel, stop-task). The CLI spawns when the panel is first shown
-(since 0.12.2). Change notes carry exactly the LAST THREE versions (0.12.3 / 0.12.2 / 0.12.1) +
-the GitHub releases link.
+**0.12.3 is the shipped version** (tag `v0.12.3`): first-paint flash fixed for real
+(`ui/ChatPanel.kt`), Marketplace-approved same day. The note-caveat hardening above is on `main`
+only — releasing it is a separate, user-initiated call. Change notes carry the LAST THREE
+versions + the GitHub releases link.
 
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **586** (fixtures to 68); `./gradlew test` **134**.
+- `python3 tools/live_harness.py` baseline **592** (fixtures to **69**); `./gradlew test` **134**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
   nothing; `pgrep -f 'idea.system.pat[h]'`; kill by pid, wait for CDP to vanish. Claude may start
   and kill the sandbox on its own (user, 2026-08-29). Never run the harness and a CDP injection
   concurrently — fixtures `__clear` the log and the injection vanishes.
-- **ALWAYS verify the running build BY CONTENT over CDP before trusting a fixture run.** Control
-  builds restore the WHOLE `plugin/src/main/resources/webview/` directory.
-- Fixture ids that a page-lifetime counter produces (`sq1…`) must be read from the bridge tape,
-  never written as literals — fixture 66 passed once then failed with `sq5` (gotchas § Testing).
-- A panel-supplied slash entry (`CMD_LOCAL`) changes every fixture that COUNTS rendered slash
-  rows (46, 50, 52 bumped +1 on 2026-08-29) — recount them when adding one.
-- Side-question probe script (spawn the CLI with the panel's flags, `initialize`, then
-  `side_question`): reproduce from `docs/ide-mcp-protocol.md` § side_question; the scratchpad copy
-  is gone with the session.
+- **ALWAYS verify the running build BY CONTENT over CDP before trusting a fixture run** (e.g. grep
+  the page HTML for the exact new code string). Control builds restore the WHOLE
+  `plugin/src/main/resources/webview/` directory.
+- Real end-to-end turns can be driven over CDP: `sendTurn('<prompt>', [])` in the panel scope
+  spawns the real CLI; approve a permission card via `.card-b button.ok`. Used 2026-09-01 for the
+  note-misfire before/after (scripts were scratchpad-only, gone with the session; trivial to redo).
+- Fixture ids from page-lifetime counters (`sq1…`) must be read from the bridge tape, never
+  written as literals (gotchas § Testing). A panel-supplied slash entry (`CMD_LOCAL`) changes
+  every fixture that COUNTS rendered slash rows — recount when adding one.
+- Sandbox-panel CLI sessions DO persist under
+  `~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/` (measured 2026-09-01) — grep
+  there for real wire shapes; the 2026-08-28 "not findable" cases stay unexplained (gotchas).
 
 ## Next steps
-- [x] Marketplace page after 0.12.0 (2026-08-29): screenshots uploaded by the user; description
-      VERIFIED via `api/plugins/33274` to match plugin.xml (`/btw` in, `/clear` and the diffs bullet
-      out) — the "description comes from the plugin on upload" setting is confirmed working.
-- [x] `reference/anthropic-claude-code/` (moved from `vscode/` 2026-08-29) re-extracted to **2.1.251** on 2026-08-29 (from 2.1.241; 2.1.250 was still on disk —
-      extension.js +14.5 KB, webview/index.js +2.4 KB between the two). **Re-audit deferred by the
-      user: wait a few CLI versions past 2.1.250 before the next checklist re-audit.**
-- [x] Gist `b2d033439ba4ca5bcd018f4fe5eef773` verified identical to `.claude/skills/context/SKILL.md`
-      on 2026-08-29 (push again after any SKILL.md edit: `gh gist edit <id> -f SKILL.md <path>`).
-- [x] 9.11 built, verified, hand-tested and committed 2026-08-30.
-- [x] Marketplace screenshots 04 (side-question placeholder) and 05 (effort pill slider) regenerated
-      2026-08-30 with `python3 tools/marketplace_shots.py 4 5`; committed. **User errand**: upload
-      the two PNGs to the listing (`plugins.jetbrains.com/plugin/33274`, manual step).
-- [x] 0.12.2 released and Marketplace-approved 2026-08-30.
-- [x] First-paint flash fixed for real in `ui/ChatPanel.kt`; 0.12.3 released and Marketplace-approved
-      2026-08-30.
+- [ ] Release the note-caveat hardening in the next version bump (bundle with whatever comes
+      next; nothing urgent — the bug needs output containing `(note:` AND ending with `)`).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
-- [ ] **User errands**: Windows `./gradlew test` + VFS click check.
+- [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots
+      04+05 (regenerated 2026-08-30) to `plugins.jetbrains.com/plugin/33274`.
 
 ## Known gaps (deliberately left)
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by decision.
 - **Do not gate UI on roster capability flags** (9.10 ➖); only `supportsFastMode` is gated.
 - Effort/model conversation MARKERS dropped 2026-08-24; confirm-card path wrapping declined.
 - Typing `/model` or `/clear` in the composer is refused (`cmdKind` → 'tui'); the chip / the header
-  New button are the only surfaces. No keyboard-only new conversation (no shortcuts bound).
+  New button are the only surfaces. No keyboard-only new conversation.
 - 1M switch carries NO client-side validity logic. Fast-mode "· fast" marker parked.
 - 5.6 keyboard-only comment pill; plan-card keyboard shortcuts deferred 2026-08-16;
   `DiffReview.open` snapshot-only lookup parked; `/batch` verified at N=2 only.
-- The user's own hand-test sessions land in NO `~/.claude/projects` dir (gotchas § Testing).
+- Note-caveat residual: sub-400 appended parenthetical at result end still renders as a note
+  (accepted 2026-09-01, decisions.md).
 
 ## Which machine — check FIRST, both are real
-The 2026-08-26 → 2026-08-29 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
+2026-08-26 → 2026-09-01 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
 Paths for both boxes in overview.md § External references. Windows still owes the CRLF splice check.

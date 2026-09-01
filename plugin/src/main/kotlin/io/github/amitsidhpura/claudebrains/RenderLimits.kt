@@ -364,12 +364,30 @@ object RenderLimits {
      *
      * Anchored to the END so a `(note: …)` occurring inside ordinary output — a compiler message, a
      * quoted log line — cannot be mistaken for the CLI's own caveat.
+     *
+     * Anchoring alone is not enough: output that merely CONTAINS "(note:" — this repo's own
+     * sources and docs carry the literal — and happens to END with ")" made the capture span
+     * everything between the two, and the whole tail rendered as one giant amber note under the
+     * tool line (seen live 2026-08-30, a grep over these files). Hence [NOTE_MAX]: every real CLI
+     * note template, read from the 2.1.251/2.1.252 binaries with `strings`, is sentence-sized —
+     * stale-file (~170 chars), Edit escape-swap (~190), "N other live agents share this name",
+     * autoupdate-held — so a capture past the bound is output, not a caveat.
      */
     private val RESULT_NOTE = Regex("""\(note:\s*(.+?)\)\s*$""", RegexOption.DOT_MATCHES_ALL)
 
+    /** Longest collapsed `(note: …)` accepted as a CLI caveat; ~2x the longest measured real one. */
+    const val NOTE_MAX = 400
+
     fun resultNote(text: String): String? =
-        RESULT_NOTE.find(text.trim())?.groupValues?.get(1)
-            ?.replace(Regex("""\s+"""), " ")?.trim()?.takeIf { it.isNotEmpty() }
+        RESULT_NOTE.find(text.trim())
+            // A caveat is APPENDED: every template in the 2.1.252 binary joins after other text
+            // (three with a leading space, the Edit escape-swap one with '\n' after the mismatch
+            // error), so a match at position 0 is a result that merely LOOKS like a note — the
+            // small-output twin of the NOTE_MAX misfire, where the whole result is "(note: …)".
+            ?.takeIf { it.range.first > 0 }
+            ?.groupValues?.get(1)
+            ?.replace(Regex("""\s+"""), " ")?.trim()
+            ?.takeIf { it.isNotEmpty() && it.length <= NOTE_MAX }
 
     /**
      * CLI plumbing wrappers that arrive as literal tags in tool-result TEXT — `<tool_use_error>`
@@ -460,7 +478,8 @@ object RenderLimits {
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }
-        return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX,pathTailMax:$PATH_TAIL_MAX," +
+        return "{descMax:$DESC_MAX,cmdMax:$CMD_MAX,outMax:$OUT_MAX,noteMax:$NOTE_MAX," +
+            "pathTailMax:$PATH_TAIL_MAX," +
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
             "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}," +
             "planDenyPrefix:\"$PLAN_DENY_PREFIX\",planCommentsHeader:\"$PLAN_COMMENTS_HEADER\"," +

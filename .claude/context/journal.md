@@ -3,6 +3,25 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-01 — the giant-yellow-note misfire found, fixed, hardened twice
+- User's 2026-08-30 "yellow text with large output" (no screenshot) diagnosed by measurement:
+  the `.t-note` caveat line — `resultNote`'s end-anchored regex captured from any literal
+  `(note:` in tool output to a final `)`. All amber emitters enumerated; not the CLI 2.1.252
+  "task notification" fix (that's API-payload-side; the panel never renders that content).
+- Two guards, both renderers, each test-first with the control watched failing: `NOTE_MAX = 400`
+  (over → DROP, not truncate — a slice of misread output is still misread) and position-0
+  (every real note template in the 2.1.252 binary is APPENDED after text — three ` (note:`,
+  Edit's escape-swap `\n(note:`). Second guard came from the user's own probe: a 3-line awk
+  whose whole result was `(note: …)` ducked under the size bound.
+- Real-wire before/after driven via `sendTurn(...)` over CDP through the live CLI: pre-fix build
+  drew the ~1300-char amber wall, fixed build none; user's exact small repro also clean.
+- Suites: `./gradlew test` 134, harness **592** (fixture 69, 6 asserts, provenance carries both
+  control runs + the real-wire reproduction). `docs/limits.md` gained the caveat row with the
+  full suppress-conditions list.
+- Learned: sandbox-panel CLI sessions DO persist under `…-claude-brains-testing/` — the raw
+  tool_result there confirmed the misfire shape byte-for-byte before any fix was trusted.
+- Committed and pushed on the user's ask (this save included).
+
 ## 2026-08-30 (sixth) — 0.12.3 released
 - User's "lets release it" → steps 1–5 proactively (bump, notes now 0.12.3/0.12.2/0.12.1, feed),
   `test buildPlugin` 134/0, zip audited, `verifyPlugin` 7/7 Compatible from the verdict files;
@@ -172,58 +191,10 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   `0e1af47` + tag, GitHub release with byte-identical asset, feed live, `marketplace-upload` green.
   Marketplace moderation pending at save time. User's manual steps: screenshots + description check.
 
-## 2026-08-29 (fifth) — 8.14 declined; §8 down to 8.7
-- Short session: explained 8.14 (page reload → chrome heals via `seedUi()`, conversation log
-  lost; trigger is DevTools reload or a renderer crash; fix = push transcript without restarting
-  the CLI + reconcile mid-turn frames). User declined it — `refresh` / reopen covers the crash case.
-- `docs/feature-checklist.md`: 8.14 ➖ with reason, At a glance 83 ✅ · 1 🟥 · 2 🟧 · 2 ⬜ · 40 ➖,
-  Next up now 8.7 only; backlog entry removed. §8 stays ⬜ solely on 8.7 (parked last with §14).
-- Remaining before the 2026-08-30 goal: 8.7, §14 (14.1–14.4), `/clear [name]` (7.6).
-
-## 2026-08-29 (fourth) — §15 closed, 8.8/8.10 deferred, 8.11 side question built and live-verified
-- §15: 15.5 `ask_debugger_help` later (backlog "Debugger MCP tools" [LG]), 15.6 MCP toggles no (by
-  design). §8: 8.8 later (follows tabs), 8.10 later ("not very important"). User parked 8.7 + §14 last.
-- 8.11 measured BEFORE building: a live probe (panel flags, `initialize` then `side_question`) showed
-  the roster has no `/btw`, the wire is `system/control_request_progress{started}` →
-  `control_response{response, synthetic}`, `history` pairs work, and nothing hits the transcript dir.
-- Built per convention: mockup + CSS first, headless render shown, yes, then wired. Kotlin gained
-  request-id-keyed control callbacks (`ClaudeCli.pending`). Fixture 66 written defensively (null-safe
-  expects) so the FREE pre-feature control could run: 21/23 failed; centring assert read -61 against
-  the pre-centring CSS; right-edge assert added after the user spotted the mockup misalignment.
-- Two slips caught by the harness: fixture 66 hard-coded row ids (`sq1`) and failed on its second
-  run (`sq5`) — ids are page-lifetime monotonic by design, so the fixture now reads them from the
-  tape; and `CMD_LOCAL` added a slash row, so four roster-count fixtures needed +1.
-- User feedback applied: side input one line at rest (was 2 rows — dead space above Send);
-  panel centred on `#inputcard` (`margin: 0 auto`, measured 435 vs 435 on JCEF) and copying the
-  composer's scrollbar inset. Measured on the way: `syncGutter` lags a scrollbar that appears
-  without a `#log` resize (pre-existing; offered, not asked).
-- Red destructive hover (roster ✕ + history delete) asked about, shown deliberate, kept.
-- End: harness **566/0** (fixtures to 66), `./gradlew test` **134/0**, sandbox up on the final
-  build. Committed and pushed.
-
-## 2026-08-29 (third) — section marks; goal set; §1 closed (1.21/1.23/1.24 built, 1.22/1.25 ➖)
-- User asked for section-level marks: `## N. ✅|⬜ Title`, one glyph, no counts ("let's not complicate
-  it"). Then set the goal: every section ✅ by 2026-08-30 EOD, working one section at a time.
-- Measured before building: `tool_progress` is NOT on stream-json (12 s foreground Bash, 2.1.251, zero
-  frames) → 1.22 ➖; `result.terminal_reason:"completed"` confirmed live → 1.24 buildable.
-- Built 1.21 (redacted_thinking line, live + replay), 1.23 (decision_reason note on the permission
-  card, Kotlin plumbing), 1.24 (turn-end-reason status line). Harness 533/0, tests 131/0.
-- Fixture slip worth remembering: the `__transcript` frame's key is `items`, not `blocks` — and a
-  null `.textContent` in an expect ABORTS the whole harness run (fixtures after it never run).
-- CLI auto-updated to 2.1.251 mid-session; the checklist stays audited at 2.1.250.
-- Tested the three builds properly: 1.23 triggered on demand (`echo $(whoami)` →
-  decision_reason "Contains command_substitution"; rule / subcommandResults asks carry a TYPE but no
-  text) and verified live end-to-end; spacing bug found by the user (note sat 8/0 on the preview) →
-  `.card .card-h + .t-note`; 1.24 measured with `--max-turns 1` (result:null + errors[] — the error
-  block now shows errors[] text); 1.21 unforceable (docs: safety-only, never on Fable/Mythos 5).
-- §6, §9 and §12 closed by decision (9.7 = later + a `system/model_fallback` watch, fixture 65);
-  §13 closed by building 13.2 as a SchemaStore-URL provider (nothing bundled) covering
-  `settings.local.json`, which the IDE's own catalog misses — verifyPlugin Compatible ×7, user
-  hand-checked in the sandbox (§17 MT-10.6). Sandbox restarted five times, each verified by content.
-- End of session: harness **541/0** (fixtures to 65), `./gradlew test` **134/0**. Sections left:
-  §8 (user's calls pending), §14 (all-➖ recommendation pending), §15. Committed and pushed.
-
 ## Digest
+- **2026-08-29 (fifth)** — 8.14 (page-reload transcript heal) declined by the user: `refresh`/reopen covers the renderer-crash case; checklist 8.14 ➖, Next up narrowed to 8.7.
+- **2026-08-29 (fourth)** — §15 closed (15.5 debugger tools → backlog [LG], 15.6 by design), 8.8/8.10 deferred; 8.11 side question measured FIRST (live probe: no `/btw` in roster, `control_request_progress{started}` → `control_response{response, synthetic}`, nothing persisted) then built mockup-first; fixture 66's free pre-feature control ran 21/23 red; side input one line at rest, panel centred on `#inputcard`. Harness 566, tests 134.
+- **2026-08-29 (third)** — section marks (`## N. ✅|⬜`, one glyph, no counts) + the 2026-08-30 all-✅ goal; 1.21/1.23/1.24 built, 1.22 ➖ (`tool_progress` measured absent on stream-json), 1.25 ➖; §6/§9/§12 closed by decision, §13 via the SchemaStore-URL provider (nothing bundled) hand-checked; 1.23's 8/0 spacing bug → `.card .card-h + .t-note`. Harness 541, tests 134.
 - **2026-08-29 (second)** — §11 closed: 11.5 `elicitation` answered `{action:"decline"}` (form deferred, backlog § Someday), 11.6 declined. 🚫 mark retired after 7 of 27 closed rows drifted between ➖/🚫 — ONE mark ➖, the row body says terminal's-half / declined / deferred; the By design / Declined / Deferred split still governs release prose.
 - **2026-08-29** — 11.3 kill-a-task built (`stop_task{task_id}`, hover-✕ via the `.hist-del` idiom, REPLACE-only removal) and hand-tested ×4 incl. a suspended Explore sub-agent resuming; stopping-id memory pruned per roster frame. 2.1.250 roster `ambient` filtered, `window.__ambientSeen` as the measurement hook. 11.4 declined on a wire tape (`task_notification{completed}` for a FAILED agent — lifecycle ≠ verdict); kill vocabulary drift (`killed`/`stopped`) fixed, fixture 45. Traps: a sub-agent's Bash raises the parent's permission card and a probe waits on it; `cdp.py` prints `# target` on stderr so `tail -n +2` eats the first JSON line. Harness 514.
 - **2026-08-28 (fourth)** — 3.6 files-changed review built: baselines from the autosave PreToolUse hook (`Autosave.handle` `snapshot` callback) → `TurnChanges` at `result`; `get_workspace_diff` probed and documented but NOT used (HEAD vs working tree, user edits included). `.files` line + `DiffReview.openChain`. Fixture 60 tap uses fixture 48's tape-and-restore idiom (a wrapper around whatever `__bridge` was at that moment fails in the FULL run). Font-size literals (63) → `--fs-*` tokens, card note 6px → `--attach-gap` (conventions § Code & assets). Tests 130, harness 490.

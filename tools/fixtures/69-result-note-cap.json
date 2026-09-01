@@ -1,0 +1,217 @@
+{
+ "item": "tool-result caveat cap (item 11 hardening, 2026-09-01): a `(note: …)` capture past LIM.noteMax is output, not a caveat",
+ "branch": "onUserEvent (75-retraction.js) → resultNote (50-blocks.js, bounded by LIM.noteMax ← RenderLimits.NOTE_MAX) → noteLine; the Kotlin twin is pinned by RenderLimitsTest `a result caveat is read only from the end`",
+ "provenance": "The MISFIRE step is SYNTHETIC, modelled on a live 2026-08-30 sighting the user reported without a screenshot (confirmed as the bottom ↳ note): large tool output that CONTAINS the literal '(note:' — this repo's own sources carry it — and happens to END with ')' made the anchored-to-end regex capture everything between, rendering the whole tail as one giant amber .t-note under the tool line. The frame SHAPES are fixture 45's (content_block_start/delta/stop + user tool_result), nothing new is claimed about the CLI. The REAL-NOTE step's text is the measured stale-file caveat verbatim (RenderLimits.resultNote doc comment, live Edit capture; also read from the 2.1.251/2.1.252 binaries with `strings` — every real note template is sentence-sized, which is what licenses the bound). NEGATIVE CONTROL RUN 2026-09-01 against the pre-fix webview (whole webview/ dir restored from HEAD): the misfire step's `.t-note` count read 1 against the expected 0 and FAILED; the real-note step passed there too, proving the bound (not the anchor) is what the misfire step discriminates. REAL-WIRE REPRODUCTION 2026-09-01: the same shape driven through the LIVE CLI (2.1.252, a Bash awk printing '(note: begin' + ~1300 chars ending ')') drew the giant amber note on the pre-fix build and none on the fixed one — the raw persisted tool_result (sessions e8205067/97c9c421 in -claude-brains-testing) starts '(note: begin' and ends ')' verbatim, so the misfire content here is no longer only synthetic in shape. SMALL-MISFIRE STEP ADDED 2026-09-01 from the user's live sandbox repro (session 97c9c421… follow-up, a 3-line awk whose whole result is '(note: …)' under noteMax): the size bound alone let it through, so resultNote gained a position-0 guard — a match at the very start of the trimmed result is rejected, licensed by every note template in the 2.1.252 binary being APPENDED after other text (three join with a leading space, the Edit escape-swap one with '\\n'). NEGATIVE CONTROL RUN 2026-09-01 against the size-bound-only build still in the sandbox: this step's `.t-note` count read 1 and FAILED; the other three steps passed there.",
+ "steps": [
+  {
+   "note": "THE MISFIRE — big Bash output containing '(note:' and ending with ')': OUT box yes, amber note NO",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_nc1",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"grep -rn '(note:' plugin/src docs\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_nc1",
+        "content": "grep -rn '(note:' plugin/src docs\nplugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/RenderLimits.kt:368:    private val RESULT_NOTE = Regex(\"\"\"\\(note:\\s*(.+?)\\)\\s*$\"\"\", RegexOption.DOT_MATCHES_ALL)\nsrc/main/resources/webview/js/50-blocks.js:400:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:401:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:402:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:403:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:404:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:405:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:406:  // anchored to the END so a parenthetical inside ordinary output src/main/resources/webview/js/50-blocks.js:407:  // anchored to the END so a parenthetical inside ordinary output\nplugin/src/main/resources/webview/js/50-blocks.js:459:    const m = /(note: pattern)/.exec(String(text).trim())",
+        "is_error": false
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .t-note').length",
+     "equals": 0,
+     "why": "DISCRIMINATING: pre-fix the whole tail from '(note:' to the final paren rendered as one giant amber line — the 2026-08-30 sighting. Reads 1 on the unbounded build."
+    },
+    {
+     "js": "[...document.querySelectorAll('.io-row')].filter(r => (r.querySelector('.io-k')||{}).textContent === 'OUT').length",
+     "equals": 1,
+     "why": "the output itself still renders normally (capped by outMax) — the bound removes only the phantom caveat"
+    }
+   ]
+  },
+  {
+   "note": "NEGATIVE CONTROL OF THE BOUND — the real stale-file caveat (sentence-sized) still draws its note",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_nc2",
+       "name": "Edit"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"file_path\": \"/home/syncroze/Sites/claude-brains/README.md\", \"old_string\": \"a\", \"new_string\": \"b\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_nc2",
+        "content": "The file /home/syncroze/Sites/claude-brains/README.md has been updated successfully. (note: the file had been modified on disk since you last read it — the edit applied cleanly, but the file contains other changes not in your context. Read it before edits that depend on surrounding content.)",
+        "is_error": false
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .t-note').length",
+     "equals": 1,
+     "why": "the CLI's genuine caveat is under noteMax and must keep rendering — the guard against over-tightening"
+    },
+    {
+     "js": "document.querySelector('#log .t-note').textContent",
+     "equals": "↳ the file had been modified on disk since you last read it — the edit applied cleanly, but the file contains other changes not in your context. Read it before edits that depend on surrounding content.",
+     "why": "verbatim, whitespace-collapsed, with the ↳ 'which means' glyph"
+    }
+   ]
+  },
+  {
+   "note": "THE SMALL MISFIRE — the WHOLE result is '(note: …)' and ducks under noteMax: still no amber note",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_nc3",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"awk 'BEGIN{...3 filler lines...}'\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_nc3",
+        "content": "(note: begin\nfiller line 0 about nothing in particular\nfiller line 1 about nothing in particular\nfiller line 2 about nothing in particular\nend of the output)",
+        "is_error": false
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .t-note').length",
+     "equals": 0,
+     "why": "DISCRIMINATING (user repro 2026-09-01, a 3-line awk): under the size bound the phantom still rendered — the position-0 guard is what kills it. A real caveat is APPENDED after other text (every 2.1.252 template, measured), never the whole result. Reads 1 on the size-bound-only build."
+    },
+    {
+     "js": "[...document.querySelectorAll('.io-v')].some(v => v.textContent.indexOf('(note: begin') !== -1)",
+     "equals": true,
+     "why": "the output itself still renders in its OUT box"
+    }
+   ]
+  }
+ ]
+}

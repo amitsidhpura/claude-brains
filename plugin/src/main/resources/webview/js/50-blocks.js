@@ -453,12 +453,16 @@
   /**
    * The `(note: …)` the CLI appends to an otherwise-successful tool result (item 11). Mirror of
    * `RenderLimits.resultNote` — same two-language contract as `cut`/`cutInfo`, pinned by tests.
-   * Anchored to the END so a parenthetical inside ordinary output cannot be mistaken for it.
+   * Anchored to the END so a parenthetical inside ordinary output cannot be mistaken for it, and
+   * bounded by LIM.noteMax so output that merely CONTAINS "(note:" and happens to end with ")"
+   * cannot dump its whole tail as one giant amber note — the Kotlin doc comment owns the rule.
    */
   function resultNote(text) {
     const m = /\(note:\s*([\s\S]+?)\)\s*$/.exec(String(text || '').trim());
-    const s = m ? m[1].replace(/\s+/g, ' ').trim() : '';
-    return s || null;
+    // m.index > 0: a caveat is APPENDED after other text, never the whole result — Kotlin owns
+    // the evidence.
+    const s = m && m.index > 0 ? m[1].replace(/\s+/g, ' ').trim() : '';
+    return s && s.length <= LIM.noteMax ? s : null;
   }
   /** Standalone caveat line, for tools whose result is otherwise skipped (Edit, Write). */
   function noteLine(note) {
