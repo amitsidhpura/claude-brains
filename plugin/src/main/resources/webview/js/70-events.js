@@ -217,6 +217,7 @@
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
       case 'files':              files = ev.items || []; return;
+      case '__mention':          insertMentions(ev.items || []); return;   // 6.5: IDE context menu → composer
       case '__commands':         slashCommands = markCustom(ev.items || []); return;
       case '__customModels':
         customModels = ev.items || [];   // pushed before __models so a restored custom selection resolves

@@ -178,7 +178,7 @@
       if (elm.scrollHeight <= elm.clientHeight + 4) { elm.classList.remove('fold'); return; }
       elm.title = 'Show more';
       elm.addEventListener('click', function (e) {
-        if (e.target.closest('a, button, input, .att')) return;
+        if (e.target.closest('a, button, input, .att, .mention')) return;
         if (window.getSelection && String(window.getSelection())) return;
         syncExtra();   // the chip row may have rewrapped since the cap was last measured
         elm.title = elm.classList.toggle('open') ? 'Show less' : 'Show more';
@@ -209,7 +209,7 @@
       // an element, not a bare text node — .msg-atts:last-child (which drops the chip row's
       // bottom margin on image-only messages) is blind to text nodes
       const t = document.createElement('span');
-      t.textContent = text;
+      t.innerHTML = mentionHtml(text);   // escaped text + @-mention chips (6.9); textContent === text
       d.appendChild(t);
     }
     turnEl.prepend(d); maybeScroll();   // before .turn-body, and outside its containment
@@ -257,6 +257,21 @@
     stopping = false;
     setBusy(true);
     smoothToBottom();
+  }
+
+  // 6.5: mentions arriving from the IDE (Project-view / editor context menu → MentionAction.kt →
+  // a `__mention` host frame). Inserted at the caret as `@path ` tokens, replacing any selection,
+  // with a separating space when the caret follows a non-space character so a token never fuses
+  // with what was already typed; the caret lands after the last token. Fixture 75 pins the rule.
+  function insertMentions(paths) {
+    const toks = (paths || []).filter(Boolean).map(function (p) { return '@' + p + ' '; }).join('');
+    if (!toks) return;
+    const v = input.value, before = v.slice(0, input.selectionStart), after = v.slice(input.selectionEnd);
+    const sep = before && !/\s$/.test(before) ? ' ' : '';
+    input.value = before + sep + toks + after;
+    const caret = before.length + sep.length + toks.length;
+    input.setSelectionRange(caret, caret);
+    input.focus(); autoGrow(); updateAuto();   // updateAuto: the caret sits after a space, so the @-menu stays shut
   }
 
   function clearComposer() { input.value = ''; pending = []; renderAttachments(); autoGrow(); closeMenus(); hideMenu(); slashEscaped = false; mentionEscaped = false; }

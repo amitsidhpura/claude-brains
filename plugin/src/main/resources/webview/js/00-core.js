@@ -148,7 +148,7 @@
     // prose ("… open full output"), so textContent would send nonsense as a path.
     const cutRef = e.target.closest('.io-cut[data-path]');
     if (cutRef) { bridge({ kind: 'open', path: cutRef.dataset.path }); return; }
-    const ref = e.target.closest('.t-desc.path, .card-h code');
+    const ref = e.target.closest('.t-desc.path, .card-h code, .mention');   // .mention: 6.9 chip, data-path
     if (!ref) return;
     // dataset.path first: a tool line SHOWS the project-relative path (and an ellipsis where the
     // middle was), so its text is no longer something the editor could open. Same idiom as the

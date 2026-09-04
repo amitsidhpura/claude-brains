@@ -42,6 +42,15 @@
 .msg-user { position: sticky; top: 0; z-index: 6;
   background: var(--user-bg); border: 1px solid var(--user-border);
   border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
+/* @-mention chips in a sent message (6.9): an inline capsule wearing the attachment chip's surface
+   (.att in css/50-side.css — same raised bg, border, radius), sized to the text line: no vertical
+   padding so the bubble's line-height is untouched, 6px sides (the chip idiom's own gap figure),
+   one line — a long path ellipsises rather than splitting across a wrap. Click opens the file
+   through the delegated #log handler (00-core.js), the same route as tool-line paths. */
+.msg-user .mention { display: inline-block; max-width: 100%; padding: 0 6px; background: var(--user-raised);
+  border: 1px solid var(--user-border); border-radius: var(--radius); color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; cursor: pointer; }
+.msg-user .mention:hover { background: var(--user-raised-hover); }
 
 /* Over-long blocks FOLD rather than getting their own scrollbar (a nested vertical scroll area
    inside #log traps the wheel): collapsed shows 2 full lines with the 3rd fading out, and the

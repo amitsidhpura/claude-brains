@@ -6,6 +6,15 @@ re-read those before trusting memory here.
 
 ## Protocol / wire
 
+- **`@path` mentions are expanded by the CLI, silently capped.** Measured 2026-09-04 (haiku,
+  headless, panel flags): `@README.md` → the file is attached BEFORE the model runs (one turn, no
+  Read); a plain `README.md` → the model calls Read itself (two turns). A 5,000-line / 200 KB
+  mention attached only the first 2,000 lines (the Read cap) with NO frame saying so — the model
+  answered as if line 2000 were the end; a 50,000-line / 2 MB mention attached NOTHING (base
+  ~9k tokens) and the model fell back to `wc -l`. The threshold between "head only" and
+  "nothing" is unmeasured (somewhere in 200 KB–2 MB); the transcript keeps only the typed text,
+  never the attachment. Consequence: the panel cannot know a mention was cut — only the IDE
+  action, which sees the file size, could warn (backlog).
 - **Probing that a control SUBTYPE is accepted says nothing about which KEYS it accepts.**
   `update_settings` answered an empty-merge probe with "requires at least one key" — proof the
   subtype exists, which the 2.1.260 audit wrote up as a general settings channel — but the first
@@ -660,6 +669,11 @@ re-read those before trusting memory here.
   `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
 ## Testing, probes and sandboxes
+- **`build/idea-sandbox/` holds STALE sibling sandboxes — verify the running build against the
+  dir the IDE's own `-Didea.plugins.path` names.** `ls -t` over the tree picked
+  `PS-2024.2/plugins/…/claude-brains-0.8.0.jar` (a sandbox from an older IDE pin, untouched since)
+  while the live IDE ran from `PS-2024.2.6/plugins/` with the fresh 0.12.5 jar (2026-09-04).
+  `pgrep -af 'idea.system.pat[h]' | grep -o '\-Didea.plugins.path=[^ ]*'` then `unzip -l` THAT jar.
 - **The gradle daemon keeps the environment it was born with** — a `PATH="…stub:$PATH" ./gradlew
   runIde` reuses a warm daemon's OLD env, so the sandbox IDE never sees the stub binary. Run
   `./gradlew --stop` first (and again after, or the tainted daemon serves the stub to later

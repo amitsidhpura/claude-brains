@@ -4,6 +4,28 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-04 — Full-surface audit: every gap gets built, small ones included; 6.9 and 6.5 first
+- The audit (checklist details block "Full-surface audit 2026-09-04") found no missing feature
+  AREA and ten small gaps, all filed [DECIDE]. The user's call: "I am planning to finish all even
+  if small" — so the [DECIDE] gate is spent for all ten; they are built one at a time on the
+  user's pick, each with the fixture-first free-control loop. Terminal's-half verdicts (config
+  dialogs, session infrastructure, composer chrome the IDE owns, VS Code's hamburger/surveys)
+  are written into that block so the next full audit does not re-judge them.
+- 6.9 built as SENT-BUBBLE chips only. Why: a `<textarea>` cannot host a chip (VS Code's
+  `inputMentionChip` rides a contenteditable), and the bubble is where the chip pays — the
+  prompt is already sent. The chip keeps the typed `@` and the bubble's textContent stays
+  byte-identical, so copy/select never lies. Rule: path-shaped token (slash or dotted extension),
+  `@` at start or after whitespace, sentence-final punctuation outside. Rejected: a
+  contenteditable composer (rewrites 6.1's picker and every caret rule); validating tokens against
+  the `files` roster (replay could render before the roster arrives — one deterministic rule).
+- 6.5 built from the user's screenshot as a CONTEXT-MENU action, first in both
+  `ProjectViewPopupMenu` and `EditorPopupMenu`, no shortcut (12.4 stance; VS Code's Alt+K is the
+  unbound action, mappable). Paths project-relative like the picker's own, folders `dir/`,
+  outside-project absolute — the CLI reads all three. The list is PARKED in `ChatPanel` until
+  `seedUi()` because a cold tool window's page has no `onClaudeEvent` yet and `pushEvent` would
+  drop the frame silently. Rejected: inserting only into an already-open panel (the first use is
+  exactly the cold one); reading file contents IDE-side (the CLI expands `@path` itself).
+
 ## 2026-09-04 — 13.3 per-project persistence DEFERRED: wait for the `update_settings` allowlist to grow
 - The user's call ("wait for Anthropic — we already persist our way") after the implementation
   attempt hit a measured wall: the 2.1.260 `update_settings` control allows exactly ONE key —

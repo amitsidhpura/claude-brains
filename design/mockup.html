@@ -163,6 +163,8 @@
     </div>
     <div class="turn">
       <div class="msg-user">Print some text with inline code</div>
+      <!-- 6.9: @-mentions render as inline chips (mentionHtml in js/50-blocks.js); the text is the typed prompt -->
+      <div class="msg-user">Refactor <span class="mention" data-path="src/components/App.tsx" title="src/components/App.tsx">@src/components/App.tsx</span> to use the hook from <span class="mention" data-path="src/hooks/useAuth.ts" title="src/hooks/useAuth.ts">@src/hooks/useAuth.ts</span>.</div>
 
       <div class="turn-body">
       <details class="think"><summary>Thought for 6s<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">The user wants a PHP example with inline code…</div></details>

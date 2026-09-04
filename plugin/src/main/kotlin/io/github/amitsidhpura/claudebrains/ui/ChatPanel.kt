@@ -824,6 +824,37 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             pushFrame(frame)
         }
+
+        // 6.5: mentions the IDE handed over before the page could take them (first open of the
+        // tool window through the context-menu action) go in now, after the seed they belong to.
+        uiSeeded = true
+        flushPendingMentions()
+    }
+
+    /** Set once the page has loaded and been seeded; before that a pushed frame finds no
+     *  `window.onClaudeEvent` and is silently dropped, so anything that must arrive is parked. */
+    @Volatile private var uiSeeded = false
+    private val pendingMentions = mutableListOf<String>()
+
+    /**
+     * Insert `@path` tokens into the composer (checklist 6.5, MentionAction). Parked until the
+     * page is seeded when the tool window was just created by the action itself; delivered at
+     * once otherwise. The composer decides placement (fixture 75).
+     */
+    fun insertMentions(paths: List<String>) {
+        if (paths.isEmpty()) return
+        synchronized(pendingMentions) {
+            if (!uiSeeded) { pendingMentions.addAll(paths); return }
+        }
+        pushFrame(buildJsonObject {
+            put("type", "__mention")
+            put("items", buildJsonArray { paths.forEach { add(JsonPrimitive(it)) } })
+        })
+    }
+
+    private fun flushPendingMentions() {
+        val parked = synchronized(pendingMentions) { pendingMentions.toList().also { pendingMentions.clear() } }
+        if (parked.isNotEmpty()) insertMentions(parked)
     }
 
     /** Deliver a raw stream-json line to the page's window.onClaudeEvent(json). */

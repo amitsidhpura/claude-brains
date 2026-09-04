@@ -5,7 +5,7 @@
      because a live one is owned/torn-down by the busy watchdog. */
   function gallery() {
     clearLogUI();
-    addUserMessage('Dev gallery — show every UI state.', []);
+    addUserMessage('Dev gallery — show every UI state, starting from @src/components/App.tsx.', []);
 
     // assistant text block (markdown + code)
     const b = el('blk', '');

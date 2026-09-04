@@ -1,0 +1,19 @@
+{
+  "item": "6.5 Mention from the IDE — a `__mention` host frame inserts @-mention tokens into the composer at the caret (2026-09-04)",
+  "branch": "the Project-view / editor context-menu action (MentionAction.kt) sends {type:'__mention', items:[relative paths]}; the webview inserts `@path ` per item at the caret — a separating space before when the caret follows a non-space character, one trailing space after each token — leaves the caret after the insertion, and focuses the composer",
+  "provenance": "__mention is OUR OWN host frame (ChatPanel.insertMentions), never on the CLI wire — renderer-vs-frame self-consistency by construction. The Kotlin half (VIRTUAL_FILE_ARRAY → project-relative paths, directories with a trailing slash, tool-window activation) is unit-tested in MentionActionTest and hand-verified in the sandbox. Modelled on VS Code's `claude-vscode.insertAtMention` (Alt+K) generalised to a multi-select context menu, per the user's request 2026-09-04. Negative control: on the pre-6.5 build the frame is unknown to the event switch and the composer stays untouched — every value assert fails.",
+  "steps": [
+    {
+      "note": "A: two items appended to a non-empty composer whose caret sits at its end (no trailing space) → one separating space, then `@a @b/ `; B: empty composer → `@x `; C: caret in the middle of `abcd` → tokens spliced with a space on both sides",
+      "setup": "window.__mn75 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); const input = document.getElementById('input'); input.value = 'look at'; input.setSelectionRange(input.value.length, input.value.length); window.onClaudeEvent(JSON.stringify({type:'__mention', items:['src/components/App.tsx', 'docs/']})); const a = { value: input.value, caret: input.selectionStart, focused: document.activeElement === input }; input.value = ''; input.setSelectionRange(0, 0); window.onClaudeEvent(JSON.stringify({type:'__mention', items:['x.js']})); const b = { value: input.value, caret: input.selectionStart }; input.value = 'abcd'; input.setSelectionRange(2, 2); window.onClaudeEvent(JSON.stringify({type:'__mention', items:['x.js']})); const c = { value: input.value, caret: input.selectionStart }; input.value = ''; return { a: a, b: b, c: c }; })();",
+      "expect": [
+        { "js": "window.__mn75.a.value", "equals": "look at @src/components/App.tsx @docs/ ", "why": "DISCRIMINATING: both items become `@path ` tokens, separated from the existing text by exactly one space (pre-fix: 'look at')" },
+        { "js": "window.__mn75.a.caret", "equals": 39, "why": "DISCRIMINATING: the caret lands after the insertion, ready to keep typing" },
+        { "js": "window.__mn75.a.focused", "equals": true, "why": "GUARD: the composer takes focus so the next keystroke goes to it" },
+        { "js": "window.__mn75.b.value", "equals": "@x.js ", "why": "DISCRIMINATING: an empty composer gets no leading space" },
+        { "js": "window.__mn75.c.value", "equals": "ab @x.js cd", "why": "DISCRIMINATING: a mid-word caret gets a space on both sides, so the token never fuses with its neighbours" },
+        { "js": "window.__mn75.c.caret", "equals": 9, "why": "GUARD: caret sits after the token's trailing space, before the remaining text" }
+      ]
+    }
+  ]
+}

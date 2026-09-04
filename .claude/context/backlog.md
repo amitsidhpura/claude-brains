@@ -25,6 +25,9 @@
   credentialed or interactive commands). PROBE FIRST: does the JetBrains terminal API expose "last
   command + output" on the 2024.2.6 floor? Fallback today is select → copy → paste. Low priority
   until the user notices repeated pasting.
+- **Oversized-mention hint on the IDE action** [XS] (offered 2026-09-04, not taken): the CLI cuts
+  `@path` mentions at 2,000 lines and attaches nothing for very large files, silently (gotchas
+  § Protocol); `MentionAction` sees the file size at pick time and could say so in the composer.
 - Per-turn fast-mode proof in the conversation: append "· fast" to the turn summary when
   `result.usage.speed === "fast"` — offered 2026-08-24, user hasn't asked; small.
 - Plan-card keyboard shortcuts, deferred by the user 2026-08-16: Enter in the feedback input =
@@ -86,7 +89,7 @@
 
 ## Deferred (user's choice, do last)
 - Conversation tabs (+ 8.8 reopen-closed-session and 8.10 session groups/sidebar, both deferred 2026-08-29 — only worth it with tabs or worktrees)
-- Auto-include selection / Alt+K insert-mention action (checklist 6.6 / 6.5, 6.5 deferred 2026-08-29)
+- Auto-include selection (checklist 6.6; the insert-mention half, 6.5, SHIPPED 2026-09-04 as the Project-view/editor context-menu action)
 - @-mention symbols from the IDE index (checklist 6.4 [MD], deferred 2026-08-29)
 - Focus view — prompts + responses only, tool noise hidden (checklist 12.6 [MD], deferred 2026-08-29; mockup first)
 - Fable overage consent card + chip update on fallback (checklist 9.7 [MD], deferred 2026-08-29) — build only after `window.__modelFallbackSeen` has captured a real frame

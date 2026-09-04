@@ -485,7 +485,32 @@
     r = String(r || '').replace(/[\/\\]+$/, '');
     if (r) projectRoot = r;
   }
-  /**
+    /**
+   * @-mention chips (6.9): every path-shaped @-token in a sent prompt becomes an inline capsule,
+   * the rest of the text is escaped as-is, so the bubble's textContent stays byte-identical to
+   * what was typed (copy/select still yields the prompt). "Path-shaped" = the token holds a slash
+   * or ends in a dotted extension; the @ must open the text or follow whitespace (an email's host
+   * is not a mention). Sentence-final punctuation is left outside the chip. The rule is pinned by
+   * fixture 74; the picker (65-slash.js) only ever inserts project-relative paths, and the chip
+   * carries that path in data-path for the delegated #log click handler (00-core.js).
+   */
+  function mentionHtml(text) {
+    const s = text == null ? '' : String(text);
+    const re = /(^|\s)@([^\s@]+)/g;
+    let out = '', last = 0, m;
+    while ((m = re.exec(s)) !== null) {
+      const punct = m[2].match(/[.,;:!?)\]]+$/);
+      const tok = punct ? m[2].slice(0, m[2].length - punct[0].length) : m[2];
+      if (!tok || !(tok.indexOf('/') !== -1 || /\.[A-Za-z0-9]+$/.test(tok))) continue;
+      const at = m.index + m[1].length;   // index of the '@'
+      out += esc(s.slice(last, at)) +
+        '<span class="mention" data-path="' + esc(tok) + '" title="' + esc(tok) + '">@' + esc(tok) + '</span>';
+      last = at + 1 + tok.length;
+    }
+    return out + esc(s.slice(last));
+  }
+
+/**
    * Where the middle-ellipsis goes: everything before the cut may shrink, everything after never
    * does. Two cuts are considered — before the filename, and before the segment above it — and the
    * parent joins the tail only when the pair fits LIM.pathTailMax, because a tail that outgrows the

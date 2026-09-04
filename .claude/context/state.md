@@ -1,15 +1,24 @@
 # State
 
 ## Current focus
-**2026-09-04 (fourth session): nothing in flight.** 0.12.5 released and Marketplace-Approved;
-the **2.1.260 re-audit is done** (checklist references now 2.1.260, details block 2026-09-04;
-83 ✅ · 47 ➖, 130 rows, every section ✅) and **13.3 is decided: deferred** — `update_settings`
-allows only `outputStyle` (measured), so per-project persistence waits on Anthropic's allowlist
-(backlog watch-item; decisions.md 2026-09-04 ×2). No plugin code changed since v0.12.5. Next
-candidates when the user picks one: backlog § Next up (Update-Claude button, Worktrees bundle
-14.1+14.3, 15.5 debugger tools).
-- Installed VS Code extension updated by the user to 2.1.260 (`cmp`-identical to the audited
-  vsix); `reference/anthropic-claude-code/` re-extracted at 2.1.260 as the next audit's base.
+**2026-09-04 (fifth session): building the full-surface audit's rows, one at a time — two shipped,
+UNRELEASED on `main`.** The user's call: "I am planning to finish all even if small." Done today:
+**6.9 mention chips** (sent-bubble `@path` capsules, `mentionHtml` in `50-blocks.js`, fixture 74)
+and **6.5 Mention from the IDE** (`MentionAction.kt`: "Mention in Claude Brains", FIRST in the
+Project-view and editor context menus → `@path ` tokens at the composer caret; fixture 75,
+`MentionPathsTest`). Checklist 85 ✅ · 9 ⬜ · 46 ➖ (140 rows). **Awaiting the user's hand-test
+of the context menu** in the running sandbox (placement first in BOTH menus and the label are
+one-line edits if disliked). The remaining nine open rows, suggested order: **1.28**
+`control_cancel_request` (correctness) → 4.7 `dontAsk` → 3.7 deny-with-message → 1.27 full IN/OUT
+in an editor → 2.12 extra content roots → 3.8 editable Bash command → 4.8 don't-ask-again
+destination → 4.9 number-key answers → 1.26 banner-class `system` frames [MD]. Release when the
+user asks (never proactively — conventions).
+- 2.1.260 re-audit and 13.3 (deferred; `update_settings` is outputStyle-only) closed earlier
+  today — decisions.md 2026-09-04. Installed VS Code extension 2.1.260; `reference/` at 2.1.260.
+- Measured for the user (gotchas § Protocol): an `@path` mention is attached by the CLI before
+  the model runs (one turn, no Read); a plain path is a hint (the model Reads it: two turns).
+  Mentions are cut at 2,000 lines SILENTLY and a 2 MB file attaches NOTHING — an [XS] size hint
+  on the IDE action was offered, not taken (backlog).
 
 ## Open investigations
 - **Fold-verdict report NOT reproduced** (user's Windows screenshot 2026-09-04: a Read OUT box
@@ -35,7 +44,7 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
 - Accepted residual: a sub-400 parenthetical appended mid-result and ending it still renders as
   a note — irreducible without structural marking from the CLI.
 - Checklist rules in force: `**id** mark [effort] **Name** — gist; facts`; **At a glance**
-  hand-maintained (recount with `awk`). Checklist: 83 ✅ · 47 ➖ (130 rows, 2026-09-04).
+  hand-maintained (recount with `awk`). Checklist: 85 ✅ · 9 ⬜ · 46 ➖ (140 rows, 2026-09-04).
 - Do not re-propose: effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29); "Effort (High)" label / blue
   slider track (2026-08-29); Copilot-derived features other than terminal-output context
@@ -46,7 +55,7 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
   14.1+14.3, 15.5 debugger tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **630** (fixtures to **73**); `./gradlew test` **137**.
+- `python3 tools/live_harness.py` baseline **642** (fixtures to **75**); `./gradlew test` **141**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
@@ -69,6 +78,12 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
   `~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/` (measured 2026-09-01).
 
 ## Next steps
+- [ ] **Hand-test 6.5 in the sandbox** (user): right-click one file / a multi-selection with a
+      folder / inside an editor → entry first + enabled, panel opens, tokens at the caret, @-menu
+      stays shut. Confirm or change: first in the editor popup too; label "Mention in Claude Brains".
+- [ ] Next row: **1.28** `control_cancel_request` — probe the frame over stdio first (interrupt a
+      parked `can_use_tool`), then mark the card lapsed + drop it from `pendingPermissions`.
+      Then 4.7, 3.7, 1.27, 2.12, 3.8, 4.8, 4.9, 1.26 (checklist ids re-derived from the file).
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
       investigations).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):

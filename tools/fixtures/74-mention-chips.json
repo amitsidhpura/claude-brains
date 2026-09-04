@@ -1,0 +1,19 @@
+{
+  "item": "6.9 Mention chips — @file mentions in a sent message render as inline capsules (2026-09-04)",
+  "branch": "addUserMessage() decorates every path-shaped @-token (contains a slash or a dotted extension, preceded by start-of-text or whitespace) as <span class=\"mention\" data-path>; the bubble's textContent is byte-identical to the typed prompt (decoration only), and non-path @-tokens (an email's host, a bare @decorator) stay plain",
+  "provenance": "The text is what OUR composer sends — a raw `@relative/path` inserted by the 6.1 picker (65-slash.js pick()), never transformed on the way out; the CLI expands @-mentions itself. Both live (sendTurn) and replay (55-replay.js user items) draw the bubble through the same addUserMessage builder, so one path proves the renderer; the trailing-punctuation strip and the email/decorator guards are the RULE this fixture pins, not a wire shape. Modelled on VS Code 2.1.260's inputMentionChip / mentionChip pills (full-surface audit 2026-09-04). Negative control: on the pre-6.9 build the bubble is one text node — chip count 0, and the guards are vacuous (all counts 0) — so only the count and data-path asserts are DISCRIMINATING.",
+  "steps": [
+    {
+      "note": "one bubble with two path mentions (one sentence-final with a trailing period), an email and a bare @decorator",
+      "setup": "window.__mc74 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); const txt = 'Refactor @src/components/App.tsx and @lib/util.js. Mail a@b.com about it; the @decorator stays plain, so does @src alone'; const d = addUserMessage(txt, []); const chips = Array.prototype.slice.call(d.querySelectorAll('.mention')); return { chips: chips.length, texts: chips.map(function (c) { return c.textContent; }), paths: chips.map(function (c) { return c.dataset.path; }), textSame: d.textContent === txt, plainEmail: d.textContent.indexOf('a@b.com') !== -1 && !chips.some(function (c) { return c.textContent.indexOf('b.com') !== -1; }), bubbles: document.querySelectorAll('#log .msg-user').length }; })();",
+      "expect": [
+        { "js": "window.__mc74.chips", "equals": 2, "why": "DISCRIMINATING: exactly the two path-shaped mentions become chips (pre-fix: 0) — the email host, the bare @decorator and the extension-less @src stay plain" },
+        { "js": "JSON.stringify(window.__mc74.texts)", "equals": "[\"@src/components/App.tsx\",\"@lib/util.js\"]", "why": "DISCRIMINATING: the chip keeps the typed token including its @; the sentence-final period is NOT swallowed into the second chip" },
+        { "js": "JSON.stringify(window.__mc74.paths)", "equals": "[\"src/components/App.tsx\",\"lib/util.js\"]", "why": "DISCRIMINATING: data-path carries the bare project-relative path, the same idiom the delegated #log click handler opens in the editor" },
+        { "js": "window.__mc74.textSame", "equals": true, "why": "GUARD: decoration never changes the bubble's text — copy/select still yields exactly the prompt that was sent" },
+        { "js": "window.__mc74.plainEmail", "equals": true, "why": "GUARD: an email address is not a mention (the @ is not preceded by whitespace)" },
+        { "js": "window.__mc74.bubbles", "equals": 1, "why": "GUARD: one bubble was drawn" }
+      ]
+    }
+  ]
+}

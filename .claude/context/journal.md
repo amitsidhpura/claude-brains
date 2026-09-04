@@ -3,6 +3,32 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-04 (fifth) — full-surface audit (ten rows); 6.9 and 6.5 built; mention facts measured
+- User: "detailed complete audit of vscode claude extension and tui, whether we are not missing
+  any feature". Inventoried EVERYTHING at 2.1.260 (package.json, 288 host `case` labels → 97 RPC
+  types, ~100 webview UI features via two background agents, 98 control + 46 `system` subtypes
+  with `describe()` text, the binary's 128-name command map, CHANGELOG 2.1.200→260), grepped
+  every identifier against the docs, hand-judged the misses. Verdict: no missing feature AREA;
+  ten small gaps → rows 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9, all [DECIDE]; terminal's-half
+  verdicts recorded in a "Full-surface audit" details block so they are never re-judged.
+  Measured while judging: `dontAsk` accepted by `set_permission_mode`; `control_cancel_request`
+  has five emission sites and NO handler here; a plain one-tool turn emits none of the
+  banner-class `system` frames; click-to-compact on our gauge already existed (agent miss).
+- User: "finish all even if small — do 6.9 first." Built: `mentionHtml` (50-blocks.js) wraps
+  path-shaped `@tokens` in `.mention` capsules (attachment-chip surface), textContent unchanged,
+  `data-path` → the delegated open-in-editor handler; composer half cut by design (textarea).
+  Fixture 74: 3/3 discriminating fails on the pre-change sandbox (free control), 6/6 after.
+- User's screenshot request: Project-view right-click → first entry adds the selection as
+  mentions. Built 6.5: `MentionAction` (first in `ProjectViewPopupMenu` + `EditorPopupMenu`,
+  claude icon), pure `MentionPaths.tokens` (+4 tests), `ChatPanel.insertMentions` parks the list
+  until `seedUi()`; webview `__mention` inserts `@path ` at the caret. Fixture 75 5/6 fail
+  pre-change → 6/6. Harness **642**, Kotlin **141**. Sandbox left up for the user's hand-test.
+- Measured for the user's questions: @-mention = CLI attaches the file before the model runs
+  (1 turn); plain path = the model Reads it (2 turns). 200 KB file → cut at 2,000 lines
+  silently; 2 MB file → nothing attached, model fell back to `wc -l`. Threshold unpinned.
+- Trap: `ls -t` over `build/idea-sandbox/` found a stale `PS-2024.2/…0.8.0.jar`; the running
+  IDE's jar is under the dir its `-Didea.plugins.path` names (PS-2024.2.6). gotchas § Testing.
+
 ## 2026-09-04 (fourth) — 2.1.260 re-audit; 13.3 probed to the wall and deferred
 - Re-audit 2.1.251 → 2.1.260 per runbook, all measured (details block in the checklist): VS Code
   session sidebar grew archive/unread/groups/filters (`delete_session` gone), CLI vocabulary
@@ -141,42 +167,15 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Notes framing that worked: the three fixes stated as what now works, with the old behaviour in
   a trailing dash-clause (Windows full-path run, two-line task name, giant yellow caveat line).
 
-## 2026-09-01 (third) — Review span becomes the sole click target on the files block
-- User (screenshot): "Can we just link the Review and not whole block?" — done; the whole-block
-  action had made stray clicks on file rows open the review, and the block-wide pointer oversold
-  what was clickable. Handler + tooltip moved to `.f-review`; block cursor auto.
-- Fixture-first with the free control against the still-running pre-change sandbox: the two new
-  discriminating asserts (row/block click sends nothing — read [7,7,7] pre-change; block/span
-  cursor 'auto/pointer' — read 'pointer/pointer') FAILED there, green after. Harness **607/0**,
-  Kotlin 134. Mockup + checklist 3.6 mirrored.
-- User confirmed live that fillPath's boundary rule reads right on real turns: project files
-  relative, files outside the root shown absolute — same as the Read/Write tool lines, because
-  the rows and the tool lines share the one helper.
-- Committed and pushed on the user's ask (this save included). Three batches now sit unreleased
-  on `main` → a natural 0.12.4.
-
-## 2026-09-01 (second) — files-changed rows + bg-popup one-line title (Windows screenshots)
-- User's office-Windows screenshots: (1) the files-changed line was a full-path blob — REAL BUG,
-  `filesLine`'s basename used `lastIndexOf('/')` which never matches `D:\…`; (2) hovering a bg
-  roster row rewrapped a long title to two lines — the ✕ hover gutter narrowed a title with no
-  nowrap, and `#bgMenu` had no fixed width.
-- User picked (from three previews) one row per file with PROJECT-RELATIVE paths. Rows reuse the
-  shared `fillPath()` (both separators, middle-ellipsis keeps the filename, abs path on tooltip);
-  counts right-aligned. Popup completed the conversations-list idiom: nowrap+ellipsis title,
-  tooltip, FIXED 330px width. Mockup-first per convention (headless renders shown).
-- Controls sequenced free against the still-running pre-change sandbox: fixture 60 (reshaped, +
-  a Windows `D:\sites\mcnplumbing` step) 8 FAIL / 11 PASS; fixture 04 long-title step 3 FAIL.
-  First control attempt hit the known null-`textContent` harness abort → row asserts null-safe.
-  HONEST NOTE recorded: the 330px width assert passes pre-fix too (wrapping never pushed past the
-  `.popup` min-width floor) — a regression pin, not a discriminator.
-- Suites: harness **605/0** (was 592), Kotlin 134. Real-wire: a CLI turn editing README.md +
-  docs/notes.md rendered the row block in the live panel (screenshot shown). Checklist 3.6 gist
-  updated. LSP4IJ NPE the user hit at the office diagnosed as NOT ours (their dispose bug during
-  dynamic plugin update; zero lsp4ij refs in this repo).
-- Committed and pushed on the user's ask (this save included). /verify was interrupted by the
-  user — the changes were already live-verified above.
-
 ## Digest
+- **2026-09-01 (third)** — Review span became the sole click target on the files block (user:
+  "just link the Review, not the whole block"); fixture-first with the free control (harness 607).
+  fillPath's boundary rule confirmed live: project files relative, outside-root absolute.
+- **2026-09-01 (second)** — files-changed rows (one per file, project-relative via the shared
+  `fillPath`, counts right-aligned) + bg-popup one-line title with FIXED width, both from the
+  user's Windows screenshots (`lastIndexOf('/')` never matched `D:\…` — real bug). Fixture 60
+  reshaped with a Windows step; honest note that the width assert is a regression pin, not a
+  discriminator. LSP4IJ NPE at the office diagnosed as not ours.
 - **2026-09-01** — giant-yellow-note misfire: `resultNote`'s end-anchored `(note:…)` regex ate a
   ~1300-char grep tail as one amber caveat; fixed with `NOTE_MAX = 400` (drop, not truncate) +
   position-0 reject, both measured off the binary's real note templates; fixture 69, harness 592.

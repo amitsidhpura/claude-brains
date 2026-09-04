@@ -13,9 +13,13 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.260, 2026-09-04) — 83 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 47 ➖ (130 rows) — every section ✅
+**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 85 ✅ · 0 🟥 · 0 🟧 · 9 ⬜ · 46 ➖ (140 rows) — open rows in §1 §2 §3 §4
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** none (13.3 decided 2026-09-04: deferred, watch the `update_settings` allowlist)
+- **Awaiting a decision ([DECIDE]):** none — the user is taking ALL ten [NEW] rows of the 2026-09-04
+  full-surface audit ("finish all even if small"); 6.9 shipped first. Remaining nine, in build order to be
+  picked: 1.26 banner-class `system` frames · 1.27 full IN/OUT in an editor · 1.28 `control_cancel_request`
+  (correctness) · 2.12 extra content roots · 3.7 deny-with-message · 3.8 editable Bash command · 4.7
+  `dontAsk` · 4.8 "don't ask again" destination · 4.9 number-key answers (13.3: deferred)
 
 **Status marks**
 
@@ -41,11 +45,50 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
+
+<details><summary><b>Full-surface audit 2026-09-04 (everything both clients have at 2.1.260, not a version diff)</b></summary>
+
+Run on the user's ask ("whether we are not missing any feature that they have"). Unlike the
+incremental re-audits below, this enumerated the WHOLE surface and cross-referenced every item
+against the rows. Inventories (all from disk, nothing from memory): extension `package.json` (26
+commands, 15 settings, 9 keybindings, views), `extension.js` (288 `case` labels → 97 RPC
+request/response types), the webview bundle's UI strings (~100 user-facing features), the CLI
+binary's SDK schema (98 control subtypes, 46 typed `system` subtypes with their `describe()`
+text, the 35-event hook roster), its command category map (128 names incl. TUI-only and debug
+ones), and the upstream CHANGELOG 2.1.200 → 2.1.260. Cross-reference: programmatic grep of every
+identifier against this file + `docs/slash-commands.md` + `docs/ide-mcp-protocol.md` § 11, then
+hand-judged (identifier misses ≠ feature gaps: `newConversation` is 8.1, `insertAtMention` 6.5,
+marketplace RPC 11.1, plan-comment RPC 5.6). Result: **ten new rows**, all [DECIDE] — see "At a
+glance". Measured while judging: `set_permission_mode dontAsk` succeeds; `control_cancel_request`
+has five emission sites in the binary and no handler here; a plain one-tool headless turn emits
+NONE of the banner-class `system` frames (init/status/thinking_tokens only); the webview's IN/OUT
+click-to-open threshold is `length > 250 || multiline`; click-to-compact on our gauge already
+exists (9.3, the sweep had missed it). **Judged the terminal's half, no row** (so the next full
+audit need not re-judge): every config dialog and setting (`/env /experiments /channel /issue
+/passes /sandbox /output-style /statusline /tui /scroll-speed /theme /vim /keybindings`, themes,
+spellcheck, emoji autocomplete, screen-reader mode, OS notification channels, `timeFormat`,
+sandbox settings family, permission-rule validation warnings); session infrastructure
+(`--bg`/`claude attach|logs|stop|respawn|rm`, daemon, `claude agents` view, routines, self-hosted
+runner, teleport/Remote Control, cross-session `SendMessage`/`ListAgents`, `/cd`, `/subtask`);
+composer chrome the IDE already owns (bash mode `!`, external editor Ctrl+G, history search
+Ctrl+R, undo/stash, paste placeholders, Ctrl+O expand-all-thinking — 12.4); VS Code's hamburger
+action menu, version row, "Report a problem", settings-file error banner (`get_settings` answers
+`{applied, effective, sources}` with no error shape observed — unmeasured), Fable-flagged
+model-switch toggle (experiment-gated), feedback survey, auto-mode nudge, transcript dimming
+while a card is pending, a11y turn headings, render-error boundary. **Probe-first notes, no
+row yet:** `<ide_diagnostics>` post-edit block (VS Code draws "Found N new problems"; the tag
+has no literal in the binary and § 12 has zero local records — unknown if it reaches this wire);
+`--forward-subagent-text` (subagent prose in the stream; 11.2 draws lines from `task_*` only);
+`task_summary`/`turn_duration` (not on a plain turn); SandboxNetworkAccess asks (a bespoke card
+header, needs sandbox on); `post_turn_summary`/`away_summary` (`@internal`). Agent transcripts
+and inventories in the 2026-09-04 session scratchpad (`full/`).
+
+</details>
 
 <details><summary><b>Re-audit 2026-09-04 (2.1.251 → 2.1.260)</b></summary>
 
@@ -196,7 +239,7 @@ auto-include selection, voice.
 
 ---
 
-## 1. ✅ Core chat & streaming
+## 1. ⬜ Core chat & streaming
 - **1.1** ✅ **Send a prompt** — reply streams token-by-token (`stream_event` deltas)
 - **1.2** ✅ **User / assistant bubbles** — Ctrl+Enter sends, Enter = newline (VS Code's
       `useCtrlEnterToSend` behaviour, fixed on, no toggle)
@@ -266,8 +309,34 @@ auto-include selection, voice.
       fields since ≤ 2.1.246). Our 1.17 handler treats `status:"allowed"` as silence regardless, so a
       grace window is invisible. Probe first: an inject through `onClaudeEvent` proves the render, a
       real grace window is unforceable by design (MT-9.6 pattern)
+- **1.26** ⬜ [MD] **Banner-class `system` frames the panel drops** [NEW] [DECIDE] — the 2.1.260
+      SDK schema types ten `system` subtypes whose text the REPL shows as a banner and our handler
+      (`70-events.js`, 16 subtypes) silently discards: `notification` ("loop-side text
+      notification", `{key, text, priority, color, timeout_ms}` — e.g. a fast-mode overage
+      rejection), `memory_saved` ("<verb> N memories") + `memory_recall` (automemory activity),
+      `agents_killed` (on interrupt), `permission_retry` ("retrying with <commands>" after a mode
+      change), `away_summary`, `scheduled_task_fire` (a `/loop` firing — `/loop` is Enabled),
+      `stop_hook_summary` (`hook_errors`, `prevented_continuation`), `code_change_published`
+      (`{provider, repo, url}` — the PR link the TUI's footer badge shows), `vcs_state_changed`.
+      Also `task_summary` (the live "what it's doing" phrase) and `turn_duration`. MEASURED
+      2026-09-04: a plain one-tool headless turn emits none of them (only init/status/
+      thinking_tokens) — each needs its trigger, several are `@internal`. One generic renderer
+      keyed on `content`/`text`, probing each trigger as it is built
+- **1.27** ⬜ [SM] **Open a tool's full IN/OUT in an editor tab** [NEW] [DECIDE] — VS Code: clicking
+      any IN/OUT body over 250 chars or multiline calls `open_content(content, "<Tool> tool
+      input|output" | "command" | "Write <file>" | "Glob output", editable:false)` → a read-only
+      editor. Ours caps at `OUT_MAX` 2000 / `CMD_MAX` 4000 with `.io-cut`, and the only escape is
+      the "open full output" link when the CLI itself persisted the output (`docs/limits.md`).
+      A scratch `LightVirtualFile` opened via `FileEditorManager` on click of a cut box
+- **1.28** ⬜ [SM] **Withdrawn asks: `control_cancel_request`** [NEW] [DECIDE] — the CLI retracts a
+      pending `can_use_tool` / question with `{type:"control_cancel_request", request_id}` (binary:
+      on interrupt of a parked decision, on `askUserQuestionTimeout` / `dialogExpiry` auto-continue,
+      on host-hook retirement). Nothing in Kotlin or JS handles the frame: the card stays live and
+      an answer goes out for an id the CLI no longer waits on (VS Code prepends late answers to
+      the next prompt as "Answering your earlier questions:"). Correctness first: mark the card
+      lapsed and drop it from `pendingPermissions`. Probe the frame over stdio before building
 
-## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
+## 2. ⬜ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -291,8 +360,14 @@ auto-include selection, voice.
       live 2026-08-17: an unsaved `ZEBRA-43` buffer was what `Read` returned
 - **2.11** ✅ **Stale lock sweep** — `~/.claude/ide/*.lock` files with a dead pid deleted on every
       lock write (the CLI's own rule; `IdeLockFile.sweepStale`); 17 → 2 on first run, 2026-08-17
+- **2.12** ⬜ [SM] **Additional content roots as working directories** [NEW] [DECIDE] — the CLI
+      accepts `--add-dir` / a `register_repo_root` control (+ `DirectoryAdded` hook) for
+      directories outside the cwd; `workspaceFolders()` hands the CLI `project.basePath` only. A
+      JetBrains project whose content roots live outside its base directory (attached modules,
+      monorepo roots) gets file tools that refuse those paths (`blockReadsOutsideWorkingDirectories`
+      territory). Enumerate `ProjectRootManager.contentRoots` and add the ones outside basePath
 
-## 3. ✅ Diffs & edit approval
+## 3. ⬜ Diffs & edit approval
 - **3.1** ✅ **Permission gate** — `can_use_tool` via `--permission-prompt-tool stdio`
 - **3.2** ✅ **Accept / Reject card** — diff inline (old→new for Edit/MultiEdit multi-hunk,
       additions for Write); under acceptEdits the diff is built optimistically from the tool input
@@ -328,8 +403,16 @@ auto-include selection, voice.
       invisible — same as VS Code's checkpointing); live turns only — a resumed session draws the
       line from the transcript (count + names) without Review (backlog). Built and hand-verified
       2026-08-28 (two files in one turn, chain navigation); fixture 60; `TurnChangesTest`
+- **3.7** ⬜ [SM] **Deny with a message on tool cards** [NEW] [DECIDE] — VS Code's reject offers
+      "Tell Claude what to do instead" and the text rides the deny. Ours has it on the plan card
+      only (`.plan-fb`, keep-planning); `ClaudeSessionService.respondPermission(feedback)` already
+      carries the field, so it is a card input + one call-site change
+- **3.8** ⬜ [SM] **Edit the Bash command in the permission card** [NEW] [DECIDE] — VS Code renders
+      the command `contentEditable` and sends the edited text as `updatedInput` on allow. Our 3.5
+      tweak-travel covers Edit/Write proposals in the editor only; the card's command preview is
+      read-only. Same `updatedInput` path, a `contenteditable` on `.cmd` with the `.cmd-cut` cap
 
-## 4. ✅ Permission modes
+## 4. ⬜ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
       aliased in the chip), acceptEdits, plan, auto (the safety-classifier mode)
 - **4.2** ➖ **`bypassPermissions`** — removed 2026-08-03 with the relaunch machinery; the CLI
@@ -343,6 +426,18 @@ auto-include selection, voice.
       reconciliation source if the persisted value ever drifts
 - **4.6** ➖ **`allowDangerouslySkipPermissions` / `initialPermissionMode`** — the flag turns every
       mode into a bypass (probed); persistence covers the initial-mode need
+- **4.7** ⬜ [XS] **`dontAsk` mode** [NEW] [DECIDE] — a fifth mode in both clients ("Claude will
+      deny actions that need approval instead of asking"; VS Code's picker lists six incl. bypass).
+      MEASURED 2026-09-04: `set_permission_mode {mode:"dontAsk"}` succeeds live over stdio. One
+      more entry in the mode menu; `--permission-mode dontAsk` at spawn
+- **4.8** ⬜ [SM] **"Don't ask again" destination picker** [NEW] [DECIDE] — VS Code cycles the
+      suggestion's target: "Only for this session (not saved)" / `.claude/settings.local.json`
+      (gitignored) / `.claude/settings.json` (shared with team) / user. Ours (4.4) echoes the
+      suggestion as-is, so the CLI's default destination decides. Adds a `destination` on the
+      echoed `updatedPermissions` entry — probe which values the CLI honours first
+- **4.9** ⬜ [XS] **Number-key answers on cards** [NEW] [DECIDE] — VS Code answers a focused
+      permission card with 1/2/3 and Esc. Not a global chord (12.4's reason for binding none): a
+      keydown handler scoped to the focused card
 
 ## 5. ✅ Plan mode
 - **5.1** ✅ **Plan card** — enter plan mode from the chip; the plan renders as a card on
@@ -377,14 +472,33 @@ auto-include selection, voice.
 - **6.3** ✅ **Injected IDE context stripped on replay** — `<ide_selection>` etc.
 - **6.4** ➖ **@-mention symbols** — deferred by the user 2026-08-29 (backlog; [MD], a second
       picker source over the IDE symbol index). Files cover most mentions
-- **6.5** ➖ **Insert @-mention from the editor** — deferred by the user 2026-08-29 (backlog; [SM],
-      VS Code's Alt+K as an unbound plugin action the user can map — compatible with the
-      no-shortcuts stance)
+- **6.5** ✅ **Mention from the IDE** — built 2026-09-04 on the user's request (a screenshot of the
+      Project-view context menu: "select items, right-click, first option adds these files as a
+      mention to the composer"). `MentionAction` ("Mention in Claude Brains", claude icon) sits
+      FIRST in `ProjectViewPopupMenu` and `EditorPopupMenu`; every selected file/folder becomes
+      an `@path ` token at the composer caret (project-relative like the picker's own inserts,
+      folders with a trailing slash, outside-project paths absolute — `MentionPaths.tokens`,
+      pinned by `MentionPathsTest`), the tool window is activated, and a list handed over before
+      the page is seeded is parked in `ChatPanel.insertMentions` and flushed after `seedUi()`.
+      Spacing/caret rule in fixture 75 (negative control 5/6 fails on the pre-change build). No
+      shortcut (12.4) — VS Code's Alt+K equivalent is the unbound action itself, mappable in
+      Keymap. Supersedes the 2026-08-29 deferral
 - **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
 - **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
       our picker is IDE-indexed and no gap has shown. (The CLI also answers `file_suggestions {query}` over stdio with
       the TUI's own fuzzy ranking — an alternative source if one ever does)
 - **6.8** ➖ **`@terminal`** [NEW] — `get_terminal_contents`; the panel does not own a terminal
+- **6.9** ✅ **Mention chips** [NEW] — built 2026-09-04 (user's "do this one first" the same day):
+      every path-shaped `@token` in a sent prompt (holds a slash or a dotted extension, `@` at the
+      start or after whitespace; sentence-final punctuation left outside) renders as an inline
+      capsule wearing the attachment chip's surface — `mentionHtml` in `50-blocks.js`, drawn by
+      `addUserMessage` so live and replay share it; the bubble's `textContent` stays byte-identical
+      to the prompt. `data-path` rides the delegated `#log` click handler, so a chip opens the file
+      like a tool-line path (live probe: `{"kind":"open","path":"README.md"}`, fold untouched).
+      Composer half NOT built by design: a plain `<textarea>` cannot host chips (VS Code's
+      `inputMentionChip` needs its contenteditable) — the sent bubble is where the chip pays.
+      Fixture 74 (6 asserts; negative control 3/3 discriminating fails on the pre-change build);
+      harness 630 → 636; mockup + gallery carry an example
 
 ## 7. ✅ Slash commands (`docs/slash-commands.md` is the source of truth)
 - **7.1** ✅ **Slash menu** — opens on `/`; keyboard nav, descriptions, source badges (project /
@@ -407,9 +521,12 @@ auto-include selection, voice.
       /add-dir /rewind /diff /update /theme /vim /keybindings /export /copy /bug /feedback
       /memory /permissions /hooks /mcp /plugin /agents /doctor /status /config /ide /terminal-setup
       /voice /desktop /mobile /teleport /remote-control /background /branch /fork /btw /tasks
-      /skills /skill-doctor /pause-memory /alias /focus /brief /wellbeing /radio …` (`/advisor`
-      left this list at 2.1.260 — it is on the headless roster now, Hidden in
-      `docs/slash-commands.md`) —
+      /skills /skill-doctor /pause-memory /alias /focus /brief /wellbeing /radio /cd /subtask
+      /plan /artifacts /autofix-pr /loops /workflows /daemon /statusline /tui /scroll-speed
+      /sandbox /output-style /stop /exit /version /release-notes /upgrade /install /web-setup
+      /privacy-settings /remote-env /cloud-plugins /onboarding …` (the 2026-09-04 full-surface
+      audit added the tail from the binary's category map; `/advisor` left this list at 2.1.260 —
+      it is on the headless roster now, Hidden in `docs/slash-commands.md`) —
       the terminal's half by construction. Where the panel has an equivalent it is listed in its
       own section (rename, model, effort, mode, resume, tasks, focus)
 - **7.9** ✅ **Panel equivalents of TUI commands** — `/rename` (header pencil), `/model` +
@@ -490,7 +607,8 @@ auto-include selection, voice.
       accepted over stdio and takes effect (probed 2026-08-23). The CLI's `/effort` hint also
       accepts `ultracode|auto` beyond the slider's five stops
 - **9.3** ✅ **Context gauge** — ring on the composer from `modelUsage[].contextWindow` (a map,
-      side models included); reset on compaction
+      side models included); reset on compaction. Click = `/compact` (through `sendTurn`, as
+      typed) — VS Code's "Click to compact now" equivalent, noted 2026-09-04
 - **9.4** ✅ **Fast mode toggle** — a switch in the model-menu footer, enabled only when the roster
       item says `supportsFastMode` (Opus family); sends `apply_flag_settings {settings:{fastMode}}`.
       Optimistic click, reconciled from the CLI's `fast_mode_state` (off|on|cooldown + reason on
@@ -507,7 +625,9 @@ auto-include selection, voice.
       `request_usage_update` [NEW]; TUI `/usage`, `/cost`, `/context`. Declined 2026-08-06; the
       built-in `/context` is enabled as a turn for the rare look. (`get_context_usage` and
       `get_settings` both answer over stdio — probed 2026-08-23 — so the data is there if this is
-      ever revived)
+      ever revived.) Same family, same verdict (2026-09-04 full-surface audit): VS Code's
+      per-category context breakdown ("Memory files", "Custom agents"…), its 5h/7d account-usage
+      dialog, and a usage-insights/attribution panel with cost advice
 - **9.7** ➖ **Fable overage gate** — deferred by the user 2026-08-29 (later + watch): no
       `supportedDialogKinds` declared, so `model_consent_fallback` never reaches the panel and
       the CLI takes the silent default — the model chip would keep the old name after a fallback.
@@ -612,7 +732,8 @@ auto-include selection, voice.
       `claudeCode.*` keys map as: `environmentVariables` / `claudeProcessWrapper` /
       `respectGitIgnore` / `usePythonEnvironment` / `disableLoginPrompt` → terminal & env;
       `useCtrlEnterToSend` → fixed on; `initialPermissionMode` → persistence; `preferredLocation`
-      / shortcuts / `hideOnboarding` / `focusView` → see §12; `autosave` → §2 candidate
+      / shortcuts / `hideOnboarding` / `focusView` → see §12; `autosave` → §2 candidate. VS Code's
+      output-style picker (`get_output_style`, 2.1.260) is `/config`'s — the terminal's half
 - **13.2** ✅ **JSON schema for `.claude/settings.json`** — `ClaudeSettingsSchemaProviderFactory`
       maps `.claude/settings.json` AND `.claude/settings.local.json` to Anthropic's published
       schema on SchemaStore (`json.schemastore.org/claude-code-settings.json`, the `$schema` their
@@ -659,8 +780,9 @@ auto-include selection, voice.
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
       (do last)
 - **15.3** ➖ **Small chrome** — message rating + `/feedback` / `/bug`, prompt suggestions, Artifact
-      auto-open, "Explored" grouping of consecutive Reads, `/stickers`, `/radio`, `/powerup`;
-      leaning no
+      auto-open, "Explored" grouping of consecutive Reads (gated `window.IS_ANT` in 2.1.260 —
+      Anthropic-internal only), `/stickers`, `/radio`, `/powerup`, the in-session "How is Claude
+      doing?" survey, the auto-mode nudge; leaning no
 - **15.4** ➖ **`/share` / `/export` / `/copy`** — the transcript is on disk; the terminal exports it
 - **15.5** ➖ [LG] **`ask_debugger_help`** [NEW] — VS Code registers a `claude-vscode-extension` MCP
       server while a debug session is active (stack, variables, breakpoints) and the console offers
@@ -671,9 +793,9 @@ auto-include selection, voice.
       terminal's half — declined by the user 2026-08-29 (by design)
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (137, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (141, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 73, 630 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 75, 642 assertions,
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins

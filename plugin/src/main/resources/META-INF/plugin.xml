@@ -89,5 +89,16 @@
                 class="io.github.amitsidhpura.claudebrains.ui.DevToolsAction"
                 text="Claude Brains: Open DevTools"
                 description="Open Chrome DevTools for the Claude Brains chat panel"/>
+        <!-- 6.5: right-click in the Project view (or the editor) with files/folders selected →
+             each lands in the composer as an @-mention token. FIRST in the menu on the user's
+             request (2026-09-04); no shortcut, like every action here. -->
+        <action id="ClaudeBrains.Mention"
+                class="io.github.amitsidhpura.claudebrains.ui.MentionAction"
+                text="Mention in Claude Brains"
+                description="Add the selected files and folders to the Claude Brains composer as @-mentions"
+                icon="/icons/claude.svg">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </action>
     </actions>
 </idea-plugin>
