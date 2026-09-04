@@ -300,6 +300,8 @@
     return null;
   }
 
+  // Deny messages the cards on this page have sent, keyed by exact text (see onUserEvent).
+  const cardDenies = Object.create(null);
   function onUserEvent(ev) {
     const content = (ev.message && ev.message.content) || [];
     if (typeof content === 'string') {
@@ -334,6 +336,12 @@
       // lines pulsing until the turn ended. Same reason the tasks bridge call below sits where it does.
       if (b.is_error || !isInternalResult(resultRaw)) t.el.classList.remove('run');
       if (b.is_error) t.el.classList.add('fail');
+      // A denial THIS panel sent (a card's Reject, 3.7): the deny message comes back as the
+      // tool's error result, so the box would repeat, one line above the card, the note the
+      // card's ✗ line already quotes (user's screenshot 2026-09-05). The red dot stays — the
+      // tool did fail — the box does not. Matched on the exact text the card sent, so a real
+      // error that merely resembles one still draws.
+      if (b.is_error && cardDenies[resultRaw.trim()]) return;
       // A Task* call changed the list; ask Kotlin for the current one (the CLI keeps it on disk).
       // MUST be above the RESULT_SKIP return below: TaskCreate/TaskUpdate/TaskList are all in that
       // set, so asking afterwards means never asking at all — which is exactly what happened, and

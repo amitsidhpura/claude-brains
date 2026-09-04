@@ -174,6 +174,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             executable = resolveExecutable(),
             permissionMode = selectedMode(),
             resumeSessionId = resumeSessionId,
+            addDirs = extraRoots(),
             onEvent = { line ->
                 // BEFORE the UI callback: the panel's own rendering must not be able to delay, or
                 // fail, the editor catching up with what the CLI just wrote to disk.
@@ -362,6 +363,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * command's rules arrive as ONE addRules suggestion with rules[] (measured 2026-08-09,
      * CLI 2.1.226), so a split-menu partial grant must echo the suggestion NARROWED to the
      * picked rule(s). Probed: the CLI accepts the subset and persists exactly those rules.
+     * [destination] (4.8) is where the grant is kept when a destination row was picked; null keeps
+     * each suggestion's own — see [PermissionDestinations] for what the CLI does with each value.
      *
      * FIRST ANSWER WINS: an edit permission now has two surfaces (the panel card and the editor
      * diff), and the pending map is the arbiter — whichever route removes the entry sends the
@@ -370,7 +373,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      */
     fun respondPermission(
         requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList(),
-        feedback: String? = null, updatedInput: JsonObject? = null,
+        feedback: String? = null, updatedInput: JsonObject? = null, destination: String? = null,
     ): Boolean {
         // [updatedInput] replaces the pending input on allow — the editor diff's tweaked edit
         // (3.5, EditProposals.tweakedInput); null answers with the input the CLI asked about.
@@ -400,8 +403,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
                 picked.add(JsonObject(s.toMutableMap().apply { put("rules", JsonArray(subset)) }))
             }
         }
-        val chosen = if (picked.isEmpty()) null
-        else kotlinx.serialization.json.buildJsonArray { picked.forEach { add(it) } }
+        val stamped = PermissionDestinations.stamp(picked.map { it.jsonObject }, destination)
+        val chosen = if (stamped.isEmpty()) null
+        else kotlinx.serialization.json.buildJsonArray { stamped.forEach { add(it) } }
         cli?.respondPermission(requestId, allow, input, chosen, feedback)
         return true
     }
@@ -479,8 +483,18 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             out
         }
 
+    /** The base directory plus every content root outside it — the lock file's `workspaceFolders`. */
     private fun workspaceFolders(): List<String> =
-        listOfNotNull(project.basePath)
+        listOfNotNull(project.basePath) + extraRoots()
+
+    /**
+     * Content roots the CLI cannot reach from its cwd (attached modules, a monorepo parent), read
+     * at each launch — a root attached mid-session is picked up by the next New/resume, not live.
+     */
+    private fun extraRoots(): List<String> = readLocked {
+        WorkspaceRoots.extraDirs(project.basePath,
+            com.intellij.openapi.roots.ProjectRootManager.getInstance(project).contentRoots.map { it.path })
+    }
 
     /**
      * Resolve the `claude` binary: `-Dclaude.executable` override -> PATH ->

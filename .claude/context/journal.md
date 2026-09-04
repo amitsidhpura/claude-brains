@@ -3,6 +3,56 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-05 (eighth) — 4.8 hand-tested and closed, 4.9 deferred, 2.12 built and measured
+- MT-4.8: all four steps passed on the real CLI in the testing repo (session-only wrote nothing +
+  no re-ask; project-shared wrote `.claude/settings.json`; main half wrote `settings.local.json`).
+  Side findings: decided Bash cards vanish on replay (deliberate, already in gotchas); `title`
+  tooltips never show anywhere in the panel on Linux JCEF → backlog § Next up + gotchas § JCEF.
+- 4.9 number-key answers: user chose "no keyboard shortcuts for now" → ➖, decisions.md.
+- 2.12: the user attached `~/Sites/computer` to the testing window and sent the "before" (every
+  Read there asked, reason "Path is outside allowed working directories"). Stdio probe: control 1
+  ask, `--add-dir` 0 asks. Built `WorkspaceRoots.extraDirs` (roots outside basePath, nested ones
+  dropped) → `ClaudeCli --add-dir` per root + lock-file `workspaceFolders`. Kotlin **153**. The
+  sandbox CLI was seen spawning with `--add-dir /home/syncroze/Sites/computer`. AFTER test passed both
+  ways (attached → no cards; detached → asks again).
+- Test-expectation trap: a sibling attached beside a monorepo parent is covered by the parent —
+  the first test asserted both and was wrong, the code was right.
+- 3.7 reject-with-note: the plan card's `.plan-fb` field inline after Reject on every ordinary card
+  (VS Code's placement); deny only (allow has no wire — a typed note before Accept is dropped, not
+  quoted); Enter rejects with the note. Fixture 78 (16; control 6 fail / 0 abort), harness **686**,
+  mockup mirrored on 5 cards. Hand test PASSED (Edit card, note "Ignore please." quoted back by the
+  model). It exposed two pre-existing defects, both fixed: the tool line's error OUT box repeated the
+  deny text above the card (now skipped for a denial this panel sent — `cardDenies`, fixture 79,
+  `rejectMessage` exported via LIMITS) and replay counted a rejected edit as "1 file changed"
+  (`reqFiles` never emptied on denial/error — fixed in SessionStore, `SessionStoreDeniedEditTest`
+  on the real transcript extracted to `src/test/resources/fixtures/denied-edit.jsonl`). Kotlin 156.
+  Third follow-up from the user's replay screenshot: a replayed EDIT card read a bare ✗ Rejected while
+  the plan card quotes its note — the parser now extracts the deny message for denied edit items too
+  (`planFeedback` reused on the wire), fixture 80 (control 1 fail). Bash cards' notes stay live-only.
+- Checklist 89 ✅ · 4 ⬜ · 47 ➖; §2 and §4 complete. Everything since 9086100 is uncommitted.
+
+## 2026-09-04 (seventh) — 4.8 built as a split button; five destination cells measured, one probe confound found
+- The user asked what 4.8 is in plain words, heard my recommendation to decline it (the default is
+  right nearly always; the rest is terminal config), and chose a split instead: main half = the
+  CLI's default destination, caret = the other targets. Built the same session.
+- Probe first (stdio, 2.1.260): the ECHOED `destination` decides the file — projectSettings /
+  localSettings / userSettings each wrote their file, session wrote nothing and stopped the re-ask,
+  cliArg behaved as session, a bogus value dropped the grant silently. Kotlin therefore forwards
+  only the four offered (`PermissionDestinations`).
+- Confound: the first cell wrote `.claude/settings.json` and STILL re-asked — the scratch workspace
+  was untrusted, so project settings never loaded; stderr said so, stdout did not. Fixed with a
+  scratch `CLAUDE_CONFIG_DIR` (copied credentials + a trust-patched `.claude.json`), deleted after.
+- Second confound: a zsh `for … set -- $c` loop ran all five cells with `--cfg` as the destination.
+  Both in gotchas § Testing.
+- UI: the compound card's existing split gained an `All of these` header + destination rows under
+  its per-rule rows; a single-rule grant is now a split too (three rows, no header). Rows are
+  "This session only / This project, shared / All projects" (+ "This project, just you" when the
+  CLI's own is session). No memory of the last pick — main half is always the default (user's spec).
+- Fixture 77 (17 asserts): negative control on the pre-fix sandbox 11 fail / 0 abort. Harness
+  **670** (was 653), Kotlin **147** (was 143). Mockup and gallery mirrored; screenshots of both
+  cards taken over CDP and checked.
+- Uncommitted at save time; sandbox left running for the user's MT-4.8 hand test.
+
 ## 2026-09-04 (sixth) — 4.7 built as VS Code's rule; the row's premise was WRONG and the user's screenshot caught it
 - Explaining 4.7 in plain language is what broke it open: the user sent a VS Code screenshot
   showing FOUR modes — exactly ours — against the row's claim that "VS Code's picker lists six
@@ -167,38 +217,14 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   banners in the page, tokens resolve, gallery states styled. Committed and pushed on the user's
   ask (this save included).
 
-## 2026-09-01 (fifth) — Marketplace shots 01+03 refreshed for the files-changed rows
-- User asked to update `design/marketplace/01-conversation.png` for the 0.12.4 files-changed
-  review change. The script composes from the live webview sources, so a plain rerun rendered the
-  new block — but its extra height overflowed the 600px panel and the capture clipped the left
-  scene's "Thought for 6s" mid-row. Measured headless (`#log` scrollHeight − clientHeight = 41px),
-  then dropped S1_LEFT's thinkBlock (the right panel keeps a think row); the residual 3px of
-  scroll dies in top whitespace.
-- `03-control.png` was stale the same way (its caption sells the per-turn review). Regenerating
-  pushed the "Bash Run the CSV tests" header off the top — the log is bottom-anchored, so only
-  trimming VISIBLE content moves the cut line (promoted to gotchas § Webview). Dropped S3_RIGHT's
-  done row and shortened its md sentence; header back, all three file rows clean.
-- 02/04/05 confirmed unaffected: no files block, and no scene opens `#bgMenu`, so the 0.12.4
-  popup fixes change none of their pixels.
-- The standing screenshot-upload errand now covers 01+03+04+05 on `plugins.jetbrains.com/plugin/33274`.
-- Committed and pushed on the user's ask (this save included).
-
-## 2026-09-01 (fourth) — 0.12.4 released and approved
-- User's "Please release it" → full gate: bump to 0.12.4, notes rewritten (0.12.4/0.12.3/0.12.2,
-  0.12.1 dropped), `test buildPlugin` green with the own-version notes guard passing, zip audited
-  (our jar + OSS deps only), `verifyPlugin` **7/7 Compatible** read from the verdict files,
-  feed + README checked. STOPPED at the approval gate with the complete notes; shipped on
-  "Go ahead please".
-- `e644dce`, tag `v0.12.4`; GitHub release created, asset HTTP 200 and `cmp`-identical to the
-  local zip, `raw.githubusercontent.com` feed served 0.12.4 immediately, `marketplace-upload`
-  run 33518632052 green in 9s.
-- Marketplace API still listed 0.12.3 as newest approved right after upload (normal moderation
-  window) — the user's screenshot minutes later showed **0.12.4 Approved**, verifier Success on
-  2025.3.6.1 / 2026.1.5 / 2026.2.2 rc plus a clean IDE run.
-- Notes framing that worked: the three fixes stated as what now works, with the old behaviour in
-  a trailing dash-clause (Windows full-path run, two-line task name, giant yellow caveat line).
-
 ## Digest
+- **2026-09-01 (fifth)** — Marketplace shots 01+03 regenerated for the files-changed rows: the
+  600px panel clipped, so VISIBLE scene content was trimmed (the log is bottom-anchored — only that
+  moves the cut line, gotchas § Webview). 02/04/05 unaffected. Committed and pushed on the ask.
+- **2026-09-01 (fourth)** — **0.12.4 released** (`e644dce`, tag `v0.12.4`): full gate, 7/7
+  Compatible from the verdict files, stopped at the approval gate, shipped on "Go ahead please";
+  Approved within minutes. Notes framing that worked: each fix as what now works, old behaviour in
+  a trailing dash-clause.
 - **2026-09-01 (third)** — Review span became the sole click target on the files block (user:
   "just link the Review, not the whole block"); fixture-first with the free control (harness 607).
   fillPath's boundary rule confirmed live: project files relative, outside-root absolute.

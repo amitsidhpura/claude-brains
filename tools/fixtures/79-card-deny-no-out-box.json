@@ -1,0 +1,245 @@
+{
+  "item": "3.7 follow-up — a denial the card sent comes back as the tool's error result; the tool line keeps its red dot but draws no OUT box repeating the note (2026-09-05)",
+  "branch": "done() records every deny message a card sends (the trimmed note, or LIM.rejectMessage when empty) in cardDenies; onUserEvent's tool_result path returns after the run/fail classes when an is_error result's text is one of them, so no OUT box is built. A different error text still draws its box. Counted as OUT rows: a Bash line always has its IN row, so the box under test is the row whose key reads OUT.",
+  "provenance": "The result shape is the CLI's: the deny message is delivered VERBATIM as the tool_result with is_error:true and toolDenialKind on the record (probed 2.1.233; seen again in the user's 2026-09-05 transcript e5d6aaf2…, content \"Ignore please.\"). stream_event tool_use frames copied from fixture 07. The harness has no mid-frame JS hook, so each deny case is two steps: the card goes up, then the next step's setup clicks Reject before the result frame arrives. Negative control on the 3.7 build without this fix: steps 1 and 3 draw an OUT box (io-row count 1) — DISCRIMINATING; step 2's box for a foreign error is a GUARD that passes on both builds.",
+  "steps": [
+    {
+      "note": "reject with a note, then the note comes back as the tool's error result: red dot, no box — part 1: the card is up",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge79) { window.__realBridge79 = window.__bridge; } window.__bridge = function(){};",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_fx79a",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"rm -rf build\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "permission_request",
+          "id": "pr79a",
+          "tool": "Bash",
+          "input": "{\"command\":\"rm -rf build\"}"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .card.warn .card-b .no').length",
+          "equals": 1,
+          "why": "GUARD: the card is live and rejectable"
+        }
+      ]
+    },
+    {
+      "note": "reject with a note, then the note comes back as the tool's error result: red dot, no box — part 2: reject, then the result arrives",
+      "setup": "document.querySelector('#log .card-b .plan-fb').value = 'use the gradle clean task instead'; document.querySelector('#log .card-b .no').click();",
+      "frames": [
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_fx79a",
+                "content": "use the gradle clean task instead",
+                "is_error": true
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .tool-line.fail').length",
+          "equals": 1,
+          "why": "GUARD: the tool line still reads as failed — the tool did not run"
+        },
+        {
+          "js": "(function(){ var t = document.querySelector('#log .card-b .no-t'); return t ? t.textContent : 'absent'; })()",
+          "equals": "✗ Rejected — “use the gradle clean task instead”",
+          "why": "GUARD: the card is the record of the note"
+        },
+        {
+          "js": "Array.prototype.filter.call(document.querySelectorAll('#log .io-row'), function (r) { var k = r.querySelector('.io-k'); return k && k.textContent.trim() === 'OUT'; }).length",
+          "equals": 0,
+          "why": "DISCRIMINATING: no OUT row repeats the note above the card (pre-fix: 1)"
+        }
+      ]
+    },
+    {
+      "note": "a foreign error with different text still draws its box — the skip matches the exact text the card sent",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_fx79b",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"rm -rf build\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_fx79b",
+                "content": "rm: cannot remove 'build': Permission denied",
+                "is_error": true
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .tool-line.fail').length",
+          "equals": 1,
+          "why": "GUARD: failed"
+        },
+        {
+          "js": "Array.prototype.filter.call(document.querySelectorAll('#log .io-row'), function (r) { var k = r.querySelector('.io-k'); return k && k.textContent.trim() === 'OUT'; }).length",
+          "equals": 1,
+          "why": "GUARD (both builds): a real error keeps its OUT row"
+        }
+      ]
+    },
+    {
+      "note": "reject with an empty field: the stock message comes back — no box either (LIM.rejectMessage) — part 1: the card is up",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "toolu_fx79c",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "input_json_delta",
+              "partial_json": "{\"command\":\"git push --force\"}"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "permission_request",
+          "id": "pr79c",
+          "tool": "Bash",
+          "input": "{\"command\":\"git push --force\"}"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .card.warn .card-b .no').length",
+          "equals": 1,
+          "why": "GUARD: the card is live and rejectable"
+        }
+      ]
+    },
+    {
+      "note": "reject with an empty field: the stock message comes back — no box either (LIM.rejectMessage) — part 2: reject, then the result arrives",
+      "setup": "document.querySelector('#log .card-b .no').click();",
+      "frames": [
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "toolu_fx79c",
+                "content": "User rejected the change in the IDE",
+                "is_error": true
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "Array.prototype.filter.call(document.querySelectorAll('#log .io-row'), function (r) { var k = r.querySelector('.io-k'); return k && k.textContent.trim() === 'OUT'; }).length",
+          "equals": 0,
+          "why": "DISCRIMINATING: the stock deny is this panel's own too (pre-fix: 1)"
+        },
+        {
+          "js": "document.querySelectorAll('#log .tool-line.fail').length",
+          "equals": 1,
+          "why": "GUARD: red dot kept"
+        }
+      ]
+    },
+    {
+      "note": "restore the real bridge",
+      "setup": "if (window.__realBridge79) { window.__bridge = window.__realBridge79; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [],
+      "expect": [
+        {
+          "js": "typeof window.__bridge",
+          "equals": "function",
+          "why": "GUARD: bridge restored"
+        }
+      ]
+    }
+  ]
+}

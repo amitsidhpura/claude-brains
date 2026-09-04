@@ -263,6 +263,13 @@ lands on `default`).
   - **Subset echo is accepted (probed):** `updatedPermissions` may carry a suggestion whose
     `rules` was narrowed to a subset — the CLI persisted exactly `Bash(factor 97)` from a
     four-rule suggestion, nothing else. This is what makes per-sub-command grants possible.
+  - **The echoed `destination` decides the file, not the suggestion's own (measured 2026-09-04,
+    2.1.260, stdio in a TRUSTED scratch workspace — an untrusted one never loads project settings,
+    so a written rule looks ignored):** `projectSettings` → `.claude/settings.json`,
+    `localSettings` → `.claude/settings.local.json`, `userSettings` → `<CLAUDE_CONFIG_DIR>/settings.json`,
+    `session` → nothing on disk and no re-ask for the run, `cliArg` → same as session. An UNKNOWN
+    value drops the grant SILENTLY (no error, the next turn asks again) — validate before echoing.
+    This is what the Always-allow caret's destination rows ride (checklist 4.8).
 - **The session scratchpad is pre-authorized.** Edit/Write into `/tmp/claude-1000/<enc-cwd>/
   <session>/scratchpad/` never emits `can_use_tool`, even in `default` mode — the CLI treats its
   own temp area as approved (probed: a scratchpad Write ran silently while the cwd Write in the
@@ -273,6 +280,14 @@ lands on `default`).
   exact-command allow rules (even pre-seeded in settings), `additionalDirectories` (settings or
   echoed suggestion), `acceptEdits`. Only a bare `Bash` allow-rule or `bypassPermissions` silences
   them — so don't offer "don't ask again" on a `blocked_path` card.
+
+- **Working directories are the cwd plus every `--add-dir` (measured 2026-09-05, 2.1.260).** A
+  `Read` outside them asks on EVERY touch with `decision_reason` "Path is outside allowed working
+  directories" (no `blocked_path`) and a `Read(//<dir>/**)` rule suggestion with destination
+  `session`; the same Read inside a directory passed as `--add-dir <abs path>` runs with no
+  `can_use_tool` at all. One flag per directory (the VS Code host passes every workspace folder
+  that is not the cwd that way). The plugin passes the project's content roots outside its base
+  directory (checklist 2.12); `system/init` does not echo the list back.
 
 Our plugin: `ClaudeCli` splits `control_request` frames from conversation events, surfaces
 `can_use_tool` as an Accept/Reject card (+ one button per usable permission suggestion; suppressed

@@ -1,11 +1,15 @@
   /* ---------- JS -> Kotlin bridge ---------- */
   function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
-  window.respondPermission = function (id, allow, suggIdxs, text) {
+  window.respondPermission = function (id, allow, suggIdxs, text, dest) {
     // text: the plan card's typed feedback — rides EVERY decision (deny → the message field,
     // allow → steered in right after the response). Empty string keeps today's behavior.
-    bridge({ kind: 'perm', id: id, allow: allow ? 'true' : 'false',
-             sugg: (suggIdxs && suggIdxs.length) ? suggIdxs.join(',') : '-1',
-             text: text || '' });
+    // dest (4.8): where the echoed grant is kept, only when a destination row was picked —
+    // absent means the CLI's own destination, so the message is unchanged for every other click.
+    const m = { kind: 'perm', id: id, allow: allow ? 'true' : 'false',
+                sugg: (suggIdxs && suggIdxs.length) ? suggIdxs.join(',') : '-1',
+                text: text || '' };
+    if (dest) m.dest = dest;
+    bridge(m);
   };
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */

@@ -71,6 +71,12 @@
 .card-menu .popup-item:hover { padding-right: 32px; }
 .card-menu .pi-ic svg { width: 15px; height: 15px; display: block; }
 .popup.card-menu.up { top: auto; bottom: calc(100% + 6px); }
+/* Destination rows (4.8) sit under the per-rule rows of a compound grant, behind a header that
+   marks the switch from "just this one" to "all of these". Same white-on-green as the rows, muted
+   the way the composer popups mute their headers, and the divider is the caret's own seam tint so
+   the menu keeps one line colour throughout. */
+.card-menu .popup-h { color: color-mix(in srgb, #fff 72%, transparent); margin-top: 4px;
+  padding: 8px 14px 4px; border-bottom-color: color-mix(in srgb, #fff 22%, transparent); }
 /* Plan-card feedback line: one row of "why", riding whichever button answers the card (deny →
    the message; approve → steered in right after the allow). Sits between the plan body and the
    buttons and leaves with them once the card is decided. Panel-toned, not user-blue: it belongs
@@ -84,6 +90,10 @@
   background: var(--warn-field); color: var(--fg); border: 1px solid var(--warn-border);
   border-radius: var(--radius); font: inherit; font-size: var(--fs-base); outline: none; }
 .plan-fb::placeholder { color: var(--dot); }
+/* The same field inline in an ordinary card's button row (3.7): fills what the buttons leave,
+   wraps under them when the row is tight (.card-b wraps), and drops the block-level margin the
+   plan card's placement needs. 160px is the least width a short note stays readable at. */
+.card-b .plan-fb { flex: 1 1 160px; width: auto; margin-top: 0; }
 
 /* Plan comments (checklist 5.6): select text in the plan body, anchor a note to it. Comment
    rows sit between the plan body and the decision surface. The FULL decision surface stays —

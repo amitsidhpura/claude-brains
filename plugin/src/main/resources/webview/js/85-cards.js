@@ -5,11 +5,30 @@
     const shown = t.length > 72 ? t.slice(0, 71) + '…' : t;
     return ' — “' + esc(shown) + '”';
   }
-  function cardBtns(okLabel, okSvg, noLabel, noSvg, suggBtns) {
+  // fbPlaceholder (3.7): a reject-note field after the buttons — the plan card's .plan-fb dress,
+  // placed inline the way VS Code places its rejectMessageInput beside the reject button. It rides
+  // DENY only: the message reaches the model verbatim as the tool_result (probed 2.1.233), while a
+  // note on an ordinary allow has no wire to travel on (`feedback` is dropped there — same probe).
+  function cardBtns(okLabel, okSvg, noLabel, noSvg, suggBtns, fbPlaceholder) {
     return '<div class="card-b"><button class="ok">' + okSvg + okLabel + '</button>' +
       (suggBtns || '') +
-      '<button class="no">' + noSvg + noLabel + '</button></div>';
+      '<button class="no">' + noSvg + noLabel + '</button>' +
+      (fbPlaceholder ? '<input class="plan-fb" placeholder="' + escA(fbPlaceholder) + '">' : '') +
+      '</div>';
   }
+  // Where a "don't ask again" rule can live (4.8). The grant's OWN destination — localSettings on
+  // every rule card measured — stays on the main half of the Always-allow split; the caret lists the
+  // others in this order (VS Code's cycle, webview index.js `Ss`; `cliArg` is never offered). Every
+  // value was MEASURED honoured on 2.1.260 (2026-09-04, stdio): the echoed destination decides the
+  // file — session writes nothing and stops the re-asks for the run — and an UNKNOWN value drops the
+  // grant silently, which is why Kotlin forwards only these four (PermissionDestinations).
+  const DESTS = {
+    session:         { row: 'This session only',       tip: 'Not saved: forgotten when this conversation ends',           done: 'for this session' },
+    localSettings:   { row: 'This project, just you',  tip: 'Saves to .claude/settings.local.json (gitignored)',          done: 'for this project (just you)' },
+    projectSettings: { row: 'This project, shared',    tip: 'Saves to .claude/settings.json (committed with the project)', done: 'for this project (shared)' },
+    userSettings:    { row: 'All projects',            tip: 'Saves to ~/.claude/settings.json',                           done: 'for all projects' },
+  };
+  const DEST_ORDER = ['session', 'localSettings', 'projectSettings', 'userSettings'];
   // The CLI sends permission_suggestions with each can_use_tool — ready-made "don't ask again"
   // options (accept-all-edits / allow-rule / allow-directory) it persists when echoed back on the
   // allow response. Map to buttons; entries we don't understand are skipped. `idxs` holds positions
@@ -29,7 +48,10 @@
           title: 'Auto-approve every edit for the rest of this session',
           doneText: 'auto-approving edits' });
       } else if (s.type === 'addRules' && s.rules && s.rules.length) {
-        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], sigs: [], parts: [], session: s.destination === 'session' }; out.push(ruleEntry); }
+        // dest: the grant's own destination, the split's main half (4.8); only a KNOWN one earns the
+        // caret's other-destination rows — an unknown value must not be echoed back changed.
+        if (!ruleEntry) { ruleEntry = { idxs: [], rules: [], sigs: [], parts: [], session: s.destination === 'session',
+          dest: DESTS[s.destination] ? s.destination : null }; out.push(ruleEntry); }
         ruleEntry.idxs.push(idx);
         // parts is one entry per RULE, so the split menu can grant a single sub-command.
         // MEASURED 2026-08-09 against CLI 2.1.226: a compound command arrives as ONE addRules
@@ -237,15 +259,13 @@
     const suggBtns = suggs.map(function (s, i) {
       const main = '<button class="alt" data-s="' + i + '" title="' + escA(s.title) + '">' +
         SVG_CHECKS + esc(s.label) + '</button>';
-      // One grant stays a plain button — a dropdown holding a single item is noise. With several
-      // (a compound command arrives as ONE addRules suggestion holding one rule per sub-command —
-      // measured 2026-08-09) the main half still grants the lot, and the caret opens the rules
-      // individually for a deliberate partial grant.
-      if (!s.parts || s.parts.length < 2) return main;
-      return '<span class="split">' + main +
-        '<button class="alt more" data-s="' + i + '" aria-haspopup="true"' +
-        ' title="Allow just one of these">' + SVG_CHEVRON + '</button>' +
-        '<div class="popup card-menu">' + s.parts.map(function (part, j) {
+      // The caret holds two kinds of row. Per-RULE rows when the grant is compound (a compound
+      // command arrives as ONE addRules suggestion holding one rule per sub-command — measured
+      // 2026-08-09): the main half still grants the lot, a row grants one rule for a deliberate
+      // partial grant. DESTINATION rows (4.8) when the grant has a known destination: each grants
+      // the lot, saved somewhere other than the main half's default. A grant with neither (a mode
+      // switch) stays a plain button — a dropdown holding nothing is noise.
+      const parts = (s.parts && s.parts.length > 1) ? s.parts.map(function (part, j) {
           const txt = part.rules.join(', ');
           // The double-check icon carries the meaning, as it already does on the button above:
           // without a marker a row is a bare command and reads like something about to RUN rather
@@ -259,7 +279,22 @@
           return '<div class="popup-item" data-s="' + i + '" data-p="' + j + '"' +
             ' title="' + escA(scope) + '"><div class="pi-ic">' + SVG_CHECKS + '</div>' +
             '<div class="pi-body"><div class="pi-title">' + esc(txt) + '</div></div></div>';
-        }).join('') + '</div></span>';
+        }).join('') : '';
+      // Every destination but the grant's own. Under per-rule rows a header marks the switch from
+      // "just this one" to "all of these": the rows below name only WHERE, the header says WHAT.
+      const dests = s.dest ? (parts ? '<div class="popup-h">All of these</div>' : '') +
+        DEST_ORDER.filter(function (d) { return d !== s.dest; }).map(function (d) {
+          return '<div class="popup-item dest" data-s="' + i + '" data-d="' + d + '"' +
+            ' title="' + escA(DESTS[d].tip) + '"><div class="pi-ic">' + SVG_CHECKS + '</div>' +
+            '<div class="pi-body"><div class="pi-title">' + esc(DESTS[d].row) + '</div></div></div>';
+        }).join('') : '';
+      if (!parts && !dests) return main;
+      const caretTitle = parts && dests ? 'Allow just one of these, or choose where the rule is kept'
+        : parts ? 'Allow just one of these' : 'Choose where the rule is kept';
+      return '<span class="split">' + main +
+        '<button class="alt more" data-s="' + i + '" aria-haspopup="true"' +
+        ' title="' + caretTitle + '">' + SVG_CHEVRON + '</button>' +
+        '<div class="popup card-menu">' + parts + dests + '</div></span>';
     }).join('');
     const card = document.createElement('div');
     if (isPlan) {
@@ -288,7 +323,7 @@
         '<div class="card-h">Claude wants to run <b>' + esc(toolLabel(ev.tool)) + '</b>' +
           (file ? ' on <code></code>' : '') + '</div>' +
         previewHtml(ev.tool, inp, ev.lineStart) +
-        cardBtns('Accept', SVG_CHECK, 'Reject', SVG_X, suggBtns);
+        cardBtns('Accept', SVG_CHECK, 'Reject', SVG_X, suggBtns, 'Tell Claude what to do instead');
     }
     // Same renderer as the tool line, so one file is never named two ways in one turn: relative,
     // middle-ellipsised, with the ABSOLUTE path on dataset.path + title (which is what keeps the
@@ -456,7 +491,9 @@
       // The typed reason rides every decision (terminal parity: its allow branches all carry
       // acceptFeedback too). Read before the input leaves with the buttons.
       const fbEl = card.querySelector('.plan-fb');
-      const fb = fbEl ? fbEl.value.trim() : '';
+      // An ordinary card's note rides deny only (see cardBtns): on allow it is dropped here rather
+      // than quoted on the line as if it had been delivered.
+      const fb = (fbEl && (isPlan || !allow)) ? fbEl.value.trim() : '';
       if (fbEl) fbEl.remove();
       // Plan comments ride whichever answer leaves. Deny wears the reference client's exact
       // shape (prefix + blank line + optional free text + header + [Re: "…"] lines — measured
@@ -482,9 +519,14 @@
         : '<span class="no-t">✗ ' + (isPlan ? 'Kept planning' : 'Rejected') + (viaEditor ? ' in the editor' : '') +
             (fb ? fbQuote(fb) : '') + planCmtNote(cs.length, !!fb) + '</span>';
       awaitingUser = false;
+      // Remember what the deny will say — Kotlin sends the trimmed text, or the stock message when
+      // empty — so the tool line can recognise the result as this card's own (onUserEvent).
+      if (!allow) cardDenies[(wireFb || '').trim() || LIM.rejectMessage] = true;
       // The editor path already answered the CLI through Kotlin's arbiter — sending again from
       // here would be a duplicate (and would be dropped, but why knock).
-      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, wireFb);
+      // pickDest is set only by a destination row — the main half sends none, so the CLI keeps the
+      // suggestion's own destination and the echo is byte-for-byte what it was before 4.8.
+      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, wireFb, sugg ? sugg.pickDest : null);
       // Approve-with-notes rides the approved plan itself (Kotlin appends it to updatedInput.plan
       // — no user message exists), so the quoted footer is the note's whole visible record here,
       // exactly as it is on replay.
@@ -533,7 +575,15 @@
         }
       };
     });
-    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item:not([data-act])'), function (it) {
+    // A destination row grants the WHOLE set (every idx, not "N.R"): the choice is about where,
+    // not which. The decided line records the scope, since the file it went to is not on screen.
+    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item.dest'), function (it) {
+      it.onclick = function () {
+        const s = suggs[+it.dataset.s], d = it.dataset.d;
+        done(true, { idxs: s.idxs, rules: s.rules, doneText: s.doneText + ' ' + DESTS[d].done, pickDest: d });
+      };
+    });
+    Array.prototype.forEach.call(card.querySelectorAll('.card-menu .popup-item:not([data-act]):not(.dest)'), function (it) {
       it.onclick = function () {
         const s = suggs[+it.dataset.s], part = s.parts[+it.dataset.p];
         // only THIS row's picks go back — "sugIdx.ruleIdx" tokens; Kotlin narrows each
@@ -559,9 +609,14 @@
         if (!s) pendingPlanMode = act;
       };
     });
-    // No shortcuts on the input (user, 2026-08-16) — but typing must not reach the document
-    // handlers (Escape would close popups, arrows would move popup cursors).
+    // No shortcuts on the plan card's input (user, 2026-08-16) — but typing must not reach the
+    // document handlers (Escape would close popups, arrows would move popup cursors). On an
+    // ordinary card Enter submits the note as a reject: the form convention for a text field,
+    // not a card shortcut (4.9 stays deferred).
     const fbIn = card.querySelector('.plan-fb');
-    if (fbIn) fbIn.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    if (fbIn) fbIn.addEventListener('keydown', function (e) {
+      e.stopPropagation();
+      if (!isPlan && e.key === 'Enter') { e.preventDefault(); done(false); }
+    });
   }
 

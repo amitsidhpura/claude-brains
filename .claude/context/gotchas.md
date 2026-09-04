@@ -306,12 +306,19 @@ re-read those before trusting memory here.
 - **A synthetic fixture whose turns are 3 blocks long cannot catch a turn-boundary bug** — real
   transcripts run ~28 blocks a turn, so a bounded forward scan that passed the fixture gave up constantly
   on real data. Shape the fixture like the real data.
+- **Replay's "files changed" list is filled at tool_use time** (`reqFiles` in SessionStore) — a
+  refused or failed Edit/Write stays on it unless the tool_result branch takes it back out (it does
+  since 2026-09-05; the 3.7 hand test replayed a rejected edit as "1 file changed"). Live never had
+  the bug: TurnChanges compares before/after texts. Any new replay-side per-turn list needs the same
+  "undo on denial/error" step.
 - **Deliberate live-vs-replay divergences (the closed `docs/renderer-parity.md` audit, deleted
   2026-08-28; full records via `git show 9bd1683:docs/renderer-parity.md`).** Do not "fix" these:
   (a) replay card wording is "**Edit** on…" + ✓ Applied, never "Claude wants to…" + ✓ Accepted —
   the transcript cannot tell manual approval from auto-mode; ✗ variants come from `toolDenialKind`.
   (b) Non-diff permission cards (e.g. a resolved Bash card) VANISH on resume — `replayCard` renders
-  only with a plan or diff body; the tool line + IN/OUT remain. (c) ⏹ Stopped is reconstructed from
+  only with a plan or diff body; the tool line + IN/OUT remain. A denied DIFF card replays with its
+  typed note quoted (since 2026-09-05, the deny message is the tool_result), a Bash card's note is
+  live-only. (c) ⏹ Stopped is reconstructed from
   `interruptedByShutdown`. (d) Compaction: the summary box is RESUME-only (live `compact_boundary`
   carries metadata only; the body exists only as the transcript's `isCompactSummary` record), while
   the "✻ Distilled for Ns" turn footer is LIVE-only (drawn from the `result` event; replay's
@@ -461,6 +468,11 @@ re-read those before trusting memory here.
   (2026-08-29, `ClaudeSettingsSchema.kt`). Write "the shared `.claude/settings.json`" instead.
 
 ## JCEF is not a browser (Linux)
+- **HTML `title` tooltips do not render at all** (user, 2026-09-05: hovered every titled control,
+  header buttons included — nothing). Not a per-element bug: `JBCefBrowser` shows no title tooltip
+  on Linux unless `CefDisplayHandler.onTooltip` is handled (backlog § Next up). Until then a
+  `title` is documentation for CDP and fixtures, not something the user sees — never make a title
+  the ONLY carrier of a fact the user needs (the 4.8 rows say their scope in their own text).
 - **`loadHTML` before the component has bounds paints the page at CEF's default surface (~300×180)**,
   visible for a frame on project open as a squashed header + composer before the tool window's layout
   arrives. The JBCef component gets no size from being constructed — only from Swing layout after
@@ -687,6 +699,16 @@ re-read those before trusting memory here.
   alike, 2026-09-04) — it is the file that governs permissions. Settings-dependent CLI probes go in
   a throwaway scratchpad dir with its own `.claude/settings.json`; a test that must touch the real
   testing repo is the user's to make.
+- **An UNTRUSTED workspace never loads project settings, so a rule the CLI just wrote looks
+  ignored.** The 4.8 probe (2026-09-04) saw `.claude/settings.json` gain `Bash(factor 97)` and the
+  next turn ask again; stderr (not stdout) carried "workspace has not been trusted". Recipe that
+  works: `CLAUDE_CONFIG_DIR=<scratch>/cfg` holding a copy of `~/.claude/.credentials.json` and a
+  copy of `~/.claude.json` with `projects[<proj>].hasTrustDialogAccepted:true` patched in — the
+  user's real config is never touched and `userSettings` writes land in the scratch dir. Delete
+  the cfg copy afterwards (it holds credentials). Read the probe's STDERR before reading its result.
+- **zsh does not word-split `set -- $var`** — a `for c in "name value"; do set -- $c` loop that is
+  idiomatic in bash gives `$1="name value"` under the default zsh; five probe cells ran with
+  `$2=--cfg` as their destination before it showed (2026-09-04). Run such loops under `bash -c`.
 - **`build/idea-sandbox/` holds STALE sibling sandboxes — verify the running build against the
   dir the IDE's own `-Didea.plugins.path` names.** `ls -t` over the tree picked
   `PS-2024.2/plugins/…/claude-brains-0.8.0.jar` (a sandbox from an older IDE pin, untouched since)

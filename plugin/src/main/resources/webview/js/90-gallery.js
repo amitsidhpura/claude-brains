@@ -230,6 +230,15 @@
         { type: 'addDirectories', directories: ['/tmp'], destination: 'session' },
         { type: 'setMode', mode: 'acceptEdits', destination: 'session' } ]) });
 
+    // permission card — a SINGLE rule (4.8): Always allow is still a split, because the caret now
+    // holds the other places the rule can be kept (session / project-shared / all projects); the
+    // main half keeps the CLI's own destination. Open it to see the three destination rows alone,
+    // and the card above to see them under the per-rule rows behind their header.
+    renderPermission({ tool: 'Bash', id: 'gallery-bash-one', input: JSON.stringify({
+      command: 'factor 97', description: 'Factor the number 97' }),
+      suggestions: JSON.stringify([
+        { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'factor 97' }], behavior: 'allow', destination: 'localSettings' } ]) });
+
     // permission card — command longer than CMD_MAX. The consent case: without the marker you
     // approve a command whose tail the card never showed you.
     renderPermission({ tool: 'Bash', id: 'gallery-bash-cut', input: JSON.stringify({

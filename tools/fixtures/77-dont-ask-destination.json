@@ -1,0 +1,71 @@
+{
+  "item": "4.8 \"don't ask again\" destination — the Always-allow button is a SPLIT: the main half keeps the CLI's own destination, the caret lists the other places the rule can live (2026-09-04)",
+  "branch": "permSuggestions keeps each grant's own `destination` (the CLI sends localSettings on every measured rule card); renderPermission wraps a grant that HAS a destination in the split idiom even when it holds a single rule, and the popup lists every other destination as a `.popup-item.dest[data-d]` row (after the per-rule rows and a header on a compound card). Picking one answers with the whole grant plus `dest`, which rides the bridge `perm` message and Kotlin stamps onto every non-setMode echoed entry. setMode grants (accept-all-edits) carry no destination and get no rows.",
+  "provenance": "Frame shapes are the CLI's (`permission_suggestions` on can_use_tool → the panel's `suggestions` string; docs/ide-mcp-protocol.md). The destination set is VS Code 2.1.260's cycle (`webview/index.js` Ss=[localSettings,userSettings,projectSettings,session]; cliArg never offered). Every value was MEASURED honoured on 2.1.260 (2026-09-04, stdio probe in a trusted scratch workspace): an echoed `destination` that differs from the suggestion's own is what decides the file — projectSettings → .claude/settings.json, localSettings → .claude/settings.local.json, userSettings → <config dir>/settings.json, session → nothing on disk and no re-ask in the same session; an UNKNOWN value drops the grant silently (re-asks next turn). Negative control on the pre-4.8 build: a single-rule grant renders a plain button (no .split), no `.dest` rows exist anywhere, and the tape's perm message carries no `dest` — those asserts are DISCRIMINATING; the compound card's per-rule rows and the setMode card's lack of rows are GUARDS.",
+  "steps": [
+    {
+      "note": "single-rule grant: the split appears with the three other destinations, the main half keeps the default",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge77) { window.__realBridge77 = window.__bridge; } window.__tape77 = []; window.__bridge = function(j){ window.__tape77.push(JSON.parse(j)); };",
+      "frames": [
+        {"type": "permission_request", "id": "pr77a", "tool": "Bash", "input": "{\"command\":\"factor 97\",\"description\":\"Factor the number 97\"}",
+         "suggestions": "[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"factor 97\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]"}
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#log .card.warn').length", "equals": 1, "why": "GUARD: one card" },
+        { "js": "document.querySelectorAll('#log .card-b .split .alt:not(.more)').length", "equals": 1, "why": "DISCRIMINATING: a single-rule grant is a split button now (pre-fix: a plain .alt, no .split)" },
+        { "js": "(function(){ var b = document.querySelector('#log .card-b .split .alt:not(.more)'); return b ? b.title.indexOf('settings.local.json') >= 0 : 'absent'; })()", "equals": true, "why": "DISCRIMINATING (pre-fix: no split, so absent): the main half still names the CLI's own destination — the default is unchanged" },
+        { "js": "Array.prototype.map.call(document.querySelectorAll('#log .card-menu .popup-item.dest'), function (i) { return i.dataset.d; }).join(',')", "equals": "session,projectSettings,userSettings", "why": "DISCRIMINATING: the caret lists every destination EXCEPT the grant's own, session first (pre-fix: no rows)" },
+        { "js": "document.querySelectorAll('#log .card-menu .popup-h').length", "equals": 0, "why": "GUARD: no header on a single-rule menu — the rows hang straight off Always allow" },
+        { "js": "(function(){ var r = document.querySelector('#log .card-menu .popup-item.dest[data-d=\"session\"]'); return r ? r.textContent.trim() : 'absent'; })()", "equals": "This session only", "why": "DISCRIMINATING: the row says what it does in plain words" },
+        { "js": "(function(){ var r = document.querySelector('#log .card-menu .popup-item.dest[data-d=\"session\"]'); if (!r) return 'absent'; r.click(); var m = window.__tape77[window.__tape77.length-1]; return m ? [m.kind, m.id, m.allow, m.sugg, m.dest].join('|') : 'no-msg'; })()", "equals": "perm|pr77a|true|0|session", "why": "DISCRIMINATING: picking a destination answers with the WHOLE grant (sugg 0) plus dest=session (pre-fix: no row to click)" },
+        { "js": "(function(){ var t = document.querySelector('#log .card-b .ok-t'); return t ? t.textContent.indexOf('this session') >= 0 : 'absent'; })()", "equals": true, "why": "DISCRIMINATING: the decided card records the scope it was granted for" }
+      ]
+    },
+    {
+      "note": "compound grant: the per-rule rows stay first, a header separates the destination rows, and a destination pick grants the whole set",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape77 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr77b", "tool": "Bash", "input": "{\"command\":\"mkdir -p out && touch out/a.txt\"}",
+         "suggestions": "[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"mkdir -p:*\"},{\"toolName\":\"Bash\",\"ruleContent\":\"touch:*\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]"}
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#log .card-menu .popup-item:not(.dest)').length", "equals": 2, "why": "GUARD: the two per-rule rows (6.4) are untouched" },
+        { "js": "Array.prototype.map.call(document.querySelectorAll('#log .card-menu > *'), function (n) { return n.className.replace(/\\s+/g,' ').trim(); }).join('|')", "equals": "popup-item|popup-item|popup-h|popup-item dest|popup-item dest|popup-item dest", "why": "DISCRIMINATING: rule rows, then the header, then the three destinations — one menu, in that order" },
+        { "js": "(function(){ var r = document.querySelector('#log .card-menu .popup-item.dest[data-d=\"userSettings\"]'); if (!r) return 'absent'; r.click(); var m = window.__tape77[window.__tape77.length-1]; return m ? [m.sugg, m.dest].join('|') : 'no-msg'; })()", "equals": "0|userSettings", "why": "DISCRIMINATING: a destination row grants EVERY rule (sugg 0 whole, not 0.N) — the scope choice is about where, not which" },
+        { "js": "(function(){ var t = document.querySelector('#log .card-b .ok-t'); return t ? (t.textContent.indexOf('all projects') >= 0 && t.querySelectorAll('code').length === 2) : 'absent'; })()", "equals": true, "why": "DISCRIMINATING (pre-fix: no row to click): both rule chips and the scope on the decided line" }
+      ]
+    },
+    {
+      "note": "a grant the CLI already scoped to the session offers the three SAVED destinations instead — the list is 'everything but the default', not a fixed three",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape77 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr77c", "tool": "Read", "input": "{\"file_path\":\"/etc/hosts\"}",
+         "suggestions": "[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Read\",\"ruleContent\":\"//etc/**\"}],\"behavior\":\"allow\",\"destination\":\"session\"}]"}
+      ],
+      "expect": [
+        { "js": "Array.prototype.map.call(document.querySelectorAll('#log .card-menu .popup-item.dest'), function (i) { return i.dataset.d; }).join(',')", "equals": "localSettings,projectSettings,userSettings", "why": "DISCRIMINATING: session is the default here, so the saved three are offered" },
+        { "js": "(function(){ var b = document.querySelector('#log .card-b .split .alt:not(.more)'); return b ? b.title.indexOf('this session') >= 0 : 'absent'; })()", "equals": true, "why": "DISCRIMINATING (pre-fix: no split): the main half's tooltip still says session" }
+      ]
+    },
+    {
+      "note": "accept-all-edits is a mode switch, not a rule — no destination rows, no split",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape77 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr77d", "tool": "Edit", "input": "{\"file_path\":\"/home/syncroze/Sites/claude-brains-testing/a.txt\",\"old_string\":\"a\",\"new_string\":\"b\"}",
+         "suggestions": "[{\"type\":\"setMode\",\"mode\":\"acceptEdits\",\"destination\":\"session\"}]"}
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#log .card-b .alt:not(.more)').length", "equals": 1, "why": "GUARD: the Accept-all-edits button is there" },
+        { "js": "document.querySelectorAll('#log .card-b .split, #log .card-menu .popup-item.dest').length", "equals": 0, "why": "GUARD: and it is a plain button with no destination rows — setMode keeps its own scope (VS Code stamps only non-setMode entries)" }
+      ]
+    },
+    {
+      "note": "restore the real bridge",
+      "setup": "if (window.__realBridge77) { window.__bridge = window.__realBridge77; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [],
+      "expect": [
+        { "js": "typeof window.__bridge", "equals": "function", "why": "GUARD: bridge restored" }
+      ]
+    }
+  ]
+}

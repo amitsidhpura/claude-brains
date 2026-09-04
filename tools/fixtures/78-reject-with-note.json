@@ -1,0 +1,75 @@
+{
+  "item": "3.7 deny with a message on tool cards — the plan card's feedback field, inline after Reject on every ordinary permission card (2026-09-05)",
+  "branch": "cardBtns appends a `.plan-fb` input (placeholder \"Tell Claude what to do instead\") inside `.card-b` after the Reject button; done() reads it on deny only (an ordinary allow drops it — Kotlin forwards `feedback` on allow solely for plans, where it rides updatedInput.plan; measured 2.1.233), the text rides the bridge `perm` message as `text` and Kotlin sends it as the deny `message` (existing path, RenderLimits.REJECT_MESSAGE when empty). Enter in the field rejects with the note. The decided line quotes the note through fbQuote, exactly as the plan card does. The plan card is untouched: its field stays above the buttons with its own placeholder.",
+  "provenance": "Frame shapes are the CLI's (`can_use_tool` → the panel's permission_request; docs/ide-mcp-protocol.md). The deny message reaching the model VERBATIM as the tool_result, and a `feedback` field on allow being dropped, were both probed on 2.1.233 (2026-08-16, protocol doc § permission facts). VS Code 2.1.260 renders the same input beside its reject button (webview/index.js `rejectMessageInput`, placeholder \"Tell Claude what to do instead\"). Negative control on the pre-3.7 build (the 2.12 sandbox): no `.plan-fb` exists on an ordinary card, so the typed-note asserts read 'absent' and the tape's text is '' — DISCRIMINATING; the empty-reject and plan-card asserts are GUARDS that must pass on both builds.",
+  "steps": [
+    {
+      "note": "ordinary Bash card: the field is in the button row; a typed note rides Reject and is quoted on the decided line",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge78) { window.__realBridge78 = window.__bridge; } window.__tape78 = []; window.__bridge = function(j){ window.__tape78.push(JSON.parse(j)); };",
+      "frames": [
+        {"type": "permission_request", "id": "pr78a", "tool": "Bash", "input": "{\"command\":\"rm -rf build\"}"}
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#log .card.warn').length", "equals": 1, "why": "GUARD: one card" },
+        { "js": "document.querySelectorAll('#log .card-b .plan-fb').length", "equals": 1, "why": "DISCRIMINATING: the note field sits in the button row (pre-fix: none)" },
+        { "js": "(function(){ var f = document.querySelector('#log .card-b .plan-fb'); return f ? f.placeholder : 'absent'; })()", "equals": "Tell Claude what to do instead", "why": "DISCRIMINATING: VS Code's wording — it is a reject note, not the plan card's 'what to change'" },
+        { "js": "(function(){ var b = document.querySelector('#log .card-b'); var k = Array.prototype.map.call(b.children, function (n) { return n.className.split(' ')[0]; }); return k.join(','); })()", "equals": "ok,no,plan-fb", "why": "DISCRIMINATING: Accept, Reject, then the field — after the buttons, never between them" },
+        { "js": "(function(){ var f = document.querySelector('#log .card-b .plan-fb'); if (!f) return 'absent'; f.value = 'use the gradle clean task instead'; document.querySelector('#log .card-b .no').click(); var m = window.__tape78[window.__tape78.length-1]; return m ? [m.kind, m.id, m.allow, m.text].join('|') : 'no-msg'; })()", "equals": "perm|pr78a|false|use the gradle clean task instead", "why": "DISCRIMINATING: the note rides the deny as `text` (pre-fix: no field, 'absent')" },
+        { "js": "(function(){ var t = document.querySelector('#log .card-b .no-t'); return t ? t.textContent : 'absent'; })()", "equals": "✗ Rejected — “use the gradle clean task instead”", "why": "DISCRIMINATING: the decided line quotes the note the way the plan card does" },
+        { "js": "document.querySelectorAll('#log .plan-fb').length", "equals": 0, "why": "GUARD: the field leaves with the buttons once the card is decided" }
+      ]
+    },
+    {
+      "note": "empty field: Reject sends no text, the decided line stays plain — today's behaviour untouched",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape78 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr78b", "tool": "Bash", "input": "{\"command\":\"rm -rf build\"}"}
+      ],
+      "expect": [
+        { "js": "(function(){ document.querySelector('#log .card-b .no').click(); var m = window.__tape78[window.__tape78.length-1]; return m ? [m.allow, m.text].join('|') : 'no-msg'; })()", "equals": "false|", "why": "GUARD: empty text → Kotlin sends REJECT_MESSAGE, as before" },
+        { "js": "(function(){ var t = document.querySelector('#log .card-b .no-t'); return t ? t.textContent : 'absent'; })()", "equals": "✗ Rejected", "why": "GUARD: no quote without a note" }
+      ]
+    },
+    {
+      "note": "a note typed and then Accept: the note is NOT sent (an ordinary allow cannot carry it) and is not quoted",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape78 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr78c", "tool": "Write", "input": "{\"file_path\":\"/home/syncroze/Sites/claude-brains-testing/a.txt\",\"content\":\"x\"}"}
+      ],
+      "expect": [
+        { "js": "(function(){ var f = document.querySelector('#log .card-b .plan-fb'); if (f) f.value = 'stray note'; document.querySelector('#log .card-b .ok').click(); var m = window.__tape78[window.__tape78.length-1]; return m ? [m.allow, m.text].join('|') : 'no-msg'; })()", "equals": "true|", "why": "GUARD (both builds): allow never carries a note on an ordinary card — it would be dropped by the CLI, so the panel must not pretend it was delivered" },
+        { "js": "(function(){ var t = document.querySelector('#log .card-b .ok-t'); return t ? t.textContent : 'absent'; })()", "equals": "✓ Accepted", "why": "GUARD: no quote on the accepted line" }
+      ]
+    },
+    {
+      "note": "Enter in the field rejects with the note — the form convention, not a card shortcut",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape78 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr78d", "tool": "Bash", "input": "{\"command\":\"git push --force\"}"}
+      ],
+      "expect": [
+        { "js": "(function(){ var f = document.querySelector('#log .card-b .plan-fb'); if (!f) return 'absent'; f.value = 'never force-push'; f.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true, cancelable: true})); var m = window.__tape78[window.__tape78.length-1]; return m ? [m.allow, m.text].join('|') : 'no-msg'; })()", "equals": "false|never force-push", "why": "DISCRIMINATING: Enter submits the reject with the note (pre-fix: 'absent')" }
+      ]
+    },
+    {
+      "note": "the plan card keeps its own field: above the buttons, its own placeholder, untouched by 3.7",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape78 = [];",
+      "frames": [
+        {"type": "permission_request", "id": "pr78e", "tool": "ExitPlanMode", "input": "{\"plan\":\"1. Do the thing\"}"}
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#log .card.plan .plan-fb').length", "equals": 1, "why": "GUARD: one field on the plan card" },
+        { "js": "(function(){ var f = document.querySelector('#log .card.plan .plan-fb'); return f ? f.placeholder : 'absent'; })()", "equals": "Tell Claude what to change", "why": "GUARD: the plan card's wording" },
+        { "js": "document.querySelectorAll('#log .card.plan .card-b .plan-fb').length", "equals": 0, "why": "GUARD: the plan card's field is NOT in the button row — 5.2's layout stands" }
+      ]
+    },
+    {
+      "note": "restore the real bridge",
+      "setup": "if (window.__realBridge78) { window.__bridge = window.__realBridge78; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [],
+      "expect": [
+        { "js": "typeof window.__bridge", "equals": "function", "why": "GUARD: bridge restored" }
+      ]
+    }
+  ]
+}

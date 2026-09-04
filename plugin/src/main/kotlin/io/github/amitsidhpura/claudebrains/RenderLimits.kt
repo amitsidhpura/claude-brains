@@ -483,6 +483,6 @@ object RenderLimits {
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
             "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}," +
             "planDenyPrefix:\"$PLAN_DENY_PREFIX\",planCommentsHeader:\"$PLAN_COMMENTS_HEADER\"," +
-            "tweakNote:\"$TWEAK_NOTE\"}"
+            "tweakNote:\"$TWEAK_NOTE\",rejectMessage:\"$REJECT_MESSAGE\"}"
     }
 }

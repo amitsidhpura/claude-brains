@@ -164,7 +164,8 @@ class RenderLimitsTest {
                 "plumbingTags:[\"tool_use_error\",\"system-reminder\"]," +
                 "planDenyPrefix:\"User chose to stay in plan mode and continue planning\"," +
                 "planCommentsHeader:\"Comments on the plan:\"," +
-                "tweakNote:\"edited in the IDE before accepting\"}",
+                "tweakNote:\"edited in the IDE before accepting\"," +
+                "rejectMessage:\"User rejected the change in the IDE\"}",
             RenderLimits.asJs(),
         )
     }

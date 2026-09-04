@@ -1,0 +1,32 @@
+{
+  "item": "3.7 follow-up — a replayed edit card quotes the note it was rejected with, as the plan card does (2026-09-05)",
+  "branch": "SessionStore.applyToolResult extracts the deny message into `planFeedback` for a denied EDIT item too (not just a plan), skipping the stock REJECT_MESSAGE and the CLI's abort prefix; fillAppliedCard draws `✗ Rejected` + fbQuote(planFeedback) on a denied diff card. A denied item without a note stays a plain `✗ Rejected`.",
+  "provenance": "Item shape is the panel's own __transcript wire (SessionStore → ChatPanel), self-consistency for the shape; the FACT it rests on is measured — the user's 2026-09-05 transcript e5d6aaf2… carries the typed note verbatim as the denied Edit's is_error tool_result, and `SessionStoreDeniedEditTest` pins the parser's extraction on that real file. The user's screenshot showed the replayed card reading a bare `✗ Rejected` while the model's reply quoted the note. Negative control on the build before this change: step 1's quoted footer reads plain `✗ Rejected` — DISCRIMINATING; step 2 is a GUARD on both builds.",
+  "steps": [
+    {
+      "note": "a denied edit with a note replays quoting it",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [
+        {"type": "__transcript", "items": [
+          {"role": "tool", "text": "Edit", "file": "/home/syncroze/Sites/claude-brains-testing/timestamp2.txt", "oldStr": "Yet more dummy text appended to the file.\n", "newStr": "Yet more dummy text appended to the file.\n\nAnother line of dummy text added on 2026-09-05.\n", "denied": true, "planFeedback": "Ignore please."}
+        ]}
+      ],
+      "expect": [
+        { "js": "document.querySelectorAll('#log .card.warn .diff').length", "equals": 1, "why": "GUARD: the diff card replays" },
+        { "js": "(function(){ var t = document.querySelector('#log .card.warn .no-t'); return t ? t.textContent : 'absent'; })()", "equals": "✗ Rejected — “Ignore please.”", "why": "DISCRIMINATING: the note is quoted on the replayed card, as the live card and the plan card quote it (pre-fix: plain ✗ Rejected)" }
+      ]
+    },
+    {
+      "note": "a denied edit without a note (the stock message, filtered out by the parser) stays plain",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [
+        {"type": "__transcript", "items": [
+          {"role": "tool", "text": "Edit", "file": "/home/syncroze/Sites/claude-brains-testing/timestamp2.txt", "oldStr": "a\n", "newStr": "b\n", "denied": true}
+        ]}
+      ],
+      "expect": [
+        { "js": "(function(){ var t = document.querySelector('#log .card.warn .no-t'); return t ? t.textContent : 'absent'; })()", "equals": "✗ Rejected", "why": "GUARD (both builds): no note, no quote — old transcripts keep their plain footer" }
+      ]
+    }
+  ]
+}

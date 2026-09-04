@@ -15,6 +15,11 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
+- **Title tooltips never show in the panel (Linux JCEF, measured by the user 2026-09-05 on every
+  titled control incl. the header buttons).** `title` attributes are used in ~18 places in chat.html
+  plus every card button/row; JBCefBrowser draws none of them unless the plugin handles
+  `CefDisplayHandler.onTooltip` and shows a Swing tooltip itself. One handler in `ChatPanel` lights
+  all of them at once. Check Windows first (native tooltips may work there) — not a 4.8 item.
 - **"Update Claude Code" button on the early-exit hint** (designed 2026-09-04, user: "I will
   think about it in future"): click → run `<resolved executable> update`, stream its output as a
   status block, auto-restart the CLI on exit 0, surface the output honestly on failure (npm
@@ -88,6 +93,7 @@
 - **15.5 Debugger MCP tools** [LG] (deferred 2026-08-29): expose the live PhpStorm debug session (`XDebuggerManager` → frames, variables, breakpoints) as bridge tools in `IdeTools.kt`, mirroring VS Code's `claude-vscode-extension` MCP server + `ask_debugger_help` hand-off; needs an Xdebug session in the sandbox to test
 
 ## Deferred (user's choice, do last)
+- **4.9 number-key answers on cards** — deferred 2026-09-05 ("no keyboard shortcuts for now"); do not re-propose.
 - Conversation tabs (+ 8.8 reopen-closed-session and 8.10 session groups/sidebar, both deferred 2026-08-29 — only worth it with tabs or worktrees)
 - Auto-include selection (checklist 6.6; the insert-mention half, 6.5, SHIPPED 2026-09-04 as the Project-view/editor context-menu action)
 - @-mention symbols from the IDE index (checklist 6.4 [MD], deferred 2026-08-29)

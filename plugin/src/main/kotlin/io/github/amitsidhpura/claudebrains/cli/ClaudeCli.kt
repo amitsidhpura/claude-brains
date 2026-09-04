@@ -50,6 +50,8 @@ class ClaudeCli(
     private val executable: String,
     private val permissionMode: String?,
     private val resumeSessionId: String? = null,
+    /** Content roots outside [workingDir], each passed as `--add-dir` (checklist 2.12, [WorkspaceRoots]). */
+    private val addDirs: List<String> = emptyList(),
     private val onEvent: (String) -> Unit,
     private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?, reason: String?) -> Unit,
     private val onInit: (commandsJson: String) -> Unit,
@@ -146,6 +148,10 @@ class ClaudeCli(
         if (resumeSessionId != null) {
             cmd += listOf("--resume", resumeSessionId)
         }
+        // One flag per directory, as the VS Code host does (extension.js: `for (l of dirs)
+        // push("--add-dir", l)`). Measured 2026-09-05: a Read inside such a directory runs with no
+        // can_use_tool; without the flag it asks on every touch.
+        addDirs.forEach { cmd += listOf("--add-dir", it) }
         // Omitted when nothing is persisted (see the class doc): the CLI then honours the user's
         // own `permissions.defaultMode`, which the flag would otherwise silently beat.
         if (permissionMode != null) {

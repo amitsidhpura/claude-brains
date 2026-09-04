@@ -13,13 +13,12 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 86 ✅ · 0 🟥 · 0 🟧 · 8 ⬜ · 46 ➖ (140 rows) — open rows in §1 §2 §3 §4
+**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 89 ✅ · 0 🟥 · 0 🟧 · 4 ⬜ · 47 ➖ (140 rows) — open rows in §1 §3
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
 - **Awaiting a decision ([DECIDE]):** none — the user is taking ALL ten [NEW] rows of the 2026-09-04
-  full-surface audit ("finish all even if small"); 6.9 and 4.7 shipped. Remaining eight, in build order to be
-  picked: 1.26 banner-class `system` frames · 1.27 full IN/OUT in an editor · 1.28 `control_cancel_request`
-  (correctness) · 2.12 extra content roots · 3.7 deny-with-message · 3.8 editable Bash command · 4.8
-  "don't ask again" destination · 4.9 number-key answers (13.3: deferred)
+  full-surface audit ("finish all even if small"); 6.9, 6.5, 4.7, 4.8, 2.12 and 3.7 shipped, 4.9 deferred
+  2026-09-05. Remaining four, in build order: 1.28 `control_cancel_request` (correctness) · 1.27 full
+  IN/OUT in an editor · 3.8 editable Bash command · 1.26 banner-class `system` frames (13.3: deferred)
 
 **Status marks**
 
@@ -336,7 +335,7 @@ auto-include selection, voice.
       the next prompt as "Answering your earlier questions:"). Correctness first: mark the card
       lapsed and drop it from `pendingPermissions`. Probe the frame over stdio before building
 
-## 2. ⬜ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -360,12 +359,18 @@ auto-include selection, voice.
       live 2026-08-17: an unsaved `ZEBRA-43` buffer was what `Read` returned
 - **2.11** ✅ **Stale lock sweep** — `~/.claude/ide/*.lock` files with a dead pid deleted on every
       lock write (the CLI's own rule; `IdeLockFile.sweepStale`); 17 → 2 on first run, 2026-08-17
-- **2.12** ⬜ [SM] **Additional content roots as working directories** [NEW] [DECIDE] — the CLI
-      accepts `--add-dir` / a `register_repo_root` control (+ `DirectoryAdded` hook) for
-      directories outside the cwd; `workspaceFolders()` hands the CLI `project.basePath` only. A
-      JetBrains project whose content roots live outside its base directory (attached modules,
-      monorepo roots) gets file tools that refuse those paths (`blockReadsOutsideWorkingDirectories`
-      territory). Enumerate `ProjectRootManager.contentRoots` and add the ones outside basePath
+- **2.12** ✅ **Additional content roots as working directories** [NEW] — built 2026-09-05:
+      `WorkspaceRoots.extraDirs` picks every `ProjectRootManager.contentRoots` entry outside
+      `project.basePath` (not the base, not nested in it; a root under another extra root is
+      dropped), `ClaudeCli` passes each as `--add-dir` (one flag per dir, as VS Code's host does for
+      every workspace folder that is not the cwd — extension.js `Yg$`), and the lock file's
+      `workspaceFolders` lists them too (the bridge's `getWorkspaceFolders` already did). Read at
+      each launch: a root attached mid-session is picked up by the next New/resume, not live (the
+      `register_repo_root` control is the follow-up if that ever matters). MEASURED 2026-09-05,
+      2.1.260: BEFORE (user's screenshot, `~/Sites/computer` attached to the testing window) every
+      Read there raised a card with `decision_reason` "Path is outside allowed working directories"
+      and a `Read(//…/**)` session rule suggestion; stdio control reproduced it (1 ask), and with
+      `--add-dir` the same Read ran with 0 asks. `WorkspaceRootsTest` (6). No webview change
 
 ## 3. ⬜ Diffs & edit approval
 - **3.1** ✅ **Permission gate** — `can_use_tool` via `--permission-prompt-tool stdio`
@@ -403,16 +408,34 @@ auto-include selection, voice.
       invisible — same as VS Code's checkpointing); live turns only — a resumed session draws the
       line from the transcript (count + names) without Review (backlog). Built and hand-verified
       2026-08-28 (two files in one turn, chain navigation); fixture 60; `TurnChangesTest`
-- **3.7** ⬜ [SM] **Deny with a message on tool cards** [NEW] [DECIDE] — VS Code's reject offers
-      "Tell Claude what to do instead" and the text rides the deny. Ours has it on the plan card
-      only (`.plan-fb`, keep-planning); `ClaudeSessionService.respondPermission(feedback)` already
-      carries the field, so it is a card input + one call-site change
+- **3.7** ✅ **Deny with a message on tool cards** [NEW] — built 2026-09-05: every ordinary
+      permission card carries the plan card's `.plan-fb` field inline after Reject (VS Code's
+      placement, `rejectMessageInput`, placeholder "Tell Claude what to do instead"), filling the
+      row and wrapping under the buttons when tight. Rides DENY only — the message reaches the
+      model verbatim as the tool_result (probed 2.1.233); a note typed before Accept is dropped,
+      not quoted, because an ordinary allow has no wire for it. Enter in the field rejects with the
+      note (a text-field convention, not a card shortcut — 4.9 stays deferred). The decided line
+      quotes it (`✗ Rejected — "…"`) via the plan card's fbQuote. Live-only: decided ordinary cards
+      vanish on replay by design. No Kotlin change — `respondPermission(feedback)` already sent the
+      deny message. Fixture 78 (16 asserts, control 6 fail / 0 abort), mockup mirrored (5 cards).
+      Hand test 2026-09-05 (Edit card, note "Ignore please."): delivered — the transcript carries
+      `toolDenialKind:"permission-rule"` with the note as the is_error tool_result and the model
+      quoted it. Two follow-ups from that test, both fixed the same day: **(a)** the tool line drew
+      an error OUT box repeating the note one line above the card (pre-existing with the stock
+      message too) — `cardDenies` in the webview skips the box for a denial this panel sent, red
+      dot kept, exact-text match so a real error still draws (fixture 79, control 2 fail / 0
+      abort); **(b)** REPLAY listed the rejected edit as "1 file changed" (pre-existing since 3.6:
+      the list was filled at tool_use time and never emptied) — `SessionStore` now drops a denied
+      or failed edit from the turn's files (`SessionStoreDeniedEditTest` on the real transcript);
+      **(c)** a replayed EDIT card read a bare `✗ Rejected` while the plan card replays its note —
+      the parser now extracts the deny message for denied edit items too and the replayed diff card
+      quotes it (fixture 80; Bash cards still vanish on replay, so their note stays live-only)
 - **3.8** ⬜ [SM] **Edit the Bash command in the permission card** [NEW] [DECIDE] — VS Code renders
       the command `contentEditable` and sends the edited text as `updatedInput` on allow. Our 3.5
       tweak-travel covers Edit/Write proposals in the editor only; the card's command preview is
       read-only. Same `updatedInput` path, a `contenteditable` on `.cmd` with the `.cmd-cut` cap
 
-## 4. ⬜ Permission modes
+## 4. ✅ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
       aliased in the chip), acceptEdits, plan, auto (the safety-classifier mode)
 - **4.2** ➖ **`bypassPermissions`** — removed 2026-08-03 with the relaunch machinery; the CLI
@@ -448,14 +471,27 @@ auto-include selection, voice.
       `default` (no guard needed). Accent shares Manual's slate. Fixture 76. Visible change: a
       never-picked chip now starts on the CLI's default (`auto` on 2.1.260) instead of a hardcoded
       Manual — change-notes line for the next release
-- **4.8** ⬜ [SM] **"Don't ask again" destination picker** [NEW] [DECIDE] — VS Code cycles the
-      suggestion's target: "Only for this session (not saved)" / `.claude/settings.local.json`
-      (gitignored) / `.claude/settings.json` (shared with team) / user. Ours (4.4) echoes the
-      suggestion as-is, so the CLI's default destination decides. Adds a `destination` on the
-      echoed `updatedPermissions` entry — probe which values the CLI honours first
-- **4.9** ⬜ [XS] **Number-key answers on cards** [NEW] [DECIDE] — VS Code answers a focused
-      permission card with 1/2/3 and Esc. Not a global chord (12.4's reason for binding none): a
-      keydown handler scoped to the focused card
+- **4.8** ✅ **"Don't ask again" destination** [NEW] — built 2026-09-04 as a SPLIT on the
+      Always-allow button (the user's call over VS Code's cycling link): the main half keeps the
+      CLI's own destination (`localSettings` on every rule card measured), the caret lists the
+      others — `This session only` / `This project, shared` / `All projects` (and `This project,
+      just you` when the CLI's own is `session`); on a compound grant they sit under the per-rule
+      rows behind an `All of these` header and grant the whole set. MEASURED on 2.1.260 (stdio, a
+      trusted scratch workspace): the echoed `destination` decides the file — `projectSettings` →
+      `.claude/settings.json`, `localSettings` → `.claude/settings.local.json`, `userSettings` →
+      `<config dir>/settings.json`, `session` → nothing on disk, no re-ask that run; an unknown
+      value drops the grant silently, so `PermissionDestinations` forwards only those four
+      (`cliArg` behaves as session and is not offered, as in VS Code). `setMode` entries keep their
+      own scope; `addDirectories` grants have no rows (destination change unprobed for them). The
+      decided line records the scope (`always allowed for all projects`). Fixture 77 (17 asserts,
+      negative control 11 fail / 0 abort on the pre-fix build), `PermissionDestinationsTest`.
+      Not remembered across cards (VS Code keeps the last pick in localStorage) — the main half is
+      always the default, by the user's spec; revisit only if the session-only pick turns out to
+      be the common one
+- **4.9** ➖ **Number-key answers on cards** [NEW] — deferred by the user 2026-09-05 ("no keyboard
+      shortcuts for now"), extending the 2026-08-16 plan-card rule to every card. VS Code answers a
+      focused card with 1/2/3 and Esc; ours would be a keydown handler scoped to the focused card,
+      not a global chord (12.4). Revisit only if the user asks for keyboard answers
 
 ## 5. ✅ Plan mode
 - **5.1** ✅ **Plan card** — enter plan mode from the chip; the plan renders as a card on
@@ -855,6 +891,7 @@ auto-include selection, voice.
 - **MT-2.10** PDF/text attach → document chip with real filename → 6.2 · 2026-08-07
 - **MT-2.11** After an error turn, ↻ Retry re-runs last prompt incl. images → 1.8 · 2026-08-07
 - **MT-2.12** Paperclip → attach menu → native picker → chip → 6.2 · 2026-08-07
+- **MT-3.7** Manual mode, a Bash card: type a note in the field after Reject, press Enter (or click Reject) → card reads `✗ Rejected — "…"`, Claude's next message follows the note instead of retrying; empty field + Reject → plain `✗ Rejected` → 3.7 · 2026-09-05
 - **MT-2.13** [/] button opens slash menu same as typing `/` → 7.1 · 2026-08-07
 - **MT-2.14** Delete forward-deletes in composer and model search (alone, with selection, Ctrl+Delete word), no stray char → 1.2, 9.1 · 2026-08-09 · RESOLVED 2026-08-09: fixed — Delete inserted a tofu char (JCEF-on-Linux sends AWT keyChar 0x7F as TEXT); document-level two-layer fix in chat.html (keydown manual forward-delete, selection-aware, Ctrl+Delete = word, native cancelled; capture-phase input filter strips control chars except \t \n, caret preserved — also kills ESC 0x1B); covers `#modelSearch`; headless 7/7 (mid, selection, Ctrl-word, end-noop, 0x7F strip, \t\n survive, mention re-filter); D1 proves no double-delete in a compliant browser; real-JCEF hardware key pending runIde
 
@@ -882,6 +919,8 @@ auto-include selection, voice.
 - **MT-4.5** Plan mode: card appears; approving drops chip to Manual → 5.1, 5.3 · 2026-08-07
 - **MT-4.6** Model pick persists across restart; search filters → 9.1 · 2026-08-07
 - **MT-4.7** Custom model `value : Display Name : Description` shows display name in chip → 9.1 · 2026-08-07
+- **MT-4.8** Always-allow caret on a single-rule Bash card lists three destinations; `This session only` → no file written, same command not re-asked; `This project, shared` → `.claude/settings.json` gains the rule; main half still writes `settings.local.json`; compound card shows the rules first, then `All of these` + the three → 4.8 · 2026-09-04 · RESOLVED 2026-09-05: all four steps passed on the real CLI in the testing repo — session-only wrote nothing and the repeat was not re-asked; project-shared wrote `.claude/settings.json`; the main half wrote `settings.local.json`; decided lines carried the scope (none for the default). Replay drops the decided card (deliberate, gotchas § Replay). Title tooltips do not show — panel-wide Linux JCEF gap, backlog § Next up
+- **MT-2.12** Attach `~/Sites/computer` to the testing window, new conversation, "Read the file list of ~/Sites/computer and open its README, without using Bash" → no cards; detach it, new conversation, same prompt → cards again with "Path is outside allowed working directories" → 2.12 · 2026-09-05 · RESOLVED 2026-09-05: both directions passed on the real CLI (user)
 
 </details>
 

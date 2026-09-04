@@ -26,7 +26,7 @@
     card.innerHTML = '<div class="card-h"><b>' + esc(toolLabel(it.text)) + '</b>' +
       (it.file ? ' on <code></code>' : '') + '</div>' + body +
       '<div class="card-b">' + (it.denied
-        ? '<span class="no-t">✗ Rejected</span>'
+        ? '<span class="no-t">✗ Rejected' + (it.planFeedback ? fbQuote(it.planFeedback) : '') + '</span>'
         : '<span class="ok-t">✓ Applied</span>') + '</div>';
     // fillPath, exactly as the live card and the tool line do — replay must not spell a path
     // differently from the surface it is replaying.

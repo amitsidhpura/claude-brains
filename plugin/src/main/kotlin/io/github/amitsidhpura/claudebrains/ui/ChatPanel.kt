@@ -226,7 +226,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     .split(',').map { it.trim() }.filter { it.isNotEmpty() && it != "-1" }
                 // "text" is the plan card's typed feedback; empty means none was given
                 val feedback = msg["text"]?.jsonPrimitive?.content?.trim()?.takeIf { it.isNotEmpty() }
-                session.respondPermission(id, allow, suggs, feedback)
+                // "dest" (4.8) is present only when a destination row was picked on the card
+                val dest = msg["dest"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                session.respondPermission(id, allow, suggs, feedback, destination = dest)
                 // The card answered (or lost the race — either way the question is settled):
                 // the editor half must not keep advertising a live decision.
                 permDiffs.remove(id)?.let { permDiffReview.dismiss(it) }

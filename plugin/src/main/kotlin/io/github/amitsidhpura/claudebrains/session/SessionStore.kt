@@ -507,7 +507,7 @@ object SessionStore {
         var questions: JsonElement? = null // AskUserQuestion input
         var answers: JsonElement? = null   // chosen answers (from toolUseResult)
         var plan: String? = null           // ExitPlanMode plan markdown
-        var planFeedback: String? = null   // the typed reason a plan was refused (deny message)
+        var planFeedback: String? = null   // the typed reason a plan OR an edit was refused (deny message, 3.7)
         var planComments: List<io.github.amitsidhpura.claudebrains.RenderLimits.PlanComment>? = null // anchored plan comments (5.6)
         var denied: Boolean = false        // permission was refused — card reads ✗, not ✓
         var resolved: Boolean = false      // a tool_result arrived — without one a plan card is UNDECIDED
@@ -815,10 +815,17 @@ object SessionStore {
                                 for (block in content) {
                                     val b = block.jsonObject
                                     if (b["type"]?.jsonPrimitive?.content == "tool_result") {
-                                        applyToolResult(
-                                            b, obj["toolUseResult"], byToolId,
-                                            denied = obj["toolDenialKind"] != null,
-                                        )
+                                        val denied = obj["toolDenialKind"] != null
+                                        applyToolResult(b, obj["toolUseResult"], byToolId, denied = denied)
+                                        // An edit that was refused or failed changed nothing: take
+                                        // it back out of the turn's "files changed" list, which was
+                                        // filled at tool_use time. Live has the before/after texts
+                                        // and drops it by comparison (TurnChanges.endTurn); replay
+                                        // only has the result's verdict. Found by the 3.7 hand test
+                                        // 2026-09-05: a rejected Edit replayed as "1 file changed".
+                                        b["tool_use_id"]?.jsonPrimitive?.content?.let(byToolId::get)?.let { ti ->
+                                            if ((denied || ti.isError) && ti.text in EDIT_TOOLS) ti.fullPath?.let(reqFiles::remove)
+                                        }
                                     }
                                 }
                             }
@@ -1364,7 +1371,10 @@ object SessionStore {
         // A denied plan's tool_result IS the deny message (probed 2.1.233: delivered verbatim) —
         // the user's typed reason when one was given. The stock no-reason message stays off the
         // card, so old transcripts keep their plain "✗ Kept planning".
-        if (denied && item.plan != null) {
+        // The same for a refused EDIT card (3.7): the note typed on the card is the deny message,
+        // and the diff card replays, so it quotes the note the way the plan card does. Bash cards
+        // do not replay at all (gotchas § Replay), so their note stays live-only.
+        if (denied && (item.plan != null || item.text in EDIT_TOOLS)) {
             resultText(block["content"])
                 ?.takeIf {
                     it.isNotBlank() && it != RenderLimits.REJECT_MESSAGE &&

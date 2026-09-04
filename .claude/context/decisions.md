@@ -4,6 +4,50 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-05 — 3.7 reject-note field: inline after Reject, DENY only, Enter submits
+**Why**: VS Code's placement (`rejectMessageInput` beside its reject button) costs no card height,
+unlike the plan card's full-width row; the plan card keeps its own layout (5.2). Deny only because
+the deny message reaches the model verbatim as the tool_result while an ordinary allow has no wire
+for a note (`feedback` dropped, stdin steer arrives late — both probed 2.1.233); a note typed before
+Accept is dropped, never quoted as if delivered. Enter rejects with the note: a text-field
+convention, not a card shortcut (4.9 stays deferred). Three side defects found by the hand test were
+fixed the same day rather than backlogged (user: "let's fix both", then the replay note): the
+duplicate error OUT box, replay's "1 file changed" for a rejected edit, and the replayed edit card's
+missing note — the plan card and the edit card now replay their notes the same way.
+**Alternatives rejected**: field hidden until "Reject with a note" (extra click, and the plan card
+shows its field always); note on Accept (undeliverable).
+
+## 2026-09-05 — 2.12 extra content roots as `--add-dir`, read at launch only
+**Why**: measured — a Read in an attached root asks on every touch ("Path is outside allowed working
+directories"), with `--add-dir` it runs silently. `WorkspaceRoots.extraDirs` = content roots outside
+`project.basePath`, nested ones dropped; one flag per root as VS Code's host does for every
+workspace folder that is not the cwd. Roots attached mid-session wait for the next New/resume.
+**Alternatives rejected**: the runtime `register_repo_root` control (follow-up only if a live attach
+ever matters); "always allow" path rules as the workaround (one rule per pattern, saved into
+permission settings, for a folder the IDE already calls part of the project).
+
+## 2026-09-05 — 4.9 number-key card answers DEFERRED: no keyboard shortcuts on any card
+**Why**: the user's call after the plain-language walk-through ("let's skip this, no keyboard
+shortcuts for now"). It extends the 2026-08-16 plan-card rule to every card and sits beside the
+2026-08-09 removal of all IDE-level chords (12.4). Nothing technical blocks it — a keydown handler
+scoped to the focused card would work in JCEF — the user simply does not want keys answering cards.
+**Alternatives rejected**: 1/2/3/Esc on the focused card as VS Code does (XS build).
+**Reopen only if** the user asks for keyboard answers.
+
+## 2026-09-04 — 4.8 builds as a SPLIT BUTTON: main half = the CLI's default destination, caret = the other targets
+**Why**: the user's call after the plain-language walk-through. The default (the suggestion's own
+`destination`, `localSettings` on every measured card) stays one click, so the hot path is unchanged;
+the deliberate choices (session-only / project-shared / all projects) sit behind the caret, the same
+idiom the compound-command partial grant already uses on the card. VS Code's picker (webview
+`vY0`) cycles `Ss=[localSettings,userSettings,projectSettings,session]` (never `cliArg`), remembers
+the last pick in localStorage, and on accept stamps the chosen destination on every NON-setMode
+suggestion (`setMode` keeps its own). Labels: `fs0` short ("this project (just you)" / "all
+projects" / "this project (shared)" / "this session"), `ys0` tooltips (file paths).
+**Alternatives rejected**: decline + label-only (my recommendation: the default is right nearly
+always and the rest is terminal config) — the user wants parity with one-click default kept;
+a cycling link like VS Code (a click that silently changes the target reads as a mode toggle).
+**Precondition**: probe which echoed `destination` values 2.1.260 honours BEFORE the UI.
+
 ## 2026-09-04 — 4.7 taken as VS Code's rule: honour `defaultMode` on a first run, DISPLAY dontAsk, never offer it
 - The row said "a fifth mode in both clients; VS Code's picker lists six incl. bypass". The user's
   screenshot showed four — ours exactly. The extension builds the picker per session
