@@ -3,6 +3,23 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-04 (third) — 0.12.5 released and Approved
+- User's "lets release updates" → steps 1–5 proactively: bump to 0.12.5, notes rewritten
+  (0.12.5/0.12.4/0.12.3, 0.12.2 dropped), and the owed "CLI 2.1.200+" line landed in README,
+  plugin.xml description AND the updatePlugins.xml feed description. `test buildPlugin` **137/0**
+  (own-version notes guard green), zip audited (our jar + OSS deps only), `verifyPlugin`
+  **8/8 Compatible** from the verdict files — the IDE ladder grew to 8 (PS-242 → PS-263).
+  STOPPED at the approval gate with the complete notes; shipped on "Go ahead please".
+- `a77a565`, tag `v0.12.5`; asset HTTP 200 and `cmp`-identical to the local zip, raw feed served
+  0.12.5 immediately, `marketplace-upload` run 33859713983 green in 12s. Marketplace **Approved**
+  within the hour (user's screenshot: verifier Success on 2026.1.5/2026.2.2/2026.3 EAP plus a
+  clean IDE run); a one-minute API poll via a background Monitor caught the listing flipping.
+- Notes framing: "first-impressions release" — four fixes as what-now-works, old behaviour in
+  trailing dash-clauses; the CLI floor stated in ⚠️ Notes as 2.1.200+ with `claude update` as
+  the fix.
+- Nothing unreleased on `main`. Marketplace screenshots (01/03/04/05) remain the user's manual
+  upload errand on the plugin 33274 edit page.
+
 ## 2026-09-04 (second) — early-exit "CLI out of date" hint; `manual` cutoff measured at 2.1.200
 - (The "2026-09-05" entry below is this same day's EARLIER session — its commits are stamped
   2026-09-04 12:50; the date was written a day ahead. Left as written for greppability.)
@@ -157,35 +174,16 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   tool_result there confirmed the misfire shape byte-for-byte before any fix was trusted.
 - Committed and pushed on the user's ask (this save included).
 
-## 2026-08-30 (sixth) — 0.12.3 released
-- User's "lets release it" → steps 1–5 proactively (bump, notes now 0.12.3/0.12.2/0.12.1, feed),
-  `test buildPlugin` 134/0, zip audited, `verifyPlugin` 7/7 Compatible from the verdict files;
-  STOPPED at the approval gate with the full notes; released on "Go ahead".
-- `1277ad7`, tag `v0.12.3`, asset `cmp`-identical, feed served 0.12.3 immediately,
-  `marketplace-upload` run 33302608925 green → Marketplace update 1157030, **Approved** within the
-  hour (verifier Success on 2025.3.6.1 / 2026.1.5 / 2026.2.2 rc, IDE run no issues).
-- Notes said plainly that 0.12.2's fix had made the flash happen on every open — the honest line
-  the user approved unchanged.
-- User tested the released update in the real IDE: working fine. Nothing unreleased on `main`.
-- Stray `plugin/verify.log` from redirecting `verifyPlugin` output — deleted, never commit it
-  (redirect into the scratchpad next time).
-
-## 2026-08-30 (fifth) — first-paint flash fixed for real (0.12.2's fix had made it deterministic)
-- User's real-IDE screenshot: the ~300×180 squashed frame STILL showing, now on every open. Root
-  cause read straight from `4b62367`: `browser.component.isVisible = false` → an invisible
-  `BorderLayout` child gets no bounds → CEF keeps its default surface → page loads small → shown
-  and resized at `onLoadEnd`. The deferral was right; hiding the child broke it.
-- Fix in `ui/ChatPanel.kt`: browser stays visible, `loadUi()` on the BROWSER component's first
-  non-empty `componentResized`, `setPageBackgroundColor("#1a1a1a")` (API present in 2024.2.6's
-  `JBCefBrowserBase`). Then, on the user's "is it optimized?", the `JPanel` wrapper + hide/show +
-  `Color` mirror were removed — the diff vs pre-0.12.2 is one listener and one call.
-- Verified each round: compileKotlin, `./gradlew test` 134/0, sandbox viewport 730×871 with body bg
-  `rgb(26,26,26)` over CDP, harness 586/0; the first native frame itself cannot be seen over CDP —
-  the user tested BOTH zips in the real IDE ("working fine"). Zip kept the 0.12.2 name (no bump).
-- Process: the user wanted a zip to test BEFORE any release — no bump/notes/feed touched. Commit +
-  push authorized with this save. Unreleased on `main` after it: this one Kotlin fix.
-
 ## Digest
+- **2026-08-30 (sixth)** — **0.12.3 released** (`1277ad7`): full gate, 7/7 Compatible, Approved
+  within the hour; notes said plainly that 0.12.2's fix had caused the every-open flash. Stray
+  `plugin/verify.log` deleted — redirect verifier output into the scratchpad, never the repo.
+- **2026-08-30 (fifth)** — the flash fix that stuck: 0.12.2's `isVisible=false` was the bug (an
+  invisible BorderLayout child gets no bounds → CEF default surface); browser stays visible,
+  `loadUi()` on the browser component's first non-empty `componentResized` +
+  `setPageBackgroundColor`. User tested both zips in the real IDE; the wrapper JPanel was removed
+  on the "is it optimized?" pass. First native frame is invisible to CDP — only a real-IDE test
+  can verify it.
 - **2026-08-30 (fourth)** — **0.12.2 released** (`50ac66c`): full gate, Marketplace update
   1157011 Approved within the hour. The public `updates` API lists approved versions only, so its
   silence right after upload is normal — read the run log's JSON. Notes carried a ⚠️ for the

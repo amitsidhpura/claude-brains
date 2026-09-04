@@ -1,9 +1,6 @@
 # Backlog
 
 ## Immediate
-- **README + plugin.xml requirements line: "needs Claude Code CLI 2.1.200+"** — the cutoff is
-  measured (decisions 2026-09-04); the in-panel hint shipped, the docs half hasn't. plugin.xml
-  feeds the Marketplace description, so time it with the 0.12.5 release.
 - **Manual-test register closed at 0 open (2026-08-15); `docs/manual-test.md` deleted 2026-08-28**
   (self-contained by design; `git show 9bd1683:docs/manual-test.md`). Re-test fixtures
   `dummy-cmd.md` + `sub/nested-cmd.md` kept under `~/Sites/claude-brains-testing/.claude/commands/`

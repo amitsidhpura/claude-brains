@@ -1,32 +1,27 @@
 # State
 
 ## Current focus
-**2026-09-04: four first-impression fixes unreleased on `main`** — a natural 0.12.5 with the
-2026-09-04 CSS split (`6f2999b`; `CSS_FILES` = cascade order, never reorder):
-- `aafbb1c` — `/context` and local built-ins no longer render as one red error block
-  (`<synthetic>` drained by the RESULT's `is_error`). Fixture 70.
-- `6acb681` — Read range suffix never wraps (`.t-sfx` nowrap + fixed flex basis). Fixture 71.
-- `92ede19` — MCP notice per fault severity: needs-auth muted, failed red. Fixture 72.
-- **Uncommitted at last save, committed with it**: early-exit hint — a non-zero exit BEFORE the
-  CLI ever spoke stream-json adds a muted "Your Claude CLI may be out of date — run `claude
-  update` in a terminal." under the ERR box (`webview/js/70-events.js`; `sawFrame` in
-  `cli/ClaudeCli.kt` → `early:true` on `__exit` in `ui/ChatPanel.kt`). Plus two latent
-  instant-death fixes: exit report joins the reader threads first (empty-ERR-box race), and
-  `writeLine` survives a dead stdin so `ClaudeSessionService.cli` is assigned before `start()`.
-  Fixture 73; decisions 2026-09-04. Release notes should mention all of it.
-
-## Settled this session
-- **CLI backward compat**: no version floor, no shims, hint only (decisions 2026-09-04). The
-  `--permission-mode manual` cutoff is MEASURED on real binaries: **2.1.200 (2026-07-03)
-  introduced it and fully works; 2.1.199 rejects → the friend's exact error + our hint**. The
-  friend just needs `claude update`. Old binaries: `claude install <version>`, kept in
-  `~/.local/share/claude/versions/`. "Update Claude" BUTTON deferred — backlog § Next up.
-- README/plugin.xml "needs CLI 2.1.200+" line still owed — backlog § Immediate, with 0.12.5.
+**2026-09-04: nothing in flight — 0.12.5 released and Marketplace-Approved.** `main` is clean
+with zero unreleased work. Next candidates when the user picks one: backlog § Next up
+(Update-Claude button, Worktrees bundle 14.1+14.3, 15.5 debugger tools).
 
 ## Open investigations
 - **Fold-verdict report NOT reproduced** (user's Windows screenshot 2026-09-04: a Read OUT box
   expanded, not collapsible). Every venue folds correctly here. WAITING on the user running the
   DevTools diagnostic snippet on the Windows box + Help→About. Do not guess-fix (conventions).
+
+## Released — 0.12.5 (2026-09-04), Marketplace-Approved
+Tag `v0.12.5`, commit `a77a565` — the four first-impression fixes + the CSS split:
+- `/context` / local built-ins render as prose, not a red error block (fixture 70)
+- Read range suffix never wraps (fixture 71); MCP notice per fault severity (fixture 72)
+- Early CLI death (pre-stream-json, `early:true`) shows the muted "may be out of date —
+  `claude update`" hint + two instant-death race fixes (fixture 73)
+- **CLI floor now stated everywhere**: "2.1.200+" in README, plugin.xml description (feeds the
+  Marketplace listing) and the updatePlugins.xml feed. Cutoff MEASURED: 2.1.200 (2026-07-03)
+  introduced `--permission-mode manual` and fully works; 2.1.199 rejects → hint. Policy stays
+  no-floor/no-shims, hint only (decisions 2026-09-04).
+- verifyPlugin ladder is now **8 IDEs** (PS-242 → PS-263), all Compatible. Marketplace verifier
+  Success incl. a clean 2026.3 EAP IDE run (user's screenshot).
 
 ## Released — 0.12.4 (2026-09-01), Marketplace-approved
 Tag `v0.12.4`, commit `e644dce`: files-changed rows + Review-only click target (fixture 60),
@@ -68,14 +63,14 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
   `~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/` (measured 2026-09-01).
 
 ## Next steps
-- [ ] Release 0.12.5 when the user asks (CSS split + fixtures 70–73 fixes; add the
-      "needs CLI 2.1.200+" README/plugin.xml line with it).
+- [x] Release 0.12.5 — done 2026-09-04, Approved (§ Released above).
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
-      investigations); friend's `claude --version` no longer needed (cutoff settled).
+      investigations).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots
-      01+03 and 04+05 to `plugins.jetbrains.com/plugin/33274`.
+      01+03 and 04+05 to `plugins.jetbrains.com/plugin/33274`; check the listing page shows the
+      new plugin.xml description ("2.1.200+") now that the 0.12.5 upload refreshed it.
 
 ## Known gaps (deliberately left)
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by decision.
