@@ -228,8 +228,15 @@
         addRetryLine();
       }
     } else {
-      // a synthetic echo with no error result at all — drain, so the dedupe can never swallow one
-      syntheticEcho.forEach(function (t) { errorBlock(t); });
+      // A <synthetic> frame on a SUCCESSFUL result is not an API-error echo — it is a local
+      // built-in's output (/context, /list-agents, …), which the CLI tags '<synthetic>' since
+      // ~2.1.24x/2.1.25x (measured 2026-09-04 on 2.1.260; on 2.1.233 the same output was a PLAIN
+      // assistant frame, fixture 47). The result's is_error is the discriminator the stash cannot
+      // know at push time — fixture 56's taped API echo says subtype:'success' WITH is_error, so
+      // subtype can't split them. Error → red echo above; success → the prose it always was.
+      // Not track()ed: no stampMessage follows a result, and a pending block would be stamped by
+      // the NEXT message's uuid.
+      syntheticEcho.forEach(function (t) { const k = el('blk', ''); k.innerHTML = renderMd(t); foldCode(k); });
       const done = el('done', '');
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
       done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero

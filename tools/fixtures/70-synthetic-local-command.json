@@ -1,0 +1,31 @@
+{
+ "item": "local-command output tagged <synthetic> — /context red-block misfire (2026-09-04)",
+ "branch": "a <synthetic> assistant frame followed by a SUCCESSFUL result is local-command output and draws a prose .blk; only a <synthetic> frame whose result carries is_error stays the red API-echo",
+ "provenance": "The frame pair is MEASURED, verbatim from the live wire 2026-09-04 (CLI 2.1.260, the panel's spawn flags, testing repo): '/context' and '/list-agents' each produce {type:'assistant', message:{model:'<synthetic>', content:[{type:'text', text:'## Context Usage…'}]}} then {type:'result', subtype:'success'} with NO is_error. On 2.1.233 the SAME commands arrived as a PLAIN assistant frame (no model tag — fixture 47 step 1 pins that shape, which still renders correctly); somewhere in 2.1.234–2.1.251 the CLI started tagging local built-ins' output '<synthetic>', the tag the panel treated as meaning 'API-error echo' (fixture 56). Found by the user's screenshot (countdown project, transcript version 2.1.251): the whole /context usage table drawn as one red .error block ABOVE a normal success done-line — exactly the non-error syntheticEcho drain calling errorBlock. The discriminator is the RESULT's is_error, the only signal that separates the two synthetic kinds (fixture 56's taped API echo is subtype:'success' WITH is_error:true, so subtype cannot discriminate); the stash itself cannot know at push time, which is why the fix lives in onResult's drain, not in the whole-message branch. Step 2 re-asserts the error side of the pair INSIDE this fixture so the discriminating claim is complete, deliberately overlapping fixture 56's step 1. NEGATIVE CONTROL RUN 2026-09-04 against the pre-fix build (sandbox launched before the JS edit, still serving the old bytes): step 1's three DISCRIMINATING asserts FAILED (errsAdded 1, blksAdded 0, lastBlkIsContext false); the doneDrawn GUARD and all of step 2 passed both phases. Green after the edit and a sandbox restart.",
+ "steps": [
+  {
+   "note": "the measured /context pair: synthetic assistant + successful result draws ONE prose .blk (rendered markdown), ZERO .error, and the normal done line",
+   "setup": "window.__lc70 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('/context', []); const errs0 = document.querySelectorAll('#log .error').length; const blks0 = document.querySelectorAll('#log .blk').length; window.onClaudeEvent(JSON.stringify({ type: 'assistant', uuid: 'fx70-a', message: { id: 'fx70-m', model: '<synthetic>', role: 'assistant', type: 'message', stop_reason: 'stop_sequence', content: [ { type: 'text', text: '## Context Usage fx70\\n\\n**Tokens:** 27.1k / 1m (3%)' } ] } })); window.onClaudeEvent(JSON.stringify({ type: 'result', subtype: 'success', duration_ms: 900 })); const blks = Array.prototype.slice.call(document.querySelectorAll('#log .blk')); const last = blks[blks.length - 1]; return { errsAdded: document.querySelectorAll('#log .error').length - errs0, blksAdded: blks.length - blks0, lastBlkIsContext: !!(last && last.querySelector('h2') && last.textContent.indexOf('Context Usage fx70') !== -1), doneDrawn: document.querySelectorAll('#log .done').length > 0 }; })();",
+   "expect": [
+    { "js": "window.__lc70.errsAdded", "equals": 0,
+      "why": "DISCRIMINATING: command output is not an error (1 pre-fix — the non-error drain called errorBlock)" },
+    { "js": "window.__lc70.blksAdded", "equals": 1,
+      "why": "DISCRIMINATING: the stashed text is drawn exactly once as prose (0 pre-fix — it only ever surfaced red)" },
+    { "js": "window.__lc70.lastBlkIsContext", "equals": true,
+      "why": "DISCRIMINATING: drawn THROUGH renderMd — the ## heading became an h2, same as any assistant prose (false pre-fix)" },
+    { "js": "window.__lc70.doneDrawn", "equals": true,
+      "why": "GUARD (both phases): the success summary line still draws — the drain change must not touch the done path" }
+   ]
+  },
+  {
+   "note": "the other half of the discriminator, unchanged: a synthetic echo whose result carries is_error stays ONE red .error and zero prose (fixture 56's taped pair, re-pinned here as the contrast)",
+   "setup": "window.__lc70b = (function () { addUserMessage('trigger error', []); const errs0 = document.querySelectorAll('#log .error').length; const blks0 = document.querySelectorAll('#log .blk').length; window.onClaudeEvent(JSON.stringify({ type: 'assistant', uuid: 'fx70-b', message: { id: 'fx70-m2', model: '<synthetic>', role: 'assistant', type: 'message', stop_reason: 'stop_sequence', content: [ { type: 'text', text: 'API Error: 400 fx70b bad request.' } ] } })); window.onClaudeEvent(JSON.stringify({ type: 'result', subtype: 'success', is_error: true, result: 'API Error: 400 fx70b bad request.' })); return { errsAdded: document.querySelectorAll('#log .error').length - errs0, blksAdded: document.querySelectorAll('#log .blk').length - blks0 }; })();",
+   "expect": [
+    { "js": "window.__lc70b.errsAdded", "equals": 1,
+      "why": "GUARD (both phases): the deduped API echo is still exactly one red block — is_error is the discriminator, and this side of it must not move" },
+    { "js": "window.__lc70b.blksAdded", "equals": 0,
+      "why": "GUARD (both phases): an error echo never becomes prose — the fix only reroutes the SUCCESS drain" }
+   ]
+  }
+ ]
+}

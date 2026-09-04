@@ -95,14 +95,16 @@
   // whole-message `assistant` frame; also cleared at `result` so an interrupted stream can't make
   // the NEXT turn's un-streamed frame (a local command's answer) look already-drawn.
   let msgStreamed = false;
-  // An API error reaches the live wire TWICE: a synthetic assistant message (message.model
-  // "<synthetic>") and then the result's is_error text — identical strings (taped 2026-08-24,
-  // haiku[1m] turn). The transcript keeps only the assistant record and SessionStore already
-  // replays it as an error item, so live must also draw ONE block: the whole-message branch
-  // stashes synthetic texts here instead of rendering prose, and the result drains the stash —
-  // dropping ONLY a text identical to its own is_error text (the taped echo). Anything else
-  // (a differing text, a second synthetic message, a non-error result) is drawn as its own
-  // error block, so dedupe can never swallow a message it hasn't literally re-shown.
+  // A message.model "<synthetic>" assistant frame is one of TWO things, and only its RESULT says
+  // which. (a) An API-error echo: the error reaches the live wire twice — the synthetic message
+  // and then the result's is_error text, identical strings (taped 2026-08-24, haiku[1m] turn).
+  // (b) A local built-in's output (/context, /list-agents, …): synthetic message, then a result
+  // with NO is_error (measured 2026-09-04, CLI 2.1.260 — on 2.1.233 this was a plain frame, and
+  // the tag's arrival painted every /context table red for a while). So the whole-message branch
+  // stashes synthetic texts here instead of rendering prose, and the result drains the stash by
+  // its own is_error: an error result draws error blocks, dropping ONLY a text identical to its
+  // own is_error text (the taped echo — dedupe never swallows a message it hasn't re-shown); a
+  // successful result draws the stash as the prose blocks they always were. Fixtures 56 + 70.
   let syntheticEcho = [];
   let toolsById = {};         // tool_use id -> {el, name, io} for OUT boxes; reset by clearLogUI
   // Marks the newest un-superseded pending edit matching (tool, file) as card-owned (4.4).
