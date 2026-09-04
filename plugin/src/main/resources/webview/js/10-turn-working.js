@@ -165,12 +165,10 @@
   function mcpNotice(list) {
     if (!Array.isArray(list)) return;
     const byFault = Object.create(null);
-    let bad = 0;
     list.forEach(function (s) {
       const fault = s && typeof s.status === 'string' ? MCP_BAD[s.status] : null;
       if (!fault || !s.name) return;
       (byFault[fault] || (byFault[fault] = [])).push(String(s.name));
-      bad++;
     });
     const faults = Object.keys(byFault).sort();
     if (!faults.length) { mcpNoticeKey = null; return; }   // recovered: allow a later relapse to speak
@@ -179,9 +177,16 @@
     const key = faults.map(function (f) { return f + ':' + byFault[f].slice().sort().join(','); }).join('|');
     if (key === mcpNoticeKey) return;
     mcpNoticeKey = key;
-    const parts = faults.map(function (f) { return byFault[f].join(', ') + ' ' + f; });
-    statusLine('MCP ' + (bad === 1 ? 'server' : 'servers') + ': ' + parts.join(' · ') +
-      ' — those tools are unavailable. Check with `claude mcp` in a terminal.', SVG_ALERT, 'status err');
+    // One line PER FAULT, styled by what it is (user report 2026-09-05, fixture 72): a fresh
+    // machine's unauthenticated claude.ai connectors were sharing one red line with real
+    // failures and read as "the plugin is broken". failed = an incident, red; needs-auth = an
+    // expected state with a known fix, the plain muted status dress.
+    faults.forEach(function (f) {
+      const names = byFault[f];
+      statusLine('MCP ' + (names.length === 1 ? 'server' : 'servers') + ': ' + names.join(', ') +
+        ' ' + f + ' — those tools are unavailable. Check with `claude mcp` in a terminal.',
+        SVG_ALERT, f === MCP_BAD.failed ? 'status err' : undefined);
+    });
   }
   function fmtResets(secs) {
     const ms = secs * 1000 - Date.now();

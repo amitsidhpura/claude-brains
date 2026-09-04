@@ -1,0 +1,25 @@
+{
+ "item": "MCP notice severity — needs-auth is a notice, failed is an error (2026-09-05)",
+ "branch": "the init frame's mcp_servers notice renders per fault severity: 'failed to start' keeps the red .err line, 'needs authentication' is a plain muted status line — an unauthenticated connector on a fresh machine is an expected state, not an incident",
+ "provenance": "The mcp_servers shape ([{name, status}] riding the system/init EVENT) is the one item 13a measured on 2.1.222 and mcpNotice already consumes; this fixture drives the SAME entry point with a synthetic init frame, so it asserts only what the renderer must do with a roster it is given — self-consistency for the frame shape, but the SYMPTOM is real: a friend's fresh install (screenshots 2026-09-05) showed five claude.ai connectors (Gmail, Drive, Calendar, Higgsfield, Miro) as one red 'needs authentication' line above a perfectly successful first turn, and read it as the plugin being broken. Server names here are fx72-unique because mcpNoticeKey is page-lifetime state a previous run may have seeded. The init frame carries ONLY subtype+mcp_servers on purpose: permissionMode/cwd/slash_commands would exercise unrelated init handling. NEGATIVE CONTROL RUN 2026-09-05 against the pre-fix build (sandbox launched before the JS edit): the two DISCRIMINATING asserts FAILED (pre-fix one combined line, class 'status err', so authLines read 0 and combined read 1); the failed-.err GUARD, the dedupe GUARD and the disabled/pending-silent GUARD passed both phases. Green after the edit and a sandbox restart.",
+ "steps": [
+  {
+   "note": "one init with a mixed roster: failed stays red, needs-auth goes muted, disabled/pending/connected stay silent; an identical re-init adds nothing (set-keyed dedupe)",
+   "setup": "window.__mcp72 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); const before = document.querySelectorAll('#log .status').length; const roster = [ {name:'fx72-ok', status:'connected'}, {name:'fx72-gmail', status:'needs-auth'}, {name:'fx72-drive', status:'needs-auth'}, {name:'fx72-broken', status:'failed'}, {name:'fx72-off', status:'disabled'}, {name:'fx72-warm', status:'pending'} ]; window.onClaudeEvent(JSON.stringify({type:'system', subtype:'init', mcp_servers: roster})); const after1 = Array.prototype.slice.call(document.querySelectorAll('#log .status')); const added = after1.slice(before); const authLines = added.filter(function (l) { return l.textContent.indexOf('needs authentication') !== -1; }); const failLines = added.filter(function (l) { return l.textContent.indexOf('failed to start') !== -1; }); window.onClaudeEvent(JSON.stringify({type:'system', subtype:'init', mcp_servers: roster})); const addedAfterDup = document.querySelectorAll('#log .status').length - after1.length; return { linesAdded: added.length, authMuted: authLines.length === 1 && !authLines[0].classList.contains('err'), authNames: authLines.length === 1 ? authLines[0].textContent.indexOf('fx72-gmail, fx72-drive') !== -1 : false, failRed: failLines.length === 1 && failLines[0].classList.contains('err'), quietNamed: added.some(function (l) { return /fx72-(ok|off|warm)/.test(l.textContent); }), dupAdded: addedAfterDup }; })();",
+   "expect": [
+    { "js": "window.__mcp72.authMuted", "equals": true,
+      "why": "DISCRIMINATING: the needs-auth group is its own line WITHOUT .err (pre-fix it shares one 'status err' line with the failure)" },
+    { "js": "window.__mcp72.linesAdded", "equals": 2,
+      "why": "DISCRIMINATING: one line per fault severity (1 combined line pre-fix)" },
+    { "js": "window.__mcp72.authNames", "equals": true,
+      "why": "GUARD: the grouping survives the split — both unauthenticated servers ride one sentence, in roster order" },
+    { "js": "window.__mcp72.failRed", "equals": true,
+      "why": "GUARD (both phases): a server that failed to start is still a red .err line — the softening must not reach real failures" },
+    { "js": "window.__mcp72.quietNamed", "equals": false,
+      "why": "GUARD (both phases): connected/disabled/pending stay silent — MCP_BAD is untouched" },
+    { "js": "window.__mcp72.dupAdded", "equals": 0,
+      "why": "GUARD (both phases): an identical re-init announces nothing — the set-keyed dedupe covers both severities together" }
+   ]
+  }
+ ]
+}
