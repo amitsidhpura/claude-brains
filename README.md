@@ -61,8 +61,9 @@ open past conversations, and start a new one.
 
 ## Requirements
 
-- The [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), installed and **already
-  logged in from a terminal** — the plugin has no login flow of its own.
+- The [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), **version 2.1.200 or
+  newer** (run `claude update` if in doubt), installed and **already logged in from a
+  terminal** — the plugin has no login flow of its own.
 - An IntelliJ-platform IDE, build **2024.2 or newer** (PhpStorm, IntelliJ IDEA, WebStorm, …).
 
 The CLI is resolved from `-Dclaude.executable=<path>`, then `PATH`, then the binary inside an

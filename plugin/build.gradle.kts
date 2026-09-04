@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.12.4"
+version = "0.12.5"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,22 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.12.5</b>
+            <ul>
+              <li>Local slash commands like <code>/context</code> render their output as normal
+                  prose — on recent CLI versions it used to arrive as one giant red error
+                  block</li>
+              <li>A tool line's range suffix (like "(lines 1-150)") stays on one line in narrow
+                  panels — it used to wrap mid-token; the file path still shortens in the
+                  middle</li>
+              <li>Startup notice for claude.ai connectors and MCP servers that just need
+                  re-authentication is now a muted hint naming them; only servers that actually
+                  failed show in red</li>
+              <li>If the CLI exits immediately on launch — typically a version older than
+                  2.1.200, which the plugin's arguments need — the error output now reliably
+                  appears (it could show empty) with a hint that the CLI may be out of date and
+                  <code>claude update</code> fixes it</li>
+            </ul>
             <b>0.12.4</b>
             <ul>
               <li>The "files changed" summary lists one file per row — project-relative path,
@@ -124,13 +140,6 @@ val changeNotesHtml = """
                   and a hidden browser has no size, so the page still laid out small and was only
                   resized when shown. The browser now stays visible and the page loads once the
                   browser itself has the tool window's size</li>
-            </ul>
-            <b>0.12.2</b>
-            <ul>
-              <li>The panel no longer flashes a squashed, corner-sized layout for a moment when a
-                  project opens — the page now loads only once the tool window has its real size</li>
-              <li>The panel stays available while the IDE is indexing — it used to be replaced by
-                  "This view is not available until indexes are built" on every project open</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()

@@ -9,7 +9,7 @@
         Claude Code for JetBrains IDEs (unofficial). Runs Anthropic's official
         <code>claude</code> CLI inside PhpStorm and other IntelliJ IDEs, wired to the editor
         through the same IDE-MCP bridge the VS Code extension uses. Opens in a right-side tool
-        window. Requires the <code>claude</code> CLI installed and logged in — does not bundle
+        window. Requires the <code>claude</code> CLI (2.1.200+) installed and logged in — does not bundle
         or redistribute Anthropic code. Not affiliated with Anthropic or JetBrains.
 
         <h3>Philosophy</h3>
