@@ -1,0 +1,102 @@
+/* ============================================================
+   Claude Code webview styles — split across webview/css/*.css.
+   WebviewAssets.CSS_FILES is the ONLY copy of the order; the plugin
+   concatenates the files in that order into chat.html's <!--CSS--> marker,
+   and design/mockup.html carries one <link> per file in the same order
+   (concatenation order IS cascade order — never reorder rules).
+   Keep all colors in :root tokens.
+   ============================================================ */
+:root {
+  --bg: #1a1a1a;          /* panel background */
+  --panel: #26282c;       /* input card / popups */
+  --fg: #d5d8dd;          /* main text */
+  --muted: #8b9096;       /* secondary text */
+  --dot: #6f7378;         /* thinking dots, IN/OUT labels */
+  --border: #3a3d43;      /* subtle borders */
+  --border-strong: #45494f;
+  --accent: #d97757;      /* Claude orange */
+  --accent-rgb: 217, 119, 87;  /* --accent as channels, for rgba() tints — keep in sync */
+  --green: #4ec26b;       /* tool dot */
+  --blue: #4daafc;        /* links */
+  --amber: #d7a35f;       /* inline code */
+  --code-bg: #141414;     /* dark code surfaces: IN/OUT, diff, cmd, codeblock body, table */
+  --code-head: #202226;   /* header strip on those surfaces: codeblock header, table header */
+  --code-stripe: #1b1c1f; /* alternate table row — a touch lighter than --code-bg */
+  --red: #f2827f;
+  --raised: #2a2d33;      /* chips, inline code, small raised surfaces */
+  --raised-hover: #31343a;
+  --hover: #2f3237;       /* list rows / icon buttons on hover */
+  --warn-border: #6b4a3c; /* shared "needs user feedback" frame: permission / plan / question cards */
+  --warn-bg: #282320;
+  --warn-field: #201c1a; /* text fields on warn cards (ask "Other", plan feedback) — a sunken
+                            step below --warn-bg so the field reads as a well */
+  --user-bg: #1b2129;     /* user input surfaces: message box + composer */
+  --user-border: #374a63;
+  --user-raised: #242e3c; /* capsules on user surfaces (attachment chips) */
+  --user-raised-hover: #2c394c;
+  --user-divider: #2d3c54;/* internal borders on user surfaces */
+  --user-muted: #8ba3c7;  /* secondary text/icons on user surfaces */
+  --ok: #0d542b;         /* confirm buttons (Accept / Submit) */
+  --ok-hover: #146e3a;
+  --danger: #6e1f1f;     /* destructive confirm (Delete) — solid like --ok, not the light --red */
+  --danger-hover: #8b2626;
+  --radius: 6px;
+  /* The two spacings in a turn. --block-gap separates INDEPENDENT blocks (one tool line from the
+     next, a card from an error); --attach-gap is the distance from a line to whatever HANGS OFF it.
+     Stated here because both are used in more than one place and drifted apart when they were not:
+     the five attached blocks carried -6/-2/+2/+2/+2 against an 18px flex gap, i.e. 12/16/20/20/20px,
+     and three of them ended up FARTHER from their own tool line than an unrelated block. */
+  --block-gap: 18px;
+  /* Type scale — the ONLY text sizes (audited 2026-08-28: 13/12/11/10 in 1px steps, all
+     literals until then). base: prose, tool lines, verdicts · sm: IN/OUT, diffs, code, chips,
+     secondary lines · xs: captions and meta (.t-note, dates, badges) · 2xs: micro labels (the
+     IN/OUT key column, the source badge). Glyph boxes (.icon-btn, .spin) and the welcome title
+     are sized on their own and are not text. */
+  --fs-base: 13px;
+  --fs-sm: 12px;
+  --fs-xs: 11px;
+  --fs-2xs: 10px;
+  --attach-gap: 8px;   /* picked from design/tool-gap-probe.html against 12/8/6/4; 8px is the gap
+                          .card-h already puts between a card's header and its body, so the panel's
+                          two "this belongs to that" idioms agree */
+  /* The panel's LIVE period — one heartbeat for everything that says "still going": the text
+     sweep (.shimmer, .generating .verb), the background chip's dot, and the in-flight gutter dot.
+     Named for the same reason the two gaps above are: it was written out four times by hand and
+     nothing kept the copies together. */
+  --pulse-period: 1.6s;
+  /* ...and the motion the in-flight dot wears. A token, not a literal, because
+     design/dot-pulse-probe.html drives THIS rule — the picked column sets only this value, so what
+     was compared is the shipped rule and re-picking stays a one-line edit. bg-pulse was picked by
+     the user on 2026-08-13, after the halo (dot-ping) was tried and rejected. It is the motion the
+     background-task chip already wears, so the panel says "still going" one way throughout. */
+  --pulse-name: bg-pulse;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+  font: var(--fs-base)/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+img { max-width: 100%; height: auto; }
+
+/* scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #3b3d44 transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3b3d44; border-radius: var(--radius); border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #4a4d55; background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+/* Composer accent follows the permission mode, so the focus border and Send say what will happen
+   when you press it. syncModeUI stamps #app[data-mode]; both rules read --mode-accent, and the
+   fallback is the Claude orange the composer used before, so an unknown mode degrades to it
+   rather than losing its colour.
+   --mode-fg is the Send arrow ON that accent; all four are dark enough to keep it white
+   (slate 4.76:1, orange 3.12:1, blue 4.02:1, gold 2.97:1 — the last a hair under the 3:1 bar for
+   graphical parts, kept for consistency). Re-measure if a colour changes: an earlier palette had
+   blue/violet/green at 2.3-2.7:1, which is genuinely unreadable and would need a dark --mode-fg. */
+#app { display: flex; flex-direction: column; height: 100%; position: relative;
+  --mode-accent: var(--accent); --mode-fg: #fff; }
+#app[data-mode="manual"]      { --mode-accent: #62748e; }
+#app[data-mode="acceptEdits"] { --mode-accent: #d97757; }
+#app[data-mode="plan"]        { --mode-accent: #0084d1; }
+#app[data-mode="auto"]        { --mode-accent: #cf8600; }
+

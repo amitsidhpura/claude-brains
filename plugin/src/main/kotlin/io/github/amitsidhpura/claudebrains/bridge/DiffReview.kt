@@ -207,14 +207,14 @@ class DiffReview(private val project: Project) {
     /**
      * The bar hung under the diff editor: no prose, no tint (user's spec 2026-08-09) — just
      * Accept ✓ / Reject ✕ buttons, centered, separated from the diff by a themed hairline.
-     * Both wear the panel card's button colours (chat.css: .ok --ok/--ok-hover for Accept,
+     * Both wear the panel card's button colours (webview/css/40-cards.css: .ok --ok/--ok-hover for Accept,
      * .no #3a3d41/#474a4f/--fg for Reject — mirrored here because Swing can't read CSS
      * tokens; keep in sync) AND its exact glyphs: /icons/accept.svg + reject.svg are the
      * card's own SVG_CHECK / SVG_X from chat.html, bundled because the closest platform
      * icons don't match (Actions.Commit is the VCS -o- glyph in the new UI, Actions.Cancel's
      * ✕ differs from the card's — user screenshots 2026-08-09). [acceptAllLabel] non-null adds
      * the card's suggestion button between them — .alt is "styled exactly like Accept, only
-     * the double-check icon tells them apart" (chat.css), so it shares Accept's colours and
+     * the double-check icon tells them apart" (webview/css/40-cards.css), so it shares Accept's colours and
      * wears SVG_CHECKS (accept-all.svg). Button order matches cardBtns(): ok, alt, no.
      */
     private fun verdictBar(

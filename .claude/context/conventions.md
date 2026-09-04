@@ -47,7 +47,7 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 - Feature bar: *is it reached many times an hour while writing code?* Yes → panel. No → terminal.
 
 ## Working style
-- **UI changes go to `design/mockup.html` + `chat.css` FIRST**, shown as a render, wired into
+- **UI changes go to `design/mockup.html` + `webview/css/` FIRST**, shown as a render, wired into
   `chat.html` once agreed. The user hands back DevTools screenshots with exact values — apply them
   verbatim.
 - **Open visual choices: render the candidates side by side**, in the REAL panel and real ancestor
@@ -83,7 +83,9 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 ## Code & assets
 - **Never bundle or redistribute** Anthropic's extension.js / webview / claude.exe; `reference/anthropic-claude-code/`
   stays out of git. Personal use only.
-- Styles ONLY in `webview/chat.css`; chat.html markup changes are mirrored in `design/mockup.html`.
+- Styles ONLY in `webview/css/*.css` (split 2026-09-04; `WebviewAssets.CSS_FILES` is the only copy
+  of the order, which IS cascade order — never reorder; the mockup mirrors it as `<link>` tags,
+  pinned by `RenderLimitsTest`); chat.html markup changes are mirrored in `design/mockup.html`.
   No hardcoded colours, sizes or gaps: colours are `:root` tokens (`color-mix()` for tints),
   `font-size` is one of `--fs-base/-sm/-xs/-2xs` (13/12/11/10), spacing is `--block-gap` /
   `--attach-gap`. A literal px is a question waiting to be asked; a fifth size gets a token and a

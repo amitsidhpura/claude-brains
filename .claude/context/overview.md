@@ -58,8 +58,9 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   Single JS<->Kotlin channel: `window.__bridge(json)` up, `window.onClaudeEvent(line)` down.
   `chat.html` is markup only; the JS is 14 numbered files in `webview/js/`, spliced back into the
   page's ONE `<script>` block by `ui/WebviewAssets.kt` at `<!--JS-->` (manifest `JS_FILES` is the
-  only copy of the order — one shared script scope, no modules). Styles ONLY in `webview/chat.css`
-  (spliced at `<!--CSS-->`; the mockup links the same file).
+  only copy of the order — one shared script scope, no modules). Styles are 10 numbered files in
+  `webview/css/`, spliced at `<!--CSS-->` in `CSS_FILES` order (= cascade order; the mockup links
+  the same files one by one).
 - **Sessions** (`session/SessionStore.kt`): reads `~/.claude/projects/<enc-cwd>/*.jsonl`
   (enc = cwd with non-alphanumerics → `-`); resume via `--resume <id>`; transcript replayed
   into the UI through rich `JsonObject` blocks so replay matches live rendering.
@@ -70,7 +71,7 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 `cd plugin && ./gradlew runIde` (sandbox PhpStorm 2024.2.6 — bumped from 2024.2.0 on 2026-08-23 for the IJPL-161111 JCEF keyboard fix). `./gradlew compileKotlin` for a fast
 type-check; `buildPlugin` → installable zip in `build/distributions/`; `./gradlew test` (plain
 JUnit 5 over SessionStore/RenderLimits); `./gradlew probe --args="<projectPath> <sessionId>"`
-dumps replay blocks without the IDE. Resource-only changes (chat.html, webview/js/, chat.css) need only a `runIde`
+dumps replay blocks without the IDE. Resource-only changes (chat.html, webview/js/, webview/css/) need only a `runIde`
 restart. `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
 Sandbox JCEF debug port: `-PjcefDebugPort=<n>` on runIde + `CLAUDE_BRAINS_CDP_PORT` for
 tools/cdp.py — but a hand-set sandbox Registry value still wins (gotchas).

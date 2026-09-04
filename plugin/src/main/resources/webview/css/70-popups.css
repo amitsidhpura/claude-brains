@@ -1,0 +1,145 @@
+/* ---------- popups ---------- */
+.popup { position: absolute; z-index: 25; bottom: calc(100% + 1px); background: var(--user-bg); border: 1px solid var(--user-border);
+  border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 330px; }
+.popup.show { display: block; }
+#modeMenu { right: 0; } #modelMenu { right: 0; } #slashMenu { left: 0; min-width: 0; max-width: 100%; }
+.menu-anchor { position: relative; display: inline-flex; align-items: center; }
+.menu-anchor .popup { bottom: calc(100% + 9px); }
+/* Pre-measure fallback only: renderSlash caps this at exactly 5 rows via capToRows, measured,
+   because rows here vary (a command with no description is shorter) and a hardcoded n × row cap
+   scrolls a list that visibly fits. Keep it >= 5 real rows so it never clips before the measure. */
+#slashList { max-height: 274px; overflow-y: auto; padding-bottom: 4px; }
+.popup-empty { padding: 10px 14px; color: var(--user-muted); font-size: var(--fs-sm); }
+/* @-file-mention menu. Body-level, positioned by openMenu() with viewport coords from
+   getBoundingClientRect — hence FIXED, unlike the composer popups (absolute in their anchors);
+   with position:static those inline left/top were ignored and the menu "opened" invisibly in
+   normal flow below #app (manual-test 2.8). max-height mirrors openMenu's min(240, scrollHeight)
+   placement math; box-sizing because openMenu sets width to the input's outer width. */
+#mention { display: none; position: fixed; z-index: 25; max-height: 240px; overflow-y: auto;
+  box-sizing: border-box; background: var(--user-bg); border: 1px solid var(--user-border);
+  border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); }
+/* Same middle-ellipsis contract as the tool line and the card header: a plain end-ellipsis ate the
+   FILENAME, which is the one segment a file row must keep. .p-head shrinks, .p-tail never does. */
+.mi { padding: 6px 14px; font-size: var(--fs-sm); color: var(--fg); cursor: pointer;
+  display: flex; align-items: baseline; overflow: hidden; }
+.mi .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi .p-tail { flex: 0 0 auto; white-space: nowrap; }
+.mi:hover, .mi.sel { background: var(--user-raised-hover); }
+#attachMenu { left: 0; min-width: 220px; }
+#attachMenu .popup-item { align-items: center; }
+.popup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; color: var(--user-muted);
+  font-size: var(--fs-xs); border-bottom: 1px solid var(--user-divider); }
+/* model dropdown search/type field — its own section: 14px insets to match the rest of the popup,
+   with a full-width divider below separating "type a model" from the list */
+.popup-search-wrap { padding: 8px 14px; border-bottom: 1px solid var(--user-divider); }
+.popup-search { display: block; width: 100%; box-sizing: border-box; padding: 6px 9px;
+  background: var(--user-raised); color: var(--fg); border: 1px solid var(--user-border);
+  border-radius: var(--radius); font: inherit; font-size: var(--fs-sm); outline: none; }
+.popup-search:focus { border-color: var(--accent); }
+.popup-search::placeholder { color: var(--user-muted); }
+.popup-item { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
+.popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
+/* remove (×) on a custom model row — hover-revealed, like the history/attachment delete controls.
+   The button sits INSIDE .pi-check, overlaying the ✓'s box (inset top = the span's 1px padding-top),
+   so ✓ and × share one center by construction — no offset math, which the #inputbar 18px svg ID
+   rule would silently break anyway. `visibility: visible` un-hides it inside a hidden check span
+   (non-selected rows), so the × still appears on hover there. */
+.model-del { display: none; position: absolute; inset: 1px 0 0 0; padding: 0;
+  background: transparent; border: 0; color: var(--user-muted); cursor: pointer;
+  border-radius: var(--radius); align-items: center; justify-content: center; }
+/* `#inputbar button { padding: 4px }` beats the class rule above; inside the 18px overlay that
+   forced padding squeezed the × svg (flex-shrink) to 10px. ID-scope the reset so ✓ and × render
+   the same 18px (measured: 18/18 fixed vs 18/10 without this). */
+#inputbar .model-del { padding: 0; }
+.popup-item:hover .model-del { display: inline-flex; visibility: visible; }
+/* on a custom row hover hides the ✓ (the span and its svg) — the × above re-shows itself
+   (scoped to #modelMenu: bare idiom-class selectors break when the idiom is duplicated) */
+#modelMenu .popup-item.custom:hover .pi-check { visibility: hidden; }
+.model-del:hover { color: var(--fg); }
+.model-del svg { width: 12px; height: 12px; display: block; }
+.pi-ic { color: var(--user-muted); width: 20px; text-align: center; font-family: ui-monospace, Consolas, monospace; padding-top: 1px;
+  display: inline-flex; align-items: flex-start; justify-content: center; flex: 0 0 20px; }
+.pi-ic svg { width: 17px; height: 17px; }
+.popup-item.sel .pi-ic, .popup-item.sel .pi-title { color: var(--fg); }
+.pi-body { flex: 1; min-width: 0; }
+.pi-title { color: var(--fg); font-size: var(--fs-base); }
+.pi-desc { color: var(--user-muted); font-size: var(--fs-xs); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Source badge on custom slash commands ("project" / "user" / "mcp") — the TUI's "(project)"
+   marker, worn as muted metadata after the name instead of inside the description. */
+.pi-src { color: var(--user-muted); font-size: var(--fs-2xs); margin-left: 8px; }
+/* a command's aliases, muted beside its name — same tone as the source badge, kept at the
+   title's own size because it is a name too, not a label */
+.pi-alias { color: var(--user-muted); margin-left: 8px; font-weight: 400; }
+.pi-check { position: relative; color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
+.pi-check svg { width: 16px; height: 16px; }
+.popup-item.on .pi-check { visibility: visible; }
+.popup-f { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--user-divider);
+  color: var(--user-muted); font-size: var(--fs-sm); }
+/* The footer label rides the SAME left rail as a mode title: 14px padding + a 20px icon slot +
+   a 10px gap = 44. `flex: 0 0 20px` is what does the work, and deliberately so: this popup lives
+   inside #inputbar, where `#inputbar svg { width:18px; height:18px }` is an ID rule that BEATS
+   both the width/height below and `.pi-ic svg`'s 17px — every icon in the composer renders 18px
+   whatever those say. flex-basis is the one property that rule does NOT set, so it is the only
+   way to widen the SLOT without a specificity fight. The width/height below therefore never
+   apply here; they are kept as the fallback for any context outside #inputbar (design/mockup.html
+   renders the same markup). Measured in the real panel 2026-08-17: pre-fix 14 + 18 + 8 = 40,
+   4px adrift; now 0, with the icon axis matching .pi-ic's. Pinned by fixture 51. */
+/* nowrap: JCEF sizes the <b>'s flex base a hair under its max-content ("Very High" got 53px
+   needing 55), so the two-word label wrapped even with the footer half empty — desktop Chrome
+   on the same markup+CSS does not. Measured live over CDP 2026-08-19: 37px tall → 19px with
+   nowrap. Levels are one or two short words; the footer never gets narrow enough to overflow. */
+.ef-label { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.ef-label svg { width: 15px; height: 15px; flex: 0 0 20px; }
+.ef-label b { color: var(--fg); font-weight: 600; }
+/* effort slider — the .tgl idiom stretched to five stops (user, 2026-08-29, from a screenshot
+   of a pill track with ticks and a knob): the same 16px pill track and off-colour as .tgl, the
+   accent (::before, width from --ef-fill) filling from the left edge to 2px past the knob — the
+   .tgl knob's inset — and the .cur stop IS the knob (var(--fg), 12px, as .tgl::after). Every
+   stop is a FIXED 12px slot: the tick is a 4px ::before centred in it, the knob is the slot's
+   own background, so the five centres never move with the level and the slots double as the
+   click targets. Same DOM and classes as the old free-standing dots — setEffortUI's .on/.cur
+   still drive it; the fill width is picked per level with :has(), no JS. */
+.effort { display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+  width: 72px; height: 16px; padding: 0 2px; box-sizing: border-box; border-radius: 999px;
+  position: relative; background: color-mix(in srgb, var(--fg) 22%, var(--user-bg)); transition: background .15s; }
+.effort::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; border-radius: 999px;
+  background: var(--accent); width: var(--ef-fill, 44px); transition: width .15s; }
+.effort .d { position: relative; z-index: 1; width: 12px; height: 12px; border-radius: 50%; transition: background .1s; }
+.effort .d::before { content: ''; position: absolute; inset: 4px; border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 45%, transparent); transition: background .1s; }
+.effort .d.on::before { background: color-mix(in srgb, var(--fg) 65%, var(--accent)); }
+.effort .d.cur { background: var(--fg); }
+.effort .d.cur::before { display: none; }
+/* five 12px slots in the 68px content box (2px padding = the .tgl knob inset), 2px gaps: centres
+   8, 22, 36, 50, 64 → fill = knob right + 2, so 2px of accent shows past the knob in every
+   state — Max reaches the track's end */
+.effort:has(.d:nth-child(1).cur) { --ef-fill: 16px; }
+.effort:has(.d:nth-child(2).cur) { --ef-fill: 30px; }
+.effort:has(.d:nth-child(3).cur) { --ef-fill: 44px; }
+.effort:has(.d:nth-child(4).cur) { --ef-fill: 58px; }
+.effort:has(.d:nth-child(5).cur) { --ef-fill: 72px; }
+.effort:hover { background: color-mix(in srgb, var(--fg) 30%, var(--user-bg)); }
+/* model-menu footer: the .popup-f idiom stacked — three label+switch rows plus the effort
+   slider behind the footer's one top border. Labels ride the .ef-label rail (20px svg slot) so
+   they line up with .pi-title. Effort MOVED here from the mode menu's own .popup-f on
+   2026-08-26 (user request): the level belongs with the model it applies to, and #modeMenu now
+   holds nothing but modes. .ef-row is deliberately NOT .tgl-row — it carries a pill slider, not
+   a switch, and keeping the two class names apart is what lets fixture 55 go on counting the
+   toggle rows while fixture 51 measures this one. */
+.pf-stack { flex-direction: column; align-items: stretch; gap: 10px; }
+.tgl-row, .ef-row { display: flex; align-items: center; justify-content: space-between; }
+/* toggle switch — first switch idiom in the panel: 28×16 pill track, 12px knob sliding on .on.
+   Colors from tokens only: off track is a fg/user-bg mix, on track the accent; the knob keeps
+   var(--fg) in both states (enough contrast on the orange, and no new colour constants). */
+.tgl { position: relative; width: 28px; height: 16px; flex: 0 0 28px; border: 0; padding: 0;
+  border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--fg) 22%, var(--user-bg)); transition: background .15s; }
+.tgl::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--fg); transition: left .15s; }
+.tgl.on { background: var(--accent); }
+.tgl.on::after { left: 14px; }
+.tgl:focus { outline: none; }
+.tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tgl[disabled] { opacity: .45; cursor: default; }
+/* fast mode cooling down: half-strength track — visibly "on but not delivering", reason on title */
+.tgl.cooldown { background: color-mix(in srgb, var(--accent) 45%, var(--user-bg)); }

@@ -239,8 +239,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     /**
      * Open a file reference from the panel. [line]/[endLine] are 1-BASED line numbers (the shape
      * `Read`'s `offset`/`limit` use); when present the editor lands on that line and SELECTS the
-     * range, so clicking "chat.css (lines 40-119)" shows exactly the slice Claude read rather than
-     * the top of a 683-line file.
+     * range, so clicking "chat.html (lines 40-119)" shows exactly the slice Claude read rather than
+     * the top of the file.
      */
     fun openFile(rawPath: String, line: Int? = null, endLine: Int? = null): Boolean {
         val p = rawPath.trim().replace('\\', '/')

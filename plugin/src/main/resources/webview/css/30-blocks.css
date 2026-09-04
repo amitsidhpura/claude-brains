@@ -1,0 +1,155 @@
+/* assistant block: plain text with small dot */
+/* THE TIMELINE GUTTER DOT — one geometry, four meanings. What a block IS comes from --dot-c on
+   the element, not from a fourth copy of left/top/width/height: the four were byte-identical and
+   nothing kept them that way. Naming the colour on the ELEMENT rather than as a background on the
+   pseudo is also what lets a STATE recolour the dot in one declaration — .run's white and .fail's
+   red below are each a single custom-property line instead of another copy of this rule. */
+.blk::before, .think::before, .think-live::before, .tool-line::before {
+  content: ''; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot-c); }
+
+.blk { position: relative; padding-left: 22px; --dot-c: var(--fg); }
+.blk > *:first-child { margin-top: 0; } .blk > *:last-child { margin-bottom: 0; }
+.blk p { margin: .45em 0; }
+.blk ul, .blk ol { margin: .4em 0; padding-left: 1.5em; }
+.blk li { margin: .2em 0; }
+.blk a { color: var(--blue); text-decoration: none; }
+.blk a:hover { text-decoration: underline; }
+.blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
+
+/* thinking */
+.think { position: relative; padding-left: 22px; color: var(--muted); font-size: var(--fs-base);
+  --dot-c: var(--dot); }
+.think summary { cursor: pointer; user-select: none; list-style: none; display: inline-flex; align-items: center; gap: 3px; }
+.think.no-body summary { cursor: default; }   /* nothing streamed: a label, not a control */
+.think summary::-webkit-details-marker { display: none; }
+.think summary .chev { width: 13px; height: 13px; transition: transform .15s ease; }
+.think[open] summary .chev { transform: rotate(90deg); }   /* chevron-right → points down */
+/* summary → its body is the attached idiom too (a line, then the block it introduces), so it takes
+   --attach-gap. <details> is an ordinary block, so the margin IS the gap. */
+.think .body { white-space: pre-wrap; font-style: italic; margin-top: var(--attach-gap); }
+
+/* live progress: thinking-in-progress + generating */
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.think-live { position: relative; padding-left: 22px; --dot-c: var(--dot); }
+.think-live .th { color: var(--muted); font-size: var(--fs-base); }
+.think-live .shimmer, .side-a.pending .shimmer { background: linear-gradient(90deg, #797d84 35%, #eceff4 50%, #797d84 65%); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer var(--pulse-period) linear infinite; }
+.generating { position: relative; display: flex; align-items: baseline; gap: 8px; padding-left: 22px; color: var(--fg); font-size: var(--fs-base); }
+.generating .spin { position: absolute; left: 0; top: 0; width: 14px; text-align: center; color: var(--accent);
+  font-size: 14px; line-height: 20px; }
+.generating .verb { background: linear-gradient(90deg, #c2603d 35%, #f2b492 50%, #c2603d 65%); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer var(--pulse-period) linear infinite; }
+.generating .meta { color: var(--muted); }
+.generating .meta svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 1px; }
+
+/* completion summary: ✻ Baked for 1m 53s · ↓ 88 tokens */
+.done { position: relative; padding-left: 22px; font-size: var(--fs-base); color: var(--muted); }
+/* "N files changed" under the summary (3.6): same voice as .done; the whole line is the Review
+   action on live turns (.click), plain text on replay. Counts wear the diff colours. */
+.files { position: relative; padding-left: 22px; font-size: var(--fs-sm); color: var(--muted); }
+.files svg { position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; }
+/* Review alone is the action (2026-09-01) — the whole-block .files.click target meant any stray
+   click on a file row opened the review, and the block-wide pointer oversold what was clickable. */
+.files .f-review { color: var(--accent); cursor: pointer; }
+.files .f-review:hover { text-decoration: underline; }
+.files .f-name { color: var(--fg); }
+.files .f-add { color: var(--green); margin-left: 4px; }
+.files .f-rem { color: var(--red); margin-left: 2px; }
+/* One row per file (user pick 2026-09-01 over the old comma-run, which wrapped into a blob —
+   worst on Windows, where a basename bug showed FULL paths). The path wears fillPath's
+   .p-head/.p-tail middle-ellipsis dress (same rules as .t-desc.path); the counts sit in a
+   right-aligned column, so rows scan like a table. */
+.files .f-row { display: flex; align-items: baseline; margin-top: 2px; }
+.files .f-row .f-name { display: inline-flex; align-items: baseline; min-width: 0; overflow: hidden; }
+.files .f-row .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files .f-row .p-tail { flex: 0 0 auto; white-space: nowrap; }
+.files .f-row .f-add { margin-left: auto; padding-left: 12px; }
+.done .star { position: absolute; left: 1px; top: 0; color: var(--accent); }
+.done svg { width: 12px; height: 12px; vertical-align: -2px; margin: 0 1px 0 3px; }
+
+/* tool line + IN/OUT */
+/* flex so the description can be told to SHRINK — a block box would let a long path push the row
+   wider and wrap it. The ::before dot is absolutely positioned, so it does not become a flex item.
+   max-width/min-width are not decoration: nowrap flex children give this row a min-content width of
+   label + filename, and inside an ancestor that sizes to content that made the ROW wider than the
+   panel — the clamp still produced one line, but the overflow ran off the right edge and the panel
+   clipped the filename. Bounding the row is what points the shrink at .p-head instead. */
+.tool-line { position: relative; display: flex; align-items: baseline; max-width: 100%; min-width: 0;
+  padding-left: 22px; font-size: var(--fs-base); color: var(--muted); box-sizing: border-box;
+  --dot-c: var(--green); }
+.tool-line b { flex: 0 0 auto; }
+/* A running tool has no verdict yet, so it must not wear one. White while in flight; the dot turns
+   green the moment its result lands, red if that result is an error — so the colour IS the outcome
+   and never a guess made at the start. Declared before .fail so a red verdict wins the tie if the
+   two are ever briefly worn together (they are not today: onUserEvent removes .run in the statement
+   above the one that adds .fail). */
+.tool-line.run { --dot-c: var(--fg); }
+.tool-line.fail { --dot-c: var(--red); }
+/* IN FLIGHT — the dot itself breathes. Worn by a tool line between content_block_start and its
+   tool_result, and by .think-live for the whole of its life: two states, one rule, because they mean
+   the same thing — this has not come back yet.
+   Picked 2026-08-13 from design/dot-pulse-probe.html. An outward halo (dot-ping) was tried first and
+   REJECTED: .turn-body carries content-visibility, whose paint containment shaved the ring into a
+   cut half-rectangle at the turn's edge, and un-containing the live turn to make room was a real
+   cost for decoration. A fade changes no geometry at all, so there is nothing to clip and no
+   containment to lift — see gotchas, this is the trap the focus rings already dodged by going INSET.
+   It touches OPACITY ONLY — the cheapest thing Chrome can composite, and it names no colour, so it
+   rides --dot-c: white while running, then green or red once the verdict lands. No will-change:
+   Chrome promotes for the duration of a compositor animation on its own, and a standing hint would
+   pin a layer per dot for the life of the log.
+   .run is set at the LIVE sites in chat.html only, never in toolLine(): replay and __gallery draw
+   FINISHED tools through that same helper, and a finished tool must not pulse. */
+.tool-line.run::before, .think-live::before {
+  animation: var(--pulse-name) var(--pulse-period) ease-in-out infinite; }
+/* Reduce motion: every animated surface in the panel at once, not just the newest one — the
+   in-flight dot, the background chip's dot, and the two shimmering texts. Written when the in-flight
+   dot landed (2026-08-13), because that was the point at which "the panel ignores this setting"
+   became worth saying out loud; the other three had animated forever without it.
+   The colour reset is NOT optional: .shimmer and .verb set `color: transparent` and rely on a
+   MOVING gradient to be legible at all, so stopping the animation without restoring a colour would
+   leave them invisible rather than still. Everything here keeps its meaning without motion: the
+   in-flight dot stops breathing but stays WHITE (.run's --dot-c is colour, not animation), so a
+   running tool is still told apart from a finished one.
+   UNVERIFIED on JCEF: Linux JCEF is offscreen-rendered and may not report the OS setting at all
+   (see backlog). This block is correct either way; whether it ever fires is the open question. */
+@media (prefers-reduced-motion: reduce) {
+  .tool-line.run::before, .think-live::before { animation: none; }
+  .bg::before { animation: none; }
+  .think-live .shimmer, .generating .verb { animation: none; color: var(--muted); }
+}
+.tool-line b { color: var(--fg); font-weight: 600; }
+.tool-line .t-desc { color: var(--muted); margin-left: 8px; }
+/* file references open in the editor — only the ones that ARE paths (.path), not free-text
+   descriptions, so nothing invites a click that would do nothing */
+/* Range suffix on a Read ("(lines 40-80)"). Its own span, dimmer than the path and OUTSIDE
+   .t-desc.path — the click handler sends that element's text to the editor, so a range folded into
+   it would be sent as part of the filename. */
+.tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: var(--fs-sm); }
+.tool-line .t-desc.path, .card-h code { cursor: pointer; }
+.tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
+/* A path is clamped to ONE line: it is already project-relative by the time it gets here, and what
+   is left is still long enough to wrap a narrow panel three times. .p-head is the shrinkable prefix
+   and wears the ellipsis; .p-tail never shrinks, and holds the filename plus — when fillPath judged
+   there was room in LIM.pathTailMax — its parent folder. So the ellipsis lands in the MIDDLE and
+   only ever eats the least useful end. WHICH segments are in the tail is decided in JS, not here:
+   flex distributes shrink proportionally, so no combination of factors expresses "shrink the parent
+   only once the prefix is gone" — measured both ways on real JCEF, and each factor that saved the
+   filename on a long path also nibbled the parent on a short one. min-width:0 is load-bearing on
+   the flex item and the head: a flex child's default min-width is its content, which would refuse
+   to shrink and put the wrap straight back. */
+/* A free-text description is ONE line too, for the same reason the path above is: descMax lets
+   through 140 characters, which wrap a narrow panel three times and push the next tool line down.
+   The cap drops content silently; this clamp does not, since the ellipsis is visible and chat.html
+   puts the shown text on `title`. The .path variant overrides display/overflow below and carries
+   its own middle-ellipsis rule — nowrap here is what its .p-head/.p-tail already assume. */
+.tool-line .t-desc { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool-line .t-desc.path, .card-h code.path { display: inline-flex; align-items: baseline; overflow: hidden; }
+.tool-line .t-desc.path .p-head, .card-h code.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-line .t-desc.path .p-tail, .card-h code.path .p-tail { flex: 0 0 auto; white-space: nowrap; }
+/* The card header is prose ("Claude wants to run Edit on <path>"), so the path sits INLINE and must
+   be allowed to shrink within it — max-width bounds the flex box, vertical-align keeps it sitting on
+   the sentence's baseline rather than lifting the line. Same head/tail split as the tool line: the
+   decision surface and the timeline must never spell one file two different ways. */
+.card-h code.path { max-width: 100%; vertical-align: bottom; }
+.path { font-family: ui-monospace, Consolas, monospace; }

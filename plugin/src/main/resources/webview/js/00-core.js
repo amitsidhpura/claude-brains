@@ -167,7 +167,7 @@
   // (prepended content pushes the anchor down), so windowed replay can't false-trigger it.
   let lastScrollTop = 0;
   // The top fade only means something while content is scrolled under the header — see
-  // `body.at-top #fade-top` in chat.css. Called from the scroll handler AND after any render,
+  // `body.at-top #fade-top` in css/20-log.css. Called from the scroll handler AND after any render,
   // because a render can leave the log at the top without a scroll event ever firing.
   function updateTopFade() { document.body.classList.toggle('at-top', log.scrollTop <= 1); }
   log.addEventListener('scroll', function () {

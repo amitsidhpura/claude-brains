@@ -1,0 +1,143 @@
+/* ---------- side question (8.11, /btw) ----------
+   A scratch surface over the log, anchored to the composer: the same floating-panel shell as
+   #histPanel (surface, strong border, 12px radius, the one drop shadow), full composer width so a
+   markdown answer has room. Questions wear the user surface exactly as sent messages do; answers
+   are the ordinary .blk prose rules minus the timeline gutter, so the two look like the log they
+   deliberately never enter. Vertical position is set by JS (composer height + 8px); 96px is the
+   static fallback for the mockup and the instant before the observer fires. `margin: 0 auto` with
+   both insets set is what centres an absolutely-positioned box once max-width caps it — without
+   it the box hugged the left inset while #inputcard sat centred (measured on JCEF at 869px:
+   centres 374 vs 435; with the margin 435 vs 435). */
+#sidePanel { position: absolute; left: 14px; right: 14px; bottom: 96px; z-index: 30; max-width: 720px; margin: 0 auto;
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; flex-direction: column; overflow: hidden; }
+#sidePanel.show { display: flex; }
+.side-h { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; color: var(--muted);
+  font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
+.side-title { display: inline-flex; align-items: center; gap: 6px; color: var(--fg); font-size: var(--fs-sm); white-space: nowrap; }
+.side-title svg { width: 14px; height: 14px; color: var(--accent); }
+.side-hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-h .icon-btn svg { width: 15px; height: 15px; }
+.side-list { max-height: 40vh; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column;
+  gap: 10px; font-size: var(--fs-base); }
+.side-empty { color: var(--muted); font-size: var(--fs-sm); }
+.side-q { align-self: flex-end; max-width: 92%; background: var(--user-bg); border: 1px solid var(--user-border);
+  border-radius: var(--radius); padding: 5px 9px; font-size: var(--fs-sm); white-space: pre-wrap; word-break: break-word; }
+.side-a.blk { padding-left: 0; }            /* prose rules, no timeline dot: this is not a turn */
+.side-a.blk::before { display: none; }
+.side-a.pending { color: var(--muted); }
+.side-a.err { color: var(--red); font-size: var(--fs-sm); }
+/* one line at rest, exactly like #input (20px), growing with content to 6 lines; the send button
+   sits centred on that single line and follows the bottom edge as the field grows */
+.side-in { display: flex; align-items: flex-end; gap: 8px; padding: 8px 10px 8px 14px; border-top: 1px solid var(--border); }
+#sideInput { flex: 1; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
+  font: inherit; line-height: 20px; height: 20px; max-height: 120px; padding: 4px 0; box-sizing: content-box; overflow-y: hidden; }
+#sideInput::placeholder { color: var(--muted); }
+#sideSend { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+#sideSend svg { width: 18px; height: 18px; }
+#sideSend:disabled { opacity: .45; cursor: default; }
+
+/* image placeholder (shared by chips + user-message images) */
+.ph-img { position: relative; display: block; background: linear-gradient(135deg, #35486b, #6b3555); }
+.ph-img svg { position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; color: rgba(255,255,255,.75); }
+
+/* composer attachment chips (image.png 283×162 · .gitignore · …) */
+#chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--user-divider); }
+.att { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--user-raised);
+  border: 1px solid var(--user-border); border-radius: var(--radius); font-size: var(--fs-sm); color: var(--fg); line-height: 1; cursor: default; }
+/* Remove control, shared by the attachment chip and the queue row (.q-row) so the two cannot
+   drift: hidden until its row is hovered, then absolutely placed over the text end as a SOLID
+   plate (the left-edge fade was dropped 2026-08-23, user pick) so revealing it never reflows
+   the row. Reserving space for it instead was rejected. The plan-comment ✕/⏎ wear the same
+   plate in the warn family — change one, check the other. */
+.rm { display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 2;
+  background: var(--user-raised); border: 0; color: var(--user-muted); cursor: pointer; padding: 3px; border-radius: 3px; }
+.rm:hover { color: var(--fg); }
+.rm svg { width: 12px; height: 12px; display: block; }
+.att:hover .rm, .q-row:hover .rm { display: inline-flex; }
+.att .thumb { width: 16px; height: 16px; border-radius: 3px; overflow: hidden; display: inline-flex; flex: 0 0 auto; }
+.att .thumb .ph-img { width: 100%; height: 100%; }
+.att .thumb .ph-img svg { width: 10px; height: 10px; }
+.att .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.att > svg { width: 14px; height: 14px; color: var(--user-muted); flex: 0 0 auto; }
+.att .meta { color: var(--user-muted); font-size: var(--fs-xs); }
+
+/* attachments inside a user message: chip row on top, click opens preview */
+.msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.msg-atts:last-child { margin-bottom: 0; }   /* image-only message: no text below to space from */
+.att.click { cursor: pointer; }
+.att.click:hover { background: var(--user-raised-hover); }
+
+/* attachment preview popup */
+#lightbox { position: absolute; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55); }
+#lightbox.show { display: flex; }
+.lb-box { position: relative; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px;
+  padding: 10px; box-shadow: 0 12px 38px rgba(0,0,0,.55); max-width: 94vw; }
+/* size to the image, capped to the panel: a real screenshot fills the tool window rather than a
+   fixed 320x200 thumbnail; a small image still shows at its natural size. aspect ratio preserved. */
+.lb-img { border-radius: var(--radius); overflow: hidden; }
+.lb-img .ph-img { display: block; width: 320px; height: 200px; }   /* mockup placeholder keeps a size */
+.lb-img img { display: block; max-width: 86vw; max-height: 78vh; }
+.lb-cap { text-align: center; color: var(--muted); font-size: var(--fs-sm); margin-top: 8px; }
+.lb-x { position: absolute; top: -12px; right: -12px; width: 26px; height: 26px; border-radius: 50%; background: var(--raised);
+  border: 1px solid var(--border-strong); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.lb-x:hover { background: var(--raised-hover); }
+.lb-x svg { width: 14px; height: 14px; }
+
+/* command preview in permission card (Bash) */
+.card .cmd { margin: 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); white-space: pre; overflow-x: auto; }
+
+/* retry — timeline line: icon sits in the dot column, text at the shared indent */
+.retry { position: relative; padding-left: 22px; font-size: var(--fs-base); }
+.retry a { color: var(--muted); text-decoration: none; }
+.retry a:hover { color: var(--fg); }
+.retry svg { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px; }
+
+/* Todo checklist (TodoWrite). Sits at the same 22px indent as the tool line it answers, so it
+   reads as that call's content rather than a new topic. Completed items dim and strike; the one
+   in flight takes the accent, because "which of these is happening now" is the question the list
+   is glanced at to answer. */
+.todos { display: flex; flex-direction: column; gap: 3px; }   /* margin: the attached-block contract */
+.todo { display: flex; align-items: flex-start; gap: 7px; font-size: var(--fs-base); color: var(--fg); }
+.todo-ic { flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--dot); }
+.todo-ic svg { width: 13px; height: 13px; display: block; }
+.todo.completed { color: var(--muted); }
+/* currentColor, not a fainter rule: the strike belongs to the text, so it tracks whatever colour
+   the row is wearing rather than reading as a separate line drawn over it. */
+.todo.completed .todo-t { text-decoration: line-through; text-decoration-color: currentColor; }
+.todo.completed .todo-ic { color: var(--green); }
+.todo.in_progress { color: var(--fg); }
+.todo.in_progress .todo-ic { color: var(--accent); }
+.todo.pending { color: var(--muted); }
+
+/* status lines (⏹ Stopped, — resumed —, …): glyph in the dot column, text at the shared indent */
+.status { position: relative; padding-left: 22px; color: var(--muted); font-size: var(--fs-base); }
+.status .s-ic { position: absolute; left: 1px; top: 4px; width: 12px; height: 12px;
+  display: inline-flex; align-items: center; justify-content: center; }
+.status .s-ic svg { width: 12px; height: 12px; display: block; }
+.status.err { color: var(--red); }
+/* Compaction boundary: the marker wears the plain status metrics, and the CLI's summary hangs
+   beneath it at the same 22px indent — folded, because it runs to 25-41k characters in real
+   sessions. It used to replay as a .msg-user box, i.e. as something the user had typed; the muted
+   code surface is what says "this is the transcript talking, not you".
+   Same attached-block relationship as a tool line and its IN/OUT box, so it takes --attach-gap —
+   but NOT the shared rule above, and this is the whole reason it is written out here: .compact is
+   an ordinary block, so there is no flex gap to cancel and the margin IS the gap. Putting it in
+   that selector list would subtract --block-gap from it and pull it 10px INTO the status line. */
+.compact .compact-sum { margin: var(--attach-gap) 0 0 22px; padding: 8px 10px; background: var(--code-bg);
+  border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted);
+  font-size: var(--fs-sm); line-height: 1.5; white-space: pre-wrap; }
+.compact .compact-sum.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
+.ok-t { color: var(--green); font-size: var(--fs-base); }
+.no-t { color: var(--red); font-size: var(--fs-base); }
+/* a replayed plan card that was never decided — neutral, neither verdict color */
+.und-t { color: var(--muted); font-size: var(--fs-base); }
+/* granted rules on a resolved card: one chip per rule, so compound-command rules stay separable */
+.ok-t code { display: inline-block; margin: 1px 2px; padding: 0 6px; border-radius: 3px;
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-xs); line-height: 17px; }
+

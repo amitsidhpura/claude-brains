@@ -4,6 +4,17 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-04 — webview CSS split into 10 manifest files (`webview/css/`, `CSS_FILES`)
+- Why: 1295-line monolith; the 2026-08-19 JS split had already proven the concat-splice seam, the
+  banner-per-file DevTools mapping, and the manifest-vs-directory test. User asked for "same as js".
+- Shape: cut ONLY at existing top-level comment boundaries, order preserved — concatenation order
+  IS cascade order (the file documents real specificity fights), verified byte-identical to the
+  old chat.css modulo the top banner. `WebviewAssets.CSS_FILES` is the only copy of the order;
+  the mockup mirrors it as `<link>` tags, pinned to the manifest by `RenderLimitsTest`.
+- Alternatives rejected: regrouping rules by component while splitting (cascade risk for zero
+  benefit — a rule moved past another flips ties); keeping chat.css as a generated artifact for
+  the mockup (a second copy that drifts; ten `<link>` tags + the pinning test instead).
+
 ## 2026-09-01 (third) — files block: the `Review` span alone is the click target
 - Why: user request from a live screenshot — the whole-block action meant any stray click on a
   file row opened the review, and the block-wide pointer cursor oversold what was clickable.

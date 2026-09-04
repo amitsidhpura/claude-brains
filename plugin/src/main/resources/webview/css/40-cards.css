@@ -1,0 +1,261 @@
+/* permission / plan / question card */
+.card { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 10px 12px; background: #232528; }
+.card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
+/* The header and the body it introduces — the same attached relationship as a tool line and its
+   IN/OUT box, and the gap --attach-gap was chosen FROM. On the token so it cannot drift away from
+   the family it anchors. Written on the header (not on each body) because the bodies vary: .diff,
+   .cmd, .blk. .card is an ordinary block, so this margin IS the gap — no flex gap to cancel. */
+.card-h { margin-bottom: var(--attach-gap); }
+.card-h code { font-family: ui-monospace, Consolas, monospace; color: var(--fg); }
+.card-b { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }  /* wrap: suggestion buttons can crowd the row */
+.card-b button, .ask-b button { border: 0; border-radius: var(--radius); line-height: 18px; padding: 4px 12px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.card-b button svg, .ask-b button svg { width: 15px; height: 15px; }
+.ok { background: var(--ok); color: #fff; }
+.ok:hover:not(:disabled) { background: var(--ok-hover); }
+.no { background: #3a3d41; color: var(--fg); }
+.no:hover { background: #474a4f; }
+/* permission-suggestion buttons ("accept all edits" / "always allow"): styled exactly like
+   Accept (.ok) — only the double-check icon tells them apart */
+.card-b .alt { background: var(--ok); color: #fff; }
+.card-b .alt:hover { background: var(--ok-hover); }
+/* Split "Always allow": the main half grants every rule the CLI suggested (what its own TUI
+   does); the caret lists them individually for a deliberate partial grant. The two halves are one
+   control, so the seam is a divider rather than a gap, and the caret inherits .alt's colours. */
+/* Positions its own menu rather than borrowing .menu-anchor: that class also matches
+   `.menu-anchor .popup { bottom: ... }`, which is declared LATER at equal specificity, so `top`
+   and `bottom` both applied and the menu collapsed to 0 height. */
+/* stretch, not center: the caret holds only a 14px icon and no text, so its natural height is
+   short — stretching makes both halves exactly as tall as the labelled one. */
+.card-b .split { position: relative; display: inline-flex; align-items: stretch; }
+/* :not(.more) — the caret is an .alt too, so an unscoped rule here squared ITS right corners as
+   well and the pair lost its rounded outer edge entirely. */
+.card-b .split .alt:not(.more), .card-b .split .ok:not(.more) { border-top-right-radius: 0;
+  border-bottom-right-radius: 0; padding-right: 8px; }
+/* One pill with a hinge, not two buttons welded together. The seam is INSET — it clears the top
+   and bottom edges — because a full-height rule reads as structure and made the caret look like a
+   separate control. The label's right padding also drops from the button default of 12px, which
+   is what actually made the caret look far from the text; a seam only ever masked that gap. */
+.card-b .alt.more, .card-b .ok.more { border-top-left-radius: 0; border-bottom-left-radius: 0;
+  padding: 4px 8px; position: relative; }
+.card-b .alt.more::before, .card-b .ok.more::before { content: ''; position: absolute; left: 0;
+  top: 6px; bottom: 6px; width: 1px; background: color-mix(in srgb, #fff 22%, transparent); }
+/* chevron-right rotated to show OPEN/CLOSED, not direction: down at rest, up while the menu is
+   open — the same convention as the thinking block's disclosure, and it stays truthful whichever
+   way the menu had to flip */
+.card-b .alt.more .chev, .card-b .ok.more .chev { width: 14px; height: 14px; transform: rotate(90deg); transition: transform .15s ease; }
+.card-b .split.open .alt.more .chev, .card-b .split.open .ok.more .chev { transform: rotate(-90deg); }
+/* while its menu is open the caret stays lit, so the control reads as active even once the
+   pointer moves down into the list */
+.card-b .split.open .alt.more, .card-b .split.open .ok.more { background: var(--ok-hover); }
+/* Green like the button it hangs off, not the composer popups' blue --user-bg: it belongs to the
+   Always-allow control, and every item in it is a grant. Items lift to --ok-hover, the same hover
+   the button itself uses.
+   Narrower than the composer popups (min-width 330px would overhang a card), and rules ellipsise
+   rather than wrap since a rule can be a whole shell command. Opens DOWNWARD, unlike the composer
+   popups: a card menu that opened up would cover the command preview being approved. JS flips it
+   to .up only when there is no room below. `.popup.card-menu` (0,2,0) because .popup is declared
+   LATER in this file and would otherwise win overflow on equal specificity. */
+.popup.card-menu { width: 310px; min-width: 0; top: calc(100% + 6px); bottom: auto;
+  overflow-y: auto; background: var(--ok); border-color: var(--ok-hover); }
+.card-menu .popup-item:hover, .card-menu .popup-item.sel { background: var(--ok-hover); }
+.card-menu .pi-title { color: #fff; }
+/* Same double-check the button wears, placed exactly like the history list's delete control:
+   on the RIGHT, only while the row is hovered — and stable for the same reason the history
+   panel is: the menu box has a FIXED width (matching #histPanel's 310px), so the hover-only
+   gutter just shifts the rule's ellipsis inside a constant box. It used to shrink-wrap
+   (min-width: 0), which made the hover padding grow the whole dropdown per mouseover — the
+   resize jiggle found in the 6.4 live check. */
+.card-menu .pi-ic { position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  display: none; width: auto; padding: 0; color: #fff; }
+.card-menu .popup-item:hover .pi-ic { display: block; }
+.card-menu .popup-item:hover { padding-right: 32px; }
+.card-menu .pi-ic svg { width: 15px; height: 15px; display: block; }
+.popup.card-menu.up { top: auto; bottom: calc(100% + 6px); }
+/* Plan-card feedback line: one row of "why", riding whichever button answers the card (deny →
+   the message; approve → steered in right after the allow). Sits between the plan body and the
+   buttons and leaves with them once the card is decided. Panel-toned, not user-blue: it belongs
+   to the card's decision surface, and the composer keeps its own colours. .plan-sep marks where
+   the plan ends and the decision surface begins — full-bleed to the card's padding edges, the
+   composer's #inputbar idiom (an input cannot carry a pseudo-element, so it is its own div).
+   The field itself wears the ask card's "Other" input dress (--warn-field well, warn-toned
+   frame) — the panel's two type-your-answer-on-a-card surfaces must read as one control. */
+.plan-sep { margin: 10px -12px 0; border-top: 1px solid var(--border); }
+.plan-fb { display: block; width: 100%; margin-top: 10px; padding: 7px 10px;
+  background: var(--warn-field); color: var(--fg); border: 1px solid var(--warn-border);
+  border-radius: var(--radius); font: inherit; font-size: var(--fs-base); outline: none; }
+.plan-fb::placeholder { color: var(--dot); }
+
+/* Plan comments (checklist 5.6): select text in the plan body, anchor a note to it. Comment
+   rows sit between the plan body and the decision surface. The FULL decision surface stays —
+   the user's call 2026-08-23, diverging from the reference client's forced keep-planning:
+   deny carries the comments as [Re: "anchor"] lines, approve rides them under the notes
+   marker. Warn-family dress throughout: the rows are part of the card's feedback surface, so
+   they wear the same well as the plan-fb input. */
+/* geometry mirrors the inline-code chip (.blk code: 1px 5px / 3px) so highlights and code
+   chips read as one family on the plan surface — change one, change both */
+mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transparent);
+  color: inherit; border-radius: 3px; padding: 1px 5px; }
+/* the pill positions against the CARD — without this it resolved against a distant positioned
+   ancestor and floated to the top of the log (user report, real IDE, 2026-08-23) */
+.card.plan { position: relative; }
+.plan-add { position: absolute; display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; font-size: var(--fs-sm); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--warn-border); border-radius: 999px; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4); white-space: nowrap; z-index: 30; }
+.plan-add svg { width: 12px; height: 12px; }
+.plan-add:hover { background: var(--warn-bg); }
+/* 10px, not --attach-gap: since the rows moved below the separator (round 3) they are part of
+   the DECISION SURFACE, whose rhythm is 10px throughout (sep / rows / fb / buttons) — they no
+   longer hang off the plan body. */
+.plan-cs { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+/* Every row — committed and composer alike — is two lines (anchor quote above, text below)
+   and wears the SAME size as the .plan-fb field beside it (13px / 7px 10px): the feedback
+   surface reads as one control family (user picks 2026-08-23). Committed rows keep 28px on
+   the right for the hover-✕ gutter. */
+.plan-c { position: relative; display: block; font-size: var(--fs-base);
+  padding: 7px 28px 7px 10px; background: var(--warn-field); border: 1px solid var(--warn-border);
+  border-radius: var(--radius); }
+.plan-c .c-a { display: block; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: var(--muted); font-style: italic; }
+.plan-c .c-t { display: block; min-width: 0; color: var(--fg); }
+/* hover-only remove, conversations-list gutter idiom: the row's width never changes */
+/* the .rm plate in the warn family (--warn-bg sits one step above the row's --warn-field
+   well, as --user-raised does on its own rows) — matched metrics: 3px padding, 3px radius */
+.plan-c .c-x { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  visibility: hidden; border: 0; border-radius: 3px;
+  background: color-mix(in srgb, var(--warn-border) 15%, var(--warn-bg));
+  color: var(--muted); cursor: pointer; padding: 3px; line-height: 0; }
+.plan-c:hover .c-x { visibility: visible; }
+.plan-c .c-x:hover { color: var(--fg); }
+.plan-c .c-x svg { width: 12px; height: 12px; }
+/* The composer: same dress, two lines — the anchor quote full-width on top (single line,
+   ellipsis), input + an explicit Enter button below (user picks 2026-08-23). The input inherits
+   the well (no double frame); focus rings the CONTAINER, not the field — same move as
+   .ask-opt:has(input:focus-visible) above, and the inner suppression needs the 3-class
+   specificity to beat the global .turn :focus-visible. */
+.plan-c.compose .c-row { display: flex; gap: 6px; align-items: center; }
+.plan-c.compose:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+.plan-c.compose input:focus-visible { outline: none; }
+/* Both composer buttons wear the committed-row ✕'s dress — borderless muted icons, ALWAYS
+   visible (it is the active row) — and sit as ONE vertically-centered stack on the row's right
+   edge (user pick, round 5): ✕ cancels above, ⏎ commits below. */
+.plan-c.compose .c-btns { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.plan-c.compose .c-btns .c-x { position: static; visibility: visible; transform: none; }
+.plan-c .c-ok { border: 0; border-radius: 3px;
+  background: color-mix(in srgb, var(--warn-border) 15%, var(--warn-bg));
+  color: var(--muted); cursor: pointer; padding: 3px; line-height: 0; }
+.plan-c .c-ok:hover { color: var(--fg); }
+.plan-c .c-ok svg { width: 12px; height: 12px; }
+.plan-c input { flex: 1 1 auto; min-width: 0; background: none; border: 0; outline: none;
+  color: var(--fg); font: inherit; font-size: var(--fs-base); padding: 0; }
+.plan-c input::placeholder { color: var(--dot); }
+
+.card-menu .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
+  overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
+/* pre (not pre-wrap): long lines keep their width and the .diff box scrolls horizontally
+   (overflow-x: auto) rather than folding — matches the codeblock <pre> behaviour */
+.diff .del { display: block; color: var(--red); white-space: pre; }
+.diff .add { display: block; color: var(--green); white-space: pre; }
+.diff .ctx { display: block; color: var(--muted); white-space: pre; }   /* unchanged context lines */
+.diff .ln { display: inline-block; min-width: 2.2em; margin-right: 8px; text-align: right;
+  color: var(--muted); opacity: .5; user-select: none; }
+
+/* markdown inside a card (e.g. plan) — drop the timeline dot */
+/* Collapses with .card-h's margin-bottom rather than adding to it (ordinary block margins), so both
+   ends of the pair must name the same token or whichever is larger silently wins. */
+.card .blk { padding-left: 0; margin-top: var(--attach-gap); }
+.card .blk::before { display: none; }
+
+/* AskUserQuestion option text */
+.q-body { display: flex; flex-direction: column; min-width: 0; }
+.q-t { color: var(--fg); font-size: var(--fs-base); }
+.q-d { font-size: var(--fs-xs); margin-top: 1px; }   /* color set by the .ask warm-tone rule */
+
+/* AskUserQuestion — tabbed multi-question card */
+.ask { border: 1px solid var(--warn-border); border-radius: var(--radius); background: var(--warn-bg); }
+.ask-h { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 12px 0; }
+.ask-tabs { display: flex; gap: 18px; }
+/* resting color comes from the warm-tone rule below (.ask .q-d, .ask-foot, .ask-tab) */
+.ask-tab { background: transparent; border: 0; cursor: pointer; font: inherit; font-size: var(--fs-base);
+  padding: 0 0 9px; border-bottom: 2px solid transparent; }
+.ask-tab.active { color: var(--fg); border-bottom-color: var(--warn-border); }
+.ask-tab:hover { color: var(--fg); }
+.ask-q { padding: 12px; color: var(--fg); font-size: var(--fs-base); line-height: 1.5; }
+.ask-list { display: flex; flex-direction: column; padding: 0 8px 6px; gap: 2px; }
+.ask-opt { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: var(--radius); cursor: pointer; }
+.ask-opt:hover { background: rgba(var(--accent-rgb), .07); }
+.ask-opt.checked { background: rgba(var(--accent-rgb), .14); }
+.ask-opt input { position: absolute; inset: 0; width: auto; height: auto; margin: 0; opacity: 0; cursor: pointer; }
+.ask-ind { display: inline-flex; flex: 0 0 auto; margin-top: 1px; color: var(--fg); }
+.ask-ind svg { width: 16px; height: 16px; display: block; }
+/* 31px left: input text (31 + 1px border + 10px padding) lands on the option-label edge (42px) */
+.ask-other { padding: 2px 8px 6px 31px; }
+.ask-other input { width: 100%; background: var(--warn-field); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 7px 10px;
+  color: var(--fg); font: inherit; font-size: var(--fs-base); outline: none; }
+.ask-other input::placeholder { color: var(--dot); }
+/* replayed (historical) card: answers are a record, not a control.
+   NB: must not be called `.done` — that's the completion-summary line (22px dot-column indent). */
+.ask-done .ask-opt { cursor: default; }
+.ask-done .ask-opt:hover { background: transparent; }
+.ask-done .ask-opt.checked:hover { background: rgba(var(--accent-rgb), .14); }
+.ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
+.ask-go:disabled { opacity: .45; cursor: not-allowed; }
+.ask-foot { padding: 0 12px 12px; font-size: var(--fs-sm); }
+/* warm muted tone for secondary text inside the question card */
+.ask .q-d, .ask-foot, .ask-tab { color: #e4bda6; }
+
+/* error block */
+.error { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #6b3a3a; background: #241a1a; color: var(--red);
+  border-radius: var(--radius); padding: 8px 12px; font-size: var(--fs-base); }
+.error svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+.error code { font-family: ui-monospace, Consolas, monospace; }
+
+/* history panel (past conversations) */
+#histPanel { position: absolute; right: 10px; z-index: 30; width: 310px; background: var(--panel);
+  border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; }
+#histPanel.show { display: block; }
+.hist-h { padding: 10px 14px 6px; font-size: var(--fs-xs); color: var(--muted); border-bottom: 1px solid var(--border); }
+/* 5 complete rows: a two-line row (title + desc/date) measures 54px */
+/* 5 rows. Rows are ~54.2px, not a round 54 — renderHistory() overwrites this with the measured
+   5-row height once rows exist (the IDE's font decides it); 271px is the static fallback and
+   what the mockup uses. A cap even 1px under the true height shows a scrollbar for a list that
+   visibly fits. */
+.hist-list { max-height: 271px; overflow-y: auto; }
+.hist-item { position: relative; padding: 8px 14px; cursor: pointer; }
+.hist-item:hover { background: var(--hover); }
+/* delete: hidden until hover. The gutter is reserved ONLY while the row is hovered, so an
+   unhovered list uses its full width and the title shortens (one more ellipsis step) exactly
+   when the button needs the room — no permanently wasted space, and nothing is ever drawn over
+   the text. Skipped on .arm (the row is then the confirmation, which needs the full width) and
+   on the live-session row, which has no delete control at all (:has needs Chromium 105+, JCEF
+   is 122+ — older than the color-mix and lh units already relied on elsewhere). */
+.hist-item:hover:not(.arm):has(.hist-del) { padding-right: 36px; }
+.hist-del { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); display: none;
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 3px; }
+.hist-item:hover .hist-del { display: block; }
+.hist-del:hover { color: var(--red); }
+.hist-del svg { width: 15px; height: 15px; display: block; }
+/* armed state: the row becomes the confirmation, so there is no modal to mis-click */
+.hist-confirm { display: none; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--fg); }
+.hist-item.arm .t, .hist-item.arm .d, .hist-item.arm .hist-del { display: none; }
+.hist-item.arm .hist-confirm { display: flex; }
+.hist-item.arm { cursor: default; background: var(--warn-bg); }
+.hist-confirm span { flex: 1; }
+.hist-confirm button { border: 0; border-radius: 3px; padding: 3px 8px; font: inherit; font-size: var(--fs-sm);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.hist-confirm button svg { width: 13px; height: 13px; }
+.hist-confirm .yes { background: var(--danger); color: #fff; }
+.hist-confirm .yes:hover { background: var(--danger-hover); }
+/* .no inherits the shared neutral button colours */
+.hist-item .t { color: var(--fg); font-size: var(--fs-base); display: flex; align-items: center; gap: 6px; }
+/* the title truncates; min-width:0 lets a flex item shrink below its content so ellipsis kicks in,
+   and the badge (flex 0 0 auto) stays whole beside it instead of being clipped by a long title */
+.hist-item .t-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-item .d { color: var(--muted); font-size: var(--fs-xs); margin-top: 1px; }
+/* live transcript: labelled, and deliberately has no delete control */
+.hist-item .badge { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
+  background: var(--user-raised); color: var(--user-muted); border: 1px solid var(--user-border); }
+.hist-empty { padding: 10px 14px; color: var(--muted); font-size: var(--fs-sm); }
+

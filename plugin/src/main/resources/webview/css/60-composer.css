@@ -1,0 +1,124 @@
+/* ---------- composer ---------- */
+#composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
+  display: flex; justify-content: center; }
+#inputcard { position: relative; width: 100%; max-width: 720px; background: var(--user-bg); border: 1px solid var(--user-border); border-radius: 12px;
+  padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
+/* focus is the coloured border alone — the 3px tinted halo that used to sit outside it made the
+   composer look like it had two edges once the border carried a mode colour of its own */
+#inputcard:focus-within { border-color: var(--mode-accent); box-shadow: 0 2px 14px rgba(0,0,0,.35); }
+#input { width: 100%; resize: none; background: transparent; color: var(--fg); border: 0; outline: none;
+  font: inherit; line-height: 20px; height: 20px; max-height: 200px; padding: 0; overflow-y: hidden; }
+#input::placeholder { color: var(--user-muted); }
+#inputbar { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 8px -12px 0; padding: 8px 12px 0; border-top: 1px solid var(--user-divider); }
+#inputbar .left, #inputbar .right { display: flex; align-items: center; gap: 10px; }
+/* Queued messages (client-parity item 24) — typed while a turn was running, waiting their turn.
+   Wears the composer's own raised surface so they read as part of the input, not as transcript.
+   Divided off below by the #chips idiom (full-bleed rule), so the pending rows read as their own
+   band rather than running into the attachment chips or the input right under them. */
+#queue { display: flex; flex-direction: column; gap: 4px; margin: 0 -12px 8px; padding: 0 12px 8px;
+  border-bottom: 1px solid var(--user-divider); }
+/* Same trap as .chip-btn: the display:flex above beats the UA's [hidden]{display:none} (ID
+   outranks attribute selector), so an EMPTY queue still rendered — zero height but its margin,
+   padding and now its divider stayed, dead space and a stray rule above the composer's first row. */
+#queue[hidden] { display: none; }
+/* Wears the attachment chip's surface exactly (.att): same raised background, same border. */
+.q-row { position: relative; display: flex; align-items: center; gap: 8px; background: var(--user-raised);
+  border: 1px solid var(--user-border); border-radius: var(--radius); padding: 5px 9px; }
+.q-row:hover { background: var(--user-raised-hover); }
+/* No override of .rm's fade colour here, deliberately: .att.click lifts on hover too and keeps its
+   remove control on the base --user-raised pill, so matching the attachment means matching that. */
+/* One line, ellipsised: the row is a reminder of what is pending, not a place to re-read a draft. */
+.q-text { flex: 1; min-width: 0; color: var(--fg); font-size: var(--fs-sm); cursor: text;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-att { color: var(--user-muted); margin-left: 8px; font-size: var(--fs-xs); }
+.chip-btn { background: transparent; border: 0; color: var(--user-muted); cursor: pointer; font: inherit; font-size: var(--fs-sm); line-height: 1;
+  border-radius: var(--radius); display: inline-flex; align-items: center; gap: 6px; }
+/* display:inline-flex above beats the UA's [hidden]{display:none} — without this re-assert a
+   "hidden" bg chip kept showing its pulsing ::before dot forever (manual-test 7.3), and
+   #ctxChip only looked hidden because its text happened to be empty. */
+.chip-btn[hidden] { display: none; }
+.chip-btn:hover { color: var(--fg); }
+.chip-btn svg { width: 14px; height: 14px; }
+/* context gauge: share of the window the next request will carry. Click to /compact.
+   Wears .chip-btn (same as the model selector); only the over-threshold tint is its own. */
+.ctx.warn, .ctx.warn:hover { color: var(--accent); }
+/* The dial in front of the number: the same figure as a shape, so the chip reads at a glance
+   without parsing digits. A RING — the stroke fills round the circle as the window fills, which is
+   the shape the eye already reads as "how far through".
+
+   An SVG arc, NOT a conic-gradient behind a radial mask. The CSS version is a third of the code and
+   needs no markup, but Chromium anti-aliases neither the sweep's leading edge nor the mask's inner
+   circle, so at chip size the ring came out visibly stepped on both edges. A stroked circle is
+   drawn by the path rasteriser and comes out smooth.
+
+   `pathLength="100"` is what keeps it honest: it redefines the circle's length as 100 units, so the
+   dash is literally the percentage — no 2*pi*r constant to recompute whenever the radius changes.
+   Both strokes are currentColor (the track at low alpha via color-mix), which is what makes the
+   ring follow the number across the warn threshold for free, with no second rule to keep in step.
+   `.gauge` gates it so the chip is unchanged until the renderer opts in. */
+/* Geometry copied from the composer's Lucide icons rather than invented, down to the numbers: the
+   square-slash beside it is `<rect x=3 y=3 width=18 height=18>` with stroke-width 2 in a 24 viewBox,
+   so its path spans units 3..21 and its painted edge 2..22. The ring matches by construction —
+   r=9 about (12,12) spans exactly the same 3..21, which is why r is 9 and not the 8 that merely
+   looked right: at r=8 DevTools measured the circle 12x12 against the rect's 13.5x13.5, a unit
+   short, and the ring sat visibly deeper inside its own box than its neighbour.
+   `r * 2 + stroke-width` must stay 20 if either is ever touched. Same 19px box as .icon-btn svg,
+   so the two glyphs are the same size with the same air around them. */
+.ctx.gauge .ctx-ring { flex: none; width: 19px; height: 19px; transform: rotate(-90deg); }
+.ctx.gauge .ctx-ring circle { fill: none; stroke-width: 2; }
+.ctx.gauge .ctx-ring .track { stroke: color-mix(in srgb, currentColor 22%, transparent); }
+.ctx.gauge .ctx-ring .fill { stroke: currentColor; stroke-dasharray: var(--ctx-pct, 0) 100; }
+/* background-task roster (client-parity item 4): a LEVEL signal, so it is a chip that reflects what
+   is running now, not a timeline entry. Wears .chip-btn like the rest; the pulsing dot is the only
+   thing of its own, and it marks the roster as live rather than historical. */
+.bg::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  flex: none; animation: bg-pulse var(--pulse-period) ease-in-out infinite; }
+@keyframes bg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+/* Rows are not clickable as a whole — only their hover-✕ (below, 11.3) acts — so they must not
+   offer the hover affordance the other popup items use to say "clickable".
+   Qualified with .popup-item deliberately: a bare .bg-row ties on specificity and LOSES, because
+   .popup-item is declared further down this file. Measured headless, not assumed.
+   `.sel` is listed for the same reason and it is the half that was MISSED: .popup-item.bg-row only
+   TIES with .popup-item.sel (0,2,0 each) and loses on order, so a JS-applied cursor repainted these
+   rows even though :hover was correctly suppressed — a stuck highlight the user saw as "dark on
+   hover, lighter after". `nosel` on #bgMenu stops the class being applied at all; this is the belt
+   to that braces. */
+.popup-item.bg-row, .popup-item.bg-row:hover, .popup-item.bg-row.sel { background: transparent; cursor: default; }
+/* kill a task (11.3): the conversations-list gutter idiom (.hist-del below) — the gutter is reserved
+   only while the row is hovered, the button is hidden until then, red on its own hover. The popup's
+   width is fixed, so nothing jiggles. A row whose ✕ was clicked dims until the CLI's next roster
+   frame drops it (or keeps it — the stop is the CLI's to honour). */
+.popup-item.bg-row:hover:has(.bg-x) { padding-right: 36px; }
+/* One line, like the conversations list's .t-txt — the half of the idiom this row had missed:
+   without it the hover gutter above NARROWS the title and a long one reflowed to two lines
+   (user screenshot 2026-09-01). The full text rides the row's title attr (renderBgTasks).
+   The FIXED width is the other half (the idiom's stability comes from it — #histPanel and
+   .card-menu are both fixed): without it nowrap makes a long title WIDEN the popup instead of
+   ellipsising. 330px = the popup family's min-width, so nothing shrinks. */
+#bgMenu { width: 330px; }
+.popup-item.bg-row .pi-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bg-x { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); display: none;
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 3px; }
+.popup-item.bg-row:hover .bg-x { display: block; }
+.bg-x:hover { color: var(--red); }
+.bg-x svg { width: 15px; height: 15px; display: block; }
+.bg-row.stopping { opacity: .5; }
+.bg-row.stopping .bg-x { cursor: default; color: var(--muted); }
+#inputbar .icon-btn { color: var(--user-muted); }
+#inputbar .icon-btn:hover { color: var(--fg); }
+#send { background: var(--mode-accent); color: var(--mode-fg); border: 0; border-radius: var(--radius); padding: 4px 0; width: 30px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+#inputbar svg { width: 18px; height: 18px; }
+/* lifted from whatever the mode accent is — a hardcoded orange here stayed orange in Plan, Auto
+   and Manual, so hovering Send flashed the wrong colour. color-mix is fine on JCEF's Chromium. */
+#send:hover { background: color-mix(in srgb, var(--mode-accent) 84%, #fff); }
+#inputbar button { padding: 4px; }
+#inputbar .left button { padding: 4px 0; }   /* icon buttons: no side padding */
+#inputbar .chip-btn { padding: 4px 0; }      /* context / model / mode chips: same, gap does the spacing */
+#send svg { display: block; }   /* size comes from the shared #inputbar svg rule */
+#send.stop { background: #c9403a; color: #fff; }
+#send.stop:hover { background: #d9534d; }
+#send .ic-stop { display: none; }
+#send.stop .ic-send { display: none; }
+#send.stop .ic-stop { display: block; }
+

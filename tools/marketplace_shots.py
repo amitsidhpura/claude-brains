@@ -2,8 +2,9 @@
 """Compose the Marketplace screenshots (design/marketplace/*.png) from the REAL renderer.
 
 Each frame is 1200x760 CSS px at device scale 2 (2400x1520): a headline, a sub-line, and two
-panels side by side. A panel is the spliced chat.html (chat.html + chat.css + window.LIMITS +
-webview/js/*.js in manifest order — exactly what WebviewAssets/loadUi build for the IDE) loaded
+panels side by side. A panel is the spliced chat.html (chat.html + webview/css/*.css +
+window.LIMITS + webview/js/*.js, both in manifest order — exactly what WebviewAssets/loadUi
+build for the IDE) loaded
 in an iframe and driven by a scene script through the same builders and frames the live panel
 uses (`renderPermission`, `todoList`, `onClaudeEvent`, …), so a screenshot cannot show a state
 the plugin does not produce.
@@ -50,17 +51,20 @@ def limits_js() -> str:
                 kotlin_const("PLAN_DENY_PREFIX"), kotlin_const("PLAN_COMMENTS_HEADER"), kotlin_const("TWEAK_NOTE")))
 
 
-def js_files() -> list:
+def manifest(name: str, ext: str) -> list:
+    """Pull a WebviewAssets file manifest (JS_FILES / CSS_FILES) so the order cannot drift."""
     src = (KT / "ui/WebviewAssets.kt").read_text()
-    body = src[src.index("val JS_FILES = listOf("):]
+    body = src[src.index("val %s = listOf(" % name):]
     body = body[:re.search(r"^\s*\)\s*$", body, re.M).start()]   # the list's own closing paren line
-    return re.findall(r'"([^"]+\.js)"', body)
+    return re.findall(r'"([^"]+\.%s)"' % ext, body)
 
 
 def panel_html() -> str:
     html = (WEB / "chat.html").read_text()
-    css = (WEB / "chat.css").read_text()
-    js = "".join("/* ===== file: %s ===== */\n" % n + (WEB / "js" / n).read_text() for n in js_files())
+    css = "".join("/* ===== file: %s ===== */\n" % n + (WEB / "css" / n).read_text()
+                  for n in manifest("CSS_FILES", "css"))
+    js = "".join("/* ===== file: %s ===== */\n" % n + (WEB / "js" / n).read_text()
+                 for n in manifest("JS_FILES", "js"))
     freeze = ("<style>*,*::before,*::after{animation:none!important;transition:none!important}"
               "#log{scrollbar-width:none}#log::-webkit-scrollbar{display:none}</style>")
     version = re.search(r'^version = "([^"]+)"', (ROOT / "plugin/build.gradle.kts").read_text(), re.M).group(1)

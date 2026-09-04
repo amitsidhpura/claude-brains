@@ -1,0 +1,71 @@
+/* ---------- log ---------- */
+/* Flex is fine again: contain-intrinsic-size is only ignored on the element that IS a flex item,
+   and containment lives on .turn-body (a block inside .turn), not on the flex item itself.
+   gap also beats the margin-rule alternative — a display:none #welcome generates no flex item,
+   so no phantom gap above the first turn, and no high-specificity `#log > *` rules to fight
+   #welcome's own margins (both were real regressions; see docs/limits.md). */
+#log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px;
+  display: flex; flex-direction: column; gap: var(--block-gap); }
+#fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
+/* top fade: content vanishes as it scrolls under the header. The first ~18px is solid --bg so
+   nothing is readable in the gap above the pinned user message (that gap is #log's padding-top,
+   which scrolling content bleeds into); it then softens to transparent. z-index sits BELOW the
+   sticky .msg-user (z 6) so the pinned message stays fully crisp, but above normal content. */
+#fade-top { position: absolute; left: 0; right: 0; top: var(--head-h, 39px); height: 48px; z-index: 5;
+  pointer-events: none; background: linear-gradient(to bottom, var(--bg) 0, var(--bg) 18px, transparent 48px);
+  transition: opacity .12s; }
+/* At the true top there is nothing scrolled under the header, so the fade describes content that
+   does not exist — and it washes out whatever the first block happens to be. A sticky .msg-user
+   (z 6) rides ABOVE the fade, which is why every conversation looked fine and this went unseen;
+   the `truncated` marker is ordinary content at z-auto and sat unreadable under it at rest
+   (user report 2026-08-12). Toggled rather than restyled: the fade is right in every other
+   position, and raising the marker's z-index instead would leave one crisp line hanging over
+   content correctly fading beneath it. */
+body.at-top #fade-top { opacity: 0; }
+
+/* scroll-to-bottom button — floats just above the composer, shown only when scrolled up */
+/* floats just above the composer, so it wears the same blue user-input surface */
+#scrollBtn { position: absolute; left: 50%; transform: translateX(-50%); bottom: 110px; z-index: 15;
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--user-border);
+  background: var(--user-bg); color: var(--user-muted); cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center; padding: 0; }
+#scrollBtn.show { display: inline-flex; }
+#scrollBtn:hover { background: var(--user-raised-hover); color: var(--fg); border-color: var(--accent); }
+#scrollBtn svg { width: 16px; height: 16px; display: block; }
+
+/* welcome / empty state — centered in the log until the first message */
+/* Centres itself rather than relying on the parent being a flex container: #log is display:block
+   now, and `margin: auto` also lost to `#log > *:last-child { margin-bottom: 0 }` on specificity,
+   which pinned it to the bottom. min-height spans #log's content box (above the composer overlay),
+   so justify-content does the vertical centring with no JS and no state to get wrong. */
+#welcome { margin: 0 auto; max-width: 440px; padding: 24px 20px; text-align: center; min-height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.w-logo svg { width: 48px; height: 48px; display: block; }
+/* relative so the version badge can hang off the title's own text box — #welcome is a centred
+   flex column, so this box is already exactly as wide as "Claude Brains" */
+.w-title { position: relative; font-size: 17px; font-weight: 600; color: var(--fg); }
+/* version badge, spliced into the markup by ChatPanel.loadUi (empty when unknown — the :empty
+   rule then hides it so the title never renders with a dangling gap). Anchored with left:100%
+   rather than a negative right offset: the badge then GROWS RIGHTWARD, so a longer string
+   (v0.10.12) can't creep back over the title text. Wears the same chip metrics and surface as
+   the history list's "current" badge (.hist-item .badge) — one badge look in the UI, not two. */
+.w-ver { position: absolute; top: -3px; left: 100%; margin-left: 6px;
+  font-size: var(--fs-xs); font-weight: 400; line-height: 1; padding: 2px 5px; border-radius: 3px;
+  background: var(--user-raised); color: var(--user-muted);
+  border: 1px solid var(--user-border); white-space: nowrap; }
+.w-ver:empty { display: none; }
+/* The slogan, and the project's scope rule (CLAUDE.md § Philosophy). It has to read as a
+   subtitle of the title rather than the first line of the help text below it, so it pulls up
+   out of #welcome's 12px gap to sit closer to the name, and holds --fg weight 500 against
+   .w-sub's muted 400 — hierarchy from spacing and weight, no third colour. */
+.w-slogan { margin-top: -5px; font-size: var(--fs-base); font-weight: 500; color: var(--fg); }
+/* One line needs a ~340px panel; a right-anchored tool window is often narrower. Each half is
+   nowrap so the only place it CAN break is the space between the two sentences — it degrades to
+   two balanced lines ("Develop in the IDE." / "Configure in the Terminal.") instead of stranding
+   a word, and the split reads as the point being made. */
+.w-slogan span { white-space: nowrap; }
+.w-sub { font-size: var(--fs-base); line-height: 1.65; color: var(--muted); }
+.w-sub kbd { font: 12px ui-monospace, Consolas, monospace; color: var(--fg);
+  background: var(--raised); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; }
+

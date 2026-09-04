@@ -7,14 +7,18 @@ import java.nio.charset.StandardCharsets
  *
  * `webview/chat.html` is markup only; the panel's JS lives under `webview/js/` and is spliced
  * back into the page's single `<script>` block at the `JS` marker — the same trick `loadUi` uses
- * for `chat.css` and `window.LIMITS`, and for the same reason: `loadHTML` has no base URL, so a
- * `<script src>` could never resolve. The splice is a pure concatenation in [JS_FILES] order into
- * ONE shared script scope — no modules, no per-file scope, load semantics identical to the years
- * the code lived inline (the 2026-08-19 split was verified byte-identical modulo banners).
+ * for the CSS (`webview/css/`, spliced by [css] at the `CSS` marker) and `window.LIMITS`, and for
+ * the same reason: `loadHTML` has no base URL, so a `<script src>` or `<link>` could never
+ * resolve. Both splices are pure concatenations in manifest order — the JS into ONE shared script
+ * scope (no modules, no per-file scope; the 2026-08-19 split was verified byte-identical modulo
+ * banners), the CSS into ONE `<style>` block where concatenation order IS cascade order (the
+ * 2026-09-04 split was verified the same way — never reorder [CSS_FILES]).
  *
- * [JS_FILES] is the ONLY copy of the file order: `ChatPanel.loadUi` renders through [page], and
- * `RenderLimitsTest` asserts over [page] plus that the manifest matches the directory exactly —
- * a file missing from this list would otherwise ship dark and silently fall out of every test.
+ * [JS_FILES] and [CSS_FILES] are the ONLY copies of the file order: `ChatPanel.loadUi` renders
+ * through [page] and [css], and `RenderLimitsTest` asserts over [page] plus that each manifest
+ * matches its directory exactly — a file missing from these lists would otherwise ship dark and
+ * silently fall out of every test. `design/mockup.html` mirrors [CSS_FILES] as `<link>` tags
+ * (it is a plain file in a browser, so links DO resolve there); the same test pins that copy.
  *
  * The banner line before each file is what maps a DevTools/stack-trace line number in the loaded
  * page back to its source file — the page is one script, so trace lines are page lines.
@@ -40,6 +44,20 @@ object WebviewAssets {
         "90-gallery.js",       // dev gallery (window.__gallery)
     )
 
+    /** Ordered manifest of the style sources. Order is CASCADE order — never reorder. */
+    val CSS_FILES = listOf(
+        "00-tokens.css",    // file banner, :root tokens, base/reset, scrollbars, #app mode accents
+        "10-header.css",    // header, rename editor
+        "20-log.css",       // #log chrome, fades, scroll button, welcome screen
+        "25-turns.css",     // turn structure, .msg-user, .fold, .tbl
+        "30-blocks.css",    // gutter dots, .blk/.think/.generating/.done/.files/.tool-line, paths
+        "35-attached.css",  // .io box, .t-prog/.t-note, .tool-imgs, cut markers, .codeblock
+        "40-cards.css",     // permission/plan cards, plan comments, .diff, AskUserQuestion, .error, history panel
+        "50-side.css",      // side question panel; attachment chips, lightbox, retry, todos, status, compaction
+        "60-composer.css",  // composer, queued messages, bg-tasks chip, context gauge
+        "70-popups.css",    // popups, slash/mention menus, model/effort pickers
+    )
+
     private fun resource(path: String): String =
         javaClass.getResourceAsStream(path)!!.use { it.readBytes() }.toString(StandardCharsets.UTF_8)
 
@@ -49,6 +67,15 @@ object WebviewAssets {
      */
     fun js(): String = JS_FILES.joinToString("") { name ->
         "/* ===== file: $name ===== */\n" + resource("/webview/js/$name")
+    }
+
+    /**
+     * All style sources concatenated in manifest order, each behind a `file:` banner line.
+     * The result must never contain a closing style tag — same failure mode as the script
+     * balance: a stray `</style>` truncates the spliced block and kills the whole page.
+     */
+    fun css(): String = CSS_FILES.joinToString("") { name ->
+        "/* ===== file: $name ===== */\n" + resource("/webview/css/$name")
     }
 
     /**

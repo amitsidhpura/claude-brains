@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-04 — chat.css split into webview/css/*.css (the JS-split mechanism)
+- User: "same as js — let's split css also." The 1295-line `chat.css` → 10 tens-numbered files
+  under `plugin/src/main/resources/webview/css/`, cut ONLY at existing top-level comment
+  boundaries, order preserved; the concatenation diffed byte-identical to HEAD's chat.css modulo
+  the reworded top banner. chat.css deleted.
+- `WebviewAssets` gained `CSS_FILES` + `css()` (banner line per file); `loadUi` splices it at
+  `<!--CSS-->` as before. `RenderLimitsTest` +3: css manifest == directory, mockup `<link>` list
+  == `CSS_FILES` in order, no `</style>` in the splice. `./gradlew test` **137/0**.
+- `design/mockup.html` and the four `design/*-probe.html` carry ten `<link>` tags now;
+  `tools/marketplace_shots.py`'s `js_files()` generalized to `manifest(name, ext)` and reads both
+  manifests. Living chat.css comments (JS, Kotlin, limits.md, gotchas) re-pointed; historical
+  records (journal/decisions/fixture provenance/checklist) left as written.
+- The real file order surprised twice: the history panel sits at the END of `40-cards.css`, and
+  `50-side.css` also carries attachment chips, lightbox, todos, status lines and the compaction
+  marker — the manifest comments state it honestly.
+- End-to-end: marketplace shots 01/03 byte-identical; 02/04/05 showed only antialiasing jitter
+  (04/05 differ even between two runs of ONE build → new trap under gotchas § Webview: pixel-
+  compare, never byte-compare); jittered PNGs restored to HEAD. Live sandbox over CDP: 10 css
+  banners in the page, tokens resolve, gallery states styled. Committed and pushed on the user's
+  ask (this save included).
+
 ## 2026-09-01 (fifth) — Marketplace shots 01+03 refreshed for the files-changed rows
 - User asked to update `design/marketplace/01-conversation.png` for the 0.12.4 files-changed
   review change. The script composes from the live webview sources, so a plain rerun rendered the
@@ -126,32 +147,16 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   its silence right after upload is normal; read the run log's JSON instead).
 - Notes carried a ⚠️ line for the behaviour change (CLI starts on first show of the panel).
 
-## 2026-08-30 (third) — first-paint flash + dumb-mode placeholder fixed
-- User's screenshot: on project open the panel paints for a fraction of a second at ~300×180
-  (header + composer squashed top-left) then snaps to width. Cause: `ChatPanel` called `loadHTML`
-  in its constructor, before `ClaudeToolWindowFactory` added the component to the tool window, so
-  CEF laid the page out against its default surface (gotchas § JCEF).
-- Fix in `ui/ChatPanel.kt`: `component` is a `JPanel(BorderLayout)` wrapper painted `PAGE_BG`
-  (`#1a1a1a`, mirrors `--bg`), JCEF child starts hidden, `loadUi()` runs on the wrapper's first
-  non-empty `componentResized`, the child is shown at `onLoadEnd` (invokeLater + revalidate).
-  Side effect: the CLI spawns when the panel is first SHOWN, not at project open.
-- Second screenshot: "This view is not available until indexes are built" — the platform's
-  dumb-mode placeholder for a non-`DumbAware` factory; pre-existing, the deferred load just made it
-  visible. `ClaudeToolWindowFactory` now implements `DumbAware` (gotchas § IDE platform).
-- Verified: compile, viewport at load 730×871 over CDP (not the default surface), harness 586/0,
-  `./gradlew test` 134/0, and the user's hands-on run: both the flash and the placeholder gone.
-- Unreleased on `main` after this commit: these two Kotlin-only fixes.
-
-## 2026-08-30 (later) — Marketplace screenshots 04/05 regenerated
-- `design/marketplace/05-sessions-models.png` (effort pill slider replaced the five dots) and
-  `04-commands-agents.png` (new side-question placeholder) re-rendered with
-  `python3 tools/marketplace_shots.py 4 5` — no scene edits needed; the script composes from the live
-  webview sources, so a UI change only needs a rerun.
-- Observed, left as-is: at the 394 px panel width the side-question placeholder clips after "Enter"
-  (`chat.html:51`); faithful to the IDE. Shorten the hint if the listing should read clean.
-- Committed and pushed on the user's "commit and push".
-
 ## Digest
+- **2026-08-30 (third)** — first-paint flash fixed: `ChatPanel` had called `loadHTML` in its
+  constructor before the component joined the tool window, so CEF laid out against its default
+  surface (gotchas § JCEF); fix = `JPanel` wrapper painted `PAGE_BG`, `loadUi()` on first
+  non-empty `componentResized`, child shown at `onLoadEnd` — CLI now spawns on first SHOW. The
+  "until indexes are built" placeholder was the factory missing `DumbAware` (gotchas § IDE
+  platform). Harness 586, tests 134, user-confirmed.
+- **2026-08-30 (later)** — Marketplace 04/05 re-rendered by a plain `marketplace_shots.py 4 5`
+  rerun (the script composes from live webview sources). Left as-is: the side-question hint clips
+  after "Enter" at 394px — faithful to the IDE.
 - **2026-08-30** — re-audit 2.1.251 per runbook (extension flat, webview +Remote Control pill; CLI: `PreModelSwitch` hook can REJECT `set_model` → 9.11, `Set model to …` echo absent before the first turn — user's screenshot corrected the audit: it draws after a turn). 9.11 built + four hand-test steps green (fixture 68, harness 586, tests 134); SchemaStore lag noted, user chose wait. **0.12.1 released** same day (gate walked, Approved within the hour). Traps re-learned: waiters must grep `BUILD FAILED`; harness + CDP injection never in one batch.
 - **2026-08-29 (eighth)** — Copilot Chat 0.63 audited (built into VS Code; its OSS repo stops at 0.44, so the shipped manifest is the only truth) and DROPPED as bloat — only "terminal last command/output as context" survived, to backlog; the extracted folders were deleted after the audit. `vscode/` moved to `reference/anthropic-claude-code/` (2.1.251) with eight path-only doc edits. Trap promoted: `git mv -k` on an untracked path exits 0 without moving.
 - **2026-08-29 (seventh)** — links open in the SYSTEM browser (blank PhpStorm windows were `target=_blank` on an OSR JCEF browser); fixed in three layers (JS delegate → `browse`, `onBeforePopup`, `onBeforeBrowse` cancelling main-frame http(s)), bare URLs autolink. Effort selector became a pill slider over four geometry rounds (fixed 12px stop slots; proven headless then in JCEF). Side-question hint matched to the composer. Fixture 67 with two controls, harness 575, tests 134.

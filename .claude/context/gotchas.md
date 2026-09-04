@@ -599,8 +599,8 @@ re-read those before trusting memory here.
 - The cut-marker is a SIBLING of `.io-v`, never a child (`foldBlock` would fold it away): the fold hides
   content it still holds, the marker reports content that is GONE. Replayed ask cards are `.ask-done`,
   which must NOT be `.done` (whose 22px dot-column indent shifts the whole card).
-- **The mockup links `chat.css` with no cache-buster**, so a `?v=N` on the HTML re-fetches the page and
-  serves the STALE stylesheet — a CSS fix measured that way reads as "no effect".
+- **The mockup links the `webview/css/*.css` files with no cache-buster**, so a `?v=N` on the HTML
+  re-fetches the page and serves the STALE stylesheets — a CSS fix measured that way reads as "no effect".
 - **Centring an absolutely-positioned box under a max-width: `margin: 0 auto` with BOTH insets set.**
   `#sidePanel { left:14px; right:14px; max-width:720px }` hugged the left inset once the cap bit,
   while `#inputcard` sat centred (JCEF at 869px: centres 374 vs 435). Auto margins resolve the
@@ -632,7 +632,11 @@ re-read those before trusting memory here.
   log's top whitespace; more clips the first visible row mid-line (the 0.12.4 files-block rows
   clipped 01's think row and pushed 03's Bash tool line off — fixed by trimming visible rows in
   the scenes). Early probe reads are transient (same log: scrollH 1191 at 300ms, 686 settled) —
-  measure after layout settles, and treat the final PNG as the only verdict.
+  measure after layout settles, and treat the final PNG as the only verdict. (4) A byte-diff on
+  the PNGs is NOT a verdict: scenes 04/05 produce different bytes on two runs of the SAME build
+  (antialiasing jitter; 2026-09-04 the CSS-split check read three "changed" files, all noise —
+  32 of 3.6M pixels at max channel delta 4). Prove no-change by pixel-diffing (PIL
+  `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
 ## Testing, probes and sandboxes
 - **`tools/cdp.py` prints its `# target:` line on STDERR.** Piping stdout through `tail -n +2` (to
@@ -756,7 +760,8 @@ re-read those before trusting memory here.
   turn, having first wrapped `window.onClaudeEvent` to timestamp every frame alongside the state you care
   about. Assert on a NUMBER, not a screenshot ("0 content deltas rendered while the button read Send").
   Neutralise the recorder afterwards or it accumulates for the session.
-- **The spliced-chat harness** (standing lane for webview JS fixes): splice `chat.css` at `<!--CSS-->` and
+- **The spliced-chat harness** (standing lane for webview JS fixes): splice `webview/css/*.css` (in
+  `CSS_FILES` order) at `<!--CSS-->` and
   `window.LIMITS` + a `window.__bridge` stub at `<!--LIMITS-->`, feed events through
   `window.onClaudeEvent`, assert via `document.title` under headless `--dump-dom`. **Assert on `#log`,
   never `document.body`** — body.textContent includes chat.html's OWN script source, which contains the

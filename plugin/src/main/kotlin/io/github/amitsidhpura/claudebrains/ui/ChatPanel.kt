@@ -646,11 +646,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
 
     private fun loadUi() {
         // loadHTML has no base URL, so neither a <link> nor a <script src> can resolve — the
-        // page's JS (webview/js/*.js) is spliced by WebviewAssets.page(), and the shared
-        // stylesheet (webview/chat.css, also linked by design/mockup.html) at the marker below.
+        // page's JS (webview/js/*.js) is spliced by WebviewAssets.page(), and the styles
+        // (webview/css/*.css, also linked one by one by design/mockup.html) at the marker below.
         val html = WebviewAssets.page()
-        val css = javaClass.getResourceAsStream("/webview/chat.css")!!
-            .use { it.readBytes() }.toString(StandardCharsets.UTF_8)
+        val css = WebviewAssets.css()
         browser.loadHTML(
             html.replace("<!--CSS-->", "<style>\n$css\n</style>")
                 // Welcome-screen version, spliced (not pushed as an event) so it is present on
@@ -842,7 +841,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     }
 
     companion object {
-        /** Mirrors `--bg: #1a1a1a` in webview/chat.css — keep the two in step. */
+        /** Mirrors `--bg: #1a1a1a` in webview/css/00-tokens.css — keep the two in step. */
         private const val PAGE_BG = "#1a1a1a"
         private const val INITIAL_BLOCKS = 250
         /** Per-file cap for drag-dropped attachments: protects the JVM + JS bridge from an

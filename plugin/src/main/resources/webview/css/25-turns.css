@@ -1,0 +1,122 @@
+/* a turn = one user message + the assistant content that answers it */
+/* Off-screen turns skip layout and paint entirely: 2000 turns went 132ms -> 4ms. The intrinsic
+   size is only a scrollbar placeholder; `auto` lets the browser remember a turn's real height once
+   it has been rendered, which matters because turns range from one line to a 400-row diff. */
+.turn { display: block; }
+.turn > * + * { margin-top: var(--block-gap); }   /* spaces .msg-user from the .turn-body that follows it */
+/* The skipped subtree is .turn-body, NOT .turn: content-visibility creates a stacking context,
+   and .msg-user (z 6) has to stay outside it or #fade-top (z 5) paints over the pinned message. */
+/* The 1000px placeholder is MEASURED, not guessed: 298 real turns from two sessions, rendered at
+   three panel widths with containment disabled, have a median turn height of 873-1208px (mean
+   1324-2320, skewed by the odd 14000px turn). The old 250px came from synthetic turns and
+   under-reported the scrollbar by roughly 4x. `auto` still decays the error as turns are visited
+   and their real size is remembered — this only sets where unvisited turns start. */
+.turn-body { display: flex; flex-direction: column; gap: var(--block-gap);
+  content-visibility: auto; contain-intrinsic-size: auto 1000px; }
+/* The split-button card menu is the ONE popup living inside a turn-body, and the paint
+   containment above clips it at the turn's box — it opened as a few-px sliver cut off at the
+   card edge (found in the 6.4 live check; clipped elements still pass DOM/synthetic-click
+   assertions, which is how the harness missed it). Lift containment only while a menu is
+   open; it returns the moment the menu closes. Containment-clipping also blocks HIT-TESTING,
+   so the regression pin for this is elementFromPoint, not querySelector. */
+.turn-body:has(.card-menu.show) { content-visibility: visible; }
+/* A turn with no response yet (interrupt, /compact, /model, a resume-continuation) has an EMPTY
+   .turn-body; hide it so its 18px top-margin (and off-screen contain-intrinsic-size) don't stack on
+   #log's 18px gap and double the space between two consecutive user messages. It reverts to flex the
+   moment content is appended (:empty stops matching). */
+.turn-body:empty { display: none; }
+/* Focus rings inside a turn are drawn INSET (negative outline-offset). The turn-body's
+   content-visibility applies paint containment while a turn sits at the viewport edge, which shaves
+   an OUTWARD ring into a "cut" half-rectangle (the sticky user box and clamped overflow clip too).
+   An inset ring stays within the element's own box, so nothing can clip it — a full ring on any
+   focusable element (thinking summary, ask tabs, card buttons, links, inputs), live and
+   resumed alike. Reset first so a plain mouse :focus shows nothing; :focus-visible (keyboard) gets
+   the accent ring, rounded to each element's own border-radius. */
+.turn :focus { outline: none; }
+.turn :focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* the radio/checkbox is a transparent overlay (opacity:0, inset:0), so its own ring is invisible —
+   surface keyboard focus on the visible option row instead */
+.ask-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* user message: full-width bordered box, sticks to the top of its turn while you scroll */
+.msg-user { position: sticky; top: 0; z-index: 6;
+  background: var(--user-bg); border: 1px solid var(--user-border);
+  border-radius: var(--radius); padding: 8px 12px; white-space: pre-wrap; }
+
+/* Over-long blocks FOLD rather than getting their own scrollbar (a nested vertical scroll area
+   inside #log traps the wheel): collapsed shows 2 full lines with the 3rd fading out, and the
+   WHOLE block is the toggle — click to expand, click again to collapse (a click that ends a text
+   selection never toggles; see foldBlock). `lh` makes the 3-line cap exact for each block's own
+   line-height; --fold-pad is the block's vertical padding+border, so the cap bounds CONTENT lines
+   rather than the border box. --fold-fade matches the surface the block is drawn on.
+
+   ONE CONTRACT for every foldable block, so they cannot drift apart:
+     1. 8px 10px padding, and whichever element carries that padding is ALSO the one that scrolls —
+        a scrollbar is painted at the bottom of its container's padding box, so the two together
+        put it flush on the border across the full width, with the content clear of it.
+     2. Foldable AND scrollable => the scrollbar appears only when EXPANDED. That falls out of
+        rule 1 for free: `overflow: hidden` below crops the element it lands on, which is the same
+        element that scrolls. Split them across two elements and a collapsed block keeps its
+        scrollbar — the bug .io-row had until 2026-08-12.
+   Holders: .diff · .card .cmd · .codeblock pre · .io-row · .compact-sum (not scrollable, it wraps).
+   .io-row's left padding sits on its sticky .io-k instead — see there for why; the 10px is still
+   there, just owned by the label. */
+.fold { cursor: pointer; }
+/* --fold-extra: non-text overhead inside the block (an attachment-chip row), measured by
+   foldBlock, so the 3-line cap counts TEXT lines */
+.fold:not(.open) { position: relative; overflow: hidden;
+  max-height: calc(3lh + var(--fold-pad, 0px) + var(--fold-extra, 0px)); }
+/* The fade is anchored to the TEXT, not the border box: --fold-bpad is the block's own BOTTOM
+   padding+border, so the transparent->opaque ramp spans exactly the 3rd text line and everything
+   below it stays flat. Anchoring to the box instead made the ramp land in the padding on surfaces
+   that pad themselves and compress into the line on ones that don't (.io-v pads via .io-row),
+   so the same text faded differently in a card than in a Bash IN box. */
+.fold:not(.open)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+  height: calc(1lh + var(--fold-bpad, 0px)); pointer-events: none;
+  background: linear-gradient(to bottom, transparent,
+    var(--fold-fade, var(--bg)) calc(100% - var(--fold-bpad, 0px))); }
+/* position:sticky must survive the collapsed state's position:relative (same specificity,
+   declared later) — without this, every folded user message silently stops pinning. */
+.msg-user.fold:not(.open) { position: sticky; }
+/* Same fight over overflow: `.card .cmd` (0,2,0, declared later) beat the collapsed rule's
+   overflow:hidden, so a folded command kept its horizontal scrollbar — and the scrollbar eats the
+   bottom of the 3-line content box, clipping the 3rd line to a third of its height. Every other
+   surface (.diff / .io-row / .codeblock pre) is a weaker selector and already crops while
+   collapsed, which is the intent: wide content scrolls when EXPANDED, crops while folded.
+   That rule is why .io-row, not .io-v, is the element foldBlock is given: the collapsed overflow
+   only crops the box it lands on, so folding the inner value left the outer row scrolling. */
+.card .cmd.fold:not(.open) { overflow: hidden; }
+.msg-user.fold { --fold-fade: var(--user-bg); --fold-pad: 18px; --fold-bpad: 9px; }  /* 8+8 padding, 1+1 border */
+.card .cmd.fold, .diff.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
+.codeblock pre.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; --fold-bpad: 8px; }  /* border lives on .codeblock */
+.io-row.fold { --fold-fade: var(--code-bg); --fold-pad: 16px; --fold-bpad: 8px; }  /* 8+8 padding, border lives on .io */
+
+/* markdown blockquote: a quiet left rule, not a panel — a quoted line inside an assistant block
+   should read as an aside, not compete with the permission/ask cards. Nothing else in the UI uses
+   <blockquote>, so this stays unscoped. */
+blockquote { margin: .5em 0; padding: 1px 0 1px 10px; border-left: 2px solid var(--border-strong);
+  color: var(--muted); }
+blockquote > *:first-child { margin-top: 0; }
+blockquote > *:last-child { margin-bottom: 0; }
+
+/* markdown table (GFM). Unscoped for the same reason as <blockquote>: nothing else in the UI
+   uses <table>. The tool window is narrow, so a wide table scrolls HORIZONTALLY inside .tbl
+   instead of stretching #log — never vertically (a nested vertical scroller traps the wheel).
+   width:auto, not 100%: a two-column table shouldn't stretch its cells across the panel. */
+/* Wears the code-surface shell: --code-bg on a --border frame with --radius corners, exactly
+   like .codeblock and .io, so the three read as one family. fit-content (not a full-width block)
+   keeps the frame hugging a narrow table instead of trailing empty dark space beside it, and
+   max-width + overflow-x still lets a wide one scroll. Row separation is by STRIPE rather than a
+   grid of rules — the same way .io separates IN from OUT — so the only rule left is under the
+   header. */
+.tbl { overflow-x: auto; margin: .55em 0; width: fit-content; max-width: 100%;
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); }
+.tbl table { border-collapse: collapse; width: auto; max-width: 100%; }
+.tbl th, .tbl td { border: 0; padding: 5px 10px; text-align: left; vertical-align: top; }
+/* header TEXT matches .cb-h too, not just its background: 11px --muted at normal weight, so the
+   strip reads as a label above the data rather than a heavier row of its own. */
+.tbl th { background: var(--code-head); color: var(--muted); font-size: var(--fs-xs); font-weight: 400;
+  white-space: nowrap; border-bottom: 1px solid var(--border); }
+.tbl tbody tr:nth-child(even) td { background: var(--code-stripe); }
+.tbl .ta-c { text-align: center; } .tbl .ta-r { text-align: right; }
+

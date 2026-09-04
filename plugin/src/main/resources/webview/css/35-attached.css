@@ -1,0 +1,118 @@
+/* THE ATTACHED-BLOCK CONTRACT. Everything that hangs off the line above it — the tool line, or the
+   .io that already follows it — shares this one column and this one gap. Nothing else may set a top
+   margin on these five.
+   The subtraction is the point, not an accident: .turn-body is a flex COLUMN, so the distance a
+   reader sees is the flex gap PLUS this margin, and writing the target gap here (rather than the
+   nudge) is what stops the family drifting again. They had drifted to -6/-2/+2/+2/+2 — 12/16/20/20/
+   20px — and three of them sat FARTHER from their own tool line than an unrelated block at
+   --block-gap. Ordering under one tool line is .io, then .t-prog / .t-note / .tool-imgs (chat.html
+   inserts those after `t.io || t.el`), so the whole stack reads as one unit at the same gap. */
+.io, .t-prog, .t-note, .tool-imgs, .todos {
+  margin: calc(var(--attach-gap) - var(--block-gap)) 0 0 22px;
+}
+.io { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
+/* The ROW is the scroll box, and it is the box that carries the padding — the same one-element
+   arrangement .diff uses, and the whole reason its scrollbar looks right. A scrollbar is painted
+   at the bottom of its container's PADDING box, so putting both here lands it flush on the border
+   across the full width, with the content padded clear of it. Scrolling .io-v instead (what this
+   did until 2026-08-12) inset the bar 42px from the left — 10px padding + 22px label + 10px gap —
+   and floated it above the row's 6px bottom padding. */
+/* No LEFT padding: the sticky label carries it instead (see .io-k). A sticky item is clamped to
+   its containing block — the row's CONTENT box — so with padding here the label could not reach
+   the padding edge, got shoved 10px right, and ate the column gap between it and the value. */
+.io-row { display: flex; gap: 10px; padding: 8px 10px 8px 0; overflow-x: auto; }
+/* NOT `.io-row + .io-row`: a cut marker or note sits between two rows now, so the adjacent
+   sibling combinator stopped matching and the IN/OUT divider vanished. */
+.io .io-row:not(:first-child) { border-top: 1px solid var(--border); }
+/* Sticky because the row scrolls: unlike .diff's line-number gutter there is only ONE label per
+   row, so letting it scroll away leaves a wide box with nothing saying which half is which. The
+   background is what the text passes UNDER.
+   It owns the row's left padding (the row has none) so its sticky box reaches the padding edge and
+   its background covers that 10px gutter when scrolled. Doing the reverse — padding on the row and
+   pulling the label out with a negative margin — does NOT work: sticky clamps to the containing
+   block, so the label was pushed 10px right and the column gap between it and .io-v collapsed to 0,
+   leaving "OUT" jammed against the value.
+   32px is the floor, and it is 22 + 10 on purpose: "OUT" measures 21.11px, so 22px is the real
+   minimum — anything narrower overflows the label into the gap or (below ~18px) breaks IN/OUT
+   alignment. box-sizing is border-box globally, so that padding-left counts against min-width. */
+.io-k { color: var(--dot); font-size: var(--fs-2xs); padding-top: 2px; min-width: 32px; padding-left: 10px;
+  position: sticky; left: 0; z-index: 1; background: var(--code-bg); }
+/* pre (no wrap): long lines keep their width and the ROW scrolls, like .diff / codeblock pre.
+   flex: none (not flex: 1 + min-width: 0) so the row's scrollWidth is driven by the text itself
+   rather than by overflow leaking out of a shrunk flex item — which also lets the fold's fade
+   gradient span the full scrollable width instead of stopping at the visible edge. */
+.io-v { white-space: pre; flex: none; }
+/* Truncation marker: what a cap PERMANENTLY dropped, as opposed to .fold, which only hides content
+   it still holds. It sits OUTSIDE .io-row entirely — two reasons, and both must hold. The row is
+   the horizontal scroll box, so a marker inside it slides away with the text; and foldBlock
+   collapses .io-v to three lines, so a marker inside THAT would be folded away — the notice that
+   content was cut, cut. Its 42px indent aligns it with .io-v: the row's 10px padding + .io-k's
+   22px min-width + the 10px gap (keep the four in step if any of them changes).
+   The row is deliberately NOT flex-wrap now that nothing needs to wrap onto a second line: with
+   .io-v content-sized, wrapping dropped a wide value onto its own line beneath the label. */
+/* UI font, not the box's monospace: this is prose ABOUT the output, not more output — the switch
+   is what keeps it from reading as a last line of the result. .io-note shares the geometry for the
+   same reason it exists (one line about the row, below the value, outside the fold) but says a
+   different kind of thing: what the CLI reported ABOUT the result, not what a cap removed. */
+/* Sub-agent progress (client-parity item 1). Sits under its Agent tool line, aligned with the IN/OUT
+   box at 22px, and reports what the sub-agent is doing WHILE it runs. LIVE ONLY, unavoidably: the
+   CLI never persists task_started/task_progress/task_notification (measured — zero in any
+   transcript), so a resumed session keeps the tool line and its result and loses this. */
+/* No status dot here, deliberately (tried and removed 2026-08-13). A dot would have to say whether
+   the sub-agent's WORK succeeded, and that is not knowable: the CLI reports the TASK as `completed`
+   either way, and whether the failure leaves any structured trace depends on how the agent happened
+   to run the command — a foreground failure lands as an errored tool_result, the same command pushed
+   to run_in_background by the sandbox guard leaves none at all. A dot that is red or green depending
+   on that is worse than no dot. The outcome is in the line's own TEXT, which is the CLI's summary. */
+.t-prog { font-size: var(--fs-sm); color: var(--dot); }   /* margin: the attached-block contract */
+.t-prog.run { color: var(--muted); }
+/* Images a tool returned (client-parity item 8): a Playwright screenshot, or Read on a PNG.
+   Aligned with the IN/OUT box at 22px so it reads as that tool's output. Capped in height rather
+   than width — a full-page screenshot is tall, and letting it run would push the rest of the turn
+   off screen; the lightbox is there for the full size. `height:auto` overrides the intrinsic
+   height attribute, which is set only so the box is reserved before the data URI decodes. */
+/* A caveat on an otherwise-successful tool result (client-parity item 11) — "the file had been
+   modified on disk since you last read it". Standalone because the tools it applies to (Edit,
+   Write) have no IN/OUT box for it to ride in; same 22px column and ↳ glyph as .io-note so the two
+   read as one idiom. Amber rather than red: the edit DID apply, so this is a caveat, not a failure. */
+.t-note { color: var(--amber); font-size: var(--fs-xs); }   /* margin: the attached-block contract */
+/* Inside a card (tweak-travel, 3.5) the note is a caption between the diff and the footer, not a
+   block attached under a tool line: no 22px tool indent. --attach-gap above it — the same 8px the
+   note gets under a tool line and the card's own header→content step (.card-h) — so the note sits
+   at one distance from a diff wherever it appears; 2px nudges ↳ in from the box's border. */
+.card .t-note { margin: var(--attach-gap) 0 0 2px; }
+/* The ask-reason note (1.23) sits ABOVE the preview, right under the header: the header's own
+   margin-bottom already gives the gap above, so this one moves the gap below — measured 8/0 live
+   before this rule, 8/8 after (2026-08-29). */
+.card .card-h + .t-note { margin: 0 0 var(--attach-gap) 2px; }
+/* align-items is load-bearing: a column flex container defaults to STRETCH, which blew every image
+   out to the full panel width — a 64x64 icon measured 474x320, a mostly-empty bordered box with the
+   picture pinned into its top-left corner by object-position. flex-start lets each image size to
+   itself, so small ones stay small and the caps below only bite on genuinely big ones. */
+.tool-imgs { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }   /* margin: the attached-block contract */
+/* A preview, not the artwork: 120px is the tallest a result image gets inline — click opens the
+   lightbox at full size. The padding keeps the picture off its own border. object-fit stays as the
+   guard for a record whose declared dimensions disagree with the actual pixels: it letterboxes
+   inside the box rather than distorting the image. */
+.tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 120px; object-fit: contain;
+  object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 4px; background: var(--code-bg); cursor: zoom-in; display: block; }
+.tool-imgs .ti-missing { color: var(--muted); font-size: var(--fs-xs); }
+.io-cut, .io-note { display: block; padding: 0 10px 8px 42px; color: var(--muted); font-size: var(--fs-xs);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+.io-cut.click { cursor: pointer; }
+.io-cut.click:hover { color: var(--fg); text-decoration: underline; }
+/* Same marker under a permission card's command preview — the consent case. Outside <pre class="cmd">
+   for the fold reason above; margin matches .cmd's own text edge rather than the io-row grid. */
+.cmd-cut { margin-left: 0; padding: 4px 0 0; }
+
+/* code block */
+.codeblock { margin: .5em 0 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.codeblock .cb-h { display: flex; justify-content: space-between; padding: 4px 10px; background: var(--code-head); color: var(--muted); font-size: var(--fs-xs); border-bottom: 1px solid var(--border); }
+.codeblock .cb-h button { background: transparent; border: 0; color: var(--muted); border-radius: var(--radius); padding: 2px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; }
+.codeblock .cb-h button:hover { color: var(--fg); }
+.codeblock .cb-h button svg { width: 14px; height: 14px; display: block; }
+.codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
+.hl-k { color: #c586c0; } .hl-s { color: #ce9178; } .hl-c { color: #6a9955; font-style: italic; } .hl-n { color: #b5cea8; } .hl-v { color: #9cdcfe; }
+

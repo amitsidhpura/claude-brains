@@ -139,7 +139,7 @@
   /* ---------- mode picker ---------- */
   let currentMode = 'manual';   // no effort suffix since 2026-08-26 — see setModelChip
   function syncModeUI() {
-    // the composer's focus ring and Send button follow the mode — see #app[data-mode] in chat.css
+    // the composer's focus ring and Send button follow the mode — see #app[data-mode] in css/00-tokens.css
     document.getElementById('app').dataset.mode = currentMode;
     Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
       item.classList.toggle('on', item.dataset.v === currentMode);
@@ -258,7 +258,7 @@
         // every row shows the selected checkmark; a custom row's remove (×) lives INSIDE the
         // check span, overlaying the ✓'s own box so their centers coincide by construction
         // (offset arithmetic is a trap here: the #inputbar 18px ID rule resizes every glyph).
-        // Hover swaps ✓ for × via chat.css (#modelMenu .popup-item.custom:hover .pi-check).
+        // Hover swaps ✓ for × via css/70-popups.css (#modelMenu .popup-item.custom:hover .pi-check).
         '<span class="pi-check">' + SVG_CHECK +
         (m.custom ? '<button class="model-del" title="Remove model" data-del="' + escA(m.value) + '">' + SVG_X + '</button>' : '') +
         '</span>' +

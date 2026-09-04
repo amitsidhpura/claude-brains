@@ -1,32 +1,24 @@
 # State
 
 ## Current focus
-**2026-09-01: 0.12.4 RELEASED and Marketplace-approved; marketplace screenshots 01+03 refreshed
-(fifth session) to show the new files-changed rows** — scene trims in `tools/marketplace_shots.py`
-(S1_LEFT lost its think row, S3_RIGHT its done row + a shorter md line) so the taller block fits
-the 600px capture; 02/04/05 verified unaffected (no files block, no scene opens `#bgMenu`).
-The three batches 0.12.4 carries, all fixes-only:
-- `5cf280d` — tool-result `(note: …)` caveat hardening: `NOTE_MAX = 400` (an over-bound collapsed
-  capture is DROPPED, not truncated) + a position-0 guard (a match starting the trimmed result is
-  output; every real CLI note template is APPENDED after other text, measured in the 2.1.252
-  binary with `strings`). Fixes the user's 2026-08-30 "giant yellow text": the end-anchored regex
-  (`RenderLimits.kt` + its `50-blocks.js` mirror) captured from a literal `(note:` in large output
-  to a final `)`. Conditions list in `docs/limits.md`; evidence (two control runs + real-wire
-  repro) in `tools/fixtures/69-result-note-cap.json` provenance.
-- `f4aa732` — two Windows-screenshot UI fixes: (a) the files-changed block (3.6) is header + ONE
-  ROW PER FILE with project-relative paths via the shared `fillPath()` (`75-retraction.js`
-  `filesLine`) — root cause was `lastIndexOf('/')` never matching backslash paths, so full `D:\…`
-  paths rendered; (b) the bg-tasks popup title is one-line ellipsised with the full name on the
-  tooltip and `#bgMenu` got the idiom's FIXED width (330px) — the hover ✕ gutter no longer
-  rewraps a long title (chat.css, `70-events.js` `renderBgTasks`).
-- `82da0c5` — on the files block the `Review` span ALONE is the click target; block cursor auto,
-  row clicks send nothing (fixture 60 pins it). User confirmed live that `fillPath`'s boundary
-  rule reads right: project files relative, external files absolute, same as the tool lines.
+**2026-09-04: chat.css split into 10 manifest files under `webview/css/`** (the JS-split
+mechanism: `WebviewAssets.CSS_FILES` is the ONLY copy of the order, which IS cascade order —
+never reorder; `css()` splices with per-file banners, the mockup + four design probes carry ten
+`<link>` tags pinned to the manifest by `RenderLimitsTest`, `marketplace_shots.py` reads both
+manifests via `manifest(name, ext)`). Concatenation verified byte-identical to the old chat.css;
+Kotlin tests now **137**; shots 01/03 byte-identical, 02/04/05 only AA jitter (gotchas § Webview:
+pixel-compare PNGs, never byte-compare). Committed on `main` post-0.12.4 — unreleased.
+
+## Released — 0.12.4 (2026-09-01), Marketplace-approved
+**0.12.4 is the shipped version** (tag `v0.12.4`, commit `e644dce`): files-changed rows (one row
+per file, project-relative via the shared `fillPath()`) + Review-only click target (fixture 60),
+one-line bg-task titles with `#bgMenu` fixed at 330px, and the `(note:)` caveat misfire capped
+(`NOTE_MAX = 400` + position-0 guard; evidence in fixture 69's provenance, conditions in
+`docs/limits.md`). Full gate walked, `verifyPlugin` 7/7, Approved same evening. Change notes
+carry the last three versions. Details in journal 2026-09-01 (second–fifth).
 - Accepted residual: a sub-400 parenthetical appended mid-result and ending it is byte-identical
   to a real caveat and still renders — irreducible without structural marking from the CLI.
-- The CLI is now **2.1.252** locally (2.1.251 audit still stands; 2.1.252 changelog is bugfix-only
-  incl. "background task notifications with very large failure output" — unrelated to our misfire,
-  that one is CLI-side API-payload, the panel never renders task-notification content).
+- The CLI is **2.1.252** locally (2.1.251 audit still stands; 2.1.252 changelog bugfix-only).
 - Checklist rules still in force: `**id** mark [effort] **Name** — gist; facts`; **At a glance**
   hand-maintained (recount with `awk` on change). Checklist: 83 ✅ · 46 ➖ (129 rows).
 - Do not re-propose: effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
@@ -34,23 +26,13 @@ The three batches 0.12.4 carries, all fixes-only:
   slider track (2026-08-29); Copilot-derived features other than terminal-output context
   (2026-08-29, decisions.md).
 
-## Released — 0.12.4 (2026-09-01)
-**0.12.4 is the shipped version** (tag `v0.12.4`, commit `e644dce`): files-changed rows +
-Review-only link, one-line bg-task titles, the `(note:)` caveat misfire capped. Gate walked in
-full — `test buildPlugin` green, zip audited (our jar + OSS deps only), `verifyPlugin` **7/7
-Compatible** read from the verdict files, approval gate held for the user's "Go ahead". Asset
-`cmp`-identical to the local zip, feed live, `marketplace-upload` run 33518632052 green in 9s →
-**Approved** the same evening (user's screenshot: IntelliJ IDEA 2025.3.6.1 / 2026.1.5 / 2026.2.2
-rc all Success, IDE run no issues). Change notes carry the LAST THREE versions
-(0.12.4 / 0.12.3 / 0.12.2) + the GitHub releases link.
-
 ## Open work — ids verified against `docs/feature-checklist.md`
 - No open checklist rows. Wants: backlog § Next up (Worktrees bundle 14.1+14.3, 15.5 debugger
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
 - `python3 tools/live_harness.py` baseline **607** (fixtures to **69**; 60 and 04 reshaped/extended
-  2026-09-01); `./gradlew test` **134**.
+  2026-09-01); `./gradlew test` **137** (three CSS-manifest tests added 2026-09-04).
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
@@ -91,5 +73,5 @@ rc all Success, IDE run no issues). Change notes carry the LAST THREE versions
   (accepted 2026-09-01, decisions.md).
 
 ## Which machine — check FIRST, both are real
-2026-08-26 → 2026-09-01 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
+2026-08-26 → 2026-09-04 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
 Paths for both boxes in overview.md § External references. Windows still owes the CRLF splice check.

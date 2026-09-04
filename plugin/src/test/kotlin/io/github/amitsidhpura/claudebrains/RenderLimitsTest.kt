@@ -50,6 +50,52 @@ class RenderLimitsTest {
         assertEquals(manifest, manifest.distinct(), "duplicate entry in WebviewAssets.JS_FILES")
     }
 
+    /** Same contract as the JS manifest test, for the 2026-09-04 CSS split. */
+    @Test
+    fun `every webview css file is in the manifest, and nothing else`() {
+        val dir = File(javaClass.getResource("/webview/css")!!.toURI())
+        val onDisk = dir.listFiles()!!.map { it.name }.sorted()
+        val manifest = io.github.amitsidhpura.claudebrains.ui.WebviewAssets.CSS_FILES
+        assertEquals(
+            onDisk, manifest.sorted(),
+            "webview/css/ and WebviewAssets.CSS_FILES disagree — a file missing from the manifest " +
+                "ships dark (never spliced); a manifest entry with no file kills page assembly " +
+                "outright",
+        )
+        assertEquals(manifest, manifest.distinct(), "duplicate entry in WebviewAssets.CSS_FILES")
+    }
+
+    /**
+     * The mockup is the second copy of the CSS order — a plain file in a browser, so it loads the
+     * styles as `<link>` tags instead of the splice. Link order is cascade order; pin it to the
+     * manifest so the two cannot drift. Tests run from `plugin/`, the mockup lives beside it.
+     */
+    @Test
+    fun `mockup links every css file in manifest order`() {
+        val mockup = File("../design/mockup.html")
+        assertTrue(mockup.isFile, "design/mockup.html not found — did the repo layout change?")
+        val links = Regex("""webview/css/([\w.-]+\.css)""").findAll(mockup.readText())
+            .map { it.groupValues[1] }.toList()
+        assertEquals(
+            io.github.amitsidhpura.claudebrains.ui.WebviewAssets.CSS_FILES, links,
+            "design/mockup.html's <link> tags and WebviewAssets.CSS_FILES disagree — link order " +
+                "IS cascade order, so the mockup would render a different cascade than the panel",
+        )
+    }
+
+    /**
+     * A closing style tag anywhere in the spliced CSS ends the `<style>` block early — the same
+     * failure mode as the script balance below, costing an unstyled page.
+     */
+    @Test
+    fun `spliced css carries no closing style tag`() {
+        val close = "</" + "style>"
+        assertFalse(
+            io.github.amitsidhpura.claudebrains.ui.WebviewAssets.css().contains(close),
+            "a `$close` inside webview/css/ (even in a comment) truncates the spliced style block",
+        )
+    }
+
     @Test
     fun `chat html carries the splice point exactly once`() {
         val marker = "<!" + "--LIMITS-->"   // split so this test file is not itself a second copy

@@ -229,7 +229,7 @@
       // ends a turn with a tool_use that never gets a tool_result at all, and that line would go on
       // pulsing for the rest of the session — the same failure .t-prog.run is guarded against
       // above, and the one that left a hidden bg chip pulsing forever (manual-test 7.3, see the
-      // .chip-btn[hidden] note in chat.css). Every setBusy(false) caller is a real end of turn: the
+      // .chip-btn[hidden] note in css/60-composer.css). Every setBusy(false) caller is a real end of turn: the
       // one intermediate `result`, where a suspending background task is still pending, returns
       // before reaching here on purpose.
       log.querySelectorAll('.tool-line.run').forEach(function (el) { el.classList.remove('run'); });

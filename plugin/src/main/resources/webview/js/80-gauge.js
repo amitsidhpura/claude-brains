@@ -64,7 +64,7 @@
    * Geometry is the composer's Lucide geometry, not its own: a 24 viewBox with the shape spanning
    * units 3..21, which is what `r=9` about (12,12) draws and what the square-slash beside it draws
    * as `<rect x=3 width=18>`. `pathLength="100"` redefines the circumference as 100 units, so the
-   * dash array in chat.css is literally the percentage — no 2*pi*r constant to keep in step.
+   * dash array in css/60-composer.css is literally the percentage — no 2*pi*r constant to keep in step.
    *
    * Built ONCE and kept: the chip is now [ring, text node], so the `textContent = pct + '%'` this
    * function used to do would delete the <svg> on the first update and never bring it back.

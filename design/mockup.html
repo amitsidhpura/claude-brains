@@ -4,11 +4,22 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Claude Brains — design mockup</title>
-<link rel="stylesheet" href="../plugin/src/main/resources/webview/chat.css"/>
+<!-- One <link> per file, in WebviewAssets.CSS_FILES order — link order IS cascade order.
+     RenderLimitsTest pins this list to the manifest; edit both together. -->
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/00-tokens.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/10-header.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/20-log.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/25-turns.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/30-blocks.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/35-attached.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/40-cards.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/50-side.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/60-composer.css"/>
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/css/70-popups.css"/>
 <style>
   /* ============================================================
      MOCKUP-ONLY styles (preview scaffolding — never shipped).
-     All shared/product CSS lives in webview/chat.css (linked above).
+     All shared/product CSS lives in webview/css/ (linked above).
      ============================================================ */
   body { background: #101114; display: flex; justify-content: center; }
 
@@ -553,7 +564,7 @@ total 196K
 }</span></div>
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">["PASS  A open via startRename -&gt; editing","PASS  B outside click closes"]</span></div>
       </div>
-      <!-- A long free-text description: clamped to ONE line with an ellipsis (chat.css), the same
+      <!-- A long free-text description: clamped to ONE line with an ellipsis (webview css), the same
            way .t-desc.path already was. It used to wrap to three lines on a narrow panel. -->
       <div class="tool-line"><b>ToolSearch</b><span class="t-desc" title="select:mcp__playwright__browser_evaluate,mcp__playwright__browser_click,mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot">select:mcp__playwright__browser_evaluate,mcp__playwright__browser_click,mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot</span></div>
       <div class="generating">
