@@ -1,13 +1,26 @@
 # State
 
 ## Current focus
-**2026-09-04: chat.css split into 10 manifest files under `webview/css/`** (the JS-split
-mechanism: `WebviewAssets.CSS_FILES` is the ONLY copy of the order, which IS cascade order —
-never reorder; `css()` splices with per-file banners, the mockup + four design probes carry ten
-`<link>` tags pinned to the manifest by `RenderLimitsTest`, `marketplace_shots.py` reads both
-manifests via `manifest(name, ext)`). Concatenation verified byte-identical to the old chat.css;
-Kotlin tests now **137**; shots 01/03 byte-identical, 02/04/05 only AA jitter (gotchas § Webview:
-pixel-compare PNGs, never byte-compare). Committed on `main` post-0.12.4 — unreleased.
+**2026-09-05: three first-impression renderer fixes, unreleased on `main`** — a natural 0.12.5
+with the 2026-09-04 CSS split (`6f2999b`, webview/css/ manifest files, `CSS_FILES` = cascade
+order, never reorder):
+- `aafbb1c` — `/context` (and every local built-in) rendered as ONE RED error block: the CLI
+  tags their output `model:'<synthetic>'` since ~2.1.24x; `onResult` now drains the stash by the
+  RESULT's `is_error` (success → prose; error → the deduped red echo). Fixture 70.
+- `6acb681` — Read range suffix "(lines 1-150)" wrapped after the hyphen on crowded lines:
+  `.t-sfx` nowrap + `flex: 0 0 auto` (the path's middle-ellipsis absorbs all shrink). Fixture 71.
+- `92ede19` — MCP notice per fault severity: needs-auth muted, failed red,
+  disabled/pending/connected silent (disabled never even reaches the wire for local servers —
+  gotchas § Protocol). Fixture 72; live-tested incl. real unauthenticated Linear MCP.
+
+## Open investigations / discussions
+- **Fold-verdict report NOT reproduced** (user's Windows screenshot 2026-09-04: a Read OUT box
+  expanded, not collapsible). Every venue folds correctly here (live, off-screen, batch,
+  replay-shaped, real CLI Read). WAITING on the user running the DevTools diagnostic snippet on
+  the Windows box (Chromium version, `lh` support, per-holder fold state) + Help→About. Do not
+  guess-fix (conventions).
+- **Old-CLI compat** (friend's `--permission-mode manual` exit-1): deferred; agreed direction is
+  a plain supported-version error, retry design rejected — backlog § Immediate, decisions.md.
 
 ## Released — 0.12.4 (2026-09-01), Marketplace-approved
 **0.12.4 is the shipped version** (tag `v0.12.4`, commit `e644dce`): files-changed rows (one row
@@ -31,16 +44,17 @@ carry the last three versions. Details in journal 2026-09-01 (second–fifth).
   tools) and § Deferred (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **607** (fixtures to **69**; 60 and 04 reshaped/extended
-  2026-09-01); `./gradlew test` **137** (three CSS-manifest tests added 2026-09-04).
+- `python3 tools/live_harness.py` baseline **623** (fixtures to **72**); `./gradlew test` **137**
+  (three CSS-manifest tests added 2026-09-04).
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
   nothing; `pgrep -f 'idea.system.pat[h]'`; kill by pid, wait for CDP to vanish. Claude may start
   and kill the sandbox on its own (user, 2026-08-29). Never run the harness and a CDP injection
   concurrently — fixtures `__clear` the log and the injection vanishes.
-- **ALWAYS verify the running build BY CONTENT over CDP before trusting a fixture run** (e.g. grep
-  the page HTML for the exact new code string). Control builds restore the WHOLE
+- **ALWAYS verify the running build BY CONTENT over CDP before trusting a fixture run** — grep
+  `<script>` textContent for JS strings and `<style>` for CSS strings (grepping the wrong element
+  reports STILL-OLD on a fixed build; hit 2026-09-05). Control builds restore the WHOLE
   `plugin/src/main/resources/webview/` directory.
 - Real end-to-end turns can be driven over CDP: `sendTurn('<prompt>', [])` in the panel scope
   spawns the real CLI; approve a permission card via `.card-b button.ok`. Used 2026-09-01 for the
@@ -53,7 +67,9 @@ carry the last three versions. Details in journal 2026-09-01 (second–fifth).
   there for real wire shapes; the 2026-08-28 "not findable" cases stay unexplained (gotchas).
 
 ## Next steps
-- [x] 0.12.4 released and Marketplace-approved 2026-09-01 (all three batches).
+- [ ] Release 0.12.5 when the user asks (CSS split + fixes `aafbb1c`/`6acb681`/`92ede19`).
+- [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
+      investigations); the old-CLI-error backlog item when they want to discuss it.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots
@@ -73,5 +89,5 @@ carry the last three versions. Details in journal 2026-09-01 (second–fifth).
   (accepted 2026-09-01, decisions.md).
 
 ## Which machine — check FIRST, both are real
-2026-08-26 → 2026-09-04 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
+2026-08-26 → 2026-09-05 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
 Paths for both boxes in overview.md § External references. Windows still owes the CRLF splice check.

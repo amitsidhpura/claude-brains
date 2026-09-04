@@ -4,6 +4,31 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-05 — MCP notice split by severity: needs-auth is a notice, failed is an error
+- Why: a friend's fresh install read the combined red line as "the plugin is broken" — an
+  unauthenticated claude.ai connector is an expected fresh-machine state with a known fix, not an
+  incident. One `statusLine` per fault now: `failed` keeps `status err`, `needs-auth` the muted
+  default dress; MCP_BAD table and the set-keyed dedupe untouched (fixture 72).
+- Alternatives rejected: keeping one combined red line (the complaint itself); dropping the
+  notice (13a exists because silently-missing tools are worse).
+
+## 2026-09-05 — old-CLI `--permission-mode` rejection: deferred, and the direction is a plain error
+- A pre-2.1.220 CLI spells the ask-mode `default` and rejects our `manual` → process exit 1,
+  cryptic first impression. User REJECTED the self-healing design (parse the failure stderr's
+  allowed-choices list, translate manual↔default, retry once, persist vocab) as too much
+  machinery — when picked up, show a clear "Claude Brains needs claude 2.1.220+ (tested 2.1.25x),
+  run `claude update`" message on the matching stderr instead. Parked in backlog § Immediate;
+  do not re-propose the retry design.
+
+## 2026-09-04 — `<synthetic>` frames drain by the RESULT's `is_error`, not by tag or subtype
+- Why: the CLI now uses `model:'<synthetic>'` for BOTH API-error echoes and local built-ins'
+  output (`/context`, `/list-agents` — drift arriving between 2.1.234 and 2.1.251), and a real
+  API echo carries `subtype:'success'` WITH `is_error:true`, so is_error is the only signal that
+  separates them. Success → the stash renders as prose; error → the red echo with exact-text
+  dedupe, unchanged (fixtures 56 + 70).
+- Alternative rejected: classifying at stash time in the whole-message branch — the frame alone
+  cannot say which kind it is; only its result can.
+
 ## 2026-09-04 — webview CSS split into 10 manifest files (`webview/css/`, `CSS_FILES`)
 - Why: 1295-line monolith; the 2026-08-19 JS split had already proven the concat-splice seam, the
   banner-per-file DevTools mapping, and the manifest-vs-directory test. User asked for "same as js".

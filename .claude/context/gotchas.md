@@ -220,6 +220,19 @@ re-read those before trusting memory here.
 - **SchemaStore's catalog maps only `**/.claude/settings.json`** ("Claude Code Settings",
   checked 2026-08-29) — `settings.local.json` gets no schema from the IDE's built-in catalog; the
   plugin's provider covers both (13.2).
+- **`model:'<synthetic>'` means TWO things; only the result's `is_error` separates them.** An
+  API-error echo (taped 2026-08-24) AND, since somewhere in 2.1.234–2.1.251, local built-ins'
+  output (`/context`, `/list-agents` — measured 2026-09-04 on 2.1.260). A real echo's result says
+  `subtype:'success'` WITH `is_error:true`, so subtype discriminates nothing. Draining the stash
+  by is_error is the fix; fixtures 56 + 70 pin both halves. When a local command renders wrong,
+  suspect this tag before the renderer.
+- **Locally-disabled MCP servers never reach the wire** (measured 2026-09-05, 2.1.260):
+  `disabledMcpjsonServers` makes the server vanish from `system/init`'s `mcp_servers` AND from
+  `claude mcp list` — the literal `status:'disabled'` arrives only from claude.ai-account
+  connectors. Also: `claude mcp list` can say "Pending approval" for a project `.mcp.json` server
+  that a real session starts fine under `enableAllProjectMcpServers` — its health view and the
+  session wire disagree. Reproducing `needs-auth` for real: unauthenticated
+  `https://mcp.linear.app/mcp` (`type:"http"`; the old `/sse` endpoint reports `failed` instead).
 
 ## Replay / transcript
 - **Compaction records land in the file BEFORE the command that caused them.** The CLI writes the

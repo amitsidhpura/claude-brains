@@ -3,6 +3,34 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-05 — three first-impression fixes (fixtures 70–72); fold report NOT reproduced
+- User's Windows screenshot: a Read OUT box fully expanded, not collapsible. NOT reproduced
+  despite live/off-screen/batch/replay-shaped mounts AND a real CLI Read in real JCEF — every
+  path folds (72px, "Show more"). Parked per "don't fix what you can't reproduce"; the user has
+  a DevTools snippet to run on the Windows box (Chromium version, `lh` support, per-holder
+  fold state) + a Help→About ask. Content-visibility does NOT zero foldBlock's rAF measurement
+  on Chrome 122 — that hypothesis is dead.
+- `/context` drawn as one giant red block (`aafbb1c`): CLI drift — since ~2.1.24x local
+  built-ins' output arrives `model:'<synthetic>'`, the tag the 2026-08-24 echo-dedupe treated
+  as "API error". Fix: `onResult` drains the stash by the RESULT's `is_error` (success → prose
+  `blk`); a real echo says subtype 'success' WITH is_error, so subtype can't discriminate.
+  Measured live on 2.1.260 (`/context` + `/list-agents`); fixture 70, free pre-fix control;
+  real `/context` re-verified in the panel (md tables, zero .error). Replay was never affected.
+- Read range suffix wrapped mid-token ("(lines 1-" / "150)", user's screenshot) (`6acb681`):
+  `.t-sfx` had no nowrap, so flex shrank it to min-content. Reproduced live pre-fix at 730px;
+  fix nowrap + `flex: 0 0 auto` (the path's middle-ellipsis absorbs all shrink). Fixture 71.
+- Friend's fresh install: unauthenticated claude.ai connectors drew ONE red line with real
+  failures (`92ede19`). `mcpNotice` now renders per fault: needs-auth muted, failed red,
+  disabled/pending/connected silent. Fixture 72; live-tested with a real unauthenticated
+  Linear MCP (`https://mcp.linear.app/mcp` → needs-auth on the wire; the old sse endpoint
+  reports `failed`), plus a manual sandbox demo for the user. Measured: locally-disabled
+  servers are OMITTED from the init roster entirely (gotchas § Protocol).
+- Friend's other screenshot DEFERRED: his old CLI rejects `--permission-mode manual` (vocab
+  `default`, pre-2.1.220) → exit 1. User rejected self-healing vocab translation as too much;
+  direction when picked up: a plain "supported CLI version" error (backlog § Immediate).
+- Harness baseline **607 → 623** (fixtures to 72); Kotlin 137 untouched. Three fix commits +
+  this save pushed on the user's ask.
+
 ## 2026-09-04 — chat.css split into webview/css/*.css (the JS-split mechanism)
 - User: "same as js — let's split css also." The 1295-line `chat.css` → 10 tens-numbered files
   under `plugin/src/main/resources/webview/css/`, cut ONLY at existing top-level comment
@@ -137,17 +165,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Process: the user wanted a zip to test BEFORE any release — no bump/notes/feed touched. Commit +
   push authorized with this save. Unreleased on `main` after it: this one Kotlin fix.
 
-## 2026-08-30 (fourth) — 0.12.2 released
-- User's "let's release it" → steps 1–5 done proactively (bump, notes now 0.12.2/0.12.1/0.12.0,
-  feed), `test buildPlugin` 134/0, zip audited, `verifyPlugin` 7/7 Compatible from the verdict files;
-  STOPPED at the approval gate with the full notes; released on the user's "go ahead".
-- `50ac66c`, tag `v0.12.2`, asset `cmp`-identical, feed served 0.12.2 immediately,
-  `marketplace-upload` run 33298655547 green → Marketplace update 1157011 (`approve:false` on
-  upload, **Approved** within the hour — the public `updates` API lists approved versions only, so
-  its silence right after upload is normal; read the run log's JSON instead).
-- Notes carried a ⚠️ line for the behaviour change (CLI starts on first show of the panel).
-
 ## Digest
+- **2026-08-30 (fourth)** — **0.12.2 released** (`50ac66c`): full gate, Marketplace update
+  1157011 Approved within the hour. The public `updates` API lists approved versions only, so its
+  silence right after upload is normal — read the run log's JSON. Notes carried a ⚠️ for the
+  behaviour change (CLI starts on first show of the panel).
 - **2026-08-30 (third)** — first-paint flash fixed: `ChatPanel` had called `loadHTML` in its
   constructor before the component joined the tool window, so CEF laid out against its default
   surface (gotchas § JCEF); fix = `JPanel` wrapper painted `PAGE_BG`, `loadUi()` on first

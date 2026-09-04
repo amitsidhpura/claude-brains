@@ -1,6 +1,10 @@
 # Backlog
 
 ## Immediate
+- **Old-CLI `--permission-mode manual` rejection → show a clear supported-version error**
+  (deferred 2026-09-05, decisions.md): on `__exit` stderr matching the invalid-argument line, say
+  "needs claude 2.1.220+ (tested 2.1.25x), run `claude update`" + README requirements line. The
+  retry/vocab-translation design was REJECTED — don't re-propose it.
 - **Manual-test register closed at 0 open (2026-08-15); `docs/manual-test.md` deleted 2026-08-28**
   (self-contained by design; `git show 9bd1683:docs/manual-test.md`). Re-test fixtures
   `dummy-cmd.md` + `sub/nested-cmd.md` kept under `~/Sites/claude-brains-testing/.claude/commands/`
