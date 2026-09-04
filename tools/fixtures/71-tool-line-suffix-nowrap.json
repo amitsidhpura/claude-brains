@@ -1,0 +1,21 @@
+{
+ "item": "tool-line range suffix wraps mid-token — \"(lines 1-\" / \"150)\" (2026-09-05)",
+ "branch": "the Read range suffix .t-sfx is one unbreakable token: it must never wrap internally, however crowded the line — the path beside it is the flexible part (middle-ellipsis)",
+ "provenance": "Pure CSS/DOM geometry — no wire frames, so this fixture asserts only what the STYLESHEET and the tool-line builders must produce, never anything about the CLI (fixture 51's precedent, and the same defect class as its step 2: a span with no nowrap inside the tool-line flex row shrinks to min-content and wraps at its internal break points). User screenshot 2026-09-05 (Windows office box, real IDE): 'Read H:\\Projects\\AAA CLAUDE\\...\\acf-rest-values.php' with the suffix broken after the hyphen into '(lines 1-' / '150)'. REPRODUCED in the real JCEF panel 2026-09-05 pre-fix at 730px with the same builders this fixture uses (toolLine + fillPath + a .t-sfx span, the exact shape 75-retraction and 55-replay build): suffix rect 37px against a 19px line-height, computed white-space 'normal'. The long path is what crowds the line — fillPath's middle-ellipsis lets the path shrink, and flexbox then also shrinks the un-protected suffix span to its min-content, which is where the internal wrap comes from. Fix is one declaration pair on .tool-line .t-sfx (webview/css/30-blocks.css): white-space nowrap + flex 0 0 auto, so the suffix's min-content becomes its whole text and the PATH absorbs all the shrink, exactly the division of labour the tool line already promises. NEGATIVE CONTROL RUN 2026-09-05 against the pre-fix build (sandbox launched before the CSS edit): both DISCRIMINATING asserts FAILED (oneLine false at 37px, nowrap 'normal'); the GUARD (path still ellipsises rather than overflowing the panel) passed both phases. Green after the edit and a sandbox restart.",
+ "steps": [
+  {
+   "note": "a crowded Read line: long path + '(lines 1-150)' — the suffix stays one line, the path does the shrinking",
+   "setup": "window.__sfx71 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('suffix wrap pin', []); const t = toolLine('Read', ''); const d = t.querySelector('.t-desc'); d.classList.add('path'); fillPath(d, 'H:\\\\Projects\\\\AAA CLAUDE\\\\wp-theme\\\\includes\\\\very\\\\deep\\\\nesting\\\\structure\\\\features\\\\acf-rest-values-with-a-long-name.php'); const s = document.createElement('span'); s.className = 't-sfx'; s.textContent = '(lines 1-150)'; d.after(s); const lh = parseFloat(getComputedStyle(s).lineHeight); const sr = s.getBoundingClientRect(); const tr = t.getBoundingClientRect(); return { oneLine: sr.height < lh * 1.5, nowrap: getComputedStyle(s).whiteSpace, pathContained: d.getBoundingClientRect().right <= tr.right + 1, sfxOnRow: Math.abs(sr.top - tr.top) < lh }; })();",
+   "expect": [
+    { "js": "window.__sfx71.oneLine", "equals": true,
+      "why": "DISCRIMINATING: the suffix rect is a single line-height (37px against 19 pre-fix — wrapped after the hyphen)" },
+    { "js": "window.__sfx71.nowrap", "equals": "nowrap",
+      "why": "DISCRIMINATING: the declaration itself, so a future refactor that drops it fails by name, not only by geometry ('normal' pre-fix)" },
+    { "js": "window.__sfx71.pathContained", "equals": true,
+      "why": "GUARD (both phases): the path still ellipsises inside the line — protecting the suffix must push shrink INTO the path, never overflow the row" },
+    { "js": "window.__sfx71.sfxOnRow", "equals": true,
+      "why": "GUARD (both phases): the suffix sits on the tool line's own row — nowrap must not knock it onto a wrapped flex line" }
+   ]
+  }
+ ]
+}

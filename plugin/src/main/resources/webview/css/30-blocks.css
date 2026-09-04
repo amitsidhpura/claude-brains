@@ -125,7 +125,11 @@
 /* Range suffix on a Read ("(lines 40-80)"). Its own span, dimmer than the path and OUTSIDE
    .t-desc.path — the click handler sends that element's text to the editor, so a range folded into
    it would be sent as part of the filename. */
-.tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: var(--fs-sm); }
+/* One unbreakable token: without nowrap, a crowded line shrinks this flex item to min-content and
+   wraps it after the hyphen ("(lines 1-" / "150)", user's Windows screenshot 2026-09-05). The path
+   beside it is the flexible part — fillPath's middle-ellipsis absorbs ALL the shrink (fixture 71). */
+.tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: var(--fs-sm);
+  white-space: nowrap; flex: 0 0 auto; }
 .tool-line .t-desc.path, .card-h code { cursor: pointer; }
 .tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
 /* A path is clamped to ONE line: it is already project-relative by the time it gets here, and what
