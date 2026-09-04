@@ -652,6 +652,21 @@ re-read those before trusting memory here.
   `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
 ## Testing, probes and sandboxes
+- **The gradle daemon keeps the environment it was born with** — a `PATH="…stub:$PATH" ./gradlew
+  runIde` reuses a warm daemon's OLD env, so the sandbox IDE never sees the stub binary. Run
+  `./gradlew --stop` first (and again after, or the tainted daemon serves the stub to later
+  launches). Applied preventively 2026-09-04 for the stub-claude early-exit test; the mechanism
+  is stock gradle daemon behavior.
+- **The full harness needs a REAL-CLI sandbox.** Against a stub-claude sandbox (no initialize
+  roster ever arrives) 3 fixtures fail on missing init-seeded state — measured 2026-09-04, 627/3
+  vs 630/0 on the same webview build. Run targeted fixtures on a stub sandbox if you must, but
+  the baseline number only means anything with the real CLI behind the panel.
+- **Test process-death paths with a stub that exits INSTANTLY — a real CLI is too slow to expose
+  the races.** A 5-line `claude` stub (error to stderr, exit 1) found two latent bugs no real
+  binary ever showed (2026-09-04): `waitFor()` beat the stderr reader so the exit reported with
+  an empty tail, and `sendInitialize()`'s throw on the dead stdin unwound out of `start()`
+  leaving `ClaudeSessionService.cli` unassigned. idea.log's line ORDER ("[claude] …" vs "claude
+  exited:") is the witness for who won the race.
 - **`tools/cdp.py` prints its `# target:` line on STDERR.** Piping stdout through `tail -n +2` (to
   "skip the header") silently drops the first line of a pretty-printed JSON result → "Extra data"
   parse errors. Redirect `2>/dev/null` instead; string results print raw.

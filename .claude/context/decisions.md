@@ -4,6 +4,25 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-04 — CLI backward compat: no version floor, no shims — a muted hint on early death
+- The policy, settled with the user: the plugin never branches on CLI version and never declares
+  a minimum it hasn't tested ("we might be supporting still below but we have not tested, so
+  let's not think of floor"). Instead, a non-zero exit BEFORE the process ever produced a
+  parseable stream-json frame (`early:true` on the `__exit` frame, set from `ClaudeCli.sawFrame`)
+  renders one muted line under the ERR box: "Your Claude CLI may be out of date — run
+  `claude update` in a terminal." A mid-session crash never carries it. Fixture 73.
+- The `manual` cutoff is now MEASURED, both sides, on real binaries: v2.1.200 (released
+  2026-07-03) introduced `--permission-mode manual` (changelog: accepted alongside `default`) and
+  the full panel works against it; v2.1.199 rejects it with the friend's exact error and the
+  panel shows the new hint end-to-end. The friend's CLI simply predates 2026-07-03. Old binaries
+  via `claude install <version>` (kept side-by-side in `~/.local/share/claude/versions/`).
+- Alternatives rejected: a version floor with `claude --version` probing (untested ≠ unsupported,
+  and 2.1.200 proved the panel works far below the audited range); stderr pattern-matching to
+  gate the hint (early-death detection covers every shape without text matching); vocab
+  translation stays rejected (2026-09-05 entry). A one-click "Update Claude Code" button
+  (run `claude update` with the resolved binary, auto-restart on success) was designed and
+  DEFERRED by the user — backlog § Next up.
+
 ## 2026-09-05 — MCP notice split by severity: needs-auth is a notice, failed is an error
 - Why: a friend's fresh install read the combined red line as "the plugin is broken" — an
   unauthenticated claude.ai connector is an expected fresh-machine state with a known fix, not an
@@ -13,6 +32,9 @@ key rejection, one entry each. Never delete; mark superseded.
   notice (13a exists because silently-missing tools are worse).
 
 ## 2026-09-05 — old-CLI `--permission-mode` rejection: deferred, and the direction is a plain error
+**SUPERSEDED 2026-09-04 (the later session; this entry's date was written a day ahead):** the
+hint shipped, and the cutoff is 2.1.200, not 2.1.220 — see "CLI backward compat" above. The
+retry/vocab-translation rejection stands.
 - A pre-2.1.220 CLI spells the ask-mode `default` and rejects our `manual` → process exit 1,
   cryptic first impression. User REJECTED the self-healing design (parse the failure stderr's
   allowed-choices list, translate manual↔default, retry once, persist vocab) as too much

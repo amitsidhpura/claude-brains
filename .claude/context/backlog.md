@@ -1,10 +1,9 @@
 # Backlog
 
 ## Immediate
-- **Old-CLI `--permission-mode manual` rejection → show a clear supported-version error**
-  (deferred 2026-09-05, decisions.md): on `__exit` stderr matching the invalid-argument line, say
-  "needs claude 2.1.220+ (tested 2.1.25x), run `claude update`" + README requirements line. The
-  retry/vocab-translation design was REJECTED — don't re-propose it.
+- **README + plugin.xml requirements line: "needs Claude Code CLI 2.1.200+"** — the cutoff is
+  measured (decisions 2026-09-04); the in-panel hint shipped, the docs half hasn't. plugin.xml
+  feeds the Marketplace description, so time it with the 0.12.5 release.
 - **Manual-test register closed at 0 open (2026-08-15); `docs/manual-test.md` deleted 2026-08-28**
   (self-contained by design; `git show 9bd1683:docs/manual-test.md`). Re-test fixtures
   `dummy-cmd.md` + `sub/nested-cmd.md` kept under `~/Sites/claude-brains-testing/.claude/commands/`
@@ -19,6 +18,11 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
+- **"Update Claude Code" button on the early-exit hint** (designed 2026-09-04, user: "I will
+  think about it in future"): click → run `<resolved executable> update`, stream its output as a
+  status block, auto-restart the CLI on exit 0, surface the output honestly on failure (npm
+  installs say "update via npm"). Show on every early non-zero exit; single-flight; disable
+  while running. `claude update` verified present on 2.1.260; assumed (not measured) on old CLIs.
 - **Terminal last command / output as an attachable context** (the one survivor of the 2026-08-29
   Copilot audit — decisions.md): for commands the USER ran in the IDE terminal (dev-server logs,
   credentialed or interactive commands). PROBE FIRST: does the JetBrains terminal API expose "last

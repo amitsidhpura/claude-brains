@@ -3,6 +3,26 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-04 (second) — early-exit "CLI out of date" hint; `manual` cutoff measured at 2.1.200
+- (The "2026-09-05" entry below is this same day's EARLIER session — its commits are stamped
+  2026-09-04 12:50; the date was written a day ahead. Left as written for greppability.)
+- Backward-compat policy settled: no version floor, no shims — a non-zero exit before the CLI
+  ever spoke stream-json renders a muted "Your Claude CLI may be out of date — run `claude
+  update` in a terminal." under the ERR box. Kotlin `sawFrame` → `early:true` on `__exit`;
+  hint only when early. Update BUTTON designed, deferred by user. Fixture 73 (3 discriminating
+  asserts failed on the content-verified pre-fix build); harness 623 → **630**, Kotlin 137.
+- The stub e2e exposed TWO latent instant-death bugs, both fixed: (1) `waitFor()` returned
+  before the stderr thread drained → ERR box rendered empty (wait thread now joins both readers,
+  bounded 1s — also settles sawFrame); (2) `sendInitialize()` threw "Stream closed" on the dead
+  stdin, unwound out of `start()`, and left `ClaudeSessionService.cli` UNASSIGNED — exit frame
+  read stderr/sawFrame off null (writeLine now runCatching; `cli` assigned BEFORE `start()`).
+- Cutoff measured on real binaries by the user: v2.1.200 (2026-07-03) introduced `manual` and
+  the whole panel works on it (multi-turn, model switch, permission card); v2.1.199 rejects it
+  with the friend's exact error + our new hint. The friend just needs `claude update`.
+- Traps: gradle daemon caches its env — PATH-dependent sandbox launches need `./gradlew --stop`
+  first; full harness against a stub-CLI sandbox fails 3 fixtures (need real-CLI init state) —
+  gotchas § Testing. User's global launcher LEFT ON 2.1.199 (restore: `claude install stable`).
+
 ## 2026-09-05 — three first-impression fixes (fixtures 70–72); fold report NOT reproduced
 - User's Windows screenshot: a Read OUT box fully expanded, not collapsible. NOT reproduced
   despite live/off-screen/batch/replay-shaped mounts AND a real CLI Read in real JCEF — every

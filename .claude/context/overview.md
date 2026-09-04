@@ -54,6 +54,9 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   (`can_use_tool`, `initialize`, `set_model`, `set_permission_mode`, `interrupt`) separately
   from conversation events. Declares ONE host hook on `initialize` (`PreToolUse
   Edit|Write|MultiEdit|Read → autosave`, `Autosave.kt`) and answers its `hook_callback`s.
+  Oldest CLI the spawn vocabulary works with: **2.1.200** (introduced `--permission-mode manual`,
+  2026-07-03; measured both sides 2026-09-04 — decisions.md). Older CLIs exit 1 at arg parse and
+  the panel shows the "may be out of date" hint.
 - **UI** (`ui/ChatPanel.kt` + `resources/webview/`): JCEF panel in a right-anchored tool window.
   Single JS<->Kotlin channel: `window.__bridge(json)` up, `window.onClaudeEvent(line)` down.
   `chat.html` is markup only; the JS is 14 numbered files in `webview/js/`, spliced back into the
