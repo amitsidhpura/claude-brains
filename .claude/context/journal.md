@@ -21,7 +21,7 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   with the friend's exact error + our new hint. The friend just needs `claude update`.
 - Traps: gradle daemon caches its env — PATH-dependent sandbox launches need `./gradlew --stop`
   first; full harness against a stub-CLI sandbox fails 3 fixtures (need real-CLI init state) —
-  gotchas § Testing. User's global launcher LEFT ON 2.1.199 (restore: `claude install stable`).
+  gotchas § Testing. User's global launcher restored to 2.1.260 after the downgrade tests.
 
 ## 2026-09-05 — three first-impression fixes (fixtures 70–72); fold report NOT reproduced
 - User's Windows screenshot: a Read OUT box fully expanded, not collapsible. NOT reproduced

@@ -70,9 +70,6 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
 ## Next steps
 - [ ] Release 0.12.5 when the user asks (CSS split + fixtures 70–73 fixes; add the
       "needs CLI 2.1.200+" README/plugin.xml line with it).
-- [ ] **User errand: restore the global CLI** — the launcher was left on **2.1.199** (below the
-      cutoff!) after the downgrade test 2026-09-04: `claude install stable`. Until then the REAL
-      PhpStorm plugin will hit the early-exit hint screen on its next CLI restart.
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
       investigations); friend's `claude --version` no longer needed (cutoff settled).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
