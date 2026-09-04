@@ -6,6 +6,15 @@ re-read those before trusting memory here.
 
 ## Protocol / wire
 
+- **`--permission-mode` BEATS `permissions.defaultMode`; `system/init` only repeats the mode with
+  the FIRST TURN.** Measured 2026-09-04 on 2.1.260 (scratchpad dir, stdio): settings
+  `defaultMode:"dontAsk"` alone → init `dontAsk`; the same file + `--permission-mode manual` → init
+  `default`. So a host that always passes the flag silently overrides the user's own setting (ours
+  did, hardcoded `manual`, until 4.7). And at spawn the ONLY statement of the mode is the
+  `initialize` response's `current_permission_mode` — seeding the chip from `system/init` alone
+  left it on Manual while the CLI ran `auto`, visible in the live panel and invisible to fixtures.
+  `dontAsk` is broadcast VERBATIM (no `default`-style alias); a file `bypassPermissions` without
+  `--dangerously-skip-permissions` lands on `default`.
 - **`@path` mentions are expanded by the CLI, silently capped.** Measured 2026-09-04 (haiku,
   headless, panel flags): `@README.md` → the file is attached BEFORE the model runs (one turn, no
   Read); a plain `README.md` → the model calls Read itself (two turns). A 5,000-line / 200 KB
@@ -669,6 +678,15 @@ re-read those before trusting memory here.
   `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
 ## Testing, probes and sandboxes
+- **A fixture guard that dereferences a node the PRE-FIX build lacks aborts the whole control
+  run.** Fixture 76's `…querySelector(row).classList.contains('on')` threw on null in the negative
+  control, killing the run after three useful failures (2026-09-04) — the same class of abort as
+  fixtures 55 and 46. Write every assert null-safe (`return i ? … : 'absent'`) so the control
+  reports instead of dying.
+- **Writing any `.claude/settings*.json` is refused by the permission classifier** (Bash and Write
+  alike, 2026-09-04) — it is the file that governs permissions. Settings-dependent CLI probes go in
+  a throwaway scratchpad dir with its own `.claude/settings.json`; a test that must touch the real
+  testing repo is the user's to make.
 - **`build/idea-sandbox/` holds STALE sibling sandboxes — verify the running build against the
   dir the IDE's own `-Didea.plugins.path` names.** `ls -t` over the tree picked
   `PS-2024.2/plugins/…/claude-brains-0.8.0.jar` (a sandbox from an older IDE pin, untouched since)

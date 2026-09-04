@@ -33,7 +33,9 @@ data class Attachment(val kind: String, val mediaType: String, val data: String,
  *    we surface it through [onPermission] and answer with `control_response` on stdin.
  *
  * Permission routing is enabled by `--permission-prompt-tool stdio` (the SDK sentinel that sends
- * permission requests over stdio) plus `--permission-mode`.
+ * permission requests over stdio) plus `--permission-mode` — only when the user has picked a mode;
+ * without the flag the CLI applies its own precedence (`permissions.defaultMode` from the settings
+ * files, else its default), and the flag beats the file (measured 2026-09-04, checklist 4.7).
  *
  * A third lane rides the same control channel: host-registered HOOKS. The `initialize` request
  * declares them (`hooks: {PreToolUse: [{matcher, hookCallbackIds}]}` — the SDK's own shape, read
@@ -46,7 +48,7 @@ class ClaudeCli(
     private val ssePort: Int,
     private val authToken: String,
     private val executable: String,
-    private val permissionMode: String,
+    private val permissionMode: String?,
     private val resumeSessionId: String? = null,
     private val onEvent: (String) -> Unit,
     private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?, reason: String?) -> Unit,
@@ -134,7 +136,6 @@ class ClaudeCli(
             "--include-partial-messages",
             "--verbose",
             "--permission-prompt-tool", "stdio",
-            "--permission-mode", permissionMode,
             // Expose the IDE bridge to the model. In stream-json mode the CLI never auto-connects
             // from CLAUDE_CODE_SSE_PORT (that discovery only runs in the interactive TUI), so the
             // server must be passed explicitly. Plain "ws" transport (the "ws-ide" type is filtered
@@ -144,6 +145,11 @@ class ClaudeCli(
         )
         if (resumeSessionId != null) {
             cmd += listOf("--resume", resumeSessionId)
+        }
+        // Omitted when nothing is persisted (see the class doc): the CLI then honours the user's
+        // own `permissions.defaultMode`, which the flag would otherwise silently beat.
+        if (permissionMode != null) {
+            cmd += listOf("--permission-mode", permissionMode)
         }
         val pb = ProcessBuilder(cmd).directory(workingDir).redirectErrorStream(false)
         pb.environment().apply {

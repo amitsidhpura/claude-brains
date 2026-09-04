@@ -173,7 +173,11 @@ if you reuse the webview; a minimal plugin can ignore them and rely on `useTermi
 ## 5b. Permission control protocol (stdin/stdout, NOT the WS channel)
 
 Edit approval is **not** done via `openDiff` — it's the SDK **control protocol** over the CLI's
-stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+ `--permission-mode`).
+stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+ `--permission-mode`
+once the user has picked a mode; on a first run the flag is omitted and the CLI's own precedence
+decides — `permissions.defaultMode` from the settings files, else its default. Measured 2026-09-04
+on 2.1.260: the flag BEATS the file, and a file `bypassPermissions` without the dangerous flag
+lands on `default`).
 
 - CLI → host (stdout line): `{"type":"control_request","request_id":"…","request":{"subtype":"can_use_tool","tool_name":"Edit","input":{…},"permission_suggestions":[…],"blocked_path":"…?"}}`
 - host → CLI (stdin line): `{"type":"control_response","response":{"subtype":"success","request_id":"…","response":{"behavior":"allow","updatedInput":{…},"updatedPermissions":[…]?}}}`
@@ -212,9 +216,10 @@ stream-json stdio. Enabled by launching with `--permission-prompt-tool stdio` (+
   advertised; `manual` replaced it. `auto` is the one the official UIs call Auto — it approves
   actions that pass a safety check and pauses on anything risky (the binary ties it to
   `CLAUDE_CODE_AUTO_MODE_CLASSIFY_EDITS` / `classifyEditsModels`), which is NOT the same as
-  `bypassPermissions`. `dontAsk` is a distinct branch in the permission flow; its semantics are
-  unverified and no UI here exposes it. Without `--permission-prompt-tool stdio` the CLI applies
-  edits without asking.
+  `bypassPermissions`. `dontAsk` denies whatever would have asked; `system/init` broadcasts it
+  VERBATIM (no `default`-style alias, measured 2026-09-04) and the chip DISPLAYS it — a
+  `defaultMode` of `dontAsk` on a first run — but never offers it, VS Code's rule (4.7). Without
+  `--permission-prompt-tool stdio` the CLI applies edits without asking.
 
 ### Permission facts probed against 2.1.220 (2026-07-31) — don't rediscover
 
@@ -847,7 +852,9 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
   output_style, pid, remote_control_auto_enable, remote_control_auto_on_by_default` — no MCP data,
   no context window (13a, 17a). Later additions: `analytics_disabled`, `current_permission_mode`,
   `session_state` (≤ 2.1.250); `remote_control_available:bool` (2.1.251, `@internal`); `agents[]`
-  entries carry `model:"inherit"` from 2.1.251.
+  entries carry `model:"inherit"` from 2.1.251. `current_permission_mode` is what seeds the mode
+  chip at spawn (`ChatPanel.pushInitMeta` → `__mode`): measured 2026-09-04 on 2.1.260 it reads
+  `auto` on a no-flag launch, and `system/init` only repeats the mode with the first turn (4.7).
 - `TodoWrite` is retired from 2.1.222's roster (every local record is 2.1.178); replaced by
   `TaskCreate`/`TaskList`/`TaskGet`/`TaskUpdate`. `TaskCreate` result text: `Task #3 created
   successfully: …`; `TaskList` result: the full list as `#1 [completed] …` (14).

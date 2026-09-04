@@ -770,6 +770,14 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             pushFrame(frame)
         }
+        // The mode the CLI actually landed on (2.1.241+). With nothing persisted no flag was passed
+        // (4.7), and this is the only truth until `system/init` says the same with the FIRST TURN —
+        // measured 2026-09-04: a never-picked chip sat on its markup default while the CLI was on
+        // `auto`. With a flag it merely reconciles (manual comes back as `default`; the chip
+        // aliases it). Replayed into a reloaded page with the rest of this payload.
+        runCatching { meta["current_permission_mode"]?.jsonPrimitive?.content }.getOrNull()?.let { m ->
+            pushFrame(buildJsonObject { put("type", "__mode"); put("mode", m) })
+        }
         // Fast-mode truth rides the same payload (fast_mode_state / fast_mode_disabled_reason);
         // forward it with the persisted preference so the footer switch reflects the CLI, and the
         // pref covers the gap when the state is absent. Replayed on every load via seedUi.
@@ -794,9 +802,11 @@ class ChatPanel(private val project: Project, parent: Disposable) {
      * rather than what it was last sent.
      */
     private fun seedUi() {
-        // Seed the mode chip with the persisted mode the CLI was just launched with —
-        // it isn't in the initialize payload, and the chip's built-in default is "default".
-        pushFrame(buildJsonObject { put("type", "__mode"); put("mode", session.selectedMode()) })
+        // Seed the mode chip with the persisted mode the CLI was just launched with — it isn't in
+        // the initialize payload, and the chip's built-in default is "manual". Nothing persisted →
+        // nothing pushed: the CLI was launched without a mode flag, and its `system/init`
+        // broadcast is the only truth about where it landed (4.7).
+        session.selectedMode()?.let { m -> pushFrame(buildJsonObject { put("type", "__mode"); put("mode", m) }) }
 
         // The project root, so a tool line can show `plugin/src/…` instead of repeating the whole
         // prefix on every row. From the IDE rather than the CLI's `system/init` cwd, which carries

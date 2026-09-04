@@ -4,6 +4,25 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-04 — 4.7 taken as VS Code's rule: honour `defaultMode` on a first run, DISPLAY dontAsk, never offer it
+- The row said "a fifth mode in both clients; VS Code's picker lists six incl. bypass". The user's
+  screenshot showed four — ours exactly. The extension builds the picker per session
+  (`webview/index.js` `c4()`); `dontAsk` is unshifted ONLY while current, bypass only under
+  `allowDangerouslySkipPermissions`. So "six" was the maximum, never a session.
+- Measured on 2.1.260 before deciding: the flag beats the settings file, and we always passed it
+  from `selectedMode()` — which cannot return `dontAsk` — so the panel could never BE in dontAsk
+  and a display-only row would have been dead code. The defect underneath was bigger: a user's
+  `permissions.defaultMode` was ignored on every launch.
+- Taken (user: "So VS Code one is the recommended one right?" → "lets go for it"): **(a)** nothing
+  persisted → NO `--permission-mode` flag, and the chip is seeded from the `initialize` response's
+  `current_permission_mode` (`ChatPanel.pushInitMeta`); **(b)** a `Don't ask` row hidden unless
+  current. Once a mode is picked, 4.5's persistence is unchanged and beats the file.
+- Alternatives rejected: ➖ "unreachable by design" (defensible — VS Code offers it no more than we
+  do — but it leaves the first-run bug for every mode, not just dontAsk); offering dontAsk as a
+  fifth pick (goes beyond both official clients, and Plan already covers "explore, change nothing").
+- Consequence to state in the next release notes: a never-picked chip now starts on the CLI's
+  default (`auto` on 2.1.260) instead of a hardcoded Manual.
+
 ## 2026-09-04 — Full-surface audit: every gap gets built, small ones included; 6.9 and 6.5 first
 - The audit (checklist details block "Full-surface audit 2026-09-04") found no missing feature
   AREA and ten small gaps, all filed [DECIDE]. The user's call: "I am planning to finish all even

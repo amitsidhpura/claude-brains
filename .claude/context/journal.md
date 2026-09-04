@@ -3,6 +3,37 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-04 (sixth) — 4.7 built as VS Code's rule; the row's premise was WRONG and the user's screenshot caught it
+- Explaining 4.7 in plain language is what broke it open: the user sent a VS Code screenshot
+  showing FOUR modes — exactly ours — against the row's claim that "VS Code's picker lists six
+  incl. bypass". Read the extension's own builder (`webview/index.js` `c4()`): the picker is
+  assembled per session — base default/acceptEdits/plan, `auto` when available,
+  `bypassPermissions` only under `allowDangerouslySkipPermissions`, and `dontAsk` ONLY while it is
+  already current. `dontAsk` is never offered, only displayed.
+- Five stdio probes on 2.1.260 (throwaway scratchpad dir, never the user's config): no flag → init
+  `auto` (the CLI's own default now); `--permission-mode dontAsk` → `dontAsk` VERBATIM, no alias;
+  settings `defaultMode:"dontAsk"` alone → `dontAsk`; same file + `--permission-mode manual` →
+  `default` (the FLAG BEATS THE FILE); settings `bypassPermissions` with no dangerous flag →
+  `default` (so no guard was needed).
+- That inverted my own earlier claim that our chip could lie: it could not, because we ALWAYS
+  passed the flag. The real defect was broader — `permissions.defaultMode` was ignored entirely,
+  so a user who set `plan`/`auto` in settings got a hardcoded Manual on first run.
+- Built both halves (decisions.md): `PermissionModes.resolveStored` (null = never picked → no
+  flag), `ChatPanel.pushInitMeta` seeds `__mode` from the initialize response's
+  `current_permission_mode`, and a `Don't ask` row `[hidden]` unless current in `syncModeUI`.
+- **A live check found the seed I had missed**: `system/init` only repeats the mode with the FIRST
+  TURN, so without the initialize seed a never-picked chip sat on Manual while the CLI was on
+  `auto`. Found by reading the running panel, not by any fixture.
+- Fixture 76 (11 asserts): negative control on the still-running pre-fix sandbox — every
+  DISCRIMINATING assert failed, and one guard THREW on a null node and aborted the run, so it was
+  made null-safe (gotchas § Testing). Kotlin 143, harness 653.
+- User hand-tested all six steps in the sandbox: first run Auto → settings dontAsk shows the row →
+  Write+Bash denied with no cards → picking Auto removes the row → the pick persists and beats the
+  file → 6.5's three right-clicks (file, folder+files `@docs/`, editor popup) all first and correct.
+  6.5 closed at the same time.
+- Trap: writing ANY `.claude/settings*.json` is blocked by the permission classifier (Bash and
+  Write alike), so the settings-file cells ran in a scratchpad dir and the user made the real edit.
+
 ## 2026-09-04 (fifth) — full-surface audit (ten rows); 6.9 and 6.5 built; mention facts measured
 - User: "detailed complete audit of vscode claude extension and tui, whether we are not missing
   any feature". Inventoried EVERYTHING at 2.1.260 (package.json, 288 host `case` labels → 97 RPC

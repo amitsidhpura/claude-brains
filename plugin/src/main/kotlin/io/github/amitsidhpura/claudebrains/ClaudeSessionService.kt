@@ -88,19 +88,16 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     /** Persisted model choice (null/"default" = CLI default). */
     fun selectedModel(): String? = props.getValue(MODEL_KEY)
 
-    /** Persisted permission mode; every (re)start launches the CLI with it. */
     /**
-     * Persisted permission mode, migrated to the CLI's current vocabulary (2.1.220): `default` is
-     * no longer advertised (it still parses, but `manual` replaced it), and what this plugin
-     * labelled "Auto mode" was `bypassPermissions` — approve everything — while the CLI's own Auto
-     * is `auto`, which safety-checks each action and pauses on anything risky. A stored bypass is
-     * therefore migrated DOWN to `auto`: the label the user chose now means the safer thing.
+     * Persisted permission mode, or null when the user has never picked one (4.7, 2026-09-04):
+     * then the CLI is launched WITHOUT `--permission-mode` and decides for itself — the user's
+     * `permissions.defaultMode` from their settings files, else its own default — exactly as the
+     * VS Code extension does (`if(D) push("--permission-mode",D)`), and the chip follows the
+     * `system/init` broadcast. Measured: the flag BEATS the settings file, so the hardcoded
+     * `manual` this used to return silently overrode a user's `defaultMode: plan/auto` on first run.
+     * The migration of stored values is [PermissionModes.resolveStored].
      */
-    fun selectedMode(): String = when (val m = props.getValue(MODE_KEY)) {
-        null, "", "default" -> "manual"
-        "bypassPermissions" -> "auto"
-        else -> m
-    }
+    fun selectedMode(): String? = PermissionModes.resolveStored(props.getValue(MODE_KEY))
 
     /** User-defined models (JSON array of {value, displayName, description}) — persisted across runs. */
     fun customModels(): String = props.getValue(CUSTOM_MODELS_KEY) ?: "[]"

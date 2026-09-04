@@ -13,13 +13,13 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 85 ✅ · 0 🟥 · 0 🟧 · 9 ⬜ · 46 ➖ (140 rows) — open rows in §1 §2 §3 §4
+**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 86 ✅ · 0 🟥 · 0 🟧 · 8 ⬜ · 46 ➖ (140 rows) — open rows in §1 §2 §3 §4
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
 - **Awaiting a decision ([DECIDE]):** none — the user is taking ALL ten [NEW] rows of the 2026-09-04
-  full-surface audit ("finish all even if small"); 6.9 shipped first. Remaining nine, in build order to be
+  full-surface audit ("finish all even if small"); 6.9 and 4.7 shipped. Remaining eight, in build order to be
   picked: 1.26 banner-class `system` frames · 1.27 full IN/OUT in an editor · 1.28 `control_cancel_request`
-  (correctness) · 2.12 extra content roots · 3.7 deny-with-message · 3.8 editable Bash command · 4.7
-  `dontAsk` · 4.8 "don't ask again" destination · 4.9 number-key answers (13.3: deferred)
+  (correctness) · 2.12 extra content roots · 3.7 deny-with-message · 3.8 editable Bash command · 4.8
+  "don't ask again" destination · 4.9 number-key answers (13.3: deferred)
 
 **Status marks**
 
@@ -423,13 +423,31 @@ auto-include selection, voice.
       merged into one button (VS Code does not); hidden on `blocked_path` prompts
 - **4.5** ✅ **Mode persistence** — survives restarts and New/Refresh/resume; launched with the
       persisted mode. Since 2.1.241 `initialize` also reports `current_permission_mode`, a
-      reconciliation source if the persisted value ever drifts
+      reconciliation source if the persisted value ever drifts. Nothing persisted (never picked) →
+      NO `--permission-mode` flag: the CLI's own precedence applies (`permissions.defaultMode` from
+      the settings files, else its default — `auto` on 2.1.260) and the chip is seeded from
+      `initialize`'s `current_permission_mode` at spawn, as in VS Code (4.7, 2026-09-04)
 - **4.6** ➖ **`allowDangerouslySkipPermissions` / `initialPermissionMode`** — the flag turns every
       mode into a bypass (probed); persistence covers the initial-mode need
-- **4.7** ⬜ [XS] **`dontAsk` mode** [NEW] [DECIDE] — a fifth mode in both clients ("Claude will
-      deny actions that need approval instead of asking"; VS Code's picker lists six incl. bypass).
-      MEASURED 2026-09-04: `set_permission_mode {mode:"dontAsk"}` succeeds live over stdio. One
-      more entry in the mode menu; `--permission-mode dontAsk` at spawn
+- **4.7** ✅ **`dontAsk` mode** [NEW] — built 2026-09-04 as VS Code's rule, not the row's original
+      "fifth menu entry" (premise corrected the same day off the user's screenshot: the VS Code
+      picker is built per session — `webview/index.js` `c4()` — and unshifts `dontAsk` ONLY while it
+      is the current mode; `bypassPermissions` only under `allowDangerouslySkipPermissions`). Two
+      halves: **(a)** nothing persisted → `ClaudeCli` omits `--permission-mode` and `ChatPanel` pushes
+      no stored `__mode`, so the CLI's own precedence lands the session (`permissions.defaultMode`,
+      else its default) and the chip is seeded from the `initialize` response's
+      `current_permission_mode` (relayed as `__mode` in `pushInitMeta`; `system/init` only repeats
+      it with the first turn — measured live: without that seed a never-picked chip sat on Manual
+      while the CLI was on `auto`) — `PermissionModes.resolveStored` (+ test);
+      **(b)** a `Don't ask` row in the mode menu, `[hidden]` unless current (`syncModeUI`), so the
+      unknown-mode guard accepts the broadcast and the chip can name the mode without the menu ever
+      offering it; leaving it hides the row again. MEASURED on 2.1.260: `set_permission_mode
+      {mode:"dontAsk"}` succeeds; init broadcasts `dontAsk` VERBATIM; a file `defaultMode:"dontAsk"`
+      alone → init `dontAsk`; the same file + `--permission-mode manual` → init `default` (the flag
+      beats the file — why (a) exists); a file `bypassPermissions` without the dangerous flag → init
+      `default` (no guard needed). Accent shares Manual's slate. Fixture 76. Visible change: a
+      never-picked chip now starts on the CLI's default (`auto` on 2.1.260) instead of a hardcoded
+      Manual — change-notes line for the next release
 - **4.8** ⬜ [SM] **"Don't ask again" destination picker** [NEW] [DECIDE] — VS Code cycles the
       suggestion's target: "Only for this session (not saved)" / `.claude/settings.local.json`
       (gitignored) / `.claude/settings.json` (shared with team) / user. Ours (4.4) echoes the

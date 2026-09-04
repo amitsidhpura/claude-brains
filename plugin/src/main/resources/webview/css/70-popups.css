@@ -38,6 +38,9 @@
 .popup-search:focus { border-color: var(--accent); }
 .popup-search::placeholder { color: var(--user-muted); }
 .popup-item { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; cursor: pointer; }
+/* A row the panel displays but never offers (the Don't-ask mode, 4.7): the flex display above
+   beats the UA stylesheet's [hidden] rule, so the attribute needs its own. */
+.popup-item[hidden] { display: none; }
 .popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
 /* remove (×) on a custom model row — hover-revealed, like the history/attachment delete controls.
    The button sits INSIDE .pi-check, overlaying the ✓'s box (inset top = the span's 1px padding-top),

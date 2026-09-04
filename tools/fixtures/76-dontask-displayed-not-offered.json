@@ -1,0 +1,44 @@
+{
+  "item": "4.7 dontAsk mode — displayed when the CLI reports it, never offered; a first run seeds the chip from system/init (2026-09-04)",
+  "branch": "The mode menu carries a `Don't ask` row that is [hidden] unless dontAsk is the current mode. applyCliMode's unknown-mode guard therefore ACCEPTS a `permissionMode:\"dontAsk\"` broadcast (chip + #app[data-mode] follow it, the row shows), and the next broadcast of any other mode hides the row again. With nothing persisted Kotlin pushes no stored __mode; the chip is seeded by the same __mode frame carrying the CLI's `initialize` `current_permission_mode` (ChatPanel.pushInitMeta), which `system/init` repeats with the first turn — the frame this fixture feeds",
+  "provenance": "`system/init` and `system/status` carrying `permissionMode` is the CLI's shape (docs/ide-mcp-protocol.md § permission facts; init frame copied from fixture 40). The value `dontAsk` was MEASURED on 2.1.260 (2026-09-04): `--permission-mode dontAsk` and a settings-file `permissions.defaultMode:\"dontAsk\"` both make init report `dontAsk` verbatim (no `default`-style alias), and `--permission-mode` beats the file — which is why the panel omits the flag until a mode is picked. The display-only rule is VS Code 2.1.260's (`webview/index.js` c4(): dontAsk is unshifted into the picker only while current). Negative control: on the pre-4.7 build no dontAsk row exists, so the guard drops the broadcast — data-mode stays manual, the chip keeps reading Manual and the row query returns null; those asserts are DISCRIMINATING, step 1's mode asserts are GUARDS (plan seeded via init already worked).",
+  "steps": [
+    {
+      "note": "first run: no stored __mode, the CLI's own mode broadcast seeds the chip",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__mode', mode:'manual'}));",
+      "frames": [
+        {"type": "system", "subtype": "init", "cwd": "/home/syncroze/Sites/claude-brains-testing", "permissionMode": "plan"}
+      ],
+      "expect": [
+        { "js": "document.getElementById('app').dataset.mode", "equals": "plan", "why": "GUARD: with no persisted mode the init broadcast alone moves the chip off its markup default" },
+        { "js": "document.getElementById('modeChip').textContent.trim()", "equals": "Plan", "why": "GUARD: the chip names the CLI's mode" },
+        { "js": "(function(){ var i = document.querySelector('#modeMenu .popup-item[data-v=\"dontAsk\"]'); return i ? i.hidden : 'absent'; })()", "equals": true, "why": "DISCRIMINATING: the Don't-ask row exists but is hidden while another mode is current (pre-fix: absent)" }
+      ]
+    },
+    {
+      "note": "the CLI reports dontAsk (a settings-file defaultMode on a first run): chip, accent and the row follow",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__mode', mode:'manual'}));",
+      "frames": [
+        {"type": "system", "subtype": "init", "cwd": "/home/syncroze/Sites/claude-brains-testing", "permissionMode": "dontAsk"}
+      ],
+      "expect": [
+        { "js": "document.getElementById('app').dataset.mode", "equals": "dontAsk", "why": "DISCRIMINATING: the guard accepts dontAsk because a row exists for it (pre-fix: stays manual — the chip lied)" },
+        { "js": "document.getElementById('modeChip').textContent.trim()", "equals": "Don't ask", "why": "DISCRIMINATING: the chip names the mode the CLI is actually in" },
+        { "js": "(function(){ var i = document.querySelector('#modeMenu .popup-item[data-v=\"dontAsk\"]'); return i ? i.hidden : 'absent'; })()", "equals": false, "why": "DISCRIMINATING: the row is shown while dontAsk is current — so the menu can say where you are" },
+        { "js": "(function(){ var i = document.querySelector('#modeMenu .popup-item[data-v=\"dontAsk\"]'); return i ? i.classList.contains('on') : 'absent'; })()", "equals": true, "why": "GUARD: it carries the check like any current mode (null-safe so the pre-fix build reports 'absent' instead of aborting the run)" },
+        { "js": "Array.prototype.filter.call(document.querySelectorAll('#modeMenu .popup-item'), function (i) { return !i.hidden; }).length", "equals": 5, "why": "GUARD: five visible rows now — the four offered modes plus the displayed one" }
+      ]
+    },
+    {
+      "note": "leaving dontAsk (any later broadcast) hides the row again — a one-way exit, as in VS Code",
+      "frames": [
+        {"type": "system", "subtype": "status", "status": null, "permissionMode": "auto"}
+      ],
+      "expect": [
+        { "js": "document.getElementById('app').dataset.mode", "equals": "auto", "why": "GUARD: the status broadcast moves the chip" },
+        { "js": "(function(){ var i = document.querySelector('#modeMenu .popup-item[data-v=\"dontAsk\"]'); return i ? i.hidden : 'absent'; })()", "equals": true, "why": "DISCRIMINATING: the row hides the moment another mode is current — it cannot be picked back (pre-fix: absent)" },
+        { "js": "Array.prototype.filter.call(document.querySelectorAll('#modeMenu .popup-item'), function (i) { return !i.hidden; }).length", "equals": 4, "why": "GUARD: back to the four offered modes" }
+      ]
+    }
+  ]
+}

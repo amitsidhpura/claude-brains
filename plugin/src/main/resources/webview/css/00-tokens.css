@@ -99,4 +99,7 @@ img { max-width: 100%; height: auto; }
 #app[data-mode="acceptEdits"] { --mode-accent: #d97757; }
 #app[data-mode="plan"]        { --mode-accent: #0084d1; }
 #app[data-mode="auto"]        { --mode-accent: #cf8600; }
+/* Don't ask shares Manual's slate: the same "nothing runs without you" posture, and the one
+   measured colour that needs no new contrast check. It is only ever reached from settings (4.7). */
+#app[data-mode="dontAsk"]     { --mode-accent: #62748e; }
 

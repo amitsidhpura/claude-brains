@@ -141,6 +141,13 @@
   function syncModeUI() {
     // the composer's focus ring and Send button follow the mode — see #app[data-mode] in css/00-tokens.css
     document.getElementById('app').dataset.mode = currentMode;
+    // Don't ask (4.7) is DISPLAYED, never offered — VS Code's rule exactly (its picker unshifts
+    // dontAsk only while it IS the current mode). The row exists so the unknown-mode guard in
+    // applyCliMode accepts the CLI's broadcast, and it hides the moment any other mode is current,
+    // so the menu never hands out a mode the user can only enter from their settings
+    // (`permissions.defaultMode`, honoured on first run when nothing is persisted — no __mode push).
+    const dontAsk = modeItemsEl.querySelector('.popup-item[data-v="dontAsk"]');
+    if (dontAsk) dontAsk.hidden = currentMode !== 'dontAsk';
     Array.prototype.forEach.call(modeItemsEl.querySelectorAll('.popup-item'), function (item) {
       item.classList.toggle('on', item.dataset.v === currentMode);
     });

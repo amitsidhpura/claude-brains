@@ -1,24 +1,27 @@
 # State
 
 ## Current focus
-**2026-09-04 (fifth session): building the full-surface audit's rows, one at a time — two shipped,
-UNRELEASED on `main`.** The user's call: "I am planning to finish all even if small." Done today:
-**6.9 mention chips** (sent-bubble `@path` capsules, `mentionHtml` in `50-blocks.js`, fixture 74)
-and **6.5 Mention from the IDE** (`MentionAction.kt`: "Mention in Claude Brains", FIRST in the
-Project-view and editor context menus → `@path ` tokens at the composer caret; fixture 75,
-`MentionPathsTest`). Checklist 85 ✅ · 9 ⬜ · 46 ➖ (140 rows). **Awaiting the user's hand-test
-of the context menu** in the running sandbox (placement first in BOTH menus and the label are
-one-line edits if disliked). The remaining nine open rows, suggested order: **1.28**
-`control_cancel_request` (correctness) → 4.7 `dontAsk` → 3.7 deny-with-message → 1.27 full IN/OUT
-in an editor → 2.12 extra content roots → 3.8 editable Bash command → 4.8 don't-ask-again
-destination → 4.9 number-key answers → 1.26 banner-class `system` frames [MD]. Release when the
-user asks (never proactively — conventions).
-- 2.1.260 re-audit and 13.3 (deferred; `update_settings` is outputStyle-only) closed earlier
-  today — decisions.md 2026-09-04. Installed VS Code extension 2.1.260; `reference/` at 2.1.260.
-- Measured for the user (gotchas § Protocol): an `@path` mention is attached by the CLI before
-  the model runs (one turn, no Read); a plain path is a hint (the model Reads it: two turns).
-  Mentions are cut at 2,000 lines SILENTLY and a 2 MB file attaches NOTHING — an [XS] size hint
-  on the IDE action was offered, not taken (backlog).
+**2026-09-04 (sixth session): building the full-surface audit's rows one at a time — three shipped,
+all UNRELEASED on `main` (uncommitted at save time unless the commit that follows this landed).**
+The user's standing call: "I am planning to finish all even if small." Done: **6.9 mention chips**,
+**6.5 Mention from the IDE** (both hand-tested by the user 2026-09-04 — file, folder+files
+`@docs/`, editor popup, all first in the menu and correct) and **4.7 `dontAsk`**, built as VS
+Code's rule after the user's screenshot disproved the row's premise (decisions.md 2026-09-04).
+Checklist **86 ✅ · 8 ⬜ · 46 ➖** (140 rows). Release only when the user asks (conventions).
+
+### 4.7 as built — two halves, both hand-verified in the sandbox
+- Nothing persisted → `ClaudeCli` omits `--permission-mode` (`PermissionModes.resolveStored`
+  returns null) and the chip is seeded from the `initialize` response's `current_permission_mode`
+  (`ChatPanel.pushInitMeta` → `__mode`). A user's `permissions.defaultMode` therefore applies on a
+  first run, as in VS Code. Once a mode is picked, 4.5's persistence is unchanged and beats the file.
+- A `Don't ask` row in the mode menu, `[hidden]` unless it IS the current mode (`syncModeUI`), so
+  the chip can name it without the menu ever offering it; leaving it hides the row (one-way exit).
+- New files: `plugin/src/main/kotlin/io/github/amitsidhpura/claudebrains/PermissionModes.kt`,
+  its test, `tools/fixtures/76-dontask-displayed-not-offered.json`.
+- **Visible change for the next release notes**: a never-picked chip now starts on the CLI's
+  default (`auto` on 2.1.260) instead of a hardcoded Manual.
+- The measured protocol facts behind it are in gotchas § Protocol (flag beats file; init only
+  repeats the mode at the first turn).
 
 ## Open investigations
 - **Fold-verdict report NOT reproduced** (user's Windows screenshot 2026-09-04: a Read OUT box
@@ -44,18 +47,20 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
 - Accepted residual: a sub-400 parenthetical appended mid-result and ending it still renders as
   a note — irreducible without structural marking from the CLI.
 - Checklist rules in force: `**id** mark [effort] **Name** — gist; facts`; **At a glance**
-  hand-maintained (recount with `awk`). Checklist: 85 ✅ · 9 ⬜ · 46 ➖ (140 rows, 2026-09-04).
+  hand-maintained (recount with `awk`). Checklist: 86 ✅ · 8 ⬜ · 46 ➖ (140 rows, 2026-09-04).
 - Do not re-propose: effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29); "Effort (High)" label / blue
   slider track (2026-08-29); Copilot-derived features other than terminal-output context
   (2026-08-29); old-CLI vocab translation/retry (2026-09-05, superseded note 2026-09-04).
 
 ## Open work — ids verified against `docs/feature-checklist.md`
-- No open checklist rows. Wants: backlog § Next up (Update-Claude button, Worktrees bundle
-  14.1+14.3, 15.5 debugger tools) and § Deferred (conversation tabs + 8.8/8.10).
+- Eight open rows, all [NEW] from the 2026-09-04 full-surface audit and all being built (order in
+  § Next steps): 1.26, 1.27, 1.28, 2.12, 3.7, 3.8, 4.8, 4.9. Beyond them: backlog § Next up
+  (Update-Claude button, Worktrees bundle 14.1+14.3, 15.5 debugger tools) and § Deferred
+  (conversation tabs + 8.8/8.10).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **642** (fixtures to **75**); `./gradlew test` **141**.
+- `python3 tools/live_harness.py` baseline **653** (fixtures to **76**); `./gradlew test` **143**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
@@ -78,12 +83,12 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
   `~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/` (measured 2026-09-01).
 
 ## Next steps
-- [ ] **Hand-test 6.5 in the sandbox** (user): right-click one file / a multi-selection with a
-      folder / inside an editor → entry first + enabled, panel opens, tokens at the caret, @-menu
-      stays shut. Confirm or change: first in the editor popup too; label "Mention in Claude Brains".
 - [ ] Next row: **1.28** `control_cancel_request` — probe the frame over stdio first (interrupt a
       parked `can_use_tool`), then mark the card lapsed + drop it from `pendingPermissions`.
-      Then 4.7, 3.7, 1.27, 2.12, 3.8, 4.8, 4.9, 1.26 (checklist ids re-derived from the file).
+      Then 3.7, 1.27, 2.12, 3.8, 4.8, 4.9, 1.26 (checklist ids re-derived from the file).
+      **4.8** is the "don't ask again" DESTINATION picker (session / `.claude/settings.local.json` /
+      `.claude/settings.json` / user — the four labels are in the extension's `ys0` map); it is a
+      per-rule choice, unrelated to 4.7's session-wide mode despite the name collision.
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
       investigations).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
