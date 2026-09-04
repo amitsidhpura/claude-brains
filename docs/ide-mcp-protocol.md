@@ -263,6 +263,18 @@ lands on `default`).
   - **Subset echo is accepted (probed):** `updatedPermissions` may carry a suggestion whose
     `rules` was narrowed to a subset — the CLI persisted exactly `Bash(factor 97)` from a
     four-rule suggestion, nothing else. This is what makes per-sub-command grants possible.
+  - **`updatedInput` on a Bash allow runs the REPLACED command (probed 2026-09-05, 2.1.260):**
+    `factor 97` asked, allowed with `updatedInput.command:"factor 91"` → tool_result `91: 7 13`.
+    The transcript keeps the ORIGINAL command in the tool_use block and only the output in the
+    result — nothing records the edited text — and the model sees the original beside the edited
+    output (it remarked on the mismatch). Checklist 3.8 rides this; VS Code's card does the same.
+    An echoed `addRules` entry whose `ruleContent` was REWRITTEN (to the edited command) is
+    persisted verbatim and honoured: `Bash(factor 91)` from a `factor 97` suggestion stopped the
+    next `factor 91` ask while `factor 97` still asked (probed the same day). Rules match PER
+    PART of a compound command: `Bash(factor 91 & factor 95)` was persisted and never matched,
+    `Bash(factor 91)` + `Bash(factor 95)` stopped the `&&` form's next ask. A compound joined
+    with a bare `&` re-asks every time even with every part allowed (empty `permission_suggestions`
+    — the same class as the `blocked_path` re-asks above).
   - **The echoed `destination` decides the file, not the suggestion's own (measured 2026-09-04,
     2.1.260, stdio in a TRUSTED scratch workspace — an untrusted one never loads project settings,
     so a written rule looks ignored):** `projectSettings` → `.claude/settings.json`,

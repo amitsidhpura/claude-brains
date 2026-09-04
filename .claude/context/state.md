@@ -2,11 +2,11 @@
 
 ## Current focus
 **2026-09-05 (eighth session, Linux): working through the 2026-09-04 full-surface audit's rows one
-at a time — six shipped (6.9, 6.5, 4.7, 4.8, 2.12, 3.7), 4.9 deferred, four open. All of it since
-0.12.5 is UNRELEASED on `main`.** The user's standing call: "I am planning to finish all even if
+at a time — seven shipped (6.9, 6.5, 4.7, 4.8, 2.12, 3.7, 3.8), 4.9 deferred, three open (all §1).
+All of it since 0.12.5 is UNRELEASED on `main`; 3.8 is uncommitted (committed through `d1974c4`).** The user's standing call: "I am planning to finish all even if
 small." Each row goes: explain it in plain words → the user decides → probe/measure → build with
 the free negative control → the user hand-tests in the sandbox (MT-row in the checklist) → next.
-Checklist **89 ✅ · 4 ⬜ · 47 ➖** (140 rows); §2 and §4 complete. Release only when asked.
+Checklist **90 ✅ · 3 ⬜ · 47 ➖** (140 rows); §2, §3, §4 complete. Release only when asked.
 
 ### Shipped since 0.12.5 — the release-notes list, one line each (details: checklist rows)
 - **4.7** never-picked chip starts on the CLI's default (`auto` on 2.1.260), `permissions.defaultMode`
@@ -20,6 +20,11 @@ Checklist **89 ✅ · 4 ⬜ · 47 ➖** (140 rows); §2 and §4 complete. Releas
   only; Enter rejects with the note. Plus three fixes it exposed: no duplicate error OUT box for a
   denial the card sent (`cardDenies`), replay no longer counts a rejected edit as "1 file changed",
   and a replayed edit card quotes its note like the plan card.
+- **3.8** the Bash command on a card is editable in place; Accept runs the edited text
+  (`updatedInput`) and the card says "edited in the IDE before accepting"; Always allow follows
+  the edit on every card (rules rewritten to the edited text, one per part of a compound —
+  `EditProposals.splitCommand`); a compound card hides only its per-rule rows while edited.
+  Live-only on replay; the model sees the original command beside the edited output (CLI design).
 - **6.9 / 6.5** mention chips; Mention-from-the-IDE popups.
 - Deferred, do not re-propose: **4.9** number-key answers on cards (user, 2026-09-05).
 
@@ -43,7 +48,7 @@ Earlier: 0.12.4 (2026-09-01, `e644dce`). Change notes carry the last three versi
   (2026-08-29); old-CLI vocab translation/retry (2026-09-04); keyboard answers on cards (2026-09-05).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **699** (fixtures to **80**); `./gradlew test` **156**.
+- `python3 tools/live_harness.py` baseline **714** (fixtures to **81**); `./gradlew test` **160**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` DETACHES** — gradle's exit code says
@@ -74,11 +79,12 @@ Earlier: 0.12.4 (2026-09-01, `e644dce`). Change notes carry the last three versi
   records stripped).
 
 ## Next steps
+- [x] **3.8 hand test** passed 2026-09-05 (MT-3.8 RESOLVED).
+- [x] **3.8 grant-follows-the-edit hand test** passed 2026-09-05 (compound `;` edit → two per-part rules in the testing repo's `.claude/settings.json`; the user owes that file's deletion). Commit when asked — 3.8 is uncommitted.
 - [ ] Next row: **1.28** `control_cancel_request` — probe over stdio FIRST whether the CLI sends
       the frame at all (interrupt a parked `can_use_tool`; the protocol doc lists it as a
       stdin-only type, the row says CLI → host — both may exist), then mark the card lapsed + drop
-      it from `pendingPermissions`. Then **1.27** full IN/OUT in an editor tab, **3.8** editable
-      Bash command in the card (`updatedInput` path, `contenteditable` on `.cmd`), **1.26**
+      it from `pendingPermissions`. Then **1.27** full IN/OUT in an editor tab, **1.26**
       banner-class `system` frames. Re-derive ids from `docs/feature-checklist.md`.
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
       investigations); testing-repo cleanup is done (both settings files removed 2026-09-05).

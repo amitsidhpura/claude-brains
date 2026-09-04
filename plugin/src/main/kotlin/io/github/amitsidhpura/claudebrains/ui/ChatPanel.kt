@@ -228,7 +228,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val feedback = msg["text"]?.jsonPrimitive?.content?.trim()?.takeIf { it.isNotEmpty() }
                 // "dest" (4.8) is present only when a destination row was picked on the card
                 val dest = msg["dest"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-                session.respondPermission(id, allow, suggs, feedback, destination = dest)
+                // "cmd" (3.8) is the Bash command as edited on the card; absent when untouched
+                val cmd = msg["cmd"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                session.respondPermission(id, allow, suggs, feedback, destination = dest, command = cmd)
                 // The card answered (or lost the race — either way the question is settled):
                 // the editor half must not keep advertising a live decision.
                 permDiffs.remove(id)?.let { permDiffReview.dismiss(it) }

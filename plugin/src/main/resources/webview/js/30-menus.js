@@ -1,6 +1,6 @@
   /* ---------- JS -> Kotlin bridge ---------- */
   function bridge(obj) { if (window.__bridge) window.__bridge(JSON.stringify(obj)); }
-  window.respondPermission = function (id, allow, suggIdxs, text, dest) {
+  window.respondPermission = function (id, allow, suggIdxs, text, dest, cmd) {
     // text: the plan card's typed feedback — rides EVERY decision (deny → the message field,
     // allow → steered in right after the response). Empty string keeps today's behavior.
     // dest (4.8): where the echoed grant is kept, only when a destination row was picked —
@@ -9,6 +9,7 @@
                 sugg: (suggIdxs && suggIdxs.length) ? suggIdxs.join(',') : '-1',
                 text: text || '' };
     if (dest) m.dest = dest;
+    if (cmd) m.cmd = cmd;      // 3.8: the command as edited on the card; absent when untouched
     bridge(m);
   };
 

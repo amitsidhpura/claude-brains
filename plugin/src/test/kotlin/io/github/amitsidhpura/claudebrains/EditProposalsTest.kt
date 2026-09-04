@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonArray
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 
 /**
@@ -148,5 +149,44 @@ class EditProposalsTest {
             obj("""{"file_path":"/f","content":"x"}"""), obj("""{"type":"create","filePath":"/f","content":"x-edited","originalFile":null}""")))
         // a result with no comparable fields is silence, not a claim
         assertFalse(EditProposals.tweaked("Edit", probeInput, obj("""{"filePath":"/p"}""")))
+    }
+
+    @Test fun `an edited command replaces only the command field (3-8)`() {
+        val input = kotlinx.serialization.json.Json.parseToJsonElement(
+            """{"command":"factor 97","description":"Factor the number 97","timeout":5000}""").jsonObject
+        val out = EditProposals.withCommand(input, "factor 91")
+        assertEquals("factor 91", out["command"]?.jsonPrimitive?.content)
+        assertEquals(input["description"], out["description"])
+        assertEquals(input["timeout"], out["timeout"])
+    }
+
+    @Test fun `no edit, a blank edit, or the same text leaves the input untouched`() {
+        val input = kotlinx.serialization.json.Json.parseToJsonElement("""{"command":"factor 97"}""").jsonObject
+        assertSame(input, EditProposals.withCommand(input, null))
+        assertSame(input, EditProposals.withCommand(input, "  "))
+        assertSame(input, EditProposals.withCommand(input, "factor 97"))
+    }
+
+    @Test fun `an edited command's grant is rewritten to one exact rule for the edited text (3-8)`() {
+        val sugg = kotlinx.serialization.json.Json.parseToJsonElement(
+            """[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"factor 97"}],"behavior":"allow","destination":"localSettings"},
+                {"type":"setMode","mode":"acceptEdits","destination":"session"}]""").jsonArray.map { it.jsonObject }
+        val out = EditProposals.withRulesFor(sugg, "factor 91")
+        assertEquals("""[{"toolName":"Bash","ruleContent":"factor 91"}]""", out[0]["rules"].toString())
+        // a compound edit → one exact rule per part, as the CLI's own suggestions are shaped
+        val parts = EditProposals.withRulesFor(sugg, "factor 91 && factor 95")
+        assertEquals("""[{"toolName":"Bash","ruleContent":"factor 91"},{"toolName":"Bash","ruleContent":"factor 95"}]""", parts[0]["rules"].toString())
+        assertEquals("localSettings", out[0]["destination"]?.jsonPrimitive?.content)   // the rest rides untouched
+        assertSame(sugg[1], out[1])                                                    // setMode is not a rule
+        assertSame(sugg, EditProposals.withRulesFor(sugg, null))
+    }
+
+    @Test fun `splitCommand follows the CLI's per-part shape and leaves quotes and subshells whole`() {
+        assertEquals(listOf("factor 97", "mcookie", "openssl rand -hex 4", "base32 <<< hello"),
+            EditProposals.splitCommand("factor 97 && mcookie ; openssl rand -hex 4 && base32 <<< hello"))
+        assertEquals(listOf("factor 91", "factor 95"), EditProposals.splitCommand("factor 91 & factor 95"))
+        assertEquals(listOf("ls", "grep x", "true"), EditProposals.splitCommand("ls | grep x || true | grep x"))  // deduped
+        assertEquals(listOf("echo 'a && b'", "(cd x && make)"), EditProposals.splitCommand("echo 'a && b'; (cd x && make)"))
+        assertEquals(listOf("factor 97"), EditProposals.splitCommand("  factor 97  "))
     }
 }

@@ -374,11 +374,16 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun respondPermission(
         requestId: String, allow: Boolean, suggestionTokens: List<String> = emptyList(),
         feedback: String? = null, updatedInput: JsonObject? = null, destination: String? = null,
+        command: String? = null,
     ): Boolean {
         // [updatedInput] replaces the pending input on allow — the editor diff's tweaked edit
         // (3.5, EditProposals.tweakedInput); null answers with the input the CLI asked about.
+        // [command] (3.8) is the card's edited Bash command: it replaces `command` in the input the
+        // CLI asked about (EditProposals.withCommand); the editor diff's [updatedInput] and this
+        // never both apply — a Bash card has no editor surface.
         val input = (pendingPermissions.remove(requestId) ?: return false)
             .let { if (allow && updatedInput != null) updatedInput else it }
+            .let { if (allow) EditProposals.withCommand(it, command) else it }
         val suggestions = pendingSuggestions.remove(requestId)
         val picked = mutableListOf<JsonElement>()
         if (allow && suggestions != null) {
@@ -403,7 +408,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
                 picked.add(JsonObject(s.toMutableMap().apply { put("rules", JsonArray(subset)) }))
             }
         }
-        val stamped = PermissionDestinations.stamp(picked.map { it.jsonObject }, destination)
+        // An edited command's grant names the EDITED text (3.8), then the picked destination (4.8).
+        val stamped = PermissionDestinations.stamp(
+            EditProposals.withRulesFor(picked.map { it.jsonObject }, command.takeIf { allow }), destination)
         val chosen = if (stamped.isEmpty()) null
         else kotlinx.serialization.json.buildJsonArray { stamped.forEach { add(it) } }
         cli?.respondPermission(requestId, allow, input, chosen, feedback)

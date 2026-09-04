@@ -4,6 +4,20 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-05 — 3.8 editable command: the grant FOLLOWS the edit, split per part; model confusion accepted
+**Why**: the user's calls, each probed before building. (1) A single-rule card keeps Always allow
+while edited: the CLI persists a rewritten `ruleContent` verbatim and honours it. (2) A compound
+card keeps Always allow + the three destinations and hides only its per-rule rows: a rule for the
+whole compound string is persisted but NEVER matches (the CLI checks parts separately), so
+`EditProposals.splitCommand` (&&, ||, ;, |, lone & outside quotes/parens) yields one exact rule per
+part — the shape the CLI's own suggestions take; a split the CLI would do differently can only
+re-ask, never widen. (3) The model seeing its original command beside the edited output is the
+CLI's design (the transcript never records the edit); VS Code measured identical; the user: "ok
+with model's confusion". Live-only on replay, like 3.5.
+**Alternatives rejected**: hiding Always allow on any edit (first cut — safe but threw away a grant
+the CLI accepts); a whole-string rule (measured useless); updating the tool line's IN box to the
+edited command (offered, not asked for — a live-only cosmetic).
+
 ## 2026-09-05 — 3.7 reject-note field: inline after Reject, DENY only, Enter submits
 **Why**: VS Code's placement (`rejectMessageInput` beside its reject button) costs no card height,
 unlike the plan card's full-width row; the plan card keeps its own layout (5.2). Deny only because

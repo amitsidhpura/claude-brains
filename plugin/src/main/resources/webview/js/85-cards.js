@@ -149,7 +149,14 @@
       const cut = cutInfo(String(cmd), LIM.cmdMax);
       // This card is a CONSENT surface — approving a command whose tail is hidden is the worst case
       // of a silent cut, so the marker sits outside .cmd (which .card .cmd.fold also collapses).
-      return '<pre class="cmd">' + esc(cut ? cut.shown : String(cmd)) + '</pre>' +
+      // Editable in place (3.8) when it is a real command shown WHOLE: a cut command cannot be
+      // edited from a box that does not hold all of it, and a description-only preview is not a
+      // command. plaintext-only keeps pasted markup out; the original rides dataset.orig so the
+      // card can tell a real change from a round trip.
+      const editable = inp.command !== undefined && !cut;
+      return '<pre class="cmd"' + (editable ? ' contenteditable="plaintext-only" spellcheck="false"' +
+          ' title="Edit the command here before accepting" data-orig="' + escA(String(cmd)) + '"' : '') +
+        '>' + esc(cut ? cut.shown : String(cmd)) + '</pre>' +
         (cut ? '<div class="io-cut cmd-cut">' + esc(cutText(cut)) + '</div>' : '');
     }
     return '';
@@ -318,7 +325,11 @@
         '</span>' +
         '<button class="no">' + SVG_STEP + 'Keep planning</button></div>';
     } else {
-      card.className = 'card warn';
+      // .cmd-compound (3.8): while a compound card's command is edited its per-rule rows hide —
+      // they name the ORIGINAL parts — but Always-allow and the destination rows stay: the grant
+      // is rewritten to the edited text, one rule per part (EditProposals.withRulesFor).
+      const compound = suggs.some(function (s) { return s.parts && s.parts.length > 1; });
+      card.className = 'card warn' + (compound ? ' cmd-compound' : '');
       card.innerHTML =
         '<div class="card-h">Claude wants to run <b>' + esc(toolLabel(ev.tool)) + '</b>' +
           (file ? ' on <code></code>' : '') + '</div>' +
@@ -488,6 +499,19 @@
     // ---------------------------------------------------------------------------------------
     const done = function (allow, sugg, viaEditor) {
       delete permCards[ev.id];
+      // The command as edited on the card (3.8), only when it differs from what was proposed. An
+      // edited command grants nothing beyond this run: the suggestions describe the ORIGINAL
+      // command, so they are dropped with the edit (the split is hidden the moment the text
+      // changes, see the input handler below — this is the belt to that brace).
+      const cmdEl = card.querySelector('.cmd[contenteditable]');
+      const cmdEdited = allow && cmdEl && cmdEl.textContent !== cmdEl.dataset.orig ? cmdEl.textContent : null;
+      if (cmdEdited && sugg && sugg.rules) {
+        // The grant follows the edit: Kotlin rewrites the echoed rules to the edited text, one
+        // exact rule per part of a compound (EditProposals.withRulesFor). The chip shows the
+        // edited command whole — the split is Kotlin's, and lives once.
+        sugg = Object.assign({}, sugg, { rules: [cmdEdited] });
+      }
+      if (cmdEl) { cmdEl.removeAttribute('contenteditable'); cmdEl.removeAttribute('title'); }
       // The typed reason rides every decision (terminal parity: its allow branches all carry
       // acceptFeedback too). Read before the input leaves with the buttons.
       const fbEl = card.querySelector('.plan-fb');
@@ -513,6 +537,7 @@
       if (sepEl) sepEl.remove();
       card.querySelector('.card-b').innerHTML = allow
         ? '<span class="ok-t">✓ ' + (isPlan ? 'Approved' : 'Accepted') + (viaEditor ? ' in the editor' : '') +
+            (cmdEdited ? ' · ' + esc(LIM.tweakNote) : '') +
             (fb ? fbQuote(fb) : '') + planCmtNote(cs.length, !!fb) +
             (sugg ? ' · ' + esc(sugg.doneText) : '') +
             (sugg && sugg.rules ? ' ' + sugg.rules.map(ruleChip).join('') : '') + '</span>'
@@ -526,7 +551,7 @@
       // here would be a duplicate (and would be dropped, but why knock).
       // pickDest is set only by a destination row — the main half sends none, so the CLI keeps the
       // suggestion's own destination and the echo is byte-for-byte what it was before 4.8.
-      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, wireFb, sugg ? sugg.pickDest : null);
+      if (!viaEditor) window.respondPermission(ev.id, allow, sugg ? sugg.idxs : null, wireFb, sugg ? sugg.pickDest : null, cmdEdited);
       // Approve-with-notes rides the approved plan itself (Kotlin appends it to updatedInput.plan
       // — no user message exists), so the quoted footer is the note's whole visible record here,
       // exactly as it is on replay.
@@ -609,6 +634,19 @@
         if (!s) pendingPlanMode = act;
       };
     });
+    // Editing the command (3.8): while the text differs from the proposal a compound card's
+    // per-rule rows hide (they describe the original parts); Always-allow itself stays on every
+    // card and grants the edited text.
+    // Typing must not reach the document handlers, and the fold toggle must not fire on a click
+    // meant to place the caret.
+    const cmdIn = card.querySelector('.cmd[contenteditable]');
+    if (cmdIn) {
+      cmdIn.addEventListener('input', function () {
+        card.classList.toggle('cmd-edited', cmdIn.textContent !== cmdIn.dataset.orig);
+      });
+      cmdIn.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      cmdIn.addEventListener('click', function (e) { e.stopPropagation(); });
+    }
     // No shortcuts on the plan card's input (user, 2026-08-16) — but typing must not reach the
     // document handlers (Escape would close popups, arrows would move popup cursors). On an
     // ordinary card Enter submits the note as a reject: the form convention for a text field,

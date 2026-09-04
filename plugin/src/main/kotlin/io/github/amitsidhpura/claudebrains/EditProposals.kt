@@ -13,6 +13,71 @@ import kotlinx.serialization.json.contentOrNull
 object EditProposals {
 
     /**
+     * The Bash input to run when the user edited the command on the card (checklist 3.8): the
+     * original input with `command` replaced, everything else (description, timeout, …) as
+     * proposed. Null command or one equal to the original → the input unchanged, so a no-op edit
+     * never produces an `updatedInput` the CLI would treat as a tweak. Probed 2026-09-05 (2.1.260):
+     * the CLI runs the replaced command; the transcript keeps the ORIGINAL in the tool_use and only
+     * the output in the result, so the edit is live-only on replay (same as 3.5's diffs).
+     */
+    /**
+     * The echoed grants for an EDITED command (3.8): every `addRules` entry's rules are replaced by
+     * one exact rule for the edited text — the CLI's suggestion named the original command, and a
+     * rule for a command other than the one about to run would be a lie. Other entry types ride
+     * untouched. Probed 2026-09-05 (2.1.260): a rewritten `ruleContent` is persisted verbatim
+     * (`Bash(factor 91)` from a `factor 97` suggestion) and honoured on the next ask.
+     */
+    fun withRulesFor(entries: List<JsonObject>, command: String?): List<JsonObject> {
+        val c = command?.takeIf { it.isNotBlank() } ?: return entries
+        return entries.map { e ->
+            if ((e["type"] as? JsonPrimitive)?.contentOrNull != "addRules") return@map e
+            val tool = ((e["rules"] as? JsonArray)?.firstOrNull() as? JsonObject)
+                ?.get("toolName")?.let { it as? JsonPrimitive }?.contentOrNull ?: "Bash"
+            JsonObject(e.toMutableMap().apply {
+                put("rules", JsonArray(splitCommand(c).map { part -> JsonObject(mapOf(
+                    "toolName" to JsonPrimitive(tool), "ruleContent" to JsonPrimitive(part))) }))
+            })
+        }
+    }
+
+    /**
+     * A compound command's parts, one exact rule each — the shape the CLI's own suggestions take
+     * (measured 2026-08-09: `a && b ; c` arrives as one addRules with one rule per part) and the
+     * only shape that matches: the CLI checks each part against the rules separately, so a rule
+     * for the whole string never matches anything (probed 2026-09-05: `Bash(factor 91 & factor
+     * 95)` was persisted and ignored). Splits on `&&`, `||`, `;`, `|` and a lone `&` outside
+     * single/double quotes and parentheses; a part is its trimmed text. The failure mode of a
+     * split the CLI would do differently is a rule that matches nothing (a re-ask), never a wider
+     * grant — every rule is an exact fragment of the command the user typed.
+     */
+    fun splitCommand(command: String): List<String> {
+        val parts = ArrayList<String>(); val cur = StringBuilder()
+        var q: Char? = null; var depth = 0; var i = 0
+        fun flush() { cur.toString().trim().takeIf { it.isNotEmpty() }?.let(parts::add); cur.setLength(0) }
+        while (i < command.length) {
+            val ch = command[i]
+            when {
+                q != null -> { cur.append(ch); if (ch == q && command.getOrNull(i - 1) != '\\') q = null }
+                ch == '\'' || ch == '"' -> { q = ch; cur.append(ch) }
+                ch == '(' -> { depth++; cur.append(ch) }
+                ch == ')' -> { depth = (depth - 1).coerceAtLeast(0); cur.append(ch) }
+                depth == 0 && (command.startsWith("&&", i) || command.startsWith("||", i)) -> { flush(); i++ }
+                depth == 0 && (ch == ';' || ch == '|' || ch == '&') -> flush()
+                else -> cur.append(ch)
+            }
+            i++
+        }
+        flush()
+        return parts.distinct()
+    }
+
+    fun withCommand(input: JsonObject, command: String?): JsonObject {
+        val c = command?.takeIf { it.isNotBlank() } ?: return input
+        if ((input["command"] as? JsonPrimitive)?.contentOrNull == c) return input
+        return JsonObject(input.toMutableMap().apply { put("command", JsonPrimitive(c)) })
+    }
+
+    /**
      * The proposed file content, or null when it can't be derived (unknown tool, missing file,
      * old_string not found — e.g. the file changed underneath; a wrong diff is worse than none).
      * Mirrors the CLI's own apply rules: Edit replaces the FIRST occurrence (all when

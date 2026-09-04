@@ -180,6 +180,13 @@
       elm.addEventListener('click', function (e) {
         if (e.target.closest('a, button, input, .att, .mention')) return;
         if (window.getSelection && String(window.getSelection())) return;
+        // An editable command box (3.8) only ever OPENS: the first click unfolds it so the whole
+        // command can be edited, and later clicks place the caret instead of folding the text
+        // being edited out of sight. It stays open once the card is decided.
+        if (elm.isContentEditable) {
+          if (!elm.classList.contains('open')) { elm.classList.add('open'); elm.title = 'Edit the command here before accepting'; }
+          return;
+        }
         syncExtra();   // the chip row may have rewrapped since the cap was last measured
         elm.title = elm.classList.toggle('open') ? 'Show less' : 'Show more';
       });

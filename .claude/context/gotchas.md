@@ -690,6 +690,12 @@ re-read those before trusting memory here.
   `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
 ## Testing, probes and sandboxes
+- **`addUserMessage(...)` over CDP SENDS a real prompt when the panel has a live CLI session** —
+  a screenshot injection on 2026-09-05 started a real turn in the sandbox (the earlier ones were
+  silent only because no session was up). For renders, feed `renderPermission(...)` / frames only,
+  or restart the sandbox afterwards; and a `__clear` wipes the DOM but not a CLI still waiting on
+  a card. `getComputedStyle(x).display` of a button inside `.split` is `flex` (blockified flex
+  child), not the stylesheet's `inline-flex` — assert `!== 'none'`, not a value.
 - **A fixture guard that dereferences a node the PRE-FIX build lacks aborts the whole control
   run.** Fixture 76's `…querySelector(row).classList.contains('on')` threw on null in the negative
   control, killing the run after three useful failures (2026-09-04) — the same class of abort as

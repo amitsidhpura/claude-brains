@@ -90,6 +90,16 @@
   background: var(--warn-field); color: var(--fg); border: 1px solid var(--warn-border);
   border-radius: var(--radius); font: inherit; font-size: var(--fs-base); outline: none; }
 .plan-fb::placeholder { color: var(--dot); }
+/* Editable command box (3.8): the caret is the affordance — the box keeps its code dress and
+   only lights its border while focused, in the warn family every type-on-a-card field wears.
+   While the text differs from the proposal a compound card's PER-RULE rows and their header hide
+   (they name the original parts); Always-allow and the destination rows stay on every card — the
+   grant is rewritten to the edited text, one exact rule per part (measured: the CLI persists
+   rewritten rules and honours them; a rule for the whole compound string never matches). */
+.card .cmd[contenteditable] { cursor: text; }
+.card .cmd[contenteditable]:focus { outline: none; border-color: var(--warn-border); }
+.card.cmd-edited.cmd-compound .card-menu .popup-item:not(.dest),
+.card.cmd-edited.cmd-compound .card-menu .popup-h { display: none; }
 /* The same field inline in an ordinary card's button row (3.7): fills what the buttons leave,
    wraps under them when the row is tight (.card-b wraps), and drops the block-level margin the
    plan card's placement needs. 160px is the least width a short note stays readable at. */

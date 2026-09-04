@@ -1,0 +1,148 @@
+{
+  "item": "3.8 edit the Bash command in the permission card — editable in place, the edit rides Accept as updatedInput (2026-09-05)",
+  "branch": "previewHtml renders `.cmd` with contenteditable=plaintext-only and data-orig when the input has a `command` shown WHOLE (a cut command and a description-only preview stay read-only). An input event toggles `.cmd-edited` on the card while the text differs from data-orig. Always-allow and the destination rows stay on every card and grant the EDITED text — done() keeps the suggestion with its chip rewritten, Kotlin (EditProposals.withRulesFor) rewrites the echoed rules to one exact rule per part of the edited command (splitCommand). On a COMPOUND card (`.cmd-compound`) the per-rule rows and their header hide while edited, since they name the original parts. done(true) sends the edited text as `cmd` on the bridge perm message, drops any suggestion, removes the editability and says `edited in the IDE before accepting` on the decided line. Kotlin (EditProposals.withCommand) replaces `command` in the input the CLI asked about.",
+  "provenance": "Wire: PROBED 2026-09-05 (2.1.260, stdio): allowing a `factor 97` ask with updatedInput.command=`factor 91` ran `factor 91` (tool_result `91: 7 13`); the transcript keeps the ORIGINAL command in the tool_use and only the output in the result, so the edit is live-only on replay. VS Code renders the command contentEditable and sends the edit as updatedInput (checklist 3.8). Negative control on the pre-3.8 build: no `.cmd[contenteditable]` exists, so the editable/edited/cmd-on-the-wire asserts read 'absent' or 0 — DISCRIMINATING; the untouched-accept and over-cap asserts are GUARDS on both builds. Rewritten rule PROBED 2026-09-05 (2.1.260, trusted scratch workspace): echoing the suggestion with ruleContent `factor 91` persisted `Bash(factor 91)` to settings.local.json; the next `factor 91` did not ask, `factor 97` still did. A rule for a WHOLE compound string is persisted but never matches (the CLI checks parts separately; probed the same day), hence the per-part split; a bare `&` compound still asks every time regardless of rules (probed: `factor 91 & factor 95` re-asked with an EMPTY suggestion list, i.e. both parts already allowed).",
+  "steps": [
+    {
+      "note": "editable box; a single-rule card keeps Always-allow while edited and grants the edited text",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge81) { window.__realBridge81 = window.__bridge; } window.__tape81 = []; window.__bridge = function(j){ window.__tape81.push(JSON.parse(j)); };",
+      "frames": [
+        {
+          "type": "permission_request",
+          "id": "pr81a",
+          "tool": "Bash",
+          "input": "{\"command\":\"factor 97\",\"description\":\"Factor the number 97\"}",
+          "suggestions": "[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"factor 97\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .card.warn .cmd[contenteditable]').length",
+          "equals": 1,
+          "why": "DISCRIMINATING: the command box is editable (pre-fix: 0)"
+        },
+        {
+          "js": "(function(){ var c = document.querySelector('#log .cmd[contenteditable]'); return c ? c.dataset.orig : 'absent'; })()",
+          "equals": "factor 97",
+          "why": "DISCRIMINATING: the proposal is kept for the round-trip check"
+        },
+        {
+          "js": "(function(){ var c = document.querySelector('#log .cmd[contenteditable]'); if (!c) return 'absent'; c.textContent = 'factor 91'; c.dispatchEvent(new Event('input', {bubbles: true})); var b = document.querySelector('#log .card-b .alt'); return [document.querySelector('#log .card').classList.contains('cmd-edited'), b ? getComputedStyle(b).display !== 'none' : 'no-alt'].join('|'); })()",
+          "equals": "true|true",
+          "why": "DISCRIMINATING: the card is marked edited and, single-rule, Always-allow STAYS (build A hid it; pre-fix: absent)"
+        },
+        {
+          "js": "(function(){ var c = document.querySelector('#log .cmd[contenteditable]'); if (!c) return 'absent'; c.textContent = 'factor 97'; c.dispatchEvent(new Event('input', {bubbles: true})); var b = document.querySelector('#log .card-b .alt'); return [document.querySelector('#log .card').classList.contains('cmd-edited'), b ? getComputedStyle(b).display !== 'none' : 'no-alt'].join('|'); })()",
+          "equals": "false|true",
+          "why": "DISCRIMINATING: reverting to the proposal brings Always-allow back — a round trip is not an edit"
+        },
+        {
+          "js": "(function(){ var c = document.querySelector('#log .cmd[contenteditable]'); if (!c) return 'absent'; c.textContent = 'factor 91'; c.dispatchEvent(new Event('input', {bubbles: true})); document.querySelector('#log .card-b .alt:not(.more)').click(); var m = window.__tape81[window.__tape81.length-1]; return m ? [m.allow, m.sugg, m.cmd].join('|') : 'no-msg'; })()",
+          "equals": "true|0|factor 91",
+          "why": "DISCRIMINATING: Always-allow on an edited single-rule card grants (sugg 0) AND carries the edited command — Kotlin rewrites the rule to it"
+        },
+        {
+          "js": "(function(){ var t = document.querySelector('#log .card-b .ok-t'); return t ? [t.textContent.indexOf('edited in the IDE before accepting') >= 0, Array.prototype.map.call(t.querySelectorAll('code'), function (c) { return c.textContent; }).join(',')].join('|') : 'absent'; })()",
+          "equals": "true|factor 91",
+          "why": "DISCRIMINATING: the decided line carries the tweak note and the rule chip names the EDITED command"
+        },
+        {
+          "js": "(function(){ var c = document.querySelector('#log .card .cmd'); return c ? [c.hasAttribute('contenteditable'), c.textContent].join('|') : 'absent'; })()",
+          "equals": "false|factor 91",
+          "why": "DISCRIMINATING (pre-fix: absent — no contenteditable box existed): the decided card shows what RAN and is no longer editable"
+        }
+      ]
+    },
+    {
+      "note": "a compound card edited: the per-rule rows hide, Always-allow and the destination rows stay and grant the edited text",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape81 = [];",
+      "frames": [
+        {
+          "type": "permission_request",
+          "id": "pr81d",
+          "tool": "Bash",
+          "input": "{\"command\":\"mkdir -p out && touch out/a.txt\"}",
+          "suggestions": "[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"mkdir -p:*\"},{\"toolName\":\"Bash\",\"ruleContent\":\"touch:*\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]"
+        }
+      ],
+      "expect": [
+        {
+          "js": "(function(){ var c = document.querySelector('#log .cmd[contenteditable]'); if (!c) return 'absent'; c.textContent = 'mkdir -p out && touch out/b.txt'; c.dispatchEvent(new Event('input', {bubbles: true})); var s = document.querySelector('#log .card-b .split'); var rows = Array.prototype.map.call(document.querySelectorAll('#log .card-menu .popup-item:not(.dest), #log .card-menu .popup-h'), function (r) { return getComputedStyle(r).display; }); var dests = Array.prototype.map.call(document.querySelectorAll('#log .card-menu .popup-item.dest'), function (r) { return getComputedStyle(r).display !== 'none'; }); return [document.querySelector('#log .card').classList.contains('cmd-compound'), s ? getComputedStyle(s).display !== 'none' : 'no-split', rows.join(','), dests.join(',')].join('|'); })()",
+          "equals": "true|true|none,none,none|true,true,true",
+          "why": "DISCRIMINATING: compound + edited → the split stays, the two per-rule rows and their header hide, the three destination rows show (build B hid the whole split; pre-fix: absent)"
+        },
+        {
+          "js": "(function(){ document.querySelector('#log .card-menu .popup-item.dest[data-d=\"session\"]').click(); var m = window.__tape81[window.__tape81.length-1]; return m ? [m.allow, m.sugg, m.dest, m.cmd].join('|') : 'no-msg'; })()",
+          "equals": "true|0|session|mkdir -p out && touch out/b.txt",
+          "why": "DISCRIMINATING: a destination pick grants the WHOLE edited command (Kotlin splits it into per-part rules) for this session"
+        },
+        {
+          "js": "(function(){ var t = document.querySelector('#log .card-b .ok-t'); return t ? Array.prototype.map.call(t.querySelectorAll('code'), function (c) { return c.textContent; }).join(',') : 'absent'; })()",
+          "equals": "mkdir -p out && touch out/b.txt",
+          "why": "DISCRIMINATING (build B: no grant survived the edit, so no chip): the chip names the edited command whole"
+        }
+      ]
+    },
+    {
+      "note": "an untouched command accepts exactly as before: no cmd on the wire, suggestion intact, no note",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape81 = [];",
+      "frames": [
+        {
+          "type": "permission_request",
+          "id": "pr81b",
+          "tool": "Bash",
+          "input": "{\"command\":\"factor 97\"}",
+          "suggestions": "[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"factor 97\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]"
+        }
+      ],
+      "expect": [
+        {
+          "js": "(function(){ document.querySelector('#log .card-b .alt:not(.more)').click(); var m = window.__tape81[window.__tape81.length-1]; return m ? [m.allow, m.sugg, 'cmd' in m].join('|') : 'no-msg'; })()",
+          "equals": "true|0|false",
+          "why": "GUARD (both builds): Always allow on an untouched command grants the suggestion and sends no cmd"
+        },
+        {
+          "js": "(function(){ var t = document.querySelector('#log .card-b .ok-t'); return t ? t.textContent.indexOf('edited') : 'absent'; })()",
+          "equals": -1,
+          "why": "GUARD: no tweak note without an edit"
+        }
+      ]
+    },
+    {
+      "note": "a command over the preview cap stays read-only — the box does not hold all of it",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape81 = [];",
+      "frames": [
+        {
+          "type": "permission_request",
+          "id": "pr81c",
+          "tool": "Bash",
+          "input": "{\"command\": \"echo xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#log .cmd-cut').length",
+          "equals": 1,
+          "why": "GUARD: the cut marker is there"
+        },
+        {
+          "js": "document.querySelectorAll('#log .cmd[contenteditable]').length",
+          "equals": 0,
+          "why": "GUARD (both builds): not editable when cut"
+        }
+      ]
+    },
+    {
+      "note": "restore the real bridge",
+      "setup": "if (window.__realBridge81) { window.__bridge = window.__realBridge81; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "frames": [],
+      "expect": [
+        {
+          "js": "typeof window.__bridge",
+          "equals": "function",
+          "why": "GUARD: bridge restored"
+        }
+      ]
+    }
+  ]
+}

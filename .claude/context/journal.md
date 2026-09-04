@@ -3,33 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
-## 2026-09-05 (eighth) — 4.8 hand-tested and closed, 4.9 deferred, 2.12 built and measured
-- MT-4.8: all four steps passed on the real CLI in the testing repo (session-only wrote nothing +
-  no re-ask; project-shared wrote `.claude/settings.json`; main half wrote `settings.local.json`).
-  Side findings: decided Bash cards vanish on replay (deliberate, already in gotchas); `title`
-  tooltips never show anywhere in the panel on Linux JCEF → backlog § Next up + gotchas § JCEF.
-- 4.9 number-key answers: user chose "no keyboard shortcuts for now" → ➖, decisions.md.
-- 2.12: the user attached `~/Sites/computer` to the testing window and sent the "before" (every
-  Read there asked, reason "Path is outside allowed working directories"). Stdio probe: control 1
-  ask, `--add-dir` 0 asks. Built `WorkspaceRoots.extraDirs` (roots outside basePath, nested ones
-  dropped) → `ClaudeCli --add-dir` per root + lock-file `workspaceFolders`. Kotlin **153**. The
-  sandbox CLI was seen spawning with `--add-dir /home/syncroze/Sites/computer`. AFTER test passed both
-  ways (attached → no cards; detached → asks again).
-- Test-expectation trap: a sibling attached beside a monorepo parent is covered by the parent —
-  the first test asserted both and was wrong, the code was right.
-- 3.7 reject-with-note: the plan card's `.plan-fb` field inline after Reject on every ordinary card
-  (VS Code's placement); deny only (allow has no wire — a typed note before Accept is dropped, not
-  quoted); Enter rejects with the note. Fixture 78 (16; control 6 fail / 0 abort), harness **686**,
-  mockup mirrored on 5 cards. Hand test PASSED (Edit card, note "Ignore please." quoted back by the
-  model). It exposed two pre-existing defects, both fixed: the tool line's error OUT box repeated the
-  deny text above the card (now skipped for a denial this panel sent — `cardDenies`, fixture 79,
-  `rejectMessage` exported via LIMITS) and replay counted a rejected edit as "1 file changed"
-  (`reqFiles` never emptied on denial/error — fixed in SessionStore, `SessionStoreDeniedEditTest`
-  on the real transcript extracted to `src/test/resources/fixtures/denied-edit.jsonl`). Kotlin 156.
-  Third follow-up from the user's replay screenshot: a replayed EDIT card read a bare ✗ Rejected while
-  the plan card quotes its note — the parser now extracts the deny message for denied edit items too
-  (`planFeedback` reused on the wire), fixture 80 (control 1 fail). Bash cards' notes stay live-only.
-- Checklist 89 ✅ · 4 ⬜ · 47 ➖; §2 and §4 complete. Everything since 9086100 is uncommitted.
+## 2026-09-05 (eighth) — 4.8 closed, 4.9 deferred, 2.12, 3.7 (+3 fixes) and 3.8 built; two commits
+- Method that held all day: explain the row in plain words → the user decides → probe → build with
+  the free negative control → hand test in the sandbox → MT row resolved. Committed `d1974c4`
+  mid-session on the user's ask; 3.8 rides the second commit.
+- MT-4.8 passed all four steps. Side findings: decided Bash cards vanish on replay (deliberate);
+  `title` tooltips never show in the panel on Linux JCEF (backlog § Next up, gotchas § JCEF).
+- 4.9 number-key answers: "no keyboard shortcuts for now" → ➖ (decisions.md).
+- 2.12: the user attached `~/Sites/computer` and sent the "before" (every Read asked). Probe:
+  `--add-dir` → 0 asks. `WorkspaceRoots.extraDirs` → one `--add-dir` per root outside basePath.
+  Hand test passed both ways (attached → no cards; detached → asks).
+- 3.7 reject-with-note (inline after Reject, deny only, Enter rejects). The hand test exposed three
+  pre-existing defects, fixed the same day: duplicate error OUT box for a denial the card sent
+  (`cardDenies`), replay "1 file changed" for a rejected edit (`reqFiles` never emptied), and a
+  replayed edit card without its note. Kotlin test on the real transcript (`denied-edit.jsonl`).
+- 3.8 editable Bash command: probe showed the CLI runs `updatedInput.command`; the transcript never
+  records the edit (live-only on replay) and the model sees the original beside the edited output
+  — VS Code measured identical, the user accepted it. Then two user calls, both probed first:
+  a single-rule grant follows the edit (rewritten `ruleContent` is persisted and honoured), and a
+  compound card keeps Always allow + destinations with per-part rules from our own
+  `splitCommand` — a WHOLE-string rule is persisted but never matches; a bare-`&` compound re-asks
+  every time regardless. Hand-tested incl. a `;` edit writing two rules to the project file.
+- Traps: `addUserMessage` over CDP sends a real prompt when a session is live; computed `display`
+  inside `.split` is `flex`; the harness has no mid-frame JS hook (click in the next step's setup);
+  a Bash line always has an IN row (count OUT rows by `.io-k`). All in gotchas § Testing.
+- Harness **714** (fixtures to 81), Kotlin **160**. Checklist 90 ✅ · 3 ⬜ · 47 ➖; §2 §3 §4 done.
 
 ## 2026-09-04 (seventh) — 4.8 built as a split button; five destination cells measured, one probe confound found
 - The user asked what 4.8 is in plain words, heard my recommendation to decline it (the default is

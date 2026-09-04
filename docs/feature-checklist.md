@@ -13,12 +13,12 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 89 ✅ · 0 🟥 · 0 🟧 · 4 ⬜ · 47 ➖ (140 rows) — open rows in §1 §3
+**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 90 ✅ · 0 🟥 · 0 🟧 · 3 ⬜ · 47 ➖ (140 rows) — open rows in §1
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
 - **Awaiting a decision ([DECIDE]):** none — the user is taking ALL ten [NEW] rows of the 2026-09-04
-  full-surface audit ("finish all even if small"); 6.9, 6.5, 4.7, 4.8, 2.12 and 3.7 shipped, 4.9 deferred
-  2026-09-05. Remaining four, in build order: 1.28 `control_cancel_request` (correctness) · 1.27 full
-  IN/OUT in an editor · 3.8 editable Bash command · 1.26 banner-class `system` frames (13.3: deferred)
+  full-surface audit ("finish all even if small"); 6.9, 6.5, 4.7, 4.8, 2.12, 3.7 and 3.8 shipped, 4.9
+  deferred 2026-09-05. Remaining three, all in §1, in build order: 1.28 `control_cancel_request`
+  (correctness) · 1.27 full IN/OUT in an editor · 1.26 banner-class `system` frames (13.3: deferred)
 
 **Status marks**
 
@@ -372,7 +372,7 @@ auto-include selection, voice.
       and a `Read(//…/**)` session rule suggestion; stdio control reproduced it (1 ask), and with
       `--add-dir` the same Read ran with 0 asks. `WorkspaceRootsTest` (6). No webview change
 
-## 3. ⬜ Diffs & edit approval
+## 3. ✅ Diffs & edit approval
 - **3.1** ✅ **Permission gate** — `can_use_tool` via `--permission-prompt-tool stdio`
 - **3.2** ✅ **Accept / Reject card** — diff inline (old→new for Edit/MultiEdit multi-hunk,
       additions for Write); under acceptEdits the diff is built optimistically from the tool input
@@ -430,10 +430,33 @@ auto-include selection, voice.
       **(c)** a replayed EDIT card read a bare `✗ Rejected` while the plan card replays its note —
       the parser now extracts the deny message for denied edit items too and the replayed diff card
       quotes it (fixture 80; Bash cards still vanish on replay, so their note stays live-only)
-- **3.8** ⬜ [SM] **Edit the Bash command in the permission card** [NEW] [DECIDE] — VS Code renders
-      the command `contentEditable` and sends the edited text as `updatedInput` on allow. Our 3.5
-      tweak-travel covers Edit/Write proposals in the editor only; the card's command preview is
-      read-only. Same `updatedInput` path, a `contenteditable` on `.cmd` with the `.cmd-cut` cap
+- **3.8** ✅ **Edit the Bash command in the permission card** [NEW] — built 2026-09-05: the
+      card's `.cmd` is `contenteditable=plaintext-only` when the input has a `command` shown WHOLE
+      (a command over `CMD_MAX` keeps its cut marker and stays read-only; a description-only
+      preview is not a command). While the text differs from the proposal the card is
+      `.cmd-edited`: a SINGLE-rule card keeps Always allow and grants the EDITED text — Kotlin
+      (`EditProposals.withRulesFor`) rewrites the echoed rule to it, PROBED 2.1.260: the CLI
+      persisted `Bash(factor 91)` from a `factor 97` suggestion and honoured it next turn while
+      `factor 97` still asked (user's call 2026-09-05, "this I think we can allow"). A COMPOUND
+      card (`.cmd-compound`) keeps Always allow and the destination rows too, hiding only its
+      per-rule rows (they name the original parts): the grant is split into one exact rule per
+      part of the edited text (`EditProposals.splitCommand` — `&&`, `||`, `;`, `|`, lone `&`
+      outside quotes/parentheses; a split the CLI would do differently can only re-ask, never
+      widen). PROBED: a rule for the WHOLE compound string is persisted but never matches (the
+      CLI checks parts separately), per-part rules from the split stopped the next `factor 91 &&
+      factor 95` ask; a bare-`&` compound re-asks every time regardless of rules (empty
+      suggestion list). The decided chip shows the edited command whole. Reverting brings the
+      per-rule rows back.
+      Accept sends the text as `cmd` on the bridge, `EditProposals.withCommand` replaces `command`
+      in the input the CLI asked about (`updatedInput`, the 3.5 path), the decided line reads
+      `✓ Accepted · edited in the IDE before accepting` and the box shows what ran. A folded long
+      command only ever OPENS on click while editable. PROBED 2.1.260: the CLI runs the replaced
+      command (`factor 97` → `factor 91` gave `91: 7 13`); the transcript keeps the original in the
+      tool_use and only the output in the result, so the edit is live-only on replay (as 3.5) and
+      the MODEL sees the original command next to the edited output — it noticed the mismatch in
+      the probe. That is the CLI's design, VS Code has the same. Fixture 81 (12 asserts, control
+      7 fail / 0 abort; the grant-follows-the-edit asserts 4 fail on the hide-always build and
+      3 on the hide-compound build), `EditProposalsTest` (+4), mockup mirrored (3 boxes)
 
 ## 4. ✅ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
@@ -892,6 +915,7 @@ auto-include selection, voice.
 - **MT-2.11** After an error turn, ↻ Retry re-runs last prompt incl. images → 1.8 · 2026-08-07
 - **MT-2.12** Paperclip → attach menu → native picker → chip → 6.2 · 2026-08-07
 - **MT-3.7** Manual mode, a Bash card: type a note in the field after Reject, press Enter (or click Reject) → card reads `✗ Rejected — "…"`, Claude's next message follows the note instead of retrying; empty field + Reject → plain `✗ Rejected` → 3.7 · 2026-09-05
+- **MT-3.8** Manual mode, a Bash card: click into the command, change it (e.g. `factor 97` → `factor 91`) → Always allow disappears; Accept → the edited command runs (OUT shows `91: 7 13`), the card reads `✓ Accepted · edited in the IDE before accepting`; revert the text before accepting → Always allow is back; edit then click Always allow → `settings.local.json` gains the EDITED command → 3.8 · 2026-09-05 · RESOLVED 2026-09-05 (all steps incl. the grant-follows-the-edit ones: a compound `factor 91; factor 95` edited to `factor 91; factor 97` + "This project, shared" wrote `Bash(factor 91)` and `Bash(factor 97)` to `.claude/settings.json`): passed on the real CLI (user) — edit hid Always allow, Accept ran `factor 91` (OUT `91: 7 13`), note on the card, revert restored the split. Observed: the model, seeing its original command beside the edited output, called the mismatch unexplainable — the CLI's design (the transcript never carries the edit). VS Code measured identical the same day (user's screenshots): its dialog edits the command in place, its IN box keeps `factor 97` over `91: 7 13`, and its model reran the command to verify. One deliberate difference: VS Code still offers "Yes, allow factor 97 for this project" beside an edited command; ours hides the rule while the text differs
 - **MT-2.13** [/] button opens slash menu same as typing `/` → 7.1 · 2026-08-07
 - **MT-2.14** Delete forward-deletes in composer and model search (alone, with selection, Ctrl+Delete word), no stray char → 1.2, 9.1 · 2026-08-09 · RESOLVED 2026-08-09: fixed — Delete inserted a tofu char (JCEF-on-Linux sends AWT keyChar 0x7F as TEXT); document-level two-layer fix in chat.html (keydown manual forward-delete, selection-aware, Ctrl+Delete = word, native cancelled; capture-phase input filter strips control chars except \t \n, caret preserved — also kills ESC 0x1B); covers `#modelSearch`; headless 7/7 (mid, selection, Ctrl-word, end-noop, 0x7F strip, \t\n survive, mention re-filter); D1 proves no double-delete in a compliant browser; real-JCEF hardware key pending runIde
 
