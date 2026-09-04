@@ -33,6 +33,13 @@
 - Effort slider: switch from the muted `/effort` turn to `apply_flag_settings
   {settings:{effortLevel}}` — measured working over stdio 2026-08-23 (checklist 9.2); small
   change, removes the audit-trail turn from transcripts.
+- **Watch-item: `update_settings` allowlist** (checklist 13.3, deferred 2026-09-04): the 2.1.260
+  control writes only `outputStyle` (binary allowlist `new Set(["outputStyle"])`, strings only, no
+  deletion). When a CLI admits `model` / `permissions` / `effortLevel`, adopt it for per-project
+  persistence of the panel's chips (the CLI already HONORS `model` and `permissions.defaultMode`
+  from `.claude/settings.local.json` at spawn — measured 2026-09-04; `PropertiesComponent` stays
+  the fallback). Check the allowlist during each CLI re-audit (grep the binary for
+  `update_settings keys not allowed`).
 - Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.

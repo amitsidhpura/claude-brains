@@ -3,18 +3,19 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.251, last full re-audit 2026-08-30)
-- VS Code extension — `~/.vscode/extensions/anthropic.claude-code-2.1.251-linux-x64/` (the 2.1.250 base was
-  no longer on disk 2026-08-30 and was downloaded from the Marketplace vsix, runbook step 3; the local
-  `reference/anthropic-claude-code/` extraction is kept at the newest installed version as the diff base
-  for the NEXT audit — see state.md)
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.251`; headless roster in `docs/slash-commands.md`
+**References** (both on 2.1.260, last full re-audit 2026-09-04)
+- VS Code extension — 2.1.260 from the Marketplace vsix (runbook step 3; `~/.vscode/extensions/`
+  still held 2.1.251, VS Code had not auto-updated); the local `reference/anthropic-claude-code/`
+  extraction is kept at the newest audited version as the diff base for the NEXT audit
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.260`; the 2.1.251 baseline binary (no
+  longer on disk) came out of the 2.1.251 vsix's `resources/native-binary/`; headless roster in
+  `docs/slash-commands.md`
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.251, 2026-08-30) — 83 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (129 rows) — every section ✅
+**At a glance** (2.1.260, 2026-09-04) — 83 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 47 ➖ (130 rows) — every section ✅
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** none
+- **Awaiting a decision ([DECIDE]):** none (13.3 decided 2026-09-04: deferred, watch the `update_settings` allowlist)
 
 **Status marks**
 
@@ -40,11 +41,57 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
+
+<details><summary><b>Re-audit 2026-09-04 (2.1.251 → 2.1.260)</b></summary>
+
+Nine versions in one hop; everything measured (2.1.260 extension from the Marketplace vsix, the
+2.1.251 CLI baseline from the 2.1.251 vsix's native binary — `~/.local/share/claude/versions/`
+no longer held it). Extension: the same twelve `tool("…")` registrations, no new `tengu_*` gate.
+What moved is the SESSION SIDEBAR: three new commands (Rename Session Tab, Add Session Tab to
+Group, Mark Session as Unread) with editor-tab context menus, and new webview RPC —
+`archive_session`/`unarchive_session` ("Archived sessions" section), `set_session_unread` +
+status filters ("Show only sessions that need input, are working, or are unread"; Active/Open/
+Closed menus), collapsed-panel-section persistence, `update_session_section_collapse_state` —
+while `delete_session` (which only ever hid, via `settings.hideSession`) is GONE, replaced by
+archive. All folded as facts on 8.10 (still deferred behind tabs, 8.9). Also new:
+`persist_session_permission_mode` (rides the new CLI `update_settings` — row 13.3),
+`open_account_usage` (9.6 stays declined), `get_output_style` replacing the old "Continue in
+Terminal to change output style?" flow, a Remote Control setting reword ("Connect all sessions…"),
+and per CHANGELOG the footer model pill now shows the effort level — fact on 9.2, our no-suffix
+decision stands (decisions 2026-08-26, do-not-re-propose). Removed strings: the "Fable 5 requires
+usage credits" switched-to-default messaging (9.7's gate copy — watch unchanged). Settings schema:
+`managedMcpServers`, model-catalog `behavesAs`, `permissions.blockReadsOutsideWorkingDirectories`,
+`timeFormat`/`timeZone`; the hook-event list is the same 35 names — all the terminal's half. CLI
+typed vocabulary grew exactly two subtypes: `cloud_session_delta` (a `system` frame the cloud
+client emits between inits with changed `cloud_session` keys — Remote Control bookkeeping, fact
+on 8.12) and `update_settings` — host-facing, "the scope host UIs need so their writes land
+exactly where /config's do" → new row 13.3 [DECIDE]. Probed 2026-09-04 over stdio: an empty
+merge is cleanly rejected ("update_settings requires at least one key"), file untouched —
+acceptance proven without a mutation. (Corrections, same day, from the 13.3 implementation
+attempt: VS Code does NOT ride it — its `persist_session_permission_mode` writes the extension's
+own `globalState`, and the extension defines the SDK `updateSettings` wrapper without ever
+calling it. And a real-key probe found the control far narrower than its description: the key
+allowlist is `outputStyle` alone, string values, no deletion — `model` and `permissions` are
+refused by name. Full measurements on row 13.3.) A headless bare `initialize` on both binaries: identical
+top-level keys, same 5-model roster with the fable row now **Fable 5.1** (`resolvedModel:
+"claude-fable-5-1"`, label "Fable 5.1 · …"; roster-driven, the chip just shows it — the
+webview's `/fable/i` checks still match, the one cosmetic residue is `10-turn-working.js`'s
+`seven_day_overage_included: 'Fable 5 limit'` label); commands 54 → 55: `/advisor`
+(`[fable|opus|sonnet|off]` — off 7.8's TUI-only list now) and `/reload-plugins` added,
+`/artifact-design` dropped, no other hint changes (only `/artifact-capabilities`' description
+text) — `docs/slash-commands.md` updated. `set_model`'s response is unchanged (probed both
+sides: plain success). NOTE_MAX tripwire (decisions 2026-09-01): no note-shaped string in the
+2.1.260 binary exceeds 400 chars. Behaviour (upstream CHANGELOG 2.1.252–260, orientation only):
+`/diff` fullscreen panel, Fable 5.1 default at 2.1.257, `--permission-prompts none`,
+`managedMcpServers` at 2.1.259 — the terminal's half or CLI-internal. Probe outputs in the
+2026-09-04 session scratchpad.
+
+</details>
 
 <details><summary><b>Re-audit 2026-08-30 (2.1.250 → 2.1.251)</b></summary>
 
@@ -220,7 +267,7 @@ auto-include selection, voice.
       grace window is invisible. Probe first: an inject through `onClaudeEvent` proves the render, a
       real grace window is unforceable by design (MT-9.6 pattern)
 
-## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.251)
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -360,7 +407,9 @@ auto-include selection, voice.
       /add-dir /rewind /diff /update /theme /vim /keybindings /export /copy /bug /feedback
       /memory /permissions /hooks /mcp /plugin /agents /doctor /status /config /ide /terminal-setup
       /voice /desktop /mobile /teleport /remote-control /background /branch /fork /btw /tasks
-      /skills /skill-doctor /pause-memory /alias /advisor /focus /brief /wellbeing /radio …` —
+      /skills /skill-doctor /pause-memory /alias /focus /brief /wellbeing /radio …` (`/advisor`
+      left this list at 2.1.260 — it is on the headless roster now, Hidden in
+      `docs/slash-commands.md`) —
       the terminal's half by construction. Where the panel has an equivalent it is listed in its
       own section (rename, model, effort, mode, resume, tasks, focus)
 - **7.9** ✅ **Panel equivalents of TUI commands** — `/rename` (header pencil), `/model` +
@@ -399,7 +448,10 @@ auto-include selection, voice.
       with user-named folders (`get_session_groups` / `update_session_groups`, stored client-side),
       hide/delete, `list_sessions_request`. Our history popup already lists per-project sessions;
       grouping only pays off once tabs or worktrees exist — deferred by the user 2026-08-29 ("not
-      very important"), follows tabs (8.9)
+      very important"), follows tabs (8.9). 2.1.260 grew the sidebar: archive/unarchive (an
+      "Archived sessions" section) REPLACES `delete_session` (which only ever hid), plus
+      mark-as-unread, status filters ("needs input / working / unread", Active/Open/Closed), tab
+      rename/groups commands — same verdict, still behind tabs
 - **8.11** ✅ [MD] **Side question** [NEW] — `/btw` (bare = open, `/btw question` = ask) opens a
       panel floating above the composer (`#sidePanel`, `webview/js/67-side.js`); the question goes
       out as a `side_question` control request and the answer renders there as markdown — never in
@@ -413,7 +465,9 @@ auto-include selection, voice.
 - **8.12** ➖ **Remote sessions / teleport / remote control** — `list_remote_sessions`,
       `teleport_session`, `toggle_remote_control` (TUI `/teleport`, `/rc`, `/session`); session
       SOURCES beyond the local disk lean infrastructure; recorded as a judgment call. 2.1.251:
-      `initialize.remote_control_available` and a webview status pill — still ➖
+      `initialize.remote_control_available` and a webview status pill — still ➖. 2.1.260 adds
+      `cloud_session_delta` `system` frames (the cloud client pushes changed `cloud_session` keys
+      between inits; never seen on a local stdio wire) — bookkeeping for this same family
 - **8.13** ➖ **`generate_session_title`** [NEW] — the CLI names threads itself (`ai-title`) and we
       show it
 - **8.14** ➖ [LG] **Reloaded-webview log replay** — chrome heals via `seedUi()`, the log does not;
@@ -429,7 +483,8 @@ auto-include selection, voice.
       `PreModelSwitch` hook: 9.11
 - **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, last row of the model-menu
       footer (moved out of the mode menu 2026-08-26; the level shows only on the footer's own
-      "Effort" label, on no chip — decisions 2026-08-26). Sends a muted `/effort` turn because no
+      "Effort" label, on no chip — decisions 2026-08-26; VS Code 2.1.260 now shows the level on
+      its footer model pill, our no-suffix decision stands, do-not-re-propose). Sends a muted `/effort` turn because no
       `set_effort` control exists; both paths render the CLI's confirmation line (gotchas
       § Protocol). Retire path when wanted: `apply_flag_settings {settings:{effortLevel}}` is
       accepted over stdio and takes effect (probed 2026-08-23). The CLI's `/effort` hint also
@@ -565,6 +620,25 @@ auto-include selection, voice.
       SchemaStore catalog the IDE already consults matches only `settings.json`; the local file
       the CLI writes rules into got nothing. Optional depends on `com.intellij.modules.json` for
       2024.3+ (JCEF pattern). Matcher pinned by `ClaudeSettingsSchemaTest`
+- **13.3** ➖ [MD] **Per-project persistence in `.claude/settings.local.json`** [NEW] —
+      DEFERRED by the user 2026-09-04 ("wait for Anthropic — we already persist our way"): stay on
+      `PropertiesComponent`, watch the `update_settings` allowlist each re-audit and adopt the CLI
+      channel when `model` / `permissions` / `effortLevel` land in it (backlog watch-item). The
+      measured story:
+      the 2.1.260 `update_settings` control ("the scope host UIs need so their writes land exactly
+      where /config's do", `source:"localSettings"` only, refused over remote transports) turned
+      out, on the implementation attempt 2026-09-04, to allow exactly ONE key: the binary's
+      allowlist is `new Set(["outputStyle"])`, string values, "deletion is not supported" —
+      `model` and `permissions` are refused by name ("update_settings keys not allowed"). The
+      `outputStyle` write was verified end-to-end: it file-merges cleanly, other keys untouched.
+      VS Code does not use it (its `persist_session_permission_mode` writes the extension's own
+      `globalState`; the SDK `updateSettings` wrapper exists uncalled). What DOES hold, measured
+      at spawn with the panel's flags: the CLI honors `model` (a file `"model":"haiku"` served
+      haiku with no `--model`, no `set_model`) and `permissions.defaultMode` (only when no
+      `--permission-mode` flag is passed — the flag wins) from `.claude/settings.local.json`.
+      So per-project persistence of model/mode is achievable ONLY by the plugin writing the file
+      itself (Kotlin read-merge-write; clobber risk against the CLI's own "always allow" rule
+      writes into the same file), not through the CLI — offered 2026-09-04, not taken
 
 ## 14. ✅ Worktrees & git
 - **14.1** ➖ [LG] **Create worktree** — `create_worktree`; TUI `/branch`. Deferred by the user
@@ -597,15 +671,15 @@ auto-include selection, voice.
       terminal's half — declined by the user 2026-08-29 (by design)
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (134, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (137, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 68, 586 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 73, 630 assertions,
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
       — gotchas)
 - **16.4** ✅ **Plugin Verifier + Marketplace** — 0 warnings on PhpStorm 242→262; upload automated
-      on `release: published`; releases 0.4.0 → 0.11.1 all Approved
+      on `release: published`; releases 0.4.0 → 0.12.5 all Approved
 - **16.5** ✅ **Manual-test checklist completed** — 102/102 passed (the old "92" undercounted), 0
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below

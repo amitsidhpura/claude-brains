@@ -15,6 +15,11 @@ from release notes. Gotchas § "Auditing the reference clients" has the traps.
    `extension/package.json`, and `extension/resources/native-binary/claude` (the CLI binary).
    Worked 2026-08-30 for 2.1.250 (~99 MB gunzipped; unzip only `extension/extension.js`,
    `extension/package.json`, `extension/webview/*`, `extension/claude-code-settings.schema.json`).
+   The native binary doubles as the OLD-CLI BASELINE when `~/.local/share/claude/versions/` no
+   longer holds it — worked 2026-09-04: the 2.1.251 vsix's binary ran the baseline `initialize`
+   and subtype extraction for the 2.1.260 audit. While there, run the backlog's binary-grep
+   watch-items (e.g. the `update_settings` key allowlist — grep near "update_settings keys not
+   allowed").
    Extra cheap diffs that catch what the `case` diff misses: `tool("…")` registrations, `tengu_*`
    gates, the settings schema (`jq -S` both sides), and the webview's readable sentences (a
    `comm` of quoted strings ≥ 25 chars with ≥ 3 words — minifier renames drown a plain string diff).

@@ -105,7 +105,10 @@ capture plus the built-in `/context`, restored from the testing-repo capture bec
 own /context project skill shadows it (see the shadowing note above); 52 since 2026-08-28, when
 the 2.1.250 roster added `/workflow-authoring` (the only roster change from 2.1.233 to 2.1.250 —
 re-probed headlessly at 2.1.241, 2.1.246, 2.1.250 and 2.1.251: no drops, no hint changes; the only
-description change is `/dataviz`'s text at 2.1.251).
+description change is `/dataviz`'s text at 2.1.251). 2026-09-04: the 2.1.260 roster (re-probed
+headlessly, 54 → 55 wire entries) added `/advisor` and `/reload-plugins` and dropped
+`/artifact-design` (its row stays, marked removed; the only other change is
+`/artifact-capabilities`' description text).
 Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
 relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
 are visible in the menu; every other built-in is hidden.
@@ -155,6 +158,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
+| `/advisor` | Hidden | [ ] |  | Let Claude consult a stronger model at key moments — hint `[fable\|opus\|sonnet\|off]` **New in 2.1.260** (headless roster 2026-09-04; not yet driven through the panel) |
 | `/agents` | Hidden | [ ] |  | (removed) Ask Claude to create/manage subagents, or edit .claude/agents/ Description says "(removed)". |
 | `/auto-mode-setup` | Hidden | [ ] |  | Set up and customise auto mode — environment context, plus optional rule tweaks |
 | `/autocompact` | Hidden | [ ] |  | Configure the auto-compact window size |
@@ -169,6 +173,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/import` | Hidden | [ ] |  | Import config from another AI coding agent |
 | `/insights` | Hidden | [ ] |  | Generate a report analyzing your Claude Code sessions |
 | `/mcp` | Hidden | [ ] |  | Manage MCP servers |
+| `/reload-plugins` | Hidden | [ ] |  | Activate pending plugin changes in the current session — hint `[--force]` **New in 2.1.260** (headless roster 2026-09-04; not yet driven through the panel) |
 | `/run-skill-generator` | Hidden | [ ] |  | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use wh… |
 | `/schedule` | Hidden | [ ] | `/routines` | Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule. |
 | `/team-onboarding` | Hidden | [ ] |  | Help teammates ramp on Claude Code with a guide from your usage |
@@ -181,7 +186,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
 | `/artifact-capabilities` | Hidden | [ ] |  | Runtime capabilities a published Artifact page can be granted — behavior static HTML cannot provide on its own, such as the page reading… |
-| `/artifact-design` | Hidden | [ ] |  | Design guidance and fundamentals for Artifacts. |
+| `/artifact-design` | Hidden | [ ] |  | (removed) Design guidance and fundamentals for Artifacts. Dropped from the roster at 2.1.260 (headless probe 2026-09-04). |
 | `/artifact-diagramming` | Hidden | [ ] |  | Diagramming know-how for Artifacts — when a picture earns its place, how to draw one that shows the real mechanism, and the inline-SVG me… |
 | `/claude-api` | Hidden | [ ] |  | Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, mod… |
 | `/dataviz` | Hidden | [ ] |  | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML… |

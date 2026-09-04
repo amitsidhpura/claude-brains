@@ -4,6 +4,41 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-04 — 13.3 per-project persistence DEFERRED: wait for the `update_settings` allowlist to grow
+- The user's call ("wait for Anthropic — we already persist our way") after the implementation
+  attempt hit a measured wall: the 2.1.260 `update_settings` control allows exactly ONE key —
+  the binary's allowlist is `new Set(["outputStyle"])`, string values only, "deletion is not
+  supported"; `model` and `permissions` are refused by name ("update_settings keys not
+  allowed"). The outputStyle write itself works and file-merges cleanly (probed end-to-end).
+- What stays true and makes the revival cheap: the CLI HONORS `model` and
+  `permissions.defaultMode` from `.claude/settings.local.json` at spawn (measured 2026-09-04
+  with the panel's flags; `--permission-mode` beats the file, `model` needs no flag at all), and
+  `ChatPanel` seeds the chips from `session.selectedModel()`/`selectedMode()` — so adoption is a
+  precedence change in those two functions plus a write path, whenever the channel opens.
+- Alternatives rejected: the plugin writing `.claude/settings.local.json` itself via Kotlin
+  read-merge-write ([MD], offered with a recommendation, not taken — the CLI also writes that
+  file on every "always allow" grant, so simultaneous writes can drop each other's change);
+  dropping the idea entirely (the binary's own description — "the scope host UIs need so their
+  writes land exactly where /config's do" — signals the allowlist will grow; backlog watch-item:
+  grep the binary for `update_settings keys not allowed` each re-audit).
+- Checklist 13.3 re-marked ➖ with the full measured story; `PropertiesComponent` persistence
+  (IDE-global) remains the mechanism of record.
+
+## 2026-09-04 — Re-audit run at 2.1.260, nine versions after 2.1.251, on the user's ask
+- Findings folded into `docs/feature-checklist.md` (details block "Re-audit 2026-09-04") and
+  `docs/slash-commands.md`: VS Code's session sidebar grew (archive/unread/groups/filters;
+  `delete_session` removed), CLI vocabulary +`cloud_session_delta` +`update_settings`, roster
+  54 → 55 (+`/advisor` +`/reload-plugins` −`/artifact-design`), fable row now Fable 5.1 —
+  roster-driven, no panel change needed. `set_model` response, IDE-MCP tool set, tengu gates,
+  initialize keys: unchanged. One new row (13.3); §16 stale counts swept.
+- Method note that saved the audit: the Marketplace vsix supplies BOTH sides — the new
+  extension AND, via `extension/resources/native-binary/claude`, the OLD CLI baseline
+  (2.1.251 was no longer under `~/.local/share/claude/versions/`). Runbook step 3 updated.
+- Two same-day corrections after deeper measurement (both folded into the audit block): VS Code
+  does NOT use `update_settings` (its `persist_session_permission_mode` writes extension
+  `globalState`), and the control's generic description oversells a one-key allowlist. Lesson in
+  gotchas § Protocol: subtype acceptance says nothing about key coverage.
+
 ## 2026-09-04 — CLI backward compat: no version floor, no shims — a muted hint on early death
 - The policy, settled with the user: the plugin never branches on CLI version and never declares
   a minimum it hasn't tested ("we might be supporting still below but we have not tested, so
@@ -617,45 +652,24 @@ shared builder (`planCommentRows`) live and replayed; decided cards keep the row
 `~/.claude/plans/` + `get_plan` make it possible later); comments forcing keep-planning (reference
 behaviour, overruled); inventing our own wire format (byte-compatibility costs nothing).
 
-## 2026-08-21 — Displaced transcript records reorder by ANCHOR, never by a global sort
-`DisplacedAnchor` (SessionStore.kt): arm an index+timestamp where a measured lie begins; a record that
-follows in file order but provably precedes in time inserts at the anchor; eviction shifts/forgets it.
-Two instances: `apiErrAnchor` (retry storms) and `compactAnchor` (the CLI writes a manual compaction's
-boundary + summary BEFORE the /compact command records, so replay drew the marker above the bubble
-that caused it). Pinned by two order tests; the refactor proved byte-identical via `probe --json` + cmp.
-**Why:** file order is the backbone of the single-pass parser and is usually chronology; the CLI breaks
-it only in measured places. The anchor makes each correction local and provable.
-**Rejected:** a global stable sort by timestamp — records with NO timestamp; one API message persists as
-several same-ts records whose only order IS file order; the streaming eviction window would need
-whole-file buffering (the exact architecture the truncation rewrite removed); and "timestamps always
-outrank file order" is an unmeasured premise, so new anchors must each be earned by a real transcript.
-Also rejected: suppressing or reconstructing the live compaction footer (the marker is the compaction's
-receipt; both divergences recorded as deliberate — now gotchas.md § Replay, item (d); renderer-parity.md deleted 2026-08-28).
+## Digest — decisions before 2026-08-22
 
-## 2026-08-21 — "Open this path" resolves against DISK; locked readers stay on the snapshot
-`Vfs.kt` gains `findVFileOnDisk` (snapshot hit first, then `refreshAndFindFileByPath`), wired into
-exactly two callers: `ClaudeSessionService.openFile` and `IdeTools.openFile`.
-**Why:** the snapshot is not the disk, so a file written behind the IDE's back reported "File not
-found" on a click. Snapshot-first means the refresh is only paid when the answer would otherwise be a
-wrong "no", and a miss still means genuinely absent.
-**Rejected:** changing `findVFile` itself (a synchronous refresh under `readLocked` deadlocks);
-refreshing in `Autosave`/`saveDocument` (a file the VFS never saw has no unsaved document); an async
-refresh with a callback (`openFile` returns the Boolean that decides the balloon, so it must be
-synchronous); `DiffReview.open` (same latent staleness, but a stale miss only mis-renders the left pane
-and the end-of-turn sweep covers it — parked in backlog).
-
-## 2026-08-19 — The webview JS lives in webview/js/, spliced back into one script scope
-`chat.html` is markup only; the JS is 14 numbered files under `webview/js/` (prefix = load order),
-concatenated in `WebviewAssets.JS_FILES` order into the page's single `<script>` block at `<!--JS-->`.
-The manifest is the ONLY copy of the order; `RenderLimitsTest` asserts over the assembled page and pins
-manifest ⇄ directory equality.
-**Why:** 4542 lines was unreviewable; the concat splice reuses the seam already proven for chat.css and
-window.LIMITS (loadHTML has no base URL), keeps ONE shared script scope so semantics are provably
-unchanged (assembled page byte-identical, banners aside), and the banners give DevTools a way back to a
-source file.
-**Rejected:** real ES modules via a CefResourceHandler or file:// base (per-file scope, but adds a
-resource-serving layer and deferred-load timing — `window.onClaudeEvent` would need explicit global
-wiring before Kotlin's first push); leaving the file whole; splitting the markup too.
+- **2026-08-21** — displaced transcript records reorder by ANCHOR (`DisplacedAnchor`,
+  SessionStore.kt: `apiErrAnchor`, `compactAnchor`), never by a global sort. Why: file order is
+  the single-pass parser's backbone and the CLI breaks chronology only in measured places — each
+  anchor is local and provable. Rejected: a global timestamp sort (records without timestamps;
+  same-ts records whose only order IS file order; would need whole-file buffering). New anchors
+  must each be earned by a real transcript.
+- **2026-08-21** — "open this path" resolves against DISK (`findVFileOnDisk`: snapshot first,
+  then refresh), wired into exactly the two `openFile` callers. Why: the VFS snapshot lags files
+  written behind the IDE's back — clicks reported "File not found" on real files. Rejected:
+  changing `findVFile` itself (sync refresh under `readLocked` deadlocks); an async callback
+  (the caller's Boolean decides the balloon).
+- **2026-08-19** — the webview JS lives in `webview/js/` (numbered files, load order = prefix),
+  concatenated into ONE script scope at `<!--JS-->`; `WebviewAssets.JS_FILES` is the only copy of
+  the order, pinned by `RenderLimitsTest`. Why: 4542 lines was unreviewable; the concat splice
+  keeps semantics provably unchanged (assembled page byte-identical). Rejected: real ES modules
+  (resource-serving layer + deferred-load timing for `window.onClaudeEvent`) — backlog "someday".
 
 ## Digest — decisions before 2026-08-18
 

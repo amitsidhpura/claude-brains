@@ -6,6 +6,14 @@ re-read those before trusting memory here.
 
 ## Protocol / wire
 
+- **Probing that a control SUBTYPE is accepted says nothing about which KEYS it accepts.**
+  `update_settings` answered an empty-merge probe with "requires at least one key" — proof the
+  subtype exists, which the 2.1.260 audit wrote up as a general settings channel — but the first
+  real-key probe got "update_settings keys not allowed: model": the key allowlist is
+  `new Set(["outputStyle"])`, string values only, no deletion (cost: the 13.3 implementation
+  attempt, 2026-09-04). Probe every key you intend to send before designing on a subtype, and
+  find such allowlists by grepping the binary around the refusal string (python `re` over the
+  decoded binary — ugrep chokes, see § Testing).
 - **A textual marker parsed out of free tool output WILL eventually occur IN the output — anchor
   on every structural property the real emitter has, not just position.** `resultNote`'s
   end-anchored `(note: …)` regex rendered a ~1300-char grep-style tail as one giant amber caveat

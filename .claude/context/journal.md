@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-04 (fourth) — 2.1.260 re-audit; 13.3 probed to the wall and deferred
+- Re-audit 2.1.251 → 2.1.260 per runbook, all measured (details block in the checklist): VS Code
+  session sidebar grew archive/unread/groups/filters (`delete_session` gone), CLI vocabulary
+  +`cloud_session_delta` +`update_settings`, roster 54 → 55 (+`/advisor` +`/reload-plugins`
+  −`/artifact-design`), fable row now **Fable 5.1** (roster-driven, panel unaffected;
+  `/fable/i` checks still match). Nothing else moved: tool set, tengu gates, initialize keys,
+  `set_model` response all flat. Checklist now 83 ✅ · 47 ➖ (130 rows); §16 counts swept;
+  slash doc updated; `reference/` re-extracted to 2.1.260.
+- Method: both vsixes downloaded from the Marketplace — 2.1.260 for the new extension, 2.1.251
+  for its `native-binary/claude` as the CLI BASELINE (no longer under `versions/`); runbook
+  step 3 updated. User then updated the real VS Code extension → `cmp`-identical to the
+  audited copy, no re-audit.
+- 13.3 ("implement it") died on measurement: `update_settings` allows ONLY `outputStyle`
+  (binary allowlist; `model`/`permissions` refused by name). But the CLI honors `model` and
+  `permissions.defaultMode` FROM `.claude/settings.local.json` at spawn (flag beats file).
+  Direct plugin file-write offered; user chose "wait for Anthropic" → 13.3 ➖, backlog
+  watch-item (grep the allowlist each re-audit), decisions.md has both entries.
+- Two same-day audit corrections from the attempt: VS Code doesn't ride `update_settings`
+  (its mode memory is extension `globalState`), and empty-merge acceptance ≠ key coverage —
+  new trap in gotchas § Protocol.
+
 ## 2026-09-04 (third) — 0.12.5 released and Approved
 - User's "lets release updates" → steps 1–5 proactively: bump to 0.12.5, notes rewritten
   (0.12.5/0.12.4/0.12.3, 0.12.2 dropped), and the owed "CLI 2.1.200+" line landed in README,
@@ -155,26 +176,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Committed and pushed on the user's ask (this save included). /verify was interrupted by the
   user — the changes were already live-verified above.
 
-## 2026-09-01 — the giant-yellow-note misfire found, fixed, hardened twice
-- User's 2026-08-30 "yellow text with large output" (no screenshot) diagnosed by measurement:
-  the `.t-note` caveat line — `resultNote`'s end-anchored regex captured from any literal
-  `(note:` in tool output to a final `)`. All amber emitters enumerated; not the CLI 2.1.252
-  "task notification" fix (that's API-payload-side; the panel never renders that content).
-- Two guards, both renderers, each test-first with the control watched failing: `NOTE_MAX = 400`
-  (over → DROP, not truncate — a slice of misread output is still misread) and position-0
-  (every real note template in the 2.1.252 binary is APPENDED after text — three ` (note:`,
-  Edit's escape-swap `\n(note:`). Second guard came from the user's own probe: a 3-line awk
-  whose whole result was `(note: …)` ducked under the size bound.
-- Real-wire before/after driven via `sendTurn(...)` over CDP through the live CLI: pre-fix build
-  drew the ~1300-char amber wall, fixed build none; user's exact small repro also clean.
-- Suites: `./gradlew test` 134, harness **592** (fixture 69, 6 asserts, provenance carries both
-  control runs + the real-wire reproduction). `docs/limits.md` gained the caveat row with the
-  full suppress-conditions list.
-- Learned: sandbox-panel CLI sessions DO persist under `…-claude-brains-testing/` — the raw
-  tool_result there confirmed the misfire shape byte-for-byte before any fix was trusted.
-- Committed and pushed on the user's ask (this save included).
-
 ## Digest
+- **2026-09-01** — giant-yellow-note misfire: `resultNote`'s end-anchored `(note:…)` regex ate a
+  ~1300-char grep tail as one amber caveat; fixed with `NOTE_MAX = 400` (drop, not truncate) +
+  position-0 reject, both measured off the binary's real note templates; fixture 69, harness 592.
+  Trap promoted to gotchas § Protocol (structural anchoring); sandbox-panel sessions persist
+  under `…-claude-brains-testing/` (now in state.md § Testing).
 - **2026-08-30 (sixth)** — **0.12.3 released** (`1277ad7`): full gate, 7/7 Compatible, Approved
   within the hour; notes said plainly that 0.12.2's fix had caused the every-open flash. Stray
   `plugin/verify.log` deleted — redirect verifier output into the scratchpad, never the repo.

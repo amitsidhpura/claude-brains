@@ -1,9 +1,15 @@
 # State
 
 ## Current focus
-**2026-09-04: nothing in flight — 0.12.5 released and Marketplace-Approved.** `main` is clean
-with zero unreleased work. Next candidates when the user picks one: backlog § Next up
-(Update-Claude button, Worktrees bundle 14.1+14.3, 15.5 debugger tools).
+**2026-09-04 (fourth session): nothing in flight.** 0.12.5 released and Marketplace-Approved;
+the **2.1.260 re-audit is done** (checklist references now 2.1.260, details block 2026-09-04;
+83 ✅ · 47 ➖, 130 rows, every section ✅) and **13.3 is decided: deferred** — `update_settings`
+allows only `outputStyle` (measured), so per-project persistence waits on Anthropic's allowlist
+(backlog watch-item; decisions.md 2026-09-04 ×2). No plugin code changed since v0.12.5. Next
+candidates when the user picks one: backlog § Next up (Update-Claude button, Worktrees bundle
+14.1+14.3, 15.5 debugger tools).
+- Installed VS Code extension updated by the user to 2.1.260 (`cmp`-identical to the audited
+  vsix); `reference/anthropic-claude-code/` re-extracted at 2.1.260 as the next audit's base.
 
 ## Open investigations
 - **Fold-verdict report NOT reproduced** (user's Windows screenshot 2026-09-04: a Read OUT box
@@ -29,7 +35,7 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
 - Accepted residual: a sub-400 parenthetical appended mid-result and ending it still renders as
   a note — irreducible without structural marking from the CLI.
 - Checklist rules in force: `**id** mark [effort] **Name** — gist; facts`; **At a glance**
-  hand-maintained (recount with `awk`). Checklist: 83 ✅ · 46 ➖ (129 rows).
+  hand-maintained (recount with `awk`). Checklist: 83 ✅ · 47 ➖ (130 rows, 2026-09-04).
 - Do not re-propose: effort chip suffix (2026-08-26); non-red destructive hovers (2026-08-29);
   Claude-side rewind/checkpoints or host git actions (2026-08-29); "Effort (High)" label / blue
   slider track (2026-08-29); Copilot-derived features other than terminal-output context
@@ -63,11 +69,12 @@ one-line bg-task titles, `(note:)` caveat cap. Change notes carry the last three
   `~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/` (measured 2026-09-01).
 
 ## Next steps
-- [x] Release 0.12.5 — done 2026-09-04, Approved (§ Released above).
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open
       investigations).
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251):
       `github.com/SchemaStore/schemastore/commits/master/src/schemas/json/claude-code-settings.json`.
+- [ ] `update_settings` allowlist watch — during each CLI re-audit, not before (backlog § Next
+      up; adopt for per-project chip persistence when `model`/`permissions`/`effortLevel` land).
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; upload Marketplace screenshots
       01+03 and 04+05 to `plugins.jetbrains.com/plugin/33274`; check the listing page shows the
       new plugin.xml description ("2.1.200+") now that the 0.12.5 upload refreshed it.
