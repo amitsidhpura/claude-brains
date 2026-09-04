@@ -1,0 +1,20 @@
+{
+  "item": "Early CLI death hint — 'Your Claude CLI may be out of date' on a pre-stream exit (2026-09-05)",
+  "branch": "a non-zero __exit frame carrying early:true (the process died before routing a single stream-json frame) renders a muted hint line under the stderr box; a mid-session crash (early absent) renders exactly what it does today — no hint",
+  "provenance": "__exit is OUR OWN host frame, built in ChatPanel.onExit — it never rides the CLI wire, so this fixture is renderer-vs-frame self-consistency by construction. The `early` flag is set Kotlin-side when ClaudeCli.route() saw no parseable stdout frame before waitFor() returned; that half is NOT covered here and is live-verified separately (a stub `claude` on PATH printing a commander error and exiting 1 → hint present; SIGKILL of a real mid-idle CLI → hint absent). The SYMPTOM is real: a friend's fresh install (screenshot 2026-09-04) ran a pre-2.1.220 CLI that rejects `--permission-mode manual` → exit 1, and the panel showed only the raw crash. The stderr text in half A is copied verbatim from that screenshot. Decision 2026-09-05: no vocab translation, no version floor — a hint only (update button deferred).",
+  "steps": [
+    {
+      "note": "half A: early death → red exit line + ERR box + ONE muted hint under the box; half B (negative control): same exit without `early` → no hint",
+      "setup": "window.__ex73 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__exit', code:1, early:true, stderr:\"error: option '--permission-mode <mode>' argument 'manual' is invalid. Allowed choices are acceptEdits, auto, bypassPermissions, default, dontAsk, plan.\"})); const a = Array.prototype.slice.call(document.querySelectorAll('#log .status')); const exitA = a.filter(function (l) { return l.textContent.indexOf('claude process exited (1)') !== -1; }); const hintA = a.filter(function (l) { return l.textContent.indexOf('may be out of date') !== -1; }); const boxA = document.querySelectorAll('#log .io').length; const hintAfterBox = hintA.length === 1 && !!hintA[0].previousElementSibling && hintA[0].previousElementSibling.className === 'io'; window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__exit', code:1, stderr:'JavaScript heap out of memory'})); const b = Array.prototype.slice.call(document.querySelectorAll('#log .status')); const hintB = b.filter(function (l) { return l.textContent.indexOf('may be out of date') !== -1; }); const exitB = b.filter(function (l) { return l.textContent.indexOf('claude process exited (1)') !== -1; }); return { exitRedA: exitA.length === 1 && exitA[0].classList.contains('err'), hintCount: hintA.length, hintMuted: hintA.length === 1 && !hintA[0].classList.contains('err'), hintAfterBox: hintAfterBox, errBoxA: boxA, hintB: hintB.length, exitB: exitB.length }; })();",
+      "expect": [
+        { "js": "window.__ex73.hintCount", "equals": 1, "why": "DISCRIMINATING: the early exit renders exactly one 'may be out of date' hint line (pre-fix: 0)" },
+        { "js": "window.__ex73.hintMuted", "equals": true, "why": "DISCRIMINATING: the hint wears the plain muted status dress, not .err — it is advice, not a second error" },
+        { "js": "window.__ex73.hintAfterBox", "equals": true, "why": "GUARD: the hint sits directly under the stderr .io box, not above the crash it explains" },
+        { "js": "window.__ex73.exitRedA", "equals": true, "why": "GUARD: the existing red 'claude process exited (1)' line is untouched" },
+        { "js": "window.__ex73.errBoxA", "equals": 1, "why": "GUARD: the folded ERR stderr box still renders alongside the hint" },
+        { "js": "window.__ex73.hintB", "equals": 0, "why": "GUARD (negative control): a mid-session crash — `early` absent — gets no out-of-date hint" },
+        { "js": "window.__ex73.exitB", "equals": 1, "why": "GUARD: the control half actually rendered its exit line (proves half B ran, not vacuous)" }
+      ]
+    }
+  ]
+}

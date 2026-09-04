@@ -85,6 +85,15 @@ class ClaudeCli(
     /** Recent stderr, newest last — empty when the process said nothing. */
     fun stderrTail(): List<String> = synchronized(stderrTail) { stderrTail.toList() }
 
+    @Volatile
+    private var sawFrame = false
+    /**
+     * Whether this process ever produced a parseable stream-json frame. False on a non-zero exit
+     * means it died at startup — argument parsing, in practice an old CLI rejecting a newer flag
+     * vocabulary — which is when the panel may fairly suggest updating.
+     */
+    fun sawFrame(): Boolean = sawFrame
+
     /** `--mcp-config` JSON pointing the CLI at the plugin's MCP-over-WebSocket bridge. */
     private fun ideMcpConfig(): String {
         val cfg = buildJsonObject {
@@ -157,7 +166,7 @@ class ClaudeCli(
         val p = pb.start().also { process = it }
         stdin = OutputStreamWriter(p.outputStream, StandardCharsets.UTF_8)
 
-        thread(name = "claude-stdout", isDaemon = true) {
+        val outThread = thread(name = "claude-stdout", isDaemon = true) {
             p.inputStream.bufferedReader(StandardCharsets.UTF_8).useLines { lines ->
                 lines.forEach { line ->
                     if (line.isNotBlank()) runCatching { route(line) }
@@ -165,7 +174,7 @@ class ClaudeCli(
                 }
             }
         }
-        thread(name = "claude-stderr", isDaemon = true) {
+        val errThread = thread(name = "claude-stderr", isDaemon = true) {
             p.errorStream.bufferedReader(StandardCharsets.UTF_8).forEachLine {
                 log.info("[claude] $it")
                 // Keep the tail so a non-zero exit can SAY why. The panel used to show
@@ -180,6 +189,12 @@ class ClaudeCli(
         }
         thread(name = "claude-wait", isDaemon = true) {
             val code = p.waitFor()
+            // The pipes can still hold the death note: a process failing at argument parsing
+            // writes stderr and exits faster than the reader threads run (measured 2026-09-05
+            // with a stub CLI — the exit reported with stderrTail still empty, so the ERR box
+            // never rendered). Draining first also settles sawFrame before the exit frame reads
+            // it. Bounded, so a wedged pipe cannot hang the exit report.
+            runCatching { outThread.join(1000); errThread.join(1000) }
             log.info("claude exited: $code")
             if (!stopped) onExit(code) // suppress when we intentionally restarted/stopped
         }
@@ -215,6 +230,7 @@ class ClaudeCli(
     /** Split control-protocol frames from conversation events. */
     private fun route(line: String) {
         val obj = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull()
+        if (obj != null) sawFrame = true
         when (obj?.get("type")?.jsonPrimitive?.content) {
             "control_request" -> handleControlRequest(obj!!)
             "control_response" -> handleControlResponse(obj!!)
@@ -485,7 +501,13 @@ class ClaudeCli(
 
     private fun writeLine(line: String) {
         val w = stdin ?: return
-        synchronized(w) { w.write(line); w.write("\n"); w.flush() }
+        // A dead pipe is an expected state, not a caller error: a CLI that fails at argument
+        // parsing is gone before the very first sendInitialize(), and the throw used to unwind
+        // out of start() — leaving ClaudeSessionService.cli unassigned, so the exit frame read
+        // stderrTail/sawFrame off a null instance (measured 2026-09-05, stub CLI). The exit
+        // path, not the writer, reports the death.
+        runCatching { synchronized(w) { w.write(line); w.write("\n"); w.flush() } }
+            .onFailure { log.warn("write to claude failed (process dead?): ${it.message}") }
     }
 
     fun stop() {

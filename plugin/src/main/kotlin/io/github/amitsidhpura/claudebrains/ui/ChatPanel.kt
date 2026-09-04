@@ -736,8 +736,15 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 pushFrame(buildJsonObject {
                     put("type", "__exit")
                     put("code", code)
-                    if (code != 0) session.stderrTail().takeIf { it.isNotEmpty() }
-                        ?.let { put("stderr", it.joinToString("\n")) }
+                    if (code != 0) {
+                        session.stderrTail().takeIf { it.isNotEmpty() }
+                            ?.let { put("stderr", it.joinToString("\n")) }
+                        // Died without ever speaking the protocol = an argument-parse rejection,
+                        // in practice an old CLI meeting a newer flag vocabulary (pre-2.1.220
+                        // rejects `--permission-mode manual`). The webview turns this into the
+                        // "may be out of date" hint; a mid-session crash must not carry it.
+                        if (!session.sawFrame()) put("early", true)
+                    }
                 })
             },
         )

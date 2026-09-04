@@ -167,7 +167,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         pendingPermissions.clear()
         pendingSuggestions.clear()
         turnChanges.reset()
-        cli = ClaudeCli(
+        // Assigned BEFORE start(): a CLI that dies at argument parsing fires onExit within
+        // milliseconds, and the exit frame reads stderrTail()/sawFrame() through this field —
+        // assigning after start() left that read on the previous (null) instance (2026-09-05).
+        val fresh = ClaudeCli(
             workingDir = cwd,
             ssePort = port,
             authToken = authToken,
@@ -191,7 +194,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
                 if (id == ClaudeCli.HOOK_AUTOSAVE) Autosave.handle(input, respond, turnChanges::snapshot)
                 else respond(kotlinx.serialization.json.buildJsonObject { put("continue", true) })
             },
-        ).apply { start() }
+        )
+        cli = fresh
+        fresh.start()
 
         // Re-apply the persisted model on every (re)start. A refusal here (9.11) has no previous
         // value to fall back to: the CLI stays on its default, so the persisted choice is dropped
@@ -341,6 +346,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** Recent CLI stderr, so a non-zero exit can report why instead of only a code. */
     fun stderrTail(): List<String> = cli?.stderrTail().orEmpty()
+
+    fun sawFrame(): Boolean = cli?.sawFrame() ?: false
 
     /** The session's current task list, from the store the CLI keeps at ~/.claude/tasks/<id>/. */
     fun tasks(id: String): kotlinx.serialization.json.JsonArray =

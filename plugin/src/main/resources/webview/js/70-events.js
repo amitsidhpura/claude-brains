@@ -498,6 +498,13 @@
           const box = ioBox([['ERR', ev.stderr]]);
           line.after(box);
         }
+        // `early` = the process died before producing a single protocol frame (set host-side) —
+        // an argument-parse rejection, which in practice is an old CLI meeting a newer flag
+        // vocabulary (a pre-2.1.220 install rejects `--permission-mode manual`). Advice, not a
+        // second error, so the plain muted dress; a mid-session crash never carries the flag.
+        if (ev.early) {
+          statusLine('Your Claude CLI may be out of date — run `claude update` in a terminal.', SVG_ALERT);
+        }
         return;
       }
     }
