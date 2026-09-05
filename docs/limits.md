@@ -116,6 +116,7 @@ this cap was future-proofing rather than a live fix.
 | diff rows | 400 | `MAX_DIFF_ROWS`, live + replay | ✅ "… diff truncated" |
 | Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number | ✅ `.io-cut` |
 | Bash output | 2000 chars | `RenderLimits.OUT_MAX` (live + replay) | ✅ `.io-cut` |
+| any cut IN/OUT box | — | the `.io-cut` marker reads "open in editor" and opens the WHOLE text read-only in an editor tab (1.27, 2026-09-05): a live row from the text it still holds, a replayed row via `SessionStore.toolText` by tool id; a persisted spill keeps "open full output" (the CLI's file) | ✅ |
 | card command preview | 4000 chars | `RenderLimits.CMD_MAX` — same cap as the IN box, by construction; a cut command is also NOT editable on the card (3.8: the box does not hold all of it) | ✅ `.cmd-cut` |
 | IN box (any `IN_KEYS` value) | 4000 chars | `RenderLimits.CMD_MAX` — `command`, `prompt` and, since 2026-08-12, `browser_evaluate`'s `function` | ✅ `.io-cut` |
 | tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) | ❌ one line, accepted |

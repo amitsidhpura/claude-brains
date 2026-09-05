@@ -257,7 +257,8 @@
             }
             if (inKey) {
               const full = String(inp[inKey]), cut = cutInfo(full, LIM.cmdMax);
-              const io = ioBox([['IN', cut ? cut.shown : full, cut]]);
+              // the uncut text rides the row for the marker's "open in editor" (1.27)
+              const io = ioBox([['IN', cut ? cut.shown : full, cut, null, null, null, null, { full: full, tool: openTool.name }]]);
               openTool.el.after(io); openTool.io = io; maybeScroll();
             }
             // 4.4: an auto-approved edit gets its diff at tool_result time, built from this
@@ -407,7 +408,8 @@
       const cut = cutInfo(shown, LIM.outMax);
       t.io.appendChild(ioRow('OUT', cut ? cut.shown : shown, cut,
         tur.persistedOutputSize || (spill && spill.bytes),
-        tur.persistedOutputPath || (spill && spill.path)));
+        tur.persistedOutputPath || (spill && spill.path),
+        undefined, undefined, { full: shown, tool: t.name }));   // 1.27: the marker opens all of it
       maybeScroll();
     });
   }

@@ -407,6 +407,10 @@
               return (typeof c === 'string') ? { name: c } : c;
             }));
           }
+        } else if (BANNER_SUBTYPES[ev.subtype]) {
+          // Checklist 1.26: the banner family (vcs_state_changed, notification, …) — one muted
+          // status line each, or the working verb for task_summary. Measured facts in 50-blocks.js.
+          bannerLine(ev);
         }
         return;
       case '__tasks': {
@@ -438,8 +442,22 @@
       // transcript without the action (see 55-replay's done case).
       case '__files_changed': return filesLine(ev.files || [], ev.turn);
       case '__perm_answered': {
-        const fn = permCards[ev.id];
-        if (fn) fn(ev.allow === true || ev.allow === 'true', ev.tweaked ? { oldStr: ev.oldStr, newStr: ev.newStr } : null);
+        const c = permCards[ev.id];
+        if (c) c.answer(ev.allow === true || ev.allow === 'true', ev.tweaked ? { oldStr: ev.oldStr, newStr: ev.newStr } : null);
+        return;
+      }
+      // 1.28: the CLI withdrew the ask — Kotlin's translation of `control_cancel_request`
+      // (MEASURED 2026-09-05, 2.1.261: an interrupt over a parked can_use_tool sends it with the
+      // ask's request_id, ahead of the auto-deny tool_result and the aborted result). The pending
+      // entry is already gone on the Kotlin side; here the card stops looking answerable. An
+      // AskUserQuestion card is the one kind not in permCards — it settles through resolveAsk.
+      case '__perm_cancelled': {
+        if (activeAsk && activeAsk.ev && activeAsk.ev.id === ev.id) {
+          resolveAsk(activeAsk.card, '<span class="no-t">✗ Withdrawn — Claude stopped waiting</span>');
+          return;
+        }
+        const c = permCards[ev.id];
+        if (c) c.lapse();
         return;
       }
       // A usage limit was hit or is close. No terminal to check — the terminal is not running this

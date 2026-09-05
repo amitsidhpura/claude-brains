@@ -503,6 +503,7 @@ object SessionStore {
         var oldStr: String? = null         // Edit fallback when no patch
         var newStr: String? = null
         var file: String? = null
+        var toolId: String? = null         // the tool_use id, so a replayed cut box can ask for its whole text (1.27)
         var images = mutableListOf<JsonObject>()
         var questions: JsonElement? = null // AskUserQuestion input
         var answers: JsonElement? = null   // chosen answers (from toolUseResult)
@@ -560,6 +561,7 @@ object SessionStore {
             fullPath?.let { put("fullPath", it) }
             cmd?.let { put("cmd", it) }
             out?.let { put("out", it) }
+            toolId?.let { put("toolId", it) }
             cmdCut?.let { put("cmdCut", cutJson(it)) }
             outCut?.let { put("outCut", cutJson(it)) }
             outTotal?.let { put("outTotal", it) }
@@ -1348,8 +1350,43 @@ object SessionStore {
             }
         }
         item.input = inp
-        b["id"]?.jsonPrimitive?.content?.let { byToolId[it] = item }
+        b["id"]?.jsonPrimitive?.content?.let { item.toolId = it; byToolId[it] = item }
         return item
+    }
+
+    /**
+     * The WHOLE text behind a replayed IN/OUT box (checklist 1.27): the transcript's own tool_use
+     * input (the first [RenderLimits.IN_KEYS] value, uncut) for `which = "in"`, or the tool_result's
+     * text for `"out"`, for the tool_use [toolId] in session [id]. Replay ships the CMD_MAX /
+     * OUT_MAX-capped copy; a click on the cut marker asks for this. A line scan with a cheap
+     * substring pre-check, not [readTranscript]: one record is wanted and parsing is the expensive
+     * half. Null when the file, the block or the text is not there.
+     */
+    fun toolText(cwd: String, id: String, toolId: String, which: String): String? {
+        val f = File(projectDir(cwd), "$id.jsonl")
+        if (!f.isFile || toolId.isBlank()) return null
+        val wantIn = which == "in"
+        f.bufferedReader().useLines { lines ->
+            for (line in lines) {
+                if (!line.contains(toolId)) continue
+                val obj = runCatching { Json.parseToJsonElement(line).jsonObject }.getOrNull() ?: continue
+                val content = obj["message"]?.jsonObject?.get("content") as? JsonArray ?: continue
+                for (el in content) {
+                    val blk = el as? JsonObject ?: continue
+                    val type = blk["type"]?.jsonPrimitive?.contentOrNull
+                    if (wantIn && type == "tool_use" && blk["id"]?.jsonPrimitive?.contentOrNull == toolId) {
+                        val inp = blk["input"] as? JsonObject ?: return null
+                        return RenderLimits.IN_KEYS.firstNotNullOfOrNull { k ->
+                            (inp[k] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+                        }
+                    }
+                    if (!wantIn && type == "tool_result" && blk["tool_use_id"]?.jsonPrimitive?.contentOrNull == toolId) {
+                        return resultText(blk["content"]).takeIf { it.isNotBlank() }
+                    }
+                }
+            }
+        }
+        return null
     }
 
     /**

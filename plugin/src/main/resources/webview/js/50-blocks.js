@@ -114,19 +114,38 @@
   // and this content is gone, so the two must read differently. `total`/`path` describe the CLI's
   // own earlier truncation (it caps stdout and spills the whole result to a file).
   // One wording, two builders: the DOM one below and previewHtml's string one, which cannot drift.
-  function cutText(cut, total, path) {
+  function cutText(cut, total, path, openable) {
     // lines is 0 for output with no newlines at all (minified JSON, one long line) — size alone is
     // the honest thing to show there rather than a meaningless "+0 lines"
     const s = total
       ? '⋯ ' + fmtSize(total) + ' total, not shown here'
       : '⋯ +' + (cut.lines ? cut.lines.toLocaleString() + ' lines · ' : '') + fmtSize(cut.bytes) + ' not shown';
-    return s + (path ? ' — open full output' : '');
+    return s + (path ? ' — open full output' : openable ? ' — open in editor' : '');
   }
-  function cutEl(cut, total, path) {
+  // 1.27: the whole text behind a cut box opens read-only in an editor tab (VS Code's open_content,
+  // hung on the marker rather than the body — the row's own click is the fold toggle). A LIVE row
+  // still holds its uncut text when it cuts, so it is kept here under a page-lifetime key on the
+  // marker and sent with the click; a REPLAYED row only ever had the capped copy, so its marker
+  // carries the tool id and Kotlin reads the transcript (SessionStore.toolText). A spill (the CLI's
+  // own persisted output) keeps opening the CLI's file, which holds more than either.
+  let fullTexts = Object.create(null), fullSeq = 0;
+  function ioTitle(tool, kind) {
+    const t = tool || 'tool';
+    return kind === 'IN' ? (t === 'Bash' ? 'Bash command' : t + ' input') : t + ' output';
+  }
+  function cutEl(cut, total, path, opts) {
     const e = document.createElement('span');
     e.className = 'io-cut';
+    let openable = false;
     if (path) { e.dataset.path = path; e.classList.add('click'); }
-    e.textContent = cutText(cut, total, path);
+    else if (opts && (opts.full != null || opts.toolId)) {
+      openable = true;
+      e.classList.add('click');
+      e.dataset.title = ioTitle(opts.tool, opts.kind);
+      if (opts.full != null) { fullSeq++; fullTexts[fullSeq] = String(opts.full); e.dataset.full = String(fullSeq); }
+      else { e.dataset.tool = opts.toolId; e.dataset.which = opts.kind === 'IN' ? 'in' : 'out'; }
+    }
+    e.textContent = cutText(cut, total, path, openable);
     return e;
   }
   // What the CLI said about the result itself, as against what the result WAS: an exit-code
@@ -145,7 +164,9 @@
   // wire (replay). Marker and note are both SIBLINGS of .io-v, never children: foldBlock collapses
   // .io-v to three lines, so either one inside it would itself be folded away — the notice that
   // content was cut, cut.
-  function ioRow(kind, text, cut, total, path, note, interrupted) {
+  // `opts` (1.27): {full, tool} on a live row (the uncut text and the tool's name) or {toolId, tool}
+  // on a replayed one — what the cut marker needs to open the whole text; absent → a plain marker.
+  function ioRow(kind, text, cut, total, path, note, interrupted, opts) {
     const frag = document.createDocumentFragment();
     const row = document.createElement('div'); row.className = 'io-row';
     row.innerHTML = '<span class="io-k"></span><span class="io-v"></span>';
@@ -163,13 +184,13 @@
     // item is 32px wider than the container once indented, which gave every row carrying one a
     // phantom 32px of scroll. Outside it they stay put and cost nothing. Still outside .io-v too,
     // for the older reason: foldBlock collapses it to three lines and would fold the notice away.
-    if (cut || total) frag.appendChild(cutEl(cut || { lines: 0, bytes: 0 }, total, path));
+    if (cut || total) frag.appendChild(cutEl(cut || { lines: 0, bytes: 0 }, total, path, opts && Object.assign({ kind: kind }, opts)));
     if (note || interrupted) frag.appendChild(noteEl(note, interrupted));
     return frag;   // a fragment, so every caller's appendChild still mounts row + markers together
   }
   function ioBox(rows) {
     const io = document.createElement('div'); io.className = 'io';
-    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1], r[2], r[3], r[4], r[5], r[6])); });
+    rows.forEach(function (r) { io.appendChild(ioRow(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7])); });
     return io;
   }
   /**
@@ -217,7 +238,8 @@
     if (res.isError) line.classList.add('fail');
     if (!holder.io) { holder.io = ioBox([]); line.after(holder.io); }
     const cut = cutInfo(res.text, LIM.outMax);
-    holder.io.appendChild(ioRow('OUT', cut ? cut.shown : res.text, cut));
+    holder.io.appendChild(ioRow('OUT', cut ? cut.shown : res.text, cut, undefined, undefined, undefined, undefined,
+      { full: res.text, tool: 'web_search' }));
     maybeScroll();
   }
   /**
@@ -247,25 +269,139 @@
     info:       { cls: 'status',     icon: false },
   });
   let infoByTool = {};   // tool_use_id -> the line to update in place; reset per session
-  function infoLine(content, level, toolUseId) {
+  // `glyph` (optional): the gutter mark for a NON-warning line — the banner family's kind marks
+  // (1.26). A warning always wears the alert; a plain CLI notice without a glyph wears nothing.
+  function infoLine(content, level, toolUseId, glyph) {
     const text = String(content == null ? '' : content).trim();
     if (!text) return;   // an empty notice is not a notice
     const lv = INFO_LEVELS[level] || INFO_LEVELS.notice;   // unknown level degrades to the quiet one
+    const icon = lv.icon ? SVG_ALERT : (glyph || null);
     const prev = toolUseId ? infoByTool[toolUseId] : null;
     if (prev && prev.isConnected) {
       // Replace the text, keep the element: re-appending would scroll the timeline for what is
       // logically the same message saying something new.
       prev.className = lv.cls;
       prev.textContent = '';
-      if (lv.icon) {
+      if (icon) {
         const s = document.createElement('span'); s.className = 's-ic';
-        s.innerHTML = SVG_ALERT; prev.appendChild(s);
+        s.innerHTML = icon; prev.appendChild(s);
       }
       prev.appendChild(document.createTextNode(text));
       return;
     }
-    const el2 = statusLine(text, lv.icon ? SVG_ALERT : null, lv.cls);
+    const el2 = statusLine(text, icon, lv.cls);
     if (toolUseId) infoByTool[toolUseId] = el2;
+  }
+  /**
+   * Banner-class `system` frames (checklist 1.26) — the one-line notices the terminal shows as a
+   * banner between turns. Drawn through the same muted status line as `informational`, so they
+   * read as what they are: a note, not a message. The webview handler used to drop all of them.
+   *
+   * MEASURED 2026-09-05 over stdio on 2.1.261 with the panel's own flags (probe_banners.py):
+   *   vcs_state_changed {kind:"commit"|"push", branch, cwd} — a `git commit` / `git push` via Bash.
+   *   notification {key, text, priority, color?, timeout_ms?} — a Stop hook exiting 2 gave
+   *     {key:"stop-hook-error", text:"Stop hook error occurred · ctrl+o to see",
+   *      priority:"immediate"}. The suffix is the TUI's transcript-toggle hint and is dropped.
+   * SCHEMA-SHAPED (the 2.1.261 binary's zod definitions), engine-emitted, never seen on this wire:
+   *   memory_saved {written_paths[], verb?} / memory_recall {mode, memories[]} — automemory
+   *   extraction, not a manual Write (a "save this to memory" prompt produced none);
+   *   code_change_published {provider, url, repo} — gated on the CLI's forge-URL allowlist, so a
+   *   local bare remote printing a PR URL never qualifies; task_summary {detail|null} — the
+   *   debounced classifier's live phrase, unseen in nine probe turns.
+   * REPL-ONLY (their only call sites are TUI transcript reducers; probed 2026-09-05: an interrupt
+   * over a live background agent, a set_permission_mode over a parked ask and a /loop tick emitted
+   * none): agents_killed, permission_retry, scheduled_task_fire, away_summary, turn_duration,
+   * and stop_hook_summary (the internal message has no stream-json translator arm — the blocking
+   * hook above produced only the `notification`). Handled anyway: one branch each against a public
+   * schema, so the day a translator arm lands the panel does not go blind.
+   *
+   * Each KIND wears a gutter glyph (option C, the user's pick 2026-09-05 from a three-way render
+   * in the real panel — bare / one dot / per kind): SVG_GIT_BRANCH for git events, SVG_LINK for a
+   * published change, SVG_BOOKMARK for memories, SVG_DOT_OPEN for every other notice; a
+   * warning-level line keeps SVG_ALERT through infoLine's own ladder.
+   *
+   * The FIRST frame of every subtype is kept verbatim in window.__bannerSeen[subtype] (readable
+   * over CDP, once in the console) — the measurement hook for the unforceable ones, exactly as
+   * __ambientSeen and __modelFallbackSeen are for theirs.
+   */
+  const BANNER_SUBTYPES = Object.assign(Object.create(null), {
+    notification: 1, vcs_state_changed: 1, code_change_published: 1, memory_saved: 1,
+    memory_recall: 1, permission_retry: 1, scheduled_task_fire: 1, away_summary: 1,
+    agents_killed: 1, stop_hook_summary: 1, task_summary: 1, turn_duration: 1,
+  });
+  // The REPL queue's priorities onto infoLine's prominence ladder: only the two loud ones alert.
+  const NOTIFY_LEVEL = { immediate: 'warning', high: 'warning', medium: 'suggestion', low: 'notice' };
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function bannerLine(ev) {
+    const st = ev.subtype;
+    if (!ev.__gallery) {
+      if (!window.__bannerSeen) window.__bannerSeen = {};
+      if (!window.__bannerSeen[st]) {
+        window.__bannerSeen[st] = ev;
+        console.warn('first ' + st + ' frame (1.26):', JSON.stringify(ev));
+      }
+    }
+    switch (st) {
+      case 'notification': {
+        const text = String(ev.text || '').replace(/\s*·\s*ctrl\+o to see\s*$/i, '');
+        // Same key = the REPL replaces its banner; infoLine's dedupe slot does the same here.
+        infoLine(text, NOTIFY_LEVEL[ev.priority] || 'notice', ev.key ? 'ntf:' + ev.key : null, SVG_DOT_OPEN);
+        return;
+      }
+      case 'vcs_state_changed': {
+        let text;
+        if (ev.kind === 'commit') text = 'Committed' + (ev.branch ? ' on ' + ev.branch : '');
+        else if (ev.kind === 'push') text = 'Pushed' + (ev.branch ? ' ' + ev.branch : '');
+        else if (ev.kind === 'merge') text = 'Merged';
+        else if (ev.kind === 'rebase') text = 'Rebased';
+        else text = String(ev.kind || '');   // the schema: treat an unknown kind like a known one
+        infoLine(text, 'notice', null, SVG_GIT_BRANCH);
+        return;
+      }
+      case 'code_change_published': {
+        const lead = 'Published to ' + (ev.provider || 'the forge');
+        if (!ev.url) { infoLine(lead, 'notice', null, SVG_LINK); return; }
+        // The URL is an anchor: browseLink (00-core.js) hands it to the system browser.
+        const d = statusLine(lead + ' · ', SVG_LINK, 'status');
+        const a = document.createElement('a');
+        a.href = ev.url; a.textContent = ev.url;
+        d.appendChild(a);
+        return;
+      }
+      case 'memory_saved': {
+        const n = Array.isArray(ev.written_paths) ? ev.written_paths.length : 0;
+        if (n) infoLine((ev.verb || 'Saved') + ' ' + plural(n, 'memory', 'memories'), 'notice', null, SVG_BOOKMARK);
+        return;
+      }
+      case 'memory_recall': {
+        const n = Array.isArray(ev.memories) ? ev.memories.length : 0;
+        if (n) infoLine('Recalled ' + plural(n, 'memory', 'memories'), 'notice', null, SVG_BOOKMARK);
+        return;
+      }
+      case 'permission_retry':
+      case 'scheduled_task_fire':
+      case 'away_summary':
+        infoLine(ev.content, 'notice', null, SVG_DOT_OPEN);
+        return;
+      case 'agents_killed':
+        infoLine('All background agents stopped', 'notice', null, SVG_DOT_OPEN);   // the REPL's own wording
+        return;
+      case 'stop_hook_summary': {
+        const errs = Array.isArray(ev.hook_errors) ? ev.hook_errors.filter(Boolean) : [];
+        const n = ev.hook_count || 0;
+        const text = errs.length ? errs.join(' · ')
+          : ev.prevented_continuation ? 'A stop hook kept the turn going'
+          : plural(n, 'stop hook ran', 'stop hooks ran');
+        infoLine(text, ev.level || 'notice', null, SVG_DOT_OPEN);
+        return;
+      }
+      case 'task_summary':
+        // The CLI's own "what it is doing" phrase pins the working verb; null is the idle clear.
+        setWorkVerb(typeof ev.detail === 'string' ? ev.detail : null);
+        return;
+      case 'turn_duration':
+        return;   // the ✻ summary already carries the turn's timing; nothing to add
+    }
   }
   /**
    * Sub-agent progress (client-parity item 1) — what a `Task`/`Agent` sub-agent is doing while it

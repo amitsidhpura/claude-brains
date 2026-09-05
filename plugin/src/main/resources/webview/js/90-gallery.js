@@ -52,8 +52,8 @@
     const longOut = Array.from({ length: 900 }, function (_, i) { return '/var/log/app-' + i + '.log'; }).join('\n');
     const oneLine = '{"rows":[' + '{"id":1,"v":"x"},'.repeat(400) + ']}';   // no newlines → size only
     t4.after(ioBox([
-      ['IN', cutInfo(longCmd, LIM.cmdMax).shown, cutInfo(longCmd, LIM.cmdMax)],
-      ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax)],
+      ['IN', cutInfo(longCmd, LIM.cmdMax).shown, cutInfo(longCmd, LIM.cmdMax), null, null, null, null, { full: longCmd, tool: 'Bash' }],
+      ['OUT', cutInfo(longOut, LIM.outMax).shown, cutInfo(longOut, LIM.outMax), null, null, null, null, { full: longOut, tool: 'Bash' }],
     ]));
     // refusal fallback — a safety classifier flagged the exchange, so the CLI retried on another
     // model and withdrew what it had sent. Drawn through the real handler; the retracted uuid names
@@ -80,6 +80,15 @@
       'reference an issue\n\nOriginal prompt: commit this', 'warning');
     infoLine('Consider running the test suite before committing.', 'suggestion');
     infoLine('Settings reloaded from ~/.claude/settings.json.', 'notice');
+    // Banner-class system frames (1.26), through the same status idiom: the commit line and the
+    // hook notification are the two MEASURED on this wire (2026-09-05, 2.1.261); the memory and
+    // PR-link lines are schema-shaped. `__gallery` keeps them out of the __bannerSeen watch.
+    bannerLine({ __gallery: true, type: 'system', subtype: 'vcs_state_changed', kind: 'commit', branch: 'main', cwd: '/x' });
+    bannerLine({ __gallery: true, type: 'system', subtype: 'notification', key: 'stop-hook-error',
+      text: 'Stop hook error occurred · ctrl+o to see', priority: 'immediate' });
+    bannerLine({ __gallery: true, type: 'system', subtype: 'memory_saved', written_paths: ['/x/a.md', '/x/b.md'] });
+    bannerLine({ __gallery: true, type: 'system', subtype: 'code_change_published', provider: 'github',
+      url: 'https://github.com/acme/demo/pull/42', repo: 'acme/demo' });
 
     // in-flight states (2026-08-13): the gutter dot is white and breathing while its work has not
     // come back, and takes its verdict colour when it does. Every OTHER tool line in this gallery is

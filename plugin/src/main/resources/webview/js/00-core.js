@@ -38,6 +38,13 @@
   const SVG_STEP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.029 4.285A2 2 0 0 0 7 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/><path d="M3 4v16"/></svg>';
   const SVG_RETRY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
   const SVG_COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+  // Banner-line glyphs (checklist 1.26, option C — the user's pick 2026-09-05 from a three-way
+  // render in the real panel): one mark per KIND of notice, in the gutter slot the alert uses.
+  // Git events, published changes (lucide link-2, the user's own choice) and memories; every
+  // other notice wears SVG_DOT_OPEN, warnings keep SVG_ALERT.
+  const SVG_GIT_BRANCH = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3.5" r="1.7"/><circle cx="4" cy="12.5" r="1.7"/><circle cx="12" cy="6" r="1.7"/><path d="M4 5.2v5.6M12 7.7c0 2.2-2.5 2.3-4.5 2.5C6 10.4 4.6 10.6 4 12"/></svg>';
+  const SVG_LINK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>';
+  const SVG_BOOKMARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v12l-4-3-4 3z"/></svg>';
   const SVG_ALERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
   const SVG_PENCIL = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
   const SVG_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
@@ -146,8 +153,18 @@
   log.addEventListener('click', function (e) {
     // A truncation marker carries its path in a data attribute, not its text: what it SHOWS is
     // prose ("… open full output"), so textContent would send nonsense as a path.
-    const cutRef = e.target.closest('.io-cut[data-path]');
-    if (cutRef) { bridge({ kind: 'open', path: cutRef.dataset.path }); return; }
+    const cutRef = e.target.closest('.io-cut.click');
+    if (cutRef) {
+      const ds = cutRef.dataset;
+      if (ds.path) bridge({ kind: 'open', path: ds.path });                     // the CLI's spill file
+      else if (ds.full) {                                                        // 1.27, live: the page still has it all
+        const t = fullTexts[ds.full];
+        if (t != null) bridge({ kind: 'openText', title: ds.title, text: t });
+      } else if (ds.tool) {                                                      // 1.27, replay: Kotlin reads the transcript
+        bridge({ kind: 'openTool', id: ds.tool, which: ds.which, title: ds.title });
+      }
+      return;
+    }
     const ref = e.target.closest('.t-desc.path, .card-h code, .mention');   // .mention: 6.9 chip, data-path
     if (!ref) return;
     // dataset.path first: a tool line SHOWS the project-relative path (and an ellipsis where the

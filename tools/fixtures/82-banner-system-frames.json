@@ -1,0 +1,353 @@
+{
+ "item": "banner-class system frames (1.26): the CLI's one-line notices draw as muted status lines instead of being dropped",
+ "branch": "bannerLine(ev) in 50-blocks.js, dispatched from 70-events.js for notification / vcs_state_changed / code_change_published / memory_saved / memory_recall / permission_retry / scheduled_task_fire / away_summary / agents_killed / stop_hook_summary; task_summary pins the working verb; turn_duration is deliberately silent; each kind wears its glyph in the gutter (branch / link / bookmark / open dot, alert for warnings — option C picked by the user 2026-09-05 from a three-way render in the real panel); the first frame of each subtype is kept in window.__bannerSeen",
+ "provenance": "Steps 1-3 carry VERBATIM frames MEASURED 2026-09-05 over stdio on 2.1.261 with the panel's own flags (scratchpad probe_banners.py): a `git commit` through Bash emitted vcs_state_changed{kind:'commit', branch:'master', cwd}; a `git push` to a bare remote emitted vcs_state_changed{kind:'push', branch:'master', cwd}; a Stop hook exiting 2 emitted notification{key:'stop-hook-error', text:'Stop hook error occurred · ctrl+o to see', priority:'immediate'} — and NO stop_hook_summary (the internal message has no stream-json translator arm). Steps 4-9 are SCHEMA-SHAPED (read from the 2.1.261 binary's zod definitions) and INFERRED: memory_saved / memory_recall / code_change_published / task_summary are engine-emitted through the same push as vcs_state_changed but need automemory extraction, a recognised forge remote (o5e allowlist) or the debounced classifier, none forceable here; agents_killed / permission_retry / scheduled_task_fire / away_summary / turn_duration are REPL-only (their only call sites are TUI transcript reducers; an interrupt with a live background agent, a mode switch over a parked ask and a /loop tick each produced none). NEGATIVE CONTROL: run against the sandbox still serving the pre-change build before the renderer landed — RUN 2026-09-05 (sandbox launched before the JS edit, fixture written first): 18 FAILED / 1 passed / 0 aborts — the one pass is the absence assert (turn_duration draws nothing), vacuous on both builds, every other assert discriminates. After the edit and a sandbox restart: 19/19; full harness 733/0 (714 + 19). GLYPH CONTROL 2026-09-05: the six glyph asserts were added while the sandbox still served the glyph-less build: 5 FAILED / 20 passed / 0 aborts — the five kind-glyph asserts discriminate, the \"warning keeps the alert\" one is a GUARD that passes on both builds (a first draft compared innerHTML to the raw constant and failed everywhere: the browser re-serialises SVG, so the constant is normalised through a scratch element). After the edit and a restart: 25/25; full harness 739/0. LINK-COLOUR CONTROL 2026-09-05: the anchor-colour assert was added while the sandbox still served the build without the .status a rule: 1 FAILED / 25 passed. After the CSS edit and a restart: 26/26; full harness 740/0.",
+ "steps": [
+  {
+   "note": "vcs commit (VERBATIM frame): one muted status line naming the branch",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('commit it', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "vcs_state_changed",
+     "kind": "commit",
+     "branch": "master",
+     "cwd": "/tmp/claude-1000/-home-syncroze-Sites-claude-brains/bf21bb0a-8303-44ac-9f2d-f6f75447f8aa/scratchpad/p/vcs",
+     "uuid": "0dea0bbb-c10e-417f-a65a-f3731bcf9a9f",
+     "session_id": "c15a1bd4-6ade-412d-b019-4da5dfcd34b3"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status').length",
+     "equals": 1,
+     "why": "exactly one line"
+    },
+    {
+     "js": "(document.querySelector('#log .status')||{}).textContent",
+     "equals": "Committed on master",
+     "why": "kind + branch in plain words"
+    },
+    {
+     "js": "(function(x){return x?x.classList.contains('err'):null})(document.querySelector('#log .status'))",
+     "equals": false,
+     "why": "a commit is not an error"
+    },
+    {
+     "js": "!!(window.__bannerSeen && window.__bannerSeen.vcs_state_changed)",
+     "equals": true,
+     "why": "first frame of the subtype kept for CDP inspection"
+    },
+    {
+     "js": "(function(x){return x?x.innerHTML:null})(document.querySelector('#log .status .s-ic')) === (typeof SVG_GIT_BRANCH === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_GIT_BRANCH))",
+     "equals": true,
+     "why": "git kind wears the branch glyph (option C, user pick 2026-09-05)"
+    }
+   ]
+  },
+  {
+   "note": "vcs push (VERBATIM frame) + the other kinds (schema enum): merge / rebase read as one word, an unknown kind is treated like a known one",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('push it', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "vcs_state_changed",
+     "kind": "push",
+     "branch": "master",
+     "cwd": "/tmp/claude-1000/-home-syncroze-Sites-claude-brains/bf21bb0a-8303-44ac-9f2d-f6f75447f8aa/scratchpad/p/push",
+     "uuid": "1545ec7f-0e8c-445d-bfe4-cd3fa12d8c9d",
+     "session_id": "f2472fb8-b9fb-4ebb-9304-66f4202f4813"
+    },
+    {
+     "type": "system",
+     "subtype": "vcs_state_changed",
+     "kind": "merge",
+     "cwd": "/x"
+    },
+    {
+     "type": "system",
+     "subtype": "vcs_state_changed",
+     "kind": "rebase",
+     "cwd": "/x"
+    },
+    {
+     "type": "system",
+     "subtype": "vcs_state_changed",
+     "kind": "cherry-pick",
+     "cwd": "/x"
+    }
+   ],
+   "expect": [
+    {
+     "js": "Array.from(document.querySelectorAll('#log .status')).map(function(e){return e.textContent}).join('|')",
+     "equals": "Pushed master|Merged|Rebased|cherry-pick",
+     "why": "push names the branch; merge/rebase are one word; an unrecognised kind shows its own name"
+    }
+   ]
+  },
+  {
+   "note": "notification (VERBATIM stop-hook frame): immediate priority draws as a warning line, the TUI's 'ctrl+o to see' suffix is dropped, a repeat with the same key REPLACES the line",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "notification",
+     "key": "stop-hook-error",
+     "text": "Stop hook error occurred · ctrl+o to see",
+     "priority": "immediate",
+     "session_id": "5ba1c352-6fa8-4492-aeb6-a60ee9dc5559",
+     "uuid": "ba9e1c85-c998-4c42-b79e-72df947828ad"
+    },
+    {
+     "type": "system",
+     "subtype": "notification",
+     "key": "stop-hook-error",
+     "text": "Stop hook error occurred again · ctrl+o to see",
+     "priority": "immediate"
+    },
+    {
+     "type": "system",
+     "subtype": "notification",
+     "key": "other",
+     "text": "Something low-key",
+     "priority": "low"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status').length",
+     "equals": 2,
+     "why": "same key replaced in place; a new key is a new line"
+    },
+    {
+     "js": "(document.querySelectorAll('#log .status')[0]||{}).textContent",
+     "equals": "Stop hook error occurred again",
+     "why": "replaced text, TUI suffix stripped"
+    },
+    {
+     "js": "(function(x){return x?x.classList.contains('err'):null})(document.querySelectorAll('#log .status')[0])",
+     "equals": true,
+     "why": "immediate priority = warning prominence"
+    },
+    {
+     "js": "(function(x){return x?!!x.querySelector('.s-ic'):null})(document.querySelectorAll('#log .status')[0])",
+     "equals": true,
+     "why": "warning carries the alert icon"
+    },
+    {
+     "js": "(function(x){return x?x.classList.contains('err'):null})(document.querySelectorAll('#log .status')[1])",
+     "equals": false,
+     "why": "low priority stays muted"
+    },
+    {
+     "js": "(function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[0]) === (typeof SVG_ALERT === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_ALERT))",
+     "equals": true,
+     "why": "warning keeps the alert glyph"
+    },
+    {
+     "js": "(function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[1]) === (typeof SVG_DOT_OPEN === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_DOT_OPEN))",
+     "equals": true,
+     "why": "a plain notice wears the open dot"
+    }
+   ]
+  },
+  {
+   "note": "memory_saved / memory_recall (schema-shaped, INFERRED): '<verb> N memories' with the REPL's default verb and singular/plural",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "memory_saved",
+     "written_paths": [
+      "/home/u/.claude/projects/x/memory/a.md",
+      "/home/u/.claude/projects/x/memory/b.md"
+     ]
+    },
+    {
+     "type": "system",
+     "subtype": "memory_saved",
+     "written_paths": [
+      "/home/u/.claude/projects/x/memory/c.md"
+     ],
+     "verb": "Improved"
+    },
+    {
+     "type": "system",
+     "subtype": "memory_saved",
+     "written_paths": []
+    },
+    {
+     "type": "system",
+     "subtype": "memory_recall",
+     "mode": "select",
+     "memories": [
+      {
+       "path": "/home/u/.claude/projects/x/memory/a.md",
+       "scope": "personal"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "Array.from(document.querySelectorAll('#log .status')).map(function(e){return e.textContent}).join('|')",
+     "equals": "Saved 2 memories|Improved 1 memory|Recalled 1 memory",
+     "why": "default verb, custom verb, empty list draws nothing, recall counts"
+    },
+    {
+     "js": "(function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[0]) === (typeof SVG_BOOKMARK === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_BOOKMARK))",
+     "equals": true,
+     "why": "memory kind wears the bookmark"
+    }
+   ]
+  },
+  {
+   "note": "code_change_published (schema-shaped, INFERRED): provider + the URL as a link that the system-browser handler will catch",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "code_change_published",
+     "provider": "github",
+     "url": "https://github.com/acme/demo/pull/42",
+     "repo": "acme/demo",
+     "identifier": "42",
+     "action": "created"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .status')||{}).textContent",
+     "equals": "Published to github · https://github.com/acme/demo/pull/42",
+     "why": "provider named, URL shown whole"
+    },
+    {
+     "js": "document.querySelector('#log .status a[href=\"https://github.com/acme/demo/pull/42\"]') !== null",
+     "equals": true,
+     "why": "the URL is an anchor (browseLink opens it in the system browser)"
+    },
+    {
+     "js": "(function(x){return x?x.innerHTML:null})(document.querySelector('#log .status .s-ic')) === (typeof SVG_LINK === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_LINK))",
+     "equals": true,
+     "why": "published change wears the link glyph"
+    },
+    {
+     "js": "(function(a){ if(!a) return null; var t=document.createElement('span'); t.style.color='var(--blue)'; document.body.appendChild(t); var want=getComputedStyle(t).color; t.remove(); return getComputedStyle(a).color === want; })(document.querySelector('#log .status a'))",
+     "equals": true,
+     "why": "the anchor wears the log's link colour (--blue), not the browser's default blue (found on the real-panel screenshot 2026-09-05: unreadable on the dark ground)"
+    }
+   ]
+  },
+  {
+   "note": "the REPL-only family (schema-shaped, INFERRED, never seen on this wire): content-carrying frames draw their text, agents_killed gets the REPL's wording, stop_hook_summary shows its errors at its own level",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "permission_retry",
+     "content": "Allowed factor 97, factor 91",
+     "commands": [
+      "factor 97",
+      "factor 91"
+     ]
+    },
+    {
+     "type": "system",
+     "subtype": "scheduled_task_fire",
+     "content": "Claude resuming /loop wakeup (10:15 am)"
+    },
+    {
+     "type": "system",
+     "subtype": "away_summary",
+     "content": "While you were away: 2 background tasks finished."
+    },
+    {
+     "type": "system",
+     "subtype": "agents_killed"
+    },
+    {
+     "type": "system",
+     "subtype": "stop_hook_summary",
+     "hook_count": 1,
+     "hook_infos": [
+      {
+       "command": "./check.sh"
+      }
+     ],
+     "hook_errors": [
+      "check.sh: tests are red"
+     ],
+     "prevented_continuation": true,
+     "has_output": true,
+     "level": "warning"
+    },
+    {
+     "type": "system",
+     "subtype": "stop_hook_summary",
+     "hook_count": 2,
+     "hook_infos": [],
+     "hook_errors": [],
+     "prevented_continuation": false,
+     "has_output": false,
+     "level": "info"
+    }
+   ],
+   "expect": [
+    {
+     "js": "Array.from(document.querySelectorAll('#log .status')).map(function(e){return e.textContent}).join('|')",
+     "equals": "Allowed factor 97, factor 91|Claude resuming /loop wakeup (10:15 am)|While you were away: 2 background tasks finished.|All background agents stopped|check.sh: tests are red|2 stop hooks ran",
+     "why": "one line each, in arrival order"
+    },
+    {
+     "js": "(function(x){return x?x.classList.contains('err'):null})(document.querySelectorAll('#log .status')[4])",
+     "equals": true,
+     "why": "a warning-level hook summary has the error prominence"
+    },
+    {
+     "js": "(function(x){return x?x.classList.contains('err'):null})(document.querySelectorAll('#log .status')[5])",
+     "equals": false,
+     "why": "an info-level one stays muted"
+    },
+    {
+     "js": "[(function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[0]) === (typeof SVG_DOT_OPEN === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_DOT_OPEN)), (function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[3]) === (typeof SVG_DOT_OPEN === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_DOT_OPEN)), (function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[4]) === (typeof SVG_ALERT === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_ALERT)), (function(x){return x&&x.querySelector('.s-ic')?x.querySelector('.s-ic').innerHTML:null})(document.querySelectorAll('#log .status')[5]) === (typeof SVG_DOT_OPEN === 'undefined' ? '<missing>' : (function(s){var t=document.createElement('span');t.innerHTML=s;return t.innerHTML})(SVG_DOT_OPEN))].join()",
+     "equals": "true,true,true,true",
+     "why": "REPL-only notices wear the dot; the warning-level hook summary keeps the alert"
+    }
+   ]
+  },
+  {
+   "note": "task_summary pins the working verb while a turn runs and null releases it; turn_duration draws nothing",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []); showWorking();",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "task_summary",
+     "detail": "Reading the config files"
+    },
+    {
+     "type": "system",
+     "subtype": "turn_duration",
+     "duration_ms": 4321,
+     "message_count": 7
+    }
+   ],
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .generating .verb')||{}).textContent",
+     "equals": "Reading the config files",
+     "why": "the CLI's own phrase replaces the rotating verb"
+    },
+    {
+     "js": "document.querySelectorAll('#log .status').length",
+     "equals": 0,
+     "why": "neither frame adds a log line"
+    },
+    {
+     "js": "!!(window.__bannerSeen && window.__bannerSeen.turn_duration)",
+     "equals": true,
+     "why": "silent, but still recorded for the day it is measured"
+    }
+   ]
+  }
+ ]
+}

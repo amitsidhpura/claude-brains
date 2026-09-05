@@ -56,6 +56,15 @@ class ClaudeCli(
     private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?, reason: String?) -> Unit,
     private val onInit: (commandsJson: String) -> Unit,
     private val onExit: (Int) -> Unit,
+    /**
+     * The CLI withdrew an in-flight control request of its own (checklist 1.28):
+     * `{type:"control_cancel_request", request_id}`. MEASURED 2026-09-05 on 2.1.261: an interrupt
+     * over a parked `can_use_tool` sends it with the ask's request_id, BEFORE the auto-deny
+     * tool_result and the aborted `result`. The binary also writes it on shutdown with a parked
+     * question, on resume of a stale parked prompt, and when a hook answer supersedes a parked
+     * hook_callback. The card must stop looking answerable; a late answer goes nowhere.
+     */
+    private val onCancel: (requestId: String) -> Unit = {},
     /** A declared hook fired: [respond] MUST be called (once) or the CLI stalls until its timeout. */
     private val onHook: (callbackId: String, input: JsonObject, respond: (JsonObject) -> Unit) -> Unit =
         { _, _, respond -> respond(buildJsonObject { put("continue", true) }) },
@@ -246,6 +255,10 @@ class ClaudeCli(
         when (obj?.get("type")?.jsonPrimitive?.content) {
             "control_request" -> handleControlRequest(obj!!)
             "control_response" -> handleControlResponse(obj!!)
+            // A withdrawn ask (1.28). Never a conversation event: before this arm the frame fell
+            // through to onEvent and the webview ignored it, leaving the card live.
+            "control_cancel_request" ->
+                obj!!["request_id"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }?.let(onCancel)
             else -> {
                 // conversation events carry the id of the transcript being written; accept either
                 // spelling since the stream and the on-disk records disagree (session_id/sessionId)

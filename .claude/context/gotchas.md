@@ -260,6 +260,20 @@ re-read those before trusting memory here.
   session wire disagree. Reproducing `needs-auth` for real: unauthenticated
   `https://mcp.linear.app/mcp` (`type:"http"`; the old `/sse` endpoint reports `failed` instead).
 
+- **A `system` subtype in the SDK schema is NOT a promise it reaches the stream-json wire.** Two
+  tests before believing: (1) grep the binary for the emitter's call sites — a push through the
+  engine's output (`Uu({type:"system",…})`) reaches the host, a TUI transcript reducer
+  (`setMessages`/`transcript.replace(…)`) never does; (2) run `tools/probe_stdio.py` on a trigger.
+  Measured 2026-09-05 on 2.1.261: `vcs_state_changed` and `notification` arrive; `agents_killed`,
+  `permission_retry`, `scheduled_task_fire`, `away_summary`, `turn_duration` are REPL-only, and
+  `stop_hook_summary` has a schema but no translator arm (a blocking Stop hook yields only the
+  `notification`). A `/loop` tick reaches the host as `command_lifecycle{started}` → a fresh
+  `system/init` → assistant → `result` → `command_lifecycle{completed}` with NO user frame.
+- **`control_cancel_request` travels BOTH ways** (the protocol doc had it stdin-only until
+  2026-09-05): an interrupt over a parked `can_use_tool` makes the CLI send it with the ask's
+  request_id, ahead of the auto-deny tool_result and the aborted `result`. A frame listed under
+  one direction in our own docs is a claim to re-measure, not a fact.
+
 ## Replay / transcript
 - **Compaction records land in the file BEFORE the command that caused them.** The CLI writes the
   boundary + summary at compaction END, physically ahead of the `/compact` command records, which
@@ -929,3 +943,34 @@ re-read those before trusting memory here.
   Inject after the harness finishes.
 - **A `runIde` background task ends with exit 1 when the IDE is killed by pid** — that is the kill,
   not a build failure; the log is empty. Check CDP/pgrep, not the task status.
+- **`pgrep -f` / `pkill -f` match the shell running them** when the pattern appears in that shell's
+  own command line — the kill lands on your Bash call (exit 144, no output). Bracket one character
+  (`'http.serve[r] 8731'`, `'idea.system.pat[h]'`) so the pattern never matches itself.
+- **A fixture `.click()` (or `.textContent`) on a missing element ABORTS the harness, and an aborted
+  control reads as "nothing failed".** Null-guard every DOM access in asserts AND setups:
+  `(sel||{}).textContent`, `var m=…; if (m) m.click();`. Three fixtures (82, 83, 84) each lost a
+  first control run to this on 2026-09-05.
+- **`innerHTML` re-serialises SVG** (self-closing tags expand, attribute order may change), so an
+  assert comparing a rendered glyph to the raw `SVG_*` constant fails on every build. Normalise the
+  constant through a scratch element first: `t=document.createElement('span'); t.innerHTML=s;
+  t.innerHTML`. Guard the constant with `typeof X === 'undefined'` so a pre-change build fails
+  instead of throwing.
+- **Stdio probe hygiene** (`tools/probe_stdio.py`): a plain run inherits the real `~/.claude` and
+  writes a transcript + memory dir under `~/.claude/projects/-tmp-…scratchpad…/` — delete them
+  afterwards; a `--cfg` scratch dir holds a credentials copy — delete it the same session. A memory
+  "save" the MODEL performs with a Write is not the memory subsystem (no `memory_saved` frame).
+
+## Docs (markdown rendering)
+- **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with
+  16px margins. A `<details>` body needs a blank line to render markdown, so the checklist's folds
+  open with `<!-- --><details>…` on one line: the leading comment is a CommonMark type-2 HTML block
+  that closes on its own line, the body that follows is ordinary markdown, and the list stays tight.
+- **A nested list inside a `<details>` inside a list item breaks the OUTER list in marked-style
+  renderers** (the user's browser markdown viewer): `</details>` gets closed inside the last nested
+  bullet, the browser repairs the tree by ending the list, and every later row of the section
+  outdents. GitHub's parser tolerates it, which is why a GitHub-only check missed it. Folds hold
+  paragraphs only (bold inline labels for sub-points). Verify a doc reformat through THREE parsers:
+  `gh api markdown` (mode `markdown`, not `gfm` — gfm turns every newline into `<br>`), marked
+  (`npm i marked` in the scratchpad), markdown-it-py (installed).
+- **Screenshots of a rendered doc are read in tiles**: a 1920×13832 full-page PNG is unreadable
+  whole; crop into ~1400px-tall slices with PIL first.

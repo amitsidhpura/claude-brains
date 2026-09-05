@@ -13,12 +13,12 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 90 ✅ · 0 🟥 · 0 🟧 · 3 ⬜ · 47 ➖ (140 rows) — open rows in §1
+**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 93 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 47 ➖ (140 rows) — no open rows
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
 - **Awaiting a decision ([DECIDE]):** none — the user is taking ALL ten [NEW] rows of the 2026-09-04
   full-surface audit ("finish all even if small"); 6.9, 6.5, 4.7, 4.8, 2.12, 3.7 and 3.8 shipped, 4.9
-  deferred 2026-09-05. Remaining three, all in §1, in build order: 1.28 `control_cancel_request`
-  (correctness) · 1.27 full IN/OUT in an editor · 1.26 banner-class `system` frames (13.3: deferred)
+  deferred 2026-09-05. none — the last three (1.26 banner frames, 1.28 withdrawn asks, 1.27 full IN/OUT in an editor)
+  shipped 2026-09-05; 13.3 stays deferred
 
 **Status marks**
 
@@ -46,6 +46,13 @@ outlives one event.
 |---|---|
 | **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
+
+**Row shape** — `**id** mark [effort] **Name** [tags] — gist`, the gist one to two lines of what
+the feature is. A row with evidence beyond its gist (probe dates, wire shapes, fixtures) folds it
+under `<!-- --><details><summary>Read more…</summary>` … `</details>`, indented to the list
+column with NO blank lines: the leading comment closes the HTML block on its own line, so the
+body renders as markdown while the list stays tight (a blank line inside an item would turn
+every row into a spaced paragraph). Count rows with a regex over the first line only.
 
 **Scope rule** — *"Develop in the IDE. Configure in the Terminal."* Reached for many times an
 hour while writing code? Yes → panel (🟥🟧⬜ until built). No → terminal (➖).
@@ -238,7 +245,7 @@ auto-include selection, voice.
 
 ---
 
-## 1. ⬜ Core chat & streaming
+## 1. ✅ Core chat & streaming
 - **1.1** ✅ **Send a prompt** — reply streams token-by-token (`stream_event` deltas)
 - **1.2** ✅ **User / assistant bubbles** — Ctrl+Enter sends, Enter = newline (VS Code's
       `useCtrlEnterToSend` behaviour, fixed on, no toggle)
@@ -262,9 +269,13 @@ auto-include selection, voice.
       `prefers-reduced-motion` honoured (OS propagation into JCEF unverified, backlog)
 - **1.14** ✅ **Auto-scroll** — pinning keyed off scroll DIRECTION; top/bottom fades;
       scroll-to-bottom button
-- **1.15** ✅ **Error surfacing** — `result.is_error`; `system/api_error` retry banner (both
-      spellings, deduped double-emits); model-refusal fallback (`supersedes` / retracted uuids);
-      CLI stderr tail under the exit line; auth failure → "sign in from a terminal"
+- **1.15** ✅ **Error surfacing** — result errors, API-error retry banners, model refusals, the CLI's
+  stderr tail under the exit line, and an auth failure pointing at "sign in from a terminal".
+  <!-- --><details><summary>Read more…</summary>
+  `result.is_error`; `system/api_error` retry banner (both spellings, deduped double-emits);
+  model-refusal fallback (`supersedes` / retracted uuids); CLI stderr tail under the exit line;
+  auth failure → "sign in from a terminal".
+  </details>
 - **1.16** ✅ **Compaction** — boundary marker + folded summary + gauge reset; "Compacting…" verb;
       failed `/compact` reported (`system/status`)
 - **1.17** ✅ **Rate-limit warnings** — `LIMIT_LABELS`, 2.1.222 vocabulary; fringe types fall back
@@ -273,67 +284,141 @@ auto-include selection, voice.
 - **1.19** ✅ **Server-side tool blocks** — web search; tool-returned images (`isImage` Bash
       results) open in the lightbox
 - **1.20** ✅ **Local-command output** — `<local-command-stdout>` / `-stderr>` rendered as markdown
-- **1.21** ✅ **`redacted_thinking` placeholder** — a non-expandable "Thought (redacted)" line,
-      live (`content_block_start`, no deltas) and replay (`SessionStore` → `redacted:true`), both
-      through `thinkBlock`. Shape is the API's; never seen on this wire (fixture 62, INFERRED).
-      Cannot be triggered on demand: the API returns it only on genuine safety redaction, the old
-      magic test string is undocumented now and did nothing on 2.1.251 (three probes, Sonnet 5 /
-      Opus 5, 2026-08-29), and Fable 5 / Mythos 5 never return it at all — they return ordinary
-      `thinking` blocks with an empty body, which is the existing "signature only" no-body line
-- **1.22** ➖ **`tool_progress` heartbeat** — not emitted to stream-json clients: MEASURED
-      2026-08-29 on 2.1.251, a foreground 12 s Bash (`is_backgrounded:false`) produced zero
-      `tool_progress` frames (the binary's own SDK adapter drops the heartbeat kind). Revisit if
-      the wire changes
-- **1.23** ✅ **Permission ask reason** — `can_use_tool.decision_reason` rides the
-      `permission_request` frame as `reason` and draws as a ↳ note under the card header.
-      MEASURED 2026-08-29 over stdio: text arrives only with `decision_reason_type:"other"` (e.g.
-      `echo $(whoami)` → "Contains command_substitution"); `rule` and `subcommandResults` asks
-      carry the type but no text, so they draw nothing. On-demand trigger for a live check: any
-      Bash with `$(…)` — VERIFIED LIVE in the sandbox panel 2026-08-29 (real CLI turn, Kotlin
-      chain end-to-end, note drawn under the header). Fixture 63 pins the JS half. The `system/permission_denied` auto-deny
-      frame is a different, unmeasured shape — not drawn
-- **1.24** ✅ **Turn end reason** — `result.terminal_reason` ≠ completed / aborted_* /
-      background_requested → "Turn ended early · max turns" status line after the summary or
-      error block (fixture 64). MEASURED 2026-08-29 on 2.1.251: `completed` on a normal turn;
-      `--max-turns 1` → `subtype:error_max_turns, is_error:true, terminal_reason:"max_turns",
-      result:null, errors:["Reached maximum number of turns (1)"]` — verbatim in fixture 64. That
-      capture also fixed the error arm: a null-result error now shows `errors[]` text instead of
-      the raw subtype token. Not forceable inside the panel (no `--max-turns` on its CLI), so the
-      live check is the verbatim frame replayed over CDP
+- **1.21** ✅ **`redacted_thinking` placeholder** — a non-expandable "Thought (redacted)" line, live
+  and on replay. The shape is the API's and has never been seen on this wire.
+  <!-- --><details><summary>Read more…</summary>
+  Live via `content_block_start` (no deltas), replay via `SessionStore` → `redacted:true`, both
+  through `thinkBlock`. Fixture 62, INFERRED. Cannot be triggered on demand: the API returns it
+  only on genuine safety redaction, the old magic test string is undocumented now and did nothing
+  on 2.1.251 (three probes, Sonnet 5 / Opus 5, 2026-08-29), and Fable 5 / Mythos 5 never return it
+  at all — they return ordinary `thinking` blocks with an empty body, which is the existing
+  "signature only" no-body line.
+  </details>
+- **1.22** ➖ **`tool_progress` heartbeat** — not emitted to stream-json clients, so there is nothing
+  to draw. Revisit if the wire changes.
+  <!-- --><details><summary>Read more…</summary>
+  MEASURED 2026-08-29 on 2.1.251: a foreground 12 s Bash (`is_backgrounded:false`) produced zero
+  `tool_progress` frames (the binary's own SDK adapter drops the heartbeat kind).
+  </details>
+- **1.23** ✅ **Permission ask reason** — the CLI's reason for asking ("Contains
+  command_substitution") draws as a ↳ note under the card header when the frame carries text.
+  <!-- --><details><summary>Read more…</summary>
+  `can_use_tool.decision_reason` rides the `permission_request` frame as `reason`. MEASURED
+  2026-08-29 over stdio: text arrives only with `decision_reason_type:"other"` (e.g.
+  `echo $(whoami)` → "Contains command_substitution"); `rule` and `subcommandResults` asks carry
+  the type but no text, so they draw nothing. On-demand trigger for a live check: any Bash with
+  `$(…)` — VERIFIED LIVE in the sandbox panel 2026-08-29 (real CLI turn, Kotlin chain end-to-end,
+  note drawn under the header). Fixture 63 pins the JS half. The `system/permission_denied`
+  auto-deny frame is a different, unmeasured shape — not drawn.
+  </details>
+- **1.24** ✅ **Turn end reason** — a turn the CLI ends early (max turns) gets a "Turn ended early ·
+  max turns" status line after the summary or error block.
+  <!-- --><details><summary>Read more…</summary>
+  `result.terminal_reason` ≠ completed / aborted_* / background_requested → the status line
+  (fixture 64). MEASURED 2026-08-29 on 2.1.251: `completed` on a normal turn; `--max-turns 1` →
+  `subtype:error_max_turns, is_error:true, terminal_reason:"max_turns", result:null,
+  errors:["Reached maximum number of turns (1)"]` — verbatim in fixture 64. That capture also
+  fixed the error arm: a null-result error now shows `errors[]` text instead of the raw subtype
+  token. Not forceable inside the panel (no `--max-turns` on its CLI), so the live check is the
+  verbatim frame replayed over CDP.
+  </details>
 - **1.25** ➖ **Usage-limit grace banner** [NEW] — deferred by the user 2026-08-29: feature-flagged
-      upstream and never seen on this wire; revisit if it shows up. VS Code 2.1.250 (behind
-      `tengu_lantern_sconce`) shows "Usage limit reached · a little extra on us, then your credits"
-      / "… · finishing up" when `rate_limit_event.rate_limit_info` carries `rateLimitGraceActive:
-      true` with `overageStatus` allowed / allowed_warning (dismissable; the CLI has emitted the
-      fields since ≤ 2.1.246). Our 1.17 handler treats `status:"allowed"` as silence regardless, so a
-      grace window is invisible. Probe first: an inject through `onClaudeEvent` proves the render, a
-      real grace window is unforceable by design (MT-9.6 pattern)
-- **1.26** ⬜ [MD] **Banner-class `system` frames the panel drops** [NEW] [DECIDE] — the 2.1.260
-      SDK schema types ten `system` subtypes whose text the REPL shows as a banner and our handler
-      (`70-events.js`, 16 subtypes) silently discards: `notification` ("loop-side text
-      notification", `{key, text, priority, color, timeout_ms}` — e.g. a fast-mode overage
-      rejection), `memory_saved` ("<verb> N memories") + `memory_recall` (automemory activity),
-      `agents_killed` (on interrupt), `permission_retry` ("retrying with <commands>" after a mode
-      change), `away_summary`, `scheduled_task_fire` (a `/loop` firing — `/loop` is Enabled),
-      `stop_hook_summary` (`hook_errors`, `prevented_continuation`), `code_change_published`
-      (`{provider, repo, url}` — the PR link the TUI's footer badge shows), `vcs_state_changed`.
-      Also `task_summary` (the live "what it's doing" phrase) and `turn_duration`. MEASURED
-      2026-09-04: a plain one-tool headless turn emits none of them (only init/status/
-      thinking_tokens) — each needs its trigger, several are `@internal`. One generic renderer
-      keyed on `content`/`text`, probing each trigger as it is built
-- **1.27** ⬜ [SM] **Open a tool's full IN/OUT in an editor tab** [NEW] [DECIDE] — VS Code: clicking
-      any IN/OUT body over 250 chars or multiline calls `open_content(content, "<Tool> tool
-      input|output" | "command" | "Write <file>" | "Glob output", editable:false)` → a read-only
-      editor. Ours caps at `OUT_MAX` 2000 / `CMD_MAX` 4000 with `.io-cut`, and the only escape is
-      the "open full output" link when the CLI itself persisted the output (`docs/limits.md`).
-      A scratch `LightVirtualFile` opened via `FileEditorManager` on click of a cut box
-- **1.28** ⬜ [SM] **Withdrawn asks: `control_cancel_request`** [NEW] [DECIDE] — the CLI retracts a
-      pending `can_use_tool` / question with `{type:"control_cancel_request", request_id}` (binary:
-      on interrupt of a parked decision, on `askUserQuestionTimeout` / `dialogExpiry` auto-continue,
-      on host-hook retirement). Nothing in Kotlin or JS handles the frame: the card stays live and
-      an answer goes out for an id the CLI no longer waits on (VS Code prepends late answers to
-      the next prompt as "Answering your earlier questions:"). Correctness first: mark the card
-      lapsed and drop it from `pendingPermissions`. Probe the frame over stdio before building
+  upstream and never seen on this wire; revisit if it shows up.
+  <!-- --><details><summary>Read more…</summary>
+  VS Code 2.1.250 (behind `tengu_lantern_sconce`) shows "Usage limit reached · a little extra on
+  us, then your credits" / "… · finishing up" when `rate_limit_event.rate_limit_info` carries
+  `rateLimitGraceActive: true` with `overageStatus` allowed / allowed_warning (dismissable; the
+  CLI has emitted the fields since ≤ 2.1.246). Our 1.17 handler treats `status:"allowed"` as
+  silence regardless, so a grace window is invisible. Probe first: an inject through
+  `onClaudeEvent` proves the render, a real grace window is unforceable by design (MT-9.6
+  pattern).
+  </details>
+- **1.26** ✅ **Banner-class `system` frames** [NEW] — the CLI's one-line notices (a git commit or
+  push it saw, a hook error, memories saved, a published PR link…) draw as muted status lines
+  instead of being dropped; the CLI's live "what it's doing" phrase pins the working verb.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-05 (user's "sure lets do it"). One renderer, `bannerLine` in `50-blocks.js`,
+  dispatched from `70-events.js` for twelve subtypes through the existing `infoLine` /
+  `statusLine` idiom (no new CSS); the first frame of each subtype is kept in
+  `window.__bannerSeen` + a console warning, as `__ambientSeen` is. MEASURED 2026-09-05 over
+  stdio on 2.1.261 with the panel's flags (scratchpad `probe_banners.py`): on the wire —
+  `vcs_state_changed {kind:"commit"|"push", branch, cwd}` after a Bash `git commit` / `git push`
+  ("Committed on master" / "Pushed master"), and `notification {key:"stop-hook-error",
+  text:"Stop hook error occurred · ctrl+o to see", priority:"immediate"}` after a Stop hook
+  exited 2 (drawn as a warning line, the TUI's ctrl+o suffix dropped, same key replaces).
+  Engine-emitted but unforceable here: `code_change_published` (gated on the CLI's forge-URL
+  allowlist and a trusted remote — a local bare remote printing a PR URL yields only the push
+  frame; rendered as "Published to github · <url>" with the URL as a link), `memory_saved` /
+  `memory_recall` (automemory extraction only; a model-driven Write into the memory dir emits
+  nothing; "<verb> N memories"), `task_summary` (never seen in nine turns; pins the verb).
+  REPL-only, never on this wire (their only call sites are TUI transcript reducers; an interrupt
+  over a live background agent, a `set_permission_mode` over a parked ask and a `/loop 1m` tick
+  produced none): `agents_killed`, `permission_retry`, `scheduled_task_fire`, `away_summary`,
+  `turn_duration`, and `stop_hook_summary` (no stream-json translator arm). Handled anyway at one
+  branch each. Side fact: a `/loop` tick reaches the panel as `command_lifecycle{started}` → a
+  fresh `system/init` → assistant → `result` → `command_lifecycle{completed}` with no user frame.
+  Nothing in this family is persisted — live-only, like the task frames. Neither VS Code's
+  webview nor its extension handles any of the twelve. Fixture 82 (26 asserts; negative control
+  on the pre-change build 18 fail / 1 vacuous pass / 0 abort), gallery carries four examples.
+  Hand-tested 2026-09-05 (MT-1.26): commit, push and a blocking Stop hook, all three drawn.
+  Gutter glyph per KIND (option C, the user's pick 2026-09-05 from a three-way render in the real
+  panel — bare / one dot / per kind): branch for git events, lucide link-2 (the user's own) for a
+  published change, bookmark for memories, the existing open dot for every other notice; a
+  warning-level line keeps the alert. `infoLine` grew an optional glyph parameter for it. The
+  real-panel screenshot of the glyph build caught the PR anchor in the browser's default blue —
+  `.status a` now wears `--blue` like `.blk a` (control: 1 fail on the rule-less build).
+  </details>
+- **1.27** ✅ **Open a tool's full IN/OUT in an editor tab** [NEW] — the cut marker under a
+  truncated IN or OUT box reads "open in editor" and opens the whole text, read-only, in an
+  editor tab; live and replayed rows alike. The CLI's own spills keep opening their file.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-05 (user's "Lets do 1.27"). VS Code's `open_content(content, fileName,
+  editable:false)` fires on a click anywhere in an IN/OUT body over 250 chars; ours hangs it on the
+  cut marker because the row's own click is already the fold toggle. Two sources for the text:
+  a LIVE row still holds its uncut text when it cuts (`OUT_MAX` 2000 / `CMD_MAX` 4000), so
+  `cutEl` keeps it in a page-lifetime map (`fullTexts`, released on `__clear`) under a key on the
+  marker and the click sends `{kind:"openText", title, text}`; a REPLAYED row only ever had the
+  capped copy, so `SessionStore` now ships the tool_use id (`toolId`) and the click sends
+  `{kind:"openTool", id, which}` for `SessionStore.toolText` — a line scan of the live transcript
+  for the tool_use's first `IN_KEYS` value or the tool_result's text. Both land in
+  `ClaudeSessionService.openText`: a `LightVirtualFile` (plain text, `isWritable=false`) through
+  `FileEditorManager`, titled "Bash command" / "<Tool> input" / "<Tool> output". A spill
+  (`<persisted-output>`, the CLI's file) keeps its "open full output" marker — the file holds more
+  than either copy. A permission card's cut command preview stays a plain marker. Fixture 84 (21
+  asserts; negative control on the pre-change build 14 fail / 7 guards / 0 abort),
+  `SessionStoreToolTextTest` (3) on the real replay-sample.jsonl, `./gradlew test` 163.
+  Hand-tested 2026-09-05 (MT-1.27): live and resumed markers both opened the full output.
+  </details>
+- **1.28** ✅ **Withdrawn asks: `control_cancel_request`** [NEW] — when the CLI stops waiting on a
+  permission card (you pressed Stop, the ask timed out, the CLI retired it), the card settles as
+  "✗ Withdrawn — Claude stopped waiting" and a late click sends nothing; the editor diff tab
+  closes with it.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-05 (user's "lets do it"). PROBED FIRST over stdio on 2.1.261 with the panel's
+  flags (scratchpad `probe_banners.py --on-ask park --interrupt-after 12`): the frame exists in
+  BOTH directions — the protocol doc had it stdin-only. A parked Bash `can_use_tool` + interrupt
+  gave, in order: `control_cancel_request {request_id:<the ask's id>}` → the interrupt's
+  `control_response` → user tool_result "The user doesn't want to proceed with this tool use…" →
+  user text "[Request interrupted by user for tool use]" → `result {error_during_execution,
+  terminal_reason:"aborted_tools", permission_denials:[…]}`. The binary also writes it on
+  shutdown with a parked question, on resume of a stale parked prompt from a prior worker, and
+  when a hook answer supersedes a parked `hook_callback`. Before: `ClaudeCli.route` let the frame
+  fall through to the webview as a conversation event, which ignored it, and Kotlin kept the
+  pending entry — the card LOOKED answerable (Kotlin's `respondPermission` already refused a late
+  answer, so the harm was the lie, not a stray response). Now: `route` → `onCancel` →
+  `ClaudeSessionService` drops `pendingPermissions` / `pendingSuggestions` FIRST (a click racing
+  the frame finds nothing) → `ChatPanel` pushes `__perm_cancelled {id}` and dismisses the editor
+  diff (`permDiffs`), the same dismissal a card answer triggers. Webview: `permCards[id]` is now
+  `{answer, lapse}`; `lapse` strips buttons, the reject-note field, the editable command, the plan
+  separator and comment composer, writes the withdrawn line, clears `awaitingUser`; an
+  AskUserQuestion card settles through `resolveAsk`. VS Code's "Answering your earlier questions"
+  fold-in of late answers is NOT replicated — correctness first, by the row's own call. Replay is
+  untouched: the CLI's auto-deny tool_result is what persists. Fixture 83 (15 asserts; negative
+  control on the pre-change build 13 fail / 2 guards / 0 abort), `./gradlew test` 160.
+  Hand-tested 2026-09-05 (MT-1.28): Bash and Edit cards withdrawn on Stop, editor diff gone. The
+  CLI's auto-deny OUT box above a withdrawn card is left as is (user's call; suppressing it would be
+  the 3.7 `cardDenies` idiom with the CLI's stock text).
+  </details>
 
 ## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
@@ -341,123 +426,151 @@ auto-include selection, voice.
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
       (FILE_SAVED / FILE_SAVED_ALL / DIFF_REJECTED, `docs/ide-mcp-protocol.md` § 4)
 - **2.3** ✅ **`getDiagnostics`** — via `DaemonCodeAnalyzerImpl.getHighlights` (warnings and up)
-- **2.4** ✅ **`close_tab`** — closes the one review opened under that `tab_name` (2026-08-17; it
-      used to sweep every diff tab); both close tools reply with the reference's exact strings
-      (`TAB_CLOSED` / `CLOSED_<n>_DIFF_TABS`)
+- **2.4** ✅ **`close_tab`** — closes the one review opened under that `tab_name`; both close tools
+  reply with the reference's exact strings.
+  <!-- --><details><summary>Read more…</summary>
+  Narrowed 2026-08-17 (it used to sweep every diff tab). Replies: `TAB_CLOSED` /
+  `CLOSED_<n>_DIFF_TABS`.
+  </details>
 - **2.5** ➖ **`executeCode`** — Jupyter; stubbed reply, no Jupyter kernel in PhpStorm's remit
 - **2.6** ✅ **Bridge** — free port, `~/.claude/ide/<port>.lock`, WS MCP server + auth header +
       `mcp` subprotocol; handed to the CLI via `--mcp-config` (not env discovery — gotchas)
 - **2.7** ✅ **Async tool dispatch** — VFS/PSI reads under `readLocked {}`
-- **2.8** ✅ **Edited files land in open editors** — no "Reload from disk"; `CliFileSync` +
-      `Vfs.refreshFromDisk` (per-tool refresh + turn-end root sweep, 2026-08-14). VS Code gets this
-      from its own FS watcher; here it had to be built
+- **2.8** ✅ **Edited files land in open editors** — no "Reload from disk" prompt after the CLI
+  writes a file the IDE has open.
+  <!-- --><details><summary>Read more…</summary>
+  `CliFileSync` + `Vfs.refreshFromDisk` (per-tool refresh + turn-end root sweep, 2026-08-14). VS
+  Code gets this from its own FS watcher; here it had to be built.
+  </details>
 - **2.9** ✅ **Login-shell environment** — captured once per IDE run (`ShellEnv.kt`) so nvm/PATH-
       dependent MCP servers start under a GUI-launched IDE
-- **2.10** ✅ **Autosave before read/write** — a host-registered SDK `PreToolUse` hook on
-      `Edit|Write|MultiEdit|Read` (declared on `initialize`, answered after `saveDocument` on the
-      EDT; `Autosave.kt`); same mechanism as VS Code's `claudeCode.autosave`, always on. Verified
-      live 2026-08-17: an unsaved `ZEBRA-43` buffer was what `Read` returned
+- **2.10** ✅ **Autosave before read/write** — unsaved editor buffers are saved before the CLI
+  reads or edits a file, always on, the same as VS Code's autosave setting.
+  <!-- --><details><summary>Read more…</summary>
+  A host-registered SDK `PreToolUse` hook on `Edit|Write|MultiEdit|Read` (declared on
+  `initialize`, answered after `saveDocument` on the EDT; `Autosave.kt`); same mechanism as VS
+  Code's `claudeCode.autosave`. Verified live 2026-08-17: an unsaved `ZEBRA-43` buffer was what
+  `Read` returned.
+  </details>
 - **2.11** ✅ **Stale lock sweep** — `~/.claude/ide/*.lock` files with a dead pid deleted on every
       lock write (the CLI's own rule; `IdeLockFile.sweepStale`); 17 → 2 on first run, 2026-08-17
-- **2.12** ✅ **Additional content roots as working directories** [NEW] — built 2026-09-05:
-      `WorkspaceRoots.extraDirs` picks every `ProjectRootManager.contentRoots` entry outside
-      `project.basePath` (not the base, not nested in it; a root under another extra root is
-      dropped), `ClaudeCli` passes each as `--add-dir` (one flag per dir, as VS Code's host does for
-      every workspace folder that is not the cwd — extension.js `Yg$`), and the lock file's
-      `workspaceFolders` lists them too (the bridge's `getWorkspaceFolders` already did). Read at
-      each launch: a root attached mid-session is picked up by the next New/resume, not live (the
-      `register_repo_root` control is the follow-up if that ever matters). MEASURED 2026-09-05,
-      2.1.260: BEFORE (user's screenshot, `~/Sites/computer` attached to the testing window) every
-      Read there raised a card with `decision_reason` "Path is outside allowed working directories"
-      and a `Read(//…/**)` session rule suggestion; stdio control reproduced it (1 ask), and with
-      `--add-dir` the same Read ran with 0 asks. `WorkspaceRootsTest` (6). No webview change
+- **2.12** ✅ **Additional content roots as working directories** [NEW] — every content root
+  outside the project base is passed to the CLI as `--add-dir`, so reads there no longer raise
+  "outside allowed working directories" cards. Read at launch; a root attached mid-session waits
+  for the next New/resume.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-05. `WorkspaceRoots.extraDirs` picks every `ProjectRootManager.contentRoots`
+  entry outside `project.basePath` (not the base, not nested in it; a root under another extra
+  root is dropped), `ClaudeCli` passes each as `--add-dir` (one flag per dir, as VS Code's host
+  does for every workspace folder that is not the cwd — extension.js `Yg$`), and the lock file's
+  `workspaceFolders` lists them too (the bridge's `getWorkspaceFolders` already did). The
+  `register_repo_root` control is the follow-up if live attachment ever matters. MEASURED
+  2026-09-05, 2.1.260: BEFORE (user's screenshot, `~/Sites/computer` attached to the testing
+  window) every Read there raised a card with `decision_reason` "Path is outside allowed working
+  directories" and a `Read(//…/**)` session rule suggestion; stdio control reproduced it (1 ask),
+  and with `--add-dir` the same Read ran with 0 asks. `WorkspaceRootsTest` (6). No webview change.
+  </details>
 
 ## 3. ✅ Diffs & edit approval
 - **3.1** ✅ **Permission gate** — `can_use_tool` via `--permission-prompt-tool stdio`
 - **3.2** ✅ **Accept / Reject card** — diff inline (old→new for Edit/MultiEdit multi-hunk,
       additions for Write); under acceptEdits the diff is built optimistically from the tool input
-- **3.3** ✅ **Editor accept/reject** — dual surface: the same edit shows as a card AND an IDE diff
-      tab with an under-diff bar (Accept ✓ / Accept all edits / Reject ✕), first answer wins
-      (2026-08-09); replaces VS Code's editor-title buttons; no keyboard shortcuts by design
+- **3.3** ✅ **Editor accept/reject** — the same edit shows as a card AND as an IDE diff tab with an
+  under-diff bar (Accept ✓ / Accept all edits / Reject ✕); the first answer wins.
+  <!-- --><details><summary>Read more…</summary>
+  Dual surface decided 2026-08-09; replaces VS Code's editor-title buttons. No keyboard shortcuts
+  by design.
+  </details>
 - **3.4** ✅ **"File was modified by the user"** — `staleRecovered` surfaced on the tool line
-- **3.5** ✅ **In-diff editing before accept** — tweak-travel: the permission diff's right pane is
-      editable; an edited pane rides back as `updatedInput` in the whole-file shape VS Code sends
-      (`EditProposals.tweakedInput`: Edit → old_string = whole file, Write → content, MultiEdit →
-      one such edit — VS Code hands MultiEdit to the card, we don't have to). Probed 2026-08-28
-      (2.1.250): the CLI applies it, the tool_result stays a one-liner, the transcript keeps the
-      model's ORIGINAL `tool_use` while `toolUseResult` records what ran. The card redraws the
-      diff that ran with a "edited in the IDE before accepting" note; replay detects the tweak by
-      replaying both onto `originalFile` (`EditProposals.tweaked`). The pane is editable only
-      through `DiffContentFactoryEx.createEditable` — `DiffContentFactory.create(text)` is a
-      read-only document (found on the hand test; the bridge flow's pane had never been editable).
-      Built and HAND-VERIFIED live + resumed 2026-08-28 (session cad0a74e); fixture 59;
-      accept/reject v2 complete
-- **3.6** ✅ **Multi-file change review** — a per-turn "✎ N files changed · Review" block under the
-      ✻ summary, one row per file (project-relative path via the shared `fillPath`, per-file +a −r
-      counts right-aligned; reshaped 2026-09-01 from the comma-run, which on Windows showed FULL
-      `D:\…` paths — `lastIndexOf('/')` never matched backslashes; the `Review` span alone is the
-      click target, same day); Review opens ONE diff tab holding a chain of every file the turn
-      changed ("Before this turn" / "Now", read-only, prev/next between files —
-      `DiffReview.openChain`). Baselines come from the PreToolUse autosave hook the CLI already
-      blocks on (`Autosave` → `TurnChanges.snapshot`, first touch per turn) and settle at `result`
-      (`__files_changed`). VS Code's shape is per-session via a `file_updated` notification to its
-      in-process sdkMcpServer + a checkpoint store; ours is per-turn because that is what the
-      hook sees cleanly. `get_workspace_diff` probed 2026-08-28: git HEAD vs working tree with
-      per-file stats + structuredPatch-shaped hunks — includes the user's own edits, so NOT the
-      source (fact in `ide-mcp-protocol.md`). Limits: Edit/Write/MultiEdit only (a Bash `sed` is
-      invisible — same as VS Code's checkpointing); live turns only — a resumed session draws the
-      line from the transcript (count + names) without Review (backlog). Built and hand-verified
-      2026-08-28 (two files in one turn, chain navigation); fixture 60; `TurnChangesTest`
-- **3.7** ✅ **Deny with a message on tool cards** [NEW] — built 2026-09-05: every ordinary
-      permission card carries the plan card's `.plan-fb` field inline after Reject (VS Code's
-      placement, `rejectMessageInput`, placeholder "Tell Claude what to do instead"), filling the
-      row and wrapping under the buttons when tight. Rides DENY only — the message reaches the
-      model verbatim as the tool_result (probed 2.1.233); a note typed before Accept is dropped,
-      not quoted, because an ordinary allow has no wire for it. Enter in the field rejects with the
-      note (a text-field convention, not a card shortcut — 4.9 stays deferred). The decided line
-      quotes it (`✗ Rejected — "…"`) via the plan card's fbQuote. Live-only: decided ordinary cards
-      vanish on replay by design. No Kotlin change — `respondPermission(feedback)` already sent the
-      deny message. Fixture 78 (16 asserts, control 6 fail / 0 abort), mockup mirrored (5 cards).
-      Hand test 2026-09-05 (Edit card, note "Ignore please."): delivered — the transcript carries
-      `toolDenialKind:"permission-rule"` with the note as the is_error tool_result and the model
-      quoted it. Two follow-ups from that test, both fixed the same day: **(a)** the tool line drew
-      an error OUT box repeating the note one line above the card (pre-existing with the stock
-      message too) — `cardDenies` in the webview skips the box for a denial this panel sent, red
-      dot kept, exact-text match so a real error still draws (fixture 79, control 2 fail / 0
-      abort); **(b)** REPLAY listed the rejected edit as "1 file changed" (pre-existing since 3.6:
-      the list was filled at tool_use time and never emptied) — `SessionStore` now drops a denied
-      or failed edit from the turn's files (`SessionStoreDeniedEditTest` on the real transcript);
-      **(c)** a replayed EDIT card read a bare `✗ Rejected` while the plan card replays its note —
-      the parser now extracts the deny message for denied edit items too and the replayed diff card
-      quotes it (fixture 80; Bash cards still vanish on replay, so their note stays live-only)
-- **3.8** ✅ **Edit the Bash command in the permission card** [NEW] — built 2026-09-05: the
-      card's `.cmd` is `contenteditable=plaintext-only` when the input has a `command` shown WHOLE
-      (a command over `CMD_MAX` keeps its cut marker and stays read-only; a description-only
-      preview is not a command). While the text differs from the proposal the card is
-      `.cmd-edited`: a SINGLE-rule card keeps Always allow and grants the EDITED text — Kotlin
-      (`EditProposals.withRulesFor`) rewrites the echoed rule to it, PROBED 2.1.260: the CLI
-      persisted `Bash(factor 91)` from a `factor 97` suggestion and honoured it next turn while
-      `factor 97` still asked (user's call 2026-09-05, "this I think we can allow"). A COMPOUND
-      card (`.cmd-compound`) keeps Always allow and the destination rows too, hiding only its
-      per-rule rows (they name the original parts): the grant is split into one exact rule per
-      part of the edited text (`EditProposals.splitCommand` — `&&`, `||`, `;`, `|`, lone `&`
-      outside quotes/parentheses; a split the CLI would do differently can only re-ask, never
-      widen). PROBED: a rule for the WHOLE compound string is persisted but never matches (the
-      CLI checks parts separately), per-part rules from the split stopped the next `factor 91 &&
-      factor 95` ask; a bare-`&` compound re-asks every time regardless of rules (empty
-      suggestion list). The decided chip shows the edited command whole. Reverting brings the
-      per-rule rows back.
-      Accept sends the text as `cmd` on the bridge, `EditProposals.withCommand` replaces `command`
-      in the input the CLI asked about (`updatedInput`, the 3.5 path), the decided line reads
-      `✓ Accepted · edited in the IDE before accepting` and the box shows what ran. A folded long
-      command only ever OPENS on click while editable. PROBED 2.1.260: the CLI runs the replaced
-      command (`factor 97` → `factor 91` gave `91: 7 13`); the transcript keeps the original in the
-      tool_use and only the output in the result, so the edit is live-only on replay (as 3.5) and
-      the MODEL sees the original command next to the edited output — it noticed the mismatch in
-      the probe. That is the CLI's design, VS Code has the same. Fixture 81 (12 asserts, control
-      7 fail / 0 abort; the grant-follows-the-edit asserts 4 fail on the hide-always build and
-      3 on the hide-compound build), `EditProposalsTest` (+4), mockup mirrored (3 boxes)
-
+- **3.5** ✅ **In-diff editing before accept** — the permission diff's right pane is editable; the
+  edited text rides back to the CLI as `updatedInput`, and the card notes "edited in the IDE
+  before accepting". Live and replay both show the diff that ran.
+  <!-- --><details><summary>Read more…</summary>
+  Tweak-travel. The edit goes back in the whole-file shape VS Code sends
+  (`EditProposals.tweakedInput`: Edit → old_string = whole file, Write → content, MultiEdit → one
+  such edit — VS Code hands MultiEdit to the card, we don't have to). Probed 2026-08-28 (2.1.250):
+  the CLI applies it, the tool_result stays a one-liner, the transcript keeps the model's ORIGINAL
+  `tool_use` while `toolUseResult` records what ran. Replay detects the tweak by replaying both
+  onto `originalFile` (`EditProposals.tweaked`). The pane is editable only through
+  `DiffContentFactoryEx.createEditable` — `DiffContentFactory.create(text)` is a read-only
+  document (found on the hand test; the bridge flow's pane had never been editable). Built and
+  HAND-VERIFIED live + resumed 2026-08-28 (session cad0a74e); fixture 59; accept/reject v2
+  complete.
+  </details>
+- **3.6** ✅ **Multi-file change review** — every turn ends with a "✎ N files changed · Review"
+  block, one row per file with +a −r counts; Review opens one diff tab chaining every file the
+  turn changed ("Before this turn" / "Now", read-only, prev/next between files).
+  <!-- --><details><summary>Read more…</summary>
+  The block sits under the ✻ summary; paths are project-relative via the shared `fillPath`, counts
+  right-aligned; the `Review` span alone is the click target. Reshaped 2026-09-01 from the
+  comma-run, which on Windows showed FULL `D:\…` paths — `lastIndexOf('/')` never matched
+  backslashes (click target narrowed the same day). The chain is `DiffReview.openChain`. Baselines
+  come from the PreToolUse autosave hook the CLI already blocks on (`Autosave` →
+  `TurnChanges.snapshot`, first touch per turn) and settle at `result` (`__files_changed`). VS
+  Code's shape is per-session via a `file_updated` notification to its in-process sdkMcpServer + a
+  checkpoint store; ours is per-turn because that is what the hook sees cleanly.
+  `get_workspace_diff` probed 2026-08-28: git HEAD vs working tree with per-file stats +
+  structuredPatch-shaped hunks — includes the user's own edits, so NOT the source (fact in
+  `ide-mcp-protocol.md`). Limits: Edit/Write/MultiEdit only (a Bash `sed` is invisible — same as
+  VS Code's checkpointing); live turns only — a resumed session draws the line from the transcript
+  (count + names) without Review (backlog). Built and hand-verified 2026-08-28 (two files in one
+  turn, chain navigation); fixture 60; `TurnChangesTest`.
+  </details>
+- **3.7** ✅ **Deny with a message on tool cards** [NEW] — every ordinary permission card carries a
+  "Tell Claude what to do instead" field inline after Reject; the note rides the denial to the
+  model verbatim, Enter in the field rejects with it, and the decided line quotes it.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-05. The field is the plan card's `.plan-fb` (VS Code's placement,
+  `rejectMessageInput`), filling the row and wrapping under the buttons when tight. Rides DENY
+  only — the message reaches the model verbatim as the tool_result (probed 2.1.233); a note typed
+  before Accept is dropped, not quoted, because an ordinary allow has no wire for it. Enter
+  rejecting is a text-field convention, not a card shortcut — 4.9 stays deferred. The decided line
+  quotes it (`✗ Rejected — "…"`) via the plan card's fbQuote. Live-only: decided ordinary cards
+  vanish on replay by design. No Kotlin change — `respondPermission(feedback)` already sent the
+  deny message. Fixture 78 (16 asserts, control 6 fail / 0 abort), mockup mirrored (5 cards). Hand
+  test 2026-09-05 (Edit card, note "Ignore please."): delivered — the transcript carries
+  `toolDenialKind:"permission-rule"` with the note as the is_error tool_result and the model
+  quoted it. Three follow-ups from that test, all fixed the same day: **(a)** the tool line drew
+  an error OUT box repeating the note one line above the card (pre-existing with the stock
+  message too) — `cardDenies` in the webview skips the box for a denial this panel sent, red dot
+  kept, exact-text match so a real error still draws (fixture 79, control 2 fail / 0 abort);
+  **(b)** REPLAY listed the rejected edit as "1 file changed" (pre-existing since 3.6: the list
+  was filled at tool_use time and never emptied) — `SessionStore` now drops a denied or failed
+  edit from the turn's files (`SessionStoreDeniedEditTest` on the real transcript); **(c)** a
+  replayed EDIT card read a bare `✗ Rejected` while the plan card replays its note — the parser
+  now extracts the deny message for denied edit items too and the replayed diff card quotes it
+  (fixture 80; Bash cards still vanish on replay, so their note stays live-only).
+  </details>
+- **3.8** ✅ **Edit the Bash command in the permission card** [NEW] — the command on a Bash card is
+  editable in place; Accept runs the edited text and the card says "edited in the IDE before
+  accepting"; Always allow follows the edit, one exact rule per part of a compound command.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-05. The card's `.cmd` is `contenteditable=plaintext-only` when the input has a
+  `command` shown WHOLE (a command over `CMD_MAX` keeps its cut marker and stays read-only; a
+  description-only preview is not a command). While the text differs from the proposal the card is
+  `.cmd-edited`; reverting brings the per-rule rows back; the decided chip shows the edited
+  command whole. **Single-rule card**: keeps Always allow and grants the EDITED text — Kotlin
+  (`EditProposals.withRulesFor`) rewrites the echoed rule to it. PROBED 2.1.260: the CLI persisted
+  `Bash(factor 91)` from a `factor 97` suggestion and honoured it next turn while `factor 97`
+  still asked (user's call 2026-09-05, "this I think we can allow"). **Compound card**
+  (`.cmd-compound`): keeps Always allow and the destination rows too, hiding only its per-rule
+  rows (they name the original parts); the grant is split into one exact rule per part of the
+  edited text (`EditProposals.splitCommand` — `&&`, `||`, `;`, `|`, lone `&` outside
+  quotes/parentheses; a split the CLI would do differently can only re-ask, never widen). PROBED:
+  a rule for the WHOLE compound string is persisted but never matches (the CLI checks parts
+  separately), per-part rules from the split stopped the next `factor 91 && factor 95` ask; a
+  bare-`&` compound re-asks every time regardless of rules (empty suggestion list). **Accept**:
+  sends the text as `cmd` on the bridge, `EditProposals.withCommand` replaces `command` in the
+  input the CLI asked about (`updatedInput`, the 3.5 path), the decided line reads
+  `✓ Accepted · edited in the IDE before accepting` and the box shows what ran. A folded long
+  command only ever OPENS on click while editable. PROBED 2.1.260: the CLI runs the replaced
+  command (`factor 97` → `factor 91` gave `91: 7 13`); the transcript keeps the original in the
+  tool_use and only the output in the result, so the edit is live-only on replay (as 3.5) and the
+  MODEL sees the original command next to the edited output — it noticed the mismatch in the
+  probe. That is the CLI's design, VS Code has the same. Fixture 81 (12 asserts, control 7 fail /
+  0 abort; the grant-follows-the-edit asserts 4 fail on the hide-always build and 3 on the
+  hide-compound build), `EditProposalsTest` (+4), mockup mirrored (3 boxes).
+  </details>
 ## 4. ✅ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
       aliased in the chip), acceptEdits, plan, auto (the safety-classifier mode)
@@ -467,115 +580,148 @@ auto-include selection, voice.
       refused control requests surface as error blocks
 - **4.4** ✅ **"Don't ask again" buttons** — from `permission_suggestions`; compound `addRules`
       merged into one button (VS Code does not); hidden on `blocked_path` prompts
-- **4.5** ✅ **Mode persistence** — survives restarts and New/Refresh/resume; launched with the
-      persisted mode. Since 2.1.241 `initialize` also reports `current_permission_mode`, a
-      reconciliation source if the persisted value ever drifts. Nothing persisted (never picked) →
-      NO `--permission-mode` flag: the CLI's own precedence applies (`permissions.defaultMode` from
-      the settings files, else its default — `auto` on 2.1.260) and the chip is seeded from
-      `initialize`'s `current_permission_mode` at spawn, as in VS Code (4.7, 2026-09-04)
+- **4.5** ✅ **Mode persistence** — the picked mode survives restarts and New/Refresh/resume; a
+  never-picked chip starts on whatever the CLI's own precedence lands (4.7).
+  <!-- --><details><summary>Read more…</summary>
+  Launched with the persisted mode. Since 2.1.241 `initialize` also reports
+  `current_permission_mode`, a reconciliation source if the persisted value ever drifts. Nothing
+  persisted (never picked) → NO `--permission-mode` flag: the CLI's own precedence applies
+  (`permissions.defaultMode` from the settings files, else its default — `auto` on 2.1.260) and
+  the chip is seeded from `initialize`'s `current_permission_mode` at spawn, as in VS Code (4.7,
+  2026-09-04).
+  </details>
 - **4.6** ➖ **`allowDangerouslySkipPermissions` / `initialPermissionMode`** — the flag turns every
       mode into a bypass (probed); persistence covers the initial-mode need
-- **4.7** ✅ **`dontAsk` mode** [NEW] — built 2026-09-04 as VS Code's rule, not the row's original
-      "fifth menu entry" (premise corrected the same day off the user's screenshot: the VS Code
-      picker is built per session — `webview/index.js` `c4()` — and unshifts `dontAsk` ONLY while it
-      is the current mode; `bypassPermissions` only under `allowDangerouslySkipPermissions`). Two
-      halves: **(a)** nothing persisted → `ClaudeCli` omits `--permission-mode` and `ChatPanel` pushes
-      no stored `__mode`, so the CLI's own precedence lands the session (`permissions.defaultMode`,
-      else its default) and the chip is seeded from the `initialize` response's
-      `current_permission_mode` (relayed as `__mode` in `pushInitMeta`; `system/init` only repeats
-      it with the first turn — measured live: without that seed a never-picked chip sat on Manual
-      while the CLI was on `auto`) — `PermissionModes.resolveStored` (+ test);
-      **(b)** a `Don't ask` row in the mode menu, `[hidden]` unless current (`syncModeUI`), so the
-      unknown-mode guard accepts the broadcast and the chip can name the mode without the menu ever
-      offering it; leaving it hides the row again. MEASURED on 2.1.260: `set_permission_mode
-      {mode:"dontAsk"}` succeeds; init broadcasts `dontAsk` VERBATIM; a file `defaultMode:"dontAsk"`
-      alone → init `dontAsk`; the same file + `--permission-mode manual` → init `default` (the flag
-      beats the file — why (a) exists); a file `bypassPermissions` without the dangerous flag → init
-      `default` (no guard needed). Accent shares Manual's slate. Fixture 76. Visible change: a
-      never-picked chip now starts on the CLI's default (`auto` on 2.1.260) instead of a hardcoded
-      Manual — change-notes line for the next release
-- **4.8** ✅ **"Don't ask again" destination** [NEW] — built 2026-09-04 as a SPLIT on the
-      Always-allow button (the user's call over VS Code's cycling link): the main half keeps the
-      CLI's own destination (`localSettings` on every rule card measured), the caret lists the
-      others — `This session only` / `This project, shared` / `All projects` (and `This project,
-      just you` when the CLI's own is `session`); on a compound grant they sit under the per-rule
-      rows behind an `All of these` header and grant the whole set. MEASURED on 2.1.260 (stdio, a
-      trusted scratch workspace): the echoed `destination` decides the file — `projectSettings` →
-      `.claude/settings.json`, `localSettings` → `.claude/settings.local.json`, `userSettings` →
-      `<config dir>/settings.json`, `session` → nothing on disk, no re-ask that run; an unknown
-      value drops the grant silently, so `PermissionDestinations` forwards only those four
-      (`cliArg` behaves as session and is not offered, as in VS Code). `setMode` entries keep their
-      own scope; `addDirectories` grants have no rows (destination change unprobed for them). The
-      decided line records the scope (`always allowed for all projects`). Fixture 77 (17 asserts,
-      negative control 11 fail / 0 abort on the pre-fix build), `PermissionDestinationsTest`.
-      Not remembered across cards (VS Code keeps the last pick in localStorage) — the main half is
-      always the default, by the user's spec; revisit only if the session-only pick turns out to
-      be the common one
+- **4.7** ✅ **`dontAsk` mode** [NEW] — VS Code's rule: the mode menu shows `Don't ask` only while
+  it is the current mode and never offers it; a never-picked chip starts on the CLI's default
+  (`auto` on 2.1.260) instead of a hardcoded Manual.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-04 as VS Code's rule, not the row's original "fifth menu entry" (premise
+  corrected the same day off the user's screenshot: the VS Code picker is built per session —
+  `webview/index.js` `c4()` — and unshifts `dontAsk` ONLY while it is the current mode;
+  `bypassPermissions` only under `allowDangerouslySkipPermissions`). Two halves: **(a)** nothing
+  persisted → `ClaudeCli` omits `--permission-mode` and `ChatPanel` pushes no stored `__mode`, so
+  the CLI's own precedence lands the session (`permissions.defaultMode`, else its default) and
+  the chip is seeded from the `initialize` response's `current_permission_mode` (relayed as
+  `__mode` in `pushInitMeta`; `system/init` only repeats it with the first turn — measured live:
+  without that seed a never-picked chip sat on Manual while the CLI was on `auto`) —
+  `PermissionModes.resolveStored` (+ test); **(b)** a `Don't ask` row in the mode menu, `[hidden]`
+  unless current (`syncModeUI`), so the unknown-mode guard accepts the broadcast and the chip can
+  name the mode without the menu ever offering it; leaving it hides the row again. MEASURED on
+  2.1.260: `set_permission_mode {mode:"dontAsk"}` succeeds; init broadcasts `dontAsk` VERBATIM; a
+  file `defaultMode:"dontAsk"` alone → init `dontAsk`; the same file + `--permission-mode manual`
+  → init `default` (the flag beats the file — why (a) exists); a file `bypassPermissions` without
+  the dangerous flag → init `default` (no guard needed). Accent shares Manual's slate. Fixture 76.
+  The visible change (never-picked chip on the CLI's default) is a change-notes line for the next
+  release.
+  </details>
+- **4.8** ✅ **"Don't ask again" destination** [NEW] — Always allow is a split button: the main half
+  keeps the CLI's own destination, the caret offers `This session only` / `This project, shared`
+  / `All projects`; the decided line records the scope.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-04 as a SPLIT (the user's call over VS Code's cycling link). The CLI's own
+  destination is `localSettings` on every rule card measured; the caret adds `This project, just
+  you` when the CLI's own is `session`; on a compound grant the rows sit under the per-rule rows
+  behind an `All of these` header and grant the whole set. MEASURED on 2.1.260 (stdio, a trusted
+  scratch workspace): the echoed `destination` decides the file — `projectSettings` →
+  `.claude/settings.json`, `localSettings` → `.claude/settings.local.json`, `userSettings` →
+  `<config dir>/settings.json`, `session` → nothing on disk, no re-ask that run; an unknown value
+  drops the grant silently, so `PermissionDestinations` forwards only those four (`cliArg`
+  behaves as session and is not offered, as in VS Code). `setMode` entries keep their own scope;
+  `addDirectories` grants have no rows (destination change unprobed for them). The decided line
+  reads e.g. `always allowed for all projects`. Fixture 77 (17 asserts, negative control 11 fail /
+  0 abort on the pre-fix build), `PermissionDestinationsTest`. Not remembered across cards (VS
+  Code keeps the last pick in localStorage) — the main half is always the default, by the user's
+  spec; revisit only if the session-only pick turns out to be the common one.
+  </details>
 - **4.9** ➖ **Number-key answers on cards** [NEW] — deferred by the user 2026-09-05 ("no keyboard
-      shortcuts for now"), extending the 2026-08-16 plan-card rule to every card. VS Code answers a
-      focused card with 1/2/3 and Esc; ours would be a keydown handler scoped to the focused card,
-      not a global chord (12.4). Revisit only if the user asks for keyboard answers
+  shortcuts for now"), extending the 2026-08-16 plan-card rule to every card.
+  <!-- --><details><summary>Read more…</summary>
+  VS Code answers a focused card with 1/2/3 and Esc; ours would be a keydown handler scoped to
+  the focused card, not a global chord (12.4). Revisit only if the user asks for keyboard answers.
+  </details>
 
 ## 5. ✅ Plan mode
 - **5.1** ✅ **Plan card** — enter plan mode from the chip; the plan renders as a card on
       `ExitPlanMode`
-- **5.2** ✅ **Feedback field** — rides whichever button answers: deny → verbatim tool_result;
-      approve → appended under `PLAN_NOTES_MARKER` via `updatedInput.plan` (same-message
-      delivery, timing-equivalent to the TUI's shift+tab; 2026-08-16)
+- **5.2** ✅ **Feedback field** — a note on the plan card rides whichever button answers: deny
+  sends it as the tool result, approve appends it to the plan.
+  <!-- --><details><summary>Read more…</summary>
+  Deny → verbatim tool_result; approve → appended under `PLAN_NOTES_MARKER` via
+  `updatedInput.plan` (same-message delivery, timing-equivalent to the TUI's shift+tab;
+  2026-08-16).
+  </details>
 - **5.3** ✅ **Split Approve** — approve · approve + auto-edit · approve + auto; mode rows park in
       `pendingPlanMode` and bridge only after the CLI's post-approval mode broadcast
 - **5.4** ✅ **Replay** — plan + quoted feedback footer (`fbQuote`), the note parsed back out of
       `toolUseResult.plan`
 - **5.5** ➖ **Card keyboard shortcuts** — Enter = keep planning, Shift+Tab = approve; deferred by
       the user 2026-08-16, backlog § Next up
-- **5.6** ✅ **Anchored plan comments** — select text in the plan card → floating Comment pill → a
-      note row quoting the anchor; rows sit between the plan and the decision surface, decided
-      cards keep them WITH the anchor highlights, replay parses them back identically
-      (`highlightAnchors` / `planCommentRows`, shared by live and replay). Deny sends the VS Code
-      client's exact wire shape (`PLAN_DENY_PREFIX` + text + `PLAN_COMMENTS_HEADER` + `[Re:
-      "<anchor>"] <note>` lines, strings in `RenderLimits`); approve-with-comments rides the
-      `PLAN_NOTES_MARKER` append. Two deliberate divergences: the full approve surface stays
-      available with comments pending (VS Code collapses to keep-planning), and VS Code's plan-file
-      preview tab is not replicated (the card body is the preview). Shipped 0.9.0 (2026-08-23);
-      fixture 53; history in journal digest 2026-08-23
+- **5.6** ✅ **Anchored plan comments** — select text in the plan card, click the floating Comment
+  pill, and a note row quoting the anchor sits between the plan and the decision buttons; the
+  notes ride the deny or the approve, and replay draws them back with their highlights.
+  <!-- --><details><summary>Read more…</summary>
+  Decided cards keep the rows WITH the anchor highlights; replay parses them back identically
+  (`highlightAnchors` / `planCommentRows`, shared by live and replay). Deny sends the VS Code
+  client's exact wire shape (`PLAN_DENY_PREFIX` + text + `PLAN_COMMENTS_HEADER` + `[Re:
+  "<anchor>"] <note>` lines, strings in `RenderLimits`); approve-with-comments rides the
+  `PLAN_NOTES_MARKER` append. Two deliberate divergences: the full approve surface stays
+  available with comments pending (VS Code collapses to keep-planning), and VS Code's plan-file
+  preview tab is not replicated (the card body is the preview). Shipped 0.9.0 (2026-08-23);
+  fixture 53; history in journal digest 2026-08-23.
+  </details>
 - **5.7** ➖ **`/ultraplan`** — cloud-drafted plan; a cloud product surface, not a panel feature
 
 ## 6. ✅ Context input
 - **6.1** ✅ **@-mention files** — fuzzy autocomplete, keyboard nav, dismissal contract shared with
       the slash menu, ellipsis at the end
-- **6.2** ✅ **Attachments** — images (`image` blocks) + PDF / text / code (`document` blocks with
-      titles); paste; drag-and-drop via an AWT `DropTarget` (JCEF never delivers OS drags); chips
-      preview in the lightbox or save via the IDE dialog
+- **6.2** ✅ **Attachments** — images, PDFs, text and code files by paste or drag-and-drop; chips
+  preview in the lightbox or save via the IDE dialog.
+  <!-- --><details><summary>Read more…</summary>
+  Images as `image` blocks; PDF / text / code as `document` blocks with titles. Drag-and-drop via
+  an AWT `DropTarget` (JCEF never delivers OS drags).
+  </details>
 - **6.3** ✅ **Injected IDE context stripped on replay** — `<ide_selection>` etc.
 - **6.4** ➖ **@-mention symbols** — deferred by the user 2026-08-29 (backlog; [MD], a second
       picker source over the IDE symbol index). Files cover most mentions
-- **6.5** ✅ **Mention from the IDE** — built 2026-09-04 on the user's request (a screenshot of the
-      Project-view context menu: "select items, right-click, first option adds these files as a
-      mention to the composer"). `MentionAction` ("Mention in Claude Brains", claude icon) sits
-      FIRST in `ProjectViewPopupMenu` and `EditorPopupMenu`; every selected file/folder becomes
-      an `@path ` token at the composer caret (project-relative like the picker's own inserts,
-      folders with a trailing slash, outside-project paths absolute — `MentionPaths.tokens`,
-      pinned by `MentionPathsTest`), the tool window is activated, and a list handed over before
-      the page is seeded is parked in `ChatPanel.insertMentions` and flushed after `seedUi()`.
-      Spacing/caret rule in fixture 75 (negative control 5/6 fails on the pre-change build). No
-      shortcut (12.4) — VS Code's Alt+K equivalent is the unbound action itself, mappable in
-      Keymap. Supersedes the 2026-08-29 deferral
+- **6.5** ✅ **Mention from the IDE** — "Mention in Claude Brains" is the first entry of the
+  Project-view and editor context menus: every selected file or folder lands as an `@path` token
+  at the composer caret and the tool window comes forward. No shortcut, mappable in Keymap.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-04 on the user's request (a screenshot of the Project-view context menu: "select
+  items, right-click, first option adds these files as a mention to the composer").
+  `MentionAction` (claude icon) sits FIRST in `ProjectViewPopupMenu` and `EditorPopupMenu`; every
+  selected file/folder becomes an `@path ` token (trailing space) at the composer caret —
+  project-relative like the picker's own inserts, folders with a trailing slash, outside-project
+  paths absolute — `MentionPaths.tokens`, pinned by `MentionPathsTest`; a list handed over before
+  the page is seeded is parked in `ChatPanel.insertMentions` and flushed after `seedUi()`.
+  Spacing/caret rule in fixture 75 (negative control 5/6 fails on the pre-change build). No
+  shortcut (12.4) — VS Code's Alt+K equivalent is the unbound action itself, mappable in Keymap.
+  Supersedes the 2026-08-29 deferral.
+  </details>
 - **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
 - **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
-      our picker is IDE-indexed and no gap has shown. (The CLI also answers `file_suggestions {query}` over stdio with
-      the TUI's own fuzzy ranking — an alternative source if one ever does)
+  our picker is IDE-indexed and no gap has shown.
+  <!-- --><details><summary>Read more…</summary>
+  The CLI also answers `file_suggestions {query}` over stdio with the TUI's own fuzzy ranking — an
+  alternative source if a gap ever does show.
+  </details>
 - **6.8** ➖ **`@terminal`** [NEW] — `get_terminal_contents`; the panel does not own a terminal
-- **6.9** ✅ **Mention chips** [NEW] — built 2026-09-04 (user's "do this one first" the same day):
-      every path-shaped `@token` in a sent prompt (holds a slash or a dotted extension, `@` at the
-      start or after whitespace; sentence-final punctuation left outside) renders as an inline
-      capsule wearing the attachment chip's surface — `mentionHtml` in `50-blocks.js`, drawn by
-      `addUserMessage` so live and replay share it; the bubble's `textContent` stays byte-identical
-      to the prompt. `data-path` rides the delegated `#log` click handler, so a chip opens the file
-      like a tool-line path (live probe: `{"kind":"open","path":"README.md"}`, fold untouched).
-      Composer half NOT built by design: a plain `<textarea>` cannot host chips (VS Code's
-      `inputMentionChip` needs its contenteditable) — the sent bubble is where the chip pays.
-      Fixture 74 (6 asserts; negative control 3/3 discriminating fails on the pre-change build);
-      harness 630 → 636; mockup + gallery carry an example
+- **6.9** ✅ **Mention chips** [NEW] — every path-shaped `@token` in a sent prompt renders as an
+  inline capsule that opens the file on click, live and on replay. The composer itself stays a
+  plain textarea by design.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-04 (user's "do this one first" the same day). Path-shaped = holds a slash or a
+  dotted extension, `@` at the start or after whitespace; sentence-final punctuation left outside.
+  The capsule wears the attachment chip's surface — `mentionHtml` in `50-blocks.js`, drawn by
+  `addUserMessage` so live and replay share it; the bubble's `textContent` stays byte-identical
+  to the prompt. `data-path` rides the delegated `#log` click handler, so a chip opens the file
+  like a tool-line path (live probe: `{"kind":"open","path":"README.md"}`, fold untouched).
+  Composer half NOT built by design: a plain `<textarea>` cannot host chips (VS Code's
+  `inputMentionChip` needs its contenteditable) — the sent bubble is where the chip pays.
+  Fixture 74 (6 asserts; negative control 3/3 discriminating fails on the pre-change build);
+  harness 630 → 636; mockup + gallery carry an example.
+  </details>
 
 ## 7. ✅ Slash commands (`docs/slash-commands.md` is the source of truth)
 - **7.1** ✅ **Slash menu** — opens on `/`; keyboard nav, descriptions, source badges (project /
@@ -587,31 +733,41 @@ auto-include selection, voice.
 - **7.4** ✅ **16 built-ins enabled** — each driven through the live panel; the rest Hidden by group
 - **7.5** ✅ **Pick rule** — a command with ANY `argumentHint` inserts `/name ` and waits; hint-less
       runs (2026-08-16; the roster carries no `immediate` flag)
-- **7.6** ➖ **`/clear`** — REMOVED by the user 2026-08-29: the header's New-conversation button
-      (`#newBtn`) is the panel's `/clear`, so the typed form (and `/new`, `/reset`) is refused like
-      `/model`. Moot with it: the 2.1.241 `[name]` hint that made a menu pick insert-not-run —
-      naming lives in the header pencil (7.9)
+- **7.6** ➖ **`/clear`** — REMOVED by the user 2026-08-29: the header's New-conversation button is
+  the panel's `/clear`, so the typed form (and `/new`, `/reset`) is refused like `/model`.
+  <!-- --><details><summary>Read more…</summary>
+  The button is `#newBtn`. Moot with it: the 2.1.241 `[name]` hint that made a menu pick
+  insert-not-run — naming lives in the header pencil (7.9).
+  </details>
 - **7.7** ✅ **Aliases** — first-class: the menu filter scores them like names, rows show them
-      muted (`.pi-alias`), a typed alias resolves to its command before the allowlist gate
-      (`canonicalCmd`; `/review` → `/code-review`, `/new` → `/clear`); fixture 52, 2026-08-17
-- **7.8** ➖ **TUI-only commands** — never on the headless roster: `/login /logout /resume /help
-      /add-dir /rewind /diff /update /theme /vim /keybindings /export /copy /bug /feedback
-      /memory /permissions /hooks /mcp /plugin /agents /doctor /status /config /ide /terminal-setup
-      /voice /desktop /mobile /teleport /remote-control /background /branch /fork /btw /tasks
-      /skills /skill-doctor /pause-memory /alias /focus /brief /wellbeing /radio /cd /subtask
-      /plan /artifacts /autofix-pr /loops /workflows /daemon /statusline /tui /scroll-speed
-      /sandbox /output-style /stop /exit /version /release-notes /upgrade /install /web-setup
-      /privacy-settings /remote-env /cloud-plugins /onboarding …` (the 2026-09-04 full-surface
-      audit added the tail from the binary's category map; `/advisor` left this list at 2.1.260 —
-      it is on the headless roster now, Hidden in `docs/slash-commands.md`) —
-      the terminal's half by construction. Where the panel has an equivalent it is listed in its
-      own section (rename, model, effort, mode, resume, tasks, focus)
+  muted, and a typed alias resolves to its command before the allowlist gate.
+  <!-- --><details><summary>Read more…</summary>
+  Muted as `.pi-alias`; resolution via `canonicalCmd` (`/review` → `/code-review`, `/new` →
+  `/clear`); fixture 52, 2026-08-17.
+  </details>
+- **7.8** ➖ **TUI-only commands** — never on the headless roster, so the terminal's half by
+  construction (login, resume, config, doctor, …). Where the panel has an equivalent it is listed
+  in its own section (rename, model, effort, mode, resume, tasks, focus).
+  <!-- --><details><summary>Read more…</summary>
+  The list: `/login /logout /resume /help /add-dir /rewind /diff /update /theme /vim /keybindings
+  /export /copy /bug /feedback /memory /permissions /hooks /mcp /plugin /agents /doctor /status
+  /config /ide /terminal-setup /voice /desktop /mobile /teleport /remote-control /background
+  /branch /fork /btw /tasks /skills /skill-doctor /pause-memory /alias /focus /brief /wellbeing
+  /radio /cd /subtask /plan /artifacts /autofix-pr /loops /workflows /daemon /statusline /tui
+  /scroll-speed /sandbox /output-style /stop /exit /version /release-notes /upgrade /install
+  /web-setup /privacy-settings /remote-env /cloud-plugins /onboarding …` (the 2026-09-04
+  full-surface audit added the tail from the binary's category map; `/advisor` left this list at
+  2.1.260 — it is on the headless roster now, Hidden in `docs/slash-commands.md`).
+  </details>
 - **7.9** ✅ **Panel equivalents of TUI commands** — `/rename` (header pencil), `/model` +
       `/effort` (chips), `/tasks` (bg roster, read-only), `/resume` (history), `/clear` (New)
-- **7.10** ✅ **Roster survives a webview reload** — `ChatPanel` keeps the newest
-      `commands_changed` frame from the current CLI and replays it after the init seed on every
-      page load (cleared on a fresh `initialize`); driven live over CDP 2026-08-17, a mid-session
-      command survived `location.reload()`
+- **7.10** ✅ **Roster survives a webview reload** — the slash menu keeps its commands after a page
+  reload mid-session.
+  <!-- --><details><summary>Read more…</summary>
+  `ChatPanel` keeps the newest `commands_changed` frame from the current CLI and replays it after
+  the init seed on every page load (cleared on a fresh `initialize`); driven live over CDP
+  2026-08-17, a mid-session command survived `location.reload()`.
+  </details>
 
 ## 8. ✅ Sessions / history
 - **8.1** ✅ **New / Resume / Refresh** — Resume = history list → `--resume <id>`; Refresh
@@ -620,259 +776,359 @@ auto-include selection, voice.
       `custom-title` (newest rename wins) → summary → first user message
 - **8.3** ✅ **Header title** — shown as soon as the transcript can name it (probe at
       `message_start`, re-read at every `result`; `seedUi()` on every load)
-- **8.4** ✅ **Rename** — in place: header pencil → the CLI's own `custom-title` record (=
-      `/rename`). A `rename_session {title}` control request also exists and is accepted over stdio
-      (probed 2026-08-23) — a cleaner path if the record-write ever grows warts
+- **8.4** ✅ **Rename** — in place from the header pencil, writing the CLI's own `custom-title`
+  record (the same thing `/rename` does).
+  <!-- --><details><summary>Read more…</summary>
+  A `rename_session {title}` control request also exists and is accepted over stdio (probed
+  2026-08-23) — a cleaner path if the record-write ever grows warts.
+  </details>
 - **8.5** ✅ **Delete** — any conversation; the live one via leave-first (`awaitExit`)
-- **8.6** ✅ **Replay** — through the same block builders as live (audited; deliberate divergences
-      in gotchas.md § Replay); windowed with an aligned turn-boundary cut, "N earlier blocks not
-      loaded" marker and load-earlier on scroll-up; interrupt markers, sub-agent lines, plan
-      feedback, steered messages all replay
-- **8.7** ➖ [LG] **Rewind / checkpoints + fork conversation** — DECLINED by the user 2026-08-29,
-      by design: undo and branching depend on git (+ PhpStorm Local History), not on Claude's
-      transcript-embedded checkpoints (VS Code `rewind_code` / `fork_conversation`; TUI `/rewind`,
-      `/branch`, `/fork`). Per-turn file rewind was removed 2026-07-30; wire shape for the record:
-      `rewind_files {user_message_id, dry_run}` → `{canRewind, filesChanged, insertions, deletions}`
-      + `file_snapshot` / `files_persisted` records, gated on `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1`
-      (never probed live — it mutates files; gotchas § Protocol). Fork: New button + `/resume` cover it
+- **8.6** ✅ **Replay** — a resumed transcript draws through the same block builders as live,
+  windowed with a load-earlier on scroll-up; interrupts, sub-agent lines, plan feedback and
+  steered messages all replay.
+  <!-- --><details><summary>Read more…</summary>
+  Audited; deliberate divergences in gotchas.md § Replay. The window has an aligned
+  turn-boundary cut and an "N earlier blocks not loaded" marker.
+  </details>
+- **8.7** ➖ [LG] **Rewind / checkpoints + fork conversation** — DECLINED by the user 2026-08-29, by
+  design: undo and branching depend on git (+ PhpStorm Local History), not on Claude's
+  transcript-embedded checkpoints. Fork: the New button + `/resume` cover it.
+  <!-- --><details><summary>Read more…</summary>
+  VS Code `rewind_code` / `fork_conversation`; TUI `/rewind`, `/branch`, `/fork`. Per-turn file
+  rewind was removed 2026-07-30; wire shape for the record: `rewind_files {user_message_id,
+  dry_run}` → `{canRewind, filesChanged, insertions, deletions}` + `file_snapshot` /
+  `files_persisted` records, gated on `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` (never probed
+  live — it mutates files; gotchas § Protocol).
+  </details>
 - **8.8** ➖ [MD] **Reopen closed session** — Ctrl+Shift+T; the plugin binds no shortcuts and has no
       tabs — deferred by the user 2026-08-29, follows conversation tabs (8.9)
 - **8.9** ➖ **Multiple conversation tabs** — deferred by the user (do last)
-- **8.10** ➖ [LG] **Session groups / sessions sidebar** [NEW] — a `claude-sessions-sidebar` view
-      with user-named folders (`get_session_groups` / `update_session_groups`, stored client-side),
-      hide/delete, `list_sessions_request`. Our history popup already lists per-project sessions;
-      grouping only pays off once tabs or worktrees exist — deferred by the user 2026-08-29 ("not
-      very important"), follows tabs (8.9). 2.1.260 grew the sidebar: archive/unarchive (an
-      "Archived sessions" section) REPLACES `delete_session` (which only ever hid), plus
-      mark-as-unread, status filters ("needs input / working / unread", Active/Open/Closed), tab
-      rename/groups commands — same verdict, still behind tabs
+- **8.10** ➖ [LG] **Session groups / sessions sidebar** [NEW] — deferred by the user 2026-08-29
+  ("not very important"): our history popup already lists per-project sessions; grouping only pays
+  off once tabs or worktrees exist, so it follows tabs (8.9).
+  <!-- --><details><summary>Read more…</summary>
+  VS Code: a `claude-sessions-sidebar` view with user-named folders (`get_session_groups` /
+  `update_session_groups`, stored client-side), hide/delete, `list_sessions_request`. 2.1.260
+  grew the sidebar: archive/unarchive (an "Archived sessions" section) REPLACES `delete_session`
+  (which only ever hid), plus mark-as-unread, status filters ("needs input / working / unread",
+  Active/Open/Closed), tab rename/groups commands — same verdict, still behind tabs.
+  </details>
 - **8.11** ✅ [MD] **Side question** [NEW] — `/btw` (bare = open, `/btw question` = ask) opens a
-      panel floating above the composer (`#sidePanel`, `webview/js/67-side.js`); the question goes
-      out as a `side_question` control request and the answer renders there as markdown — never in
-      the log, never on disk (the CLI runs a one-turn fork with the transcript write skipped and
-      tools denied; measured 2026-08-29 on 2.1.251: `system/control_request_progress{started}` →
-      `control_response{response, synthetic}`, follow-ups carry the panel's `{question, response}`
-      pairs as `history`). The roster has no `/btw`; the panel supplies the entry (`CMD_LOCAL`), as
-      VS Code does. Escape closes, ✕ clears, a new/resumed conversation resets. Fixture 66 (25
-      asserts, control run pre-feature: 21 of 23 fail; centring assert -61 pre-fix; right-edge assert
-      copies the composer's scrollbar inset). Built 2026-08-29; live-verified §17 MT-7.9
-- **8.12** ➖ **Remote sessions / teleport / remote control** — `list_remote_sessions`,
-      `teleport_session`, `toggle_remote_control` (TUI `/teleport`, `/rc`, `/session`); session
-      SOURCES beyond the local disk lean infrastructure; recorded as a judgment call. 2.1.251:
-      `initialize.remote_control_available` and a webview status pill — still ➖. 2.1.260 adds
-      `cloud_session_delta` `system` frames (the cloud client pushes changed `cloud_session` keys
-      between inits; never seen on a local stdio wire) — bookkeeping for this same family
+  panel floating above the composer; the answer renders there as markdown and never enters the
+  log or the transcript. Escape closes, ✕ clears, a new/resumed conversation resets.
+  <!-- --><details><summary>Read more…</summary>
+  `#sidePanel`, `webview/js/67-side.js`. The question goes out as a `side_question` control
+  request (the CLI runs a one-turn fork with the transcript write skipped and tools denied;
+  measured 2026-08-29 on 2.1.251: `system/control_request_progress{started}` →
+  `control_response{response, synthetic}`, follow-ups carry the panel's `{question, response}`
+  pairs as `history`). The roster has no `/btw`; the panel supplies the entry (`CMD_LOCAL`), as
+  VS Code does. Fixture 66 (25 asserts, control run pre-feature: 21 of 23 fail; centring assert
+  -61 pre-fix; right-edge assert copies the composer's scrollbar inset). Built 2026-08-29;
+  live-verified §17 MT-7.9.
+  </details>
+- **8.12** ➖ **Remote sessions / teleport / remote control** — session SOURCES beyond the local
+  disk lean infrastructure; recorded as a judgment call.
+  <!-- --><details><summary>Read more…</summary>
+  `list_remote_sessions`, `teleport_session`, `toggle_remote_control` (TUI `/teleport`, `/rc`,
+  `/session`). 2.1.251: `initialize.remote_control_available` and a webview status pill — still
+  ➖. 2.1.260 adds `cloud_session_delta` `system` frames (the cloud client pushes changed
+  `cloud_session` keys between inits; never seen on a local stdio wire) — bookkeeping for this
+  same family.
+  </details>
 - **8.13** ➖ **`generate_session_title`** [NEW] — the CLI names threads itself (`ai-title`) and we
       show it
-- **8.14** ➖ [LG] **Reloaded-webview log replay** — chrome heals via `seedUi()`, the log does not;
-      declined by the user 2026-08-29: a reload only happens from DevTools or a renderer crash, never
-      seen in the wild, and `refresh` / reopening the session already restores the conversation
+- **8.14** ➖ [LG] **Reloaded-webview log replay** — declined by the user 2026-08-29: a reload only
+  happens from DevTools or a renderer crash, never seen in the wild.
+  <!-- --><details><summary>Read more…</summary>
+  Chrome heals via `seedUi()`, the log does not; `refresh` / reopening the session already
+  restores the conversation.
+  </details>
 
 ## 9. ✅ Model, effort, usage
-- **9.1** ✅ **Model chip** — from `initialize.models`, search + custom id → `set_model`; persisted
-      and re-applied on every restart. The CLI echoes `Set model to …` as a `<local-command-stdout>`
-      user frame that the panel draws as a confirmation line — since 2.1.251 only AFTER the
-      session's first turn (headless probe: no echo before any turn, 2.1.250 echoed there too; the
-      user's hands-on switch after a turn drew the line — both 2026-08-30). Rejection by a
-      `PreModelSwitch` hook: 9.11
-- **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, last row of the model-menu
-      footer (moved out of the mode menu 2026-08-26; the level shows only on the footer's own
-      "Effort" label, on no chip — decisions 2026-08-26; VS Code 2.1.260 now shows the level on
-      its footer model pill, our no-suffix decision stands, do-not-re-propose). Sends a muted `/effort` turn because no
-      `set_effort` control exists; both paths render the CLI's confirmation line (gotchas
-      § Protocol). Retire path when wanted: `apply_flag_settings {settings:{effortLevel}}` is
-      accepted over stdio and takes effect (probed 2026-08-23). The CLI's `/effort` hint also
-      accepts `ultracode|auto` beyond the slider's five stops
-- **9.3** ✅ **Context gauge** — ring on the composer from `modelUsage[].contextWindow` (a map,
-      side models included); reset on compaction. Click = `/compact` (through `sendTurn`, as
-      typed) — VS Code's "Click to compact now" equivalent, noted 2026-09-04
-- **9.4** ✅ **Fast mode toggle** — a switch in the model-menu footer, enabled only when the roster
-      item says `supportsFastMode` (Opus family); sends `apply_flag_settings {settings:{fastMode}}`.
-      Optimistic click, reconciled from the CLI's `fast_mode_state` (off|on|cooldown + reason on
-      the tooltip) at initialize and every `result`; pref persisted (`claudeCode.fastMode`) and
-      re-applied each CLI start. Built 2026-08-24; fixture 55; history in decisions 2026-08-24
+- **9.1** ✅ **Model chip** — the roster from the CLI, search plus a custom id; persisted and
+  re-applied on every restart; the CLI's own "Set model to …" echo draws as a confirmation line.
+  <!-- --><details><summary>Read more…</summary>
+  From `initialize.models` → `set_model`. The CLI echoes `Set model to …` as a
+  `<local-command-stdout>` user frame — since 2.1.251 only AFTER the session's first turn
+  (headless probe: no echo before any turn, 2.1.250 echoed there too; the user's hands-on switch
+  after a turn drew the line — both 2026-08-30). Rejection by a `PreModelSwitch` hook: 9.11.
+  </details>
+- **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, the last row of the model-menu
+  footer; the level shows only on the footer's own "Effort" label, never on a chip.
+  <!-- --><details><summary>Read more…</summary>
+  Moved out of the mode menu 2026-08-26; no-suffix decision 2026-08-26 (VS Code 2.1.260 now shows
+  the level on its footer model pill, our decision stands, do-not-re-propose). Sends a muted
+  `/effort` turn because no `set_effort` control exists; both paths render the CLI's confirmation
+  line (gotchas § Protocol). Retire path when wanted: `apply_flag_settings
+  {settings:{effortLevel}}` is accepted over stdio and takes effect (probed 2026-08-23). The
+  CLI's `/effort` hint also accepts `ultracode|auto` beyond the slider's five stops.
+  </details>
+- **9.3** ✅ **Context gauge** — a ring on the composer showing context use, reset on compaction;
+  click = `/compact`.
+  <!-- --><details><summary>Read more…</summary>
+  From `modelUsage[].contextWindow` (a map, side models included). The click goes through
+  `sendTurn`, as typed — VS Code's "Click to compact now" equivalent, noted 2026-09-04.
+  </details>
+- **9.4** ✅ **Fast mode toggle** — a switch in the model-menu footer, enabled only for models the
+  roster says support it (Opus family); reconciled from the CLI's state, persisted, re-applied
+  each CLI start.
+  <!-- --><details><summary>Read more…</summary>
+  Gated on `supportsFastMode`; sends `apply_flag_settings {settings:{fastMode}}`. Optimistic
+  click, reconciled from the CLI's `fast_mode_state` (off|on|cooldown + reason on the tooltip) at
+  initialize and every `result`; pref persisted as `claudeCode.fastMode`. Built 2026-08-24;
+  fixture 55; history in decisions 2026-08-24.
+  </details>
 - **9.5** ✅ **Thinking on/off** — a switch in the model-menu footer, default ON, never gated.
-      OFF → `set_max_thinking_tokens {max_thinking_tokens: 0}`; ON → `null` (= session default, a
-      deliberate divergence from VS Code's pinned 31999 — decisions 2026-08-24). **Inert on Fable**:
-      measured 2026-08-26, kept as-is by user decision ("document only"; no roster flag
-      discriminates it — gotchas § Protocol). Pref persisted (`claudeCode.thinkingOff`), re-applied
-      each CLI start, seeded to the webview via `__thinking` (no CLI echo exists). Built
-      2026-08-24; fixture 55
-- **9.6** ➖ **Cost / token breakdown / usage panel** — `get_usage`, `get_context_usage`,
-      `request_usage_update` [NEW]; TUI `/usage`, `/cost`, `/context`. Declined 2026-08-06; the
-      built-in `/context` is enabled as a turn for the rare look. (`get_context_usage` and
-      `get_settings` both answer over stdio — probed 2026-08-23 — so the data is there if this is
-      ever revived.) Same family, same verdict (2026-09-04 full-surface audit): VS Code's
-      per-category context breakdown ("Memory files", "Custom agents"…), its 5h/7d account-usage
-      dialog, and a usage-insights/attribution panel with cost advice
-- **9.7** ➖ **Fable overage gate** — deferred by the user 2026-08-29 (later + watch): no
-      `supportedDialogKinds` declared, so `model_consent_fallback` never reaches the panel and
-      the CLI takes the silent default — the model chip would keep the old name after a fallback.
-      Cannot be triggered on demand (needs the Fable allowance to run out); never observed. WATCH:
-      the first `system/model_fallback` frame lands in `window.__modelFallbackSeen` + a console
-      warning (70-events.js). Revivable as [MD] once one is captured: consent card + chip update
+  **Inert on Fable** — measured, kept as-is by user decision ("document only").
+  <!-- --><details><summary>Read more…</summary>
+  OFF → `set_max_thinking_tokens {max_thinking_tokens: 0}`; ON → `null` (= session default, a
+  deliberate divergence from VS Code's pinned 31999 — decisions 2026-08-24). Inert on Fable
+  measured 2026-08-26; no roster flag discriminates it — gotchas § Protocol. Pref persisted
+  (`claudeCode.thinkingOff`), re-applied each CLI start, seeded to the webview via `__thinking`
+  (no CLI echo exists). Built 2026-08-24; fixture 55.
+  </details>
+- **9.6** ➖ **Cost / token breakdown / usage panel** — declined 2026-08-06; the built-in `/context`
+  is enabled as a turn for the rare look. Same verdict for VS Code's context breakdown, account
+  usage dialog and usage-insights panel (2026-09-04 full-surface audit).
+  <!-- --><details><summary>Read more…</summary>
+  `get_usage`, `get_context_usage`, `request_usage_update` [NEW]; TUI `/usage`, `/cost`,
+  `/context`. (`get_context_usage` and `get_settings` both answer over stdio — probed 2026-08-23
+  — so the data is there if this is ever revived.) The same family: VS Code's per-category
+  context breakdown ("Memory files", "Custom agents"…), its 5h/7d account-usage dialog, and a
+  usage-insights/attribution panel with cost advice.
+  </details>
+- **9.7** ➖ **Fable overage gate** — deferred by the user 2026-08-29 (later + watch): the consent
+  dialog never reaches the panel, so after a fallback the model chip would keep the old name.
+  Never observed; cannot be triggered on demand.
+  <!-- --><details><summary>Read more…</summary>
+  No `supportedDialogKinds` declared, so `model_consent_fallback` never reaches the panel and
+  the CLI takes the silent default. Needs the Fable allowance to run out. WATCH: the first
+  `system/model_fallback` frame lands in `window.__modelFallbackSeen` + a console warning
+  (70-events.js). Revivable as [MD] once one is captured: consent card + chip update.
+  </details>
 - **9.8** ➖ **Subagent model / cloud providers** — `CLAUDE_CODE_SUBAGENT_MODEL`, Bedrock / Vertex /
       Foundry setup; env and terminal configuration
-- **9.9** ✅ **1M-context toggle** [NEW] — a switch in the model-menu footer that appends/strips
-      `[1m]` on the selection and re-selects through `setModel` (persistence rides
-      `claudeCode.selectedModel`; `default` resolves to `claude-opus-5[1m]`). **No client-side
-      validity logic** (user decision 2026-08-24): `set_model` never rejects (until 2.1.251's
-      `PreModelSwitch` hooks — 9.11), an unsupported combo
-      fails on the next turn with the API's own 400. The switch reconciles to the REAL window from
-      `result.modelUsage[].contextWindow` after each model's first turn (`reconcileFromResult`);
-      gauge denominator set explicitly on toggle. Built 2026-08-24; fixture 55; decisions
-      2026-08-24
-- **9.10** ➖ **Per-model gating of effort / Thinking** — on the roster's capability flags
-      (`supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking`); proposed and
-      dropped 2026-08-26 on measurement: haiku carries none of the flags yet accepts `/effort max`
-      and thinks, and Fable carries `supportsAdaptiveThinking` yet ignores the switch (9.5) — no
-      flag tracks behaviour in either direction. Only `supportsFastMode` gates anything (9.4).
-      Revive only if a CLI ships a flag proven to track behaviour. Gotchas § Protocol; decisions
-      2026-08-26
-- **9.11** ✅ **Chip revert when a `PreModelSwitch` hook rejects `set_model`** [NEW] — built
-      2026-08-30 (user's "yes" the same day). New at 2.1.251: a user-configured `PreModelSwitch`
-      hook (`~/.claude/settings.json` — the terminal's half) runs for the chip's `set_model` with
-      `source:"sdk"`; `permissionDecision:"deny"` answers a `control_response` error "Model switch
-      blocked by a PreModelSwitch hook: <reason>" and `PostModelSwitch` does not fire. The panel
-      still switches optimistically (chip + persisted `claudeCode.selectedModel` before the request,
-      as before), but `set_model` now carries a response callback (`ClaudeCli.setModel(model,
-      onResponse)`): on error `ClaudeSessionService.revertModel` puts the persisted value back and
-      pushes `__model_rejected {model, previous?, error}`; the webview's handler calls `showModel`
-      (the display half split out of `setModel` — no bridge, the retraction rule) and draws the
-      CLI's text as an error block. `previous` absent = a refused restart re-apply: the persisted
-      choice is dropped and the chip falls back to the roster head. Fixture 68 (negative control
-      6/6 discriminating fails on the pre-change build; live end-to-end with a real deny hook in the
-      testing repo, chip `haiku` → `default`). The `/effort` path has no hook and is unaffected
+- **9.9** ✅ **1M-context toggle** [NEW] — a switch in the model-menu footer that appends or strips
+  `[1m]` on the selected model. **No client-side validity logic** (user decision 2026-08-24): an
+  unsupported combo fails on the next turn with the API's own 400.
+  <!-- --><details><summary>Read more…</summary>
+  Re-selects through `setModel` (persistence rides `claudeCode.selectedModel`; `default`
+  resolves to `claude-opus-5[1m]`). `set_model` never rejects (until 2.1.251's `PreModelSwitch`
+  hooks — 9.11). The switch reconciles to the REAL window from `result.modelUsage[].contextWindow`
+  after each model's first turn (`reconcileFromResult`); gauge denominator set explicitly on
+  toggle. Built 2026-08-24; fixture 55; decisions 2026-08-24.
+  </details>
+- **9.10** ➖ **Per-model gating of effort / Thinking** — proposed and dropped 2026-08-26 on
+  measurement: no roster capability flag tracks behaviour in either direction. Only
+  `supportsFastMode` gates anything (9.4). Revive only if a CLI ships a flag proven to track
+  behaviour.
+  <!-- --><details><summary>Read more…</summary>
+  The flags: `supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking`. Haiku
+  carries none of them yet accepts `/effort max` and thinks; Fable carries
+  `supportsAdaptiveThinking` yet ignores the switch (9.5). Gotchas § Protocol; decisions
+  2026-08-26.
+  </details>
+- **9.11** ✅ **Chip revert when a `PreModelSwitch` hook rejects `set_model`** [NEW] — when a
+  user's hook denies the switch, the chip and the persisted choice go back to the previous model
+  and the CLI's reason draws as an error block; a refused restart re-apply falls back to the
+  roster head.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-08-30 (user's "yes" the same day). New at 2.1.251: a user-configured
+  `PreModelSwitch` hook (`~/.claude/settings.json` — the terminal's half) runs for the chip's
+  `set_model` with `source:"sdk"`; `permissionDecision:"deny"` answers a `control_response` error
+  "Model switch blocked by a PreModelSwitch hook: <reason>" and `PostModelSwitch` does not fire.
+  The panel still switches optimistically (chip + persisted `claudeCode.selectedModel` before the
+  request, as before), but `set_model` now carries a response callback
+  (`ClaudeCli.setModel(model, onResponse)`): on error `ClaudeSessionService.revertModel` puts the
+  persisted value back and pushes `__model_rejected {model, previous?, error}`; the webview's
+  handler calls `showModel` (the display half split out of `setModel` — no bridge, the retraction
+  rule) and draws the CLI's text as an error block. `previous` absent = a refused restart
+  re-apply: the persisted choice is dropped and the chip falls back to the roster head. Fixture
+  68 (negative control 6/6 discriminating fails on the pre-change build; live end-to-end with a
+  real deny hook in the testing repo, chip `haiku` → `default`). The `/effort` path has no hook
+  and is unaffected.
+  </details>
 ## 10. ✅ Auth & account
 - **10.1** ➖ **Login / logout / account display** — by design: sign in once by running `claude`;
-      the panel reports an auth failure with a "sign in from a terminal" line
-      (`disableLoginPrompt` is the terminal's). Confirmed a decision, not a missing capability
-      (`claude_authenticate` + OAuth callbacks exist in the CLI)
+  the panel reports an auth failure with a "sign in from a terminal" line.
+  <!-- --><details><summary>Read more…</summary>
+  `disableLoginPrompt` is the terminal's. Confirmed a decision, not a missing capability
+  (`claude_authenticate` + OAuth callbacks exist in the CLI).
+  </details>
 
 ## 11. ✅ Extensibility (MCP / plugins / skills / hooks / subagents)
 - **11.1** ➖ **Plugin / MCP / hooks / agents management UI** — the terminal's half (`/plugin`,
       `/mcp`, `/hooks`, `/agents`, `~/.claude`)
-- **11.2** ✅ **What the panel shows from this family** — MCP server failure notice at init
-      (`mcp_servers[].status`), MCP prompts and skills in the / menu, hook output, sub-agent
-      progress line + prompt + final report, background task roster (`bg` chip, reset at the CLI
-      boundary), Todo/Task checklist (`TodoWrite` + the Kotlin task store)
-- **11.3** ✅ [MD] **Kill a background process from the panel** — built 2026-08-28: each roster
-      row carries a hover-✕ (conversations-list gutter idiom, no confirm step) → bridge `stopTask`
-      → `stop_task {task_id}`; the row dims until the CLI's next `background_tasks_changed`
-      REPLACES the set (never removed optimistically — unknown ids answer success too, so the
-      roster frame is the only confirmation). `ambient:true` tasks (2.1.250 schema: "hosts should
-      exclude them from activity indicators") are dropped from the roster and the suspend count — UNMEASURED (no live frame yet): the first one seen is kept verbatim as `window.__ambientSeen` + a console warning, read it over CDP the day it appears.
-      Fixture 61. Sibling `background_tasks {tool_use_id?}` (Ctrl+B semantics) not taken
-- **11.4** ➖ **Sub-agent work outcome** — the dot was built and withdrawn 2026-08-13; RE-MEASURED
-      2026-08-29 on 2.1.250: an Explore agent whose Bash returned `is_error:true` and which replied
-      "FAILED: could not complete the task." ended `task_updated{status:"completed"}` +
-      `task_notification{status:"completed", summary:"FAILED: …"}` — task status is the task's
-      LIFECYCLE (`completed|failed|stopped`; a panel ✕ = `killed`/`stopped`), never the work's
-      verdict; the summary prose is the only signal, and colouring from prose was rejected
-      2026-08-13. VS Code's `handleTaskNotification` only deletes the task from its map — it shows
-      no outcome either. Declined: nothing measurable to build on; the summary already rides the
-      Explore line
-- **11.5** ➖ [SM] **Elicitation** — `elicitation` control request (an MCP server asking the user
-      a question) is answered `{action:"decline"}` since 2026-08-29 — the honest no-answer; the
-      earlier bare `{}` ack was schema-invalid (enum `accept|decline|cancel`). No form: no local
-      MCP server elicits, and VS Code registers no `onElicitation` handler either. Deferred — if
-      one ever does, measure the request with a ~30-line stdio MCP probe server before building
-- **11.6** ➖ **Extensibility status view** — declined 2026-08-29: the `system/init` frame
-      already carries `mcp_servers[].status` / agents / skills / plugins, and the panel shows the
-      actionable half (11.2's MCP failure notice, skills + MCP prompts in the / menu); a
-      "everything is fine" list is looked at rarely, is the terminal's half (`/mcp`, `/plugins`,
-      `/agents` can also FIX things), VS Code has no such view, and a second copy drifts per CLI
-      release. Revivable as [SM]: a popup listing `server · status` (+ agents/skills/plugins)
-      from the init frame
+- **11.2** ✅ **What the panel shows from this family** — MCP server failure notice at init, MCP
+  prompts and skills in the / menu, hook output, sub-agent progress line + prompt + final report,
+  background task roster, Todo/Task checklist.
+  <!-- --><details><summary>Read more…</summary>
+  The failure notice reads `mcp_servers[].status`; the roster is the `bg` chip, reset at the CLI
+  boundary; the checklist is `TodoWrite` + the Kotlin task store.
+  </details>
+- **11.3** ✅ [MD] **Kill a background process from the panel** — each roster row carries a hover-✕
+  (no confirm step) that stops the task; the row dims until the CLI's next roster frame confirms
+  it. Ambient tasks stay out of the roster.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-08-28. Conversations-list gutter idiom → bridge `stopTask` → `stop_task {task_id}`;
+  the CLI's next `background_tasks_changed` REPLACES the set (never removed optimistically —
+  unknown ids answer success too, so the roster frame is the only confirmation). `ambient:true`
+  tasks (2.1.250 schema: "hosts should exclude them from activity indicators") are dropped from
+  the roster and the suspend count — UNMEASURED (no live frame yet): the first one seen is kept
+  verbatim as `window.__ambientSeen` + a console warning, read it over CDP the day it appears.
+  Fixture 61. Sibling `background_tasks {tool_use_id?}` (Ctrl+B semantics) not taken.
+  </details>
+- **11.4** ➖ **Sub-agent work outcome** — declined: task status is the task's LIFECYCLE, never the
+  work's verdict, so there is nothing measurable to build on; the summary prose already rides the
+  Explore line.
+  <!-- --><details><summary>Read more…</summary>
+  The dot was built and withdrawn 2026-08-13; RE-MEASURED 2026-08-29 on 2.1.250: an Explore agent
+  whose Bash returned `is_error:true` and which replied "FAILED: could not complete the task."
+  ended `task_updated{status:"completed"}` +
+  `task_notification{status:"completed", summary:"FAILED: …"}` — status is
+  `completed|failed|stopped` (a panel ✕ = `killed`/`stopped`); the summary prose is the only
+  signal, and colouring from prose was rejected 2026-08-13. VS Code's
+  `handleTaskNotification` only deletes the task from its map — it shows no outcome either.
+  </details>
+- **11.5** ➖ [SM] **Elicitation** — an MCP server asking the user a question is answered with a
+  decline, the honest no-answer; no form, because no local MCP server elicits. Deferred.
+  <!-- --><details><summary>Read more…</summary>
+  The `elicitation` control request is answered `{action:"decline"}` since 2026-08-29; the
+  earlier bare `{}` ack was schema-invalid (enum `accept|decline|cancel`). VS Code registers no
+  `onElicitation` handler either. If a server ever does elicit, measure the request with a
+  ~30-line stdio MCP probe server before building.
+  </details>
+- **11.6** ➖ **Extensibility status view** — declined 2026-08-29: the panel already shows the
+  actionable half (the MCP failure notice, skills + MCP prompts in the / menu); an "everything is
+  fine" list is the terminal's half and a second copy drifts per CLI release.
+  <!-- --><details><summary>Read more…</summary>
+  The `system/init` frame already carries `mcp_servers[].status` / agents / skills / plugins
+  (11.2). `/mcp`, `/plugins`, `/agents` can also FIX things; VS Code has no such view. Revivable
+  as [SM]: a popup listing `server · status` (+ agents/skills/plugins) from the init frame.
+  </details>
 
 ## 12. ✅ UI placement, windows, keys
 - **12.1** ✅ **Right-anchored tool window** — JetBrains moves/floats/undocks it natively (covers
       `preferredLocation`, sidebar/panel, new window)
 - **12.2** ✅ **Open DevTools action** — "Claude Brains: Open DevTools" via Find Action; no default
       chord
-- **12.3** ➖ **Open in editor tab** [NEW] — declined by the user 2026-08-29 ("not needed"):
-      `editor.open` / `primaryEditor.open` would be a second host for the same webview; the tool
-      window's native Float / Window view modes already give a wide chat
-- **12.4** ➖ **Keyboard shortcuts** — focus/blur input, Ctrl+N new conversation, Ctrl+Shift+T: the
-      plugin binds NO keyboard shortcuts (2026-08-09, chords proved unreliable across setups);
-      users can map the tool window's own Show action in Keymap
+- **12.3** ➖ **Open in editor tab** [NEW] — declined by the user 2026-08-29 ("not needed"): the
+  tool window's native Float / Window view modes already give a wide chat.
+  <!-- --><details><summary>Read more…</summary>
+  `editor.open` / `primaryEditor.open` would be a second host for the same webview.
+  </details>
+- **12.4** ➖ **Keyboard shortcuts** — the plugin binds NO keyboard shortcuts (2026-08-09, chords
+  proved unreliable across setups); users can map the tool window's own Show action in Keymap.
+  <!-- --><details><summary>Read more…</summary>
+  VS Code's: focus/blur input, Ctrl+N new conversation, Ctrl+Shift+T reopen.
+  </details>
 - **12.5** ➖ **Terminal mode** — `useTerminal`; that is just the terminal
-- **12.6** ➖ **Focus view** [NEW] — deferred by the user 2026-08-29 ("not needed for now"):
-      VS Code `toggleFocusView` / `set_focus_view` / `focusView` setting, TUI `/focus`, `/brief` —
-      a reading mode hiding tool lines / IO boxes / diffs, prompts + responses only (cards always
-      shown). Revivable as [MD], mockup first; folded IN/OUT boxes already do half of it
+- **12.6** ➖ **Focus view** [NEW] — deferred by the user 2026-08-29 ("not needed for now"): a
+  reading mode hiding tool lines / IO boxes / diffs, prompts + responses only.
+  <!-- --><details><summary>Read more…</summary>
+  VS Code `toggleFocusView` / `set_focus_view` / `focusView` setting, TUI `/focus`, `/brief`
+  (cards always shown). Revivable as [MD], mockup first; folded IN/OUT boxes already do half of
+  it.
+  </details>
 - **12.7** ➖ **Light theme / configurable colours** — decided 2026-08-07 (dark only)
 
 ## 13. ✅ Settings
-- **13.1** ➖ **No settings page** — by design. CLI resolution: `-Dclaude.executable` → PATH → VS
-      Code extension binary; model, mode, effort persist via `PropertiesComponent`. VS Code's
-      `claudeCode.*` keys map as: `environmentVariables` / `claudeProcessWrapper` /
-      `respectGitIgnore` / `usePythonEnvironment` / `disableLoginPrompt` → terminal & env;
-      `useCtrlEnterToSend` → fixed on; `initialPermissionMode` → persistence; `preferredLocation`
-      / shortcuts / `hideOnboarding` / `focusView` → see §12; `autosave` → §2 candidate. VS Code's
-      output-style picker (`get_output_style`, 2.1.260) is `/config`'s — the terminal's half
-- **13.2** ✅ **JSON schema for `.claude/settings.json`** — `ClaudeSettingsSchemaProviderFactory`
-      maps `.claude/settings.json` AND `.claude/settings.local.json` to Anthropic's published
-      schema on SchemaStore (`json.schemastore.org/claude-code-settings.json`, the `$schema` their
-      docs recommend) — fetched by the IDE, nothing bundled. Built 2026-08-29 because the
-      SchemaStore catalog the IDE already consults matches only `settings.json`; the local file
-      the CLI writes rules into got nothing. Optional depends on `com.intellij.modules.json` for
-      2024.3+ (JCEF pattern). Matcher pinned by `ClaudeSettingsSchemaTest`
-- **13.3** ➖ [MD] **Per-project persistence in `.claude/settings.local.json`** [NEW] —
-      DEFERRED by the user 2026-09-04 ("wait for Anthropic — we already persist our way"): stay on
-      `PropertiesComponent`, watch the `update_settings` allowlist each re-audit and adopt the CLI
-      channel when `model` / `permissions` / `effortLevel` land in it (backlog watch-item). The
-      measured story:
-      the 2.1.260 `update_settings` control ("the scope host UIs need so their writes land exactly
-      where /config's do", `source:"localSettings"` only, refused over remote transports) turned
-      out, on the implementation attempt 2026-09-04, to allow exactly ONE key: the binary's
-      allowlist is `new Set(["outputStyle"])`, string values, "deletion is not supported" —
-      `model` and `permissions` are refused by name ("update_settings keys not allowed"). The
-      `outputStyle` write was verified end-to-end: it file-merges cleanly, other keys untouched.
-      VS Code does not use it (its `persist_session_permission_mode` writes the extension's own
-      `globalState`; the SDK `updateSettings` wrapper exists uncalled). What DOES hold, measured
-      at spawn with the panel's flags: the CLI honors `model` (a file `"model":"haiku"` served
-      haiku with no `--model`, no `set_model`) and `permissions.defaultMode` (only when no
-      `--permission-mode` flag is passed — the flag wins) from `.claude/settings.local.json`.
-      So per-project persistence of model/mode is achievable ONLY by the plugin writing the file
-      itself (Kotlin read-merge-write; clobber risk against the CLI's own "always allow" rule
-      writes into the same file), not through the CLI — offered 2026-09-04, not taken
+- **13.1** ➖ **No settings page** — by design. The CLI is resolved from a system property, then
+  PATH, then the VS Code extension binary; model, mode and effort persist in IDE properties.
+  Every VS Code setting maps to the terminal, a fixed choice, or a §12 row.
+  <!-- --><details><summary>Read more…</summary>
+  CLI resolution: `-Dclaude.executable` → PATH → VS Code extension binary; persistence via
+  `PropertiesComponent`. VS Code's `claudeCode.*` keys map as: `environmentVariables` /
+  `claudeProcessWrapper` / `respectGitIgnore` / `usePythonEnvironment` / `disableLoginPrompt` →
+  terminal & env; `useCtrlEnterToSend` → fixed on; `initialPermissionMode` → persistence;
+  `preferredLocation` / shortcuts / `hideOnboarding` / `focusView` → see §12; `autosave` → §2
+  candidate. VS Code's output-style picker (`get_output_style`, 2.1.260) is `/config`'s — the
+  terminal's half.
+  </details>
+- **13.2** ✅ **JSON schema for `.claude/settings.json`** — both settings files in `.claude/` get
+  Anthropic's published SchemaStore schema, fetched by the IDE, nothing bundled.
+  <!-- --><details><summary>Read more…</summary>
+  `ClaudeSettingsSchemaProviderFactory` maps `.claude/settings.json` AND
+  `.claude/settings.local.json` to `json.schemastore.org/claude-code-settings.json` (the
+  `$schema` their docs recommend). Built 2026-08-29 because the SchemaStore catalog the IDE
+  already consults matches only `settings.json`; the local file the CLI writes rules into got
+  nothing. Optional depends on `com.intellij.modules.json` for 2024.3+ (JCEF pattern). Matcher
+  pinned by `ClaudeSettingsSchemaTest`.
+  </details>
+- **13.3** ➖ [MD] **Per-project persistence in `.claude/settings.local.json`** [NEW] — DEFERRED by
+  the user 2026-09-04 ("wait for Anthropic — we already persist our way"): stay on IDE properties,
+  watch the `update_settings` allowlist each re-audit and adopt the CLI channel when `model` /
+  `permissions` / `effortLevel` land in it (backlog watch-item).
+  <!-- --><details><summary>Read more…</summary>
+  We stay on `PropertiesComponent`. The measured story: the 2.1.260 `update_settings` control
+  ("the scope host UIs need so their writes land exactly where /config's do",
+  `source:"localSettings"` only, refused over remote transports) turned out, on the
+  implementation attempt 2026-09-04, to allow exactly ONE key: the binary's allowlist is `new
+  Set(["outputStyle"])`, string values, "deletion is not supported" — `model` and `permissions`
+  are refused by name ("update_settings keys not allowed"). The `outputStyle` write was verified
+  end-to-end: it file-merges cleanly, other keys untouched. VS Code does not use it (its
+  `persist_session_permission_mode` writes the extension's own `globalState`; the SDK
+  `updateSettings` wrapper exists uncalled). What DOES hold, measured at spawn with the panel's
+  flags: the CLI honors `model` (a file `"model":"haiku"` served haiku with no `--model`, no
+  `set_model`) and `permissions.defaultMode` (only when no `--permission-mode` flag is passed —
+  the flag wins) from `.claude/settings.local.json`. So per-project persistence of model/mode is
+  achievable ONLY by the plugin writing the file itself (Kotlin read-merge-write; clobber risk
+  against the CLI's own "always allow" rule writes into the same file), not through the CLI —
+  offered 2026-09-04, not taken.
+  </details>
 
 ## 14. ✅ Worktrees & git
-- **14.1** ➖ [LG] **Create worktree** — `create_worktree`; TUI `/branch`. Deferred by the user
-      2026-08-29 as the head of the "worktrees" backlog bundle (with 14.3); a worktree is a new
-      project window in JetBrains, so the IDE-side question comes first
-- **14.2** ➖ [MD] **Git actions in the host** [NEW] — `checkout_branch`, `check_git_status`,
-      `update_skipped_branch`. Declined 2026-08-29, by design: thin-client git for a webview that
-      has no git; the IDE's git client is one keystroke away
+- **14.1** ➖ [LG] **Create worktree** — deferred by the user 2026-08-29 as the head of the
+  "worktrees" backlog bundle (with 14.3); a worktree is a new project window in JetBrains, so the
+  IDE-side question comes first.
+  <!-- --><details><summary>Read more…</summary>
+  `create_worktree`; TUI `/branch`.
+  </details>
+- **14.2** ➖ [MD] **Git actions in the host** [NEW] — declined 2026-08-29, by design: thin-client
+  git for a webview that has no git; the IDE's git client is one keystroke away.
+  <!-- --><details><summary>Read more…</summary>
+  `checkout_branch`, `check_git_status`, `update_skipped_branch`.
+  </details>
 - **14.3** ➖ [LG] **Git-aware diff/context** — deferred 2026-08-29 into the "worktrees" bundle
       with 14.1; only concrete once a worktree exists to diff against
-- **14.4** ➖ [SM] **Workspace diff over the wire** [NEW] — `get_workspace_diff` control, the engine
-      behind the TUI's thin-client `/diff` (one base ref, 5s git timeout, 50 files, 1MB/file caps;
-      present since ≤2.1.233). Declined 2026-08-29, by design: the IDE's diff viewer is native
+- **14.4** ➖ [SM] **Workspace diff over the wire** [NEW] — declined 2026-08-29, by design: the
+  IDE's diff viewer is native.
+  <!-- --><details><summary>Read more…</summary>
+  `get_workspace_diff` control, the engine behind the TUI's thin-client `/diff` (one base ref, 5s
+  git timeout, 50 files, 1MB/file caps; present since ≤2.1.233).
+  </details>
 
 ## 15. ✅ Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
       (do last)
-- **15.3** ➖ **Small chrome** — message rating + `/feedback` / `/bug`, prompt suggestions, Artifact
-      auto-open, "Explored" grouping of consecutive Reads (gated `window.IS_ANT` in 2.1.260 —
-      Anthropic-internal only), `/stickers`, `/radio`, `/powerup`, the in-session "How is Claude
-      doing?" survey, the auto-mode nudge; leaning no
+- **15.3** ➖ **Small chrome** — message rating, prompt suggestions, Artifact auto-open, "Explored"
+  grouping of consecutive Reads, stickers, the in-session survey, the auto-mode nudge; leaning no.
+  <!-- --><details><summary>Read more…</summary>
+  Message rating + `/feedback` / `/bug`; "Explored" grouping is gated `window.IS_ANT` in 2.1.260
+  — Anthropic-internal only; `/stickers`, `/radio`, `/powerup`; the "How is Claude doing?"
+  survey.
+  </details>
 - **15.4** ➖ **`/share` / `/export` / `/copy`** — the transcript is on disk; the terminal exports it
-- **15.5** ➖ [LG] **`ask_debugger_help`** [NEW] — VS Code registers a `claude-vscode-extension` MCP
-      server while a debug session is active (stack, variables, breakpoints) and the console offers
-      a hand-off; buildable via `XDebuggerManager` in the bridge's `IdeTools.kt` — deferred by the
-      user 2026-08-29 (backlog, [LG] "debugger MCP tools")
-- **15.6** ➖ [SM] **Chrome MCP / Jupyter MCP toggles** [NEW] — `ensure_chrome_mcp_enabled` /
-      `disable_chrome_mcp`, `enable_jupyter_mcp` / `disable_jupyter_mcp`; MCP configuration is the
-      terminal's half — declined by the user 2026-08-29 (by design)
+- **15.5** ➖ [LG] **`ask_debugger_help`** [NEW] — deferred by the user 2026-08-29 (backlog, [LG]
+  "debugger MCP tools"): a debug-session MCP server (stack, variables, breakpoints) with a
+  console hand-off, as VS Code has.
+  <!-- --><details><summary>Read more…</summary>
+  VS Code registers a `claude-vscode-extension` MCP server while a debug session is active;
+  buildable via `XDebuggerManager` in the bridge's `IdeTools.kt`.
+  </details>
+- **15.6** ➖ [SM] **Chrome MCP / Jupyter MCP toggles** [NEW] — declined by the user 2026-08-29 (by
+  design): MCP configuration is the terminal's half.
+  <!-- --><details><summary>Read more…</summary>
+  `ensure_chrome_mcp_enabled` / `disable_chrome_mcp`, `enable_jupyter_mcp` /
+  `disable_jupyter_mcp`.
+  </details>
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (141, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (163, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 75, 642 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 84, 776 assertions,
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
@@ -948,7 +1204,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.5 Streaming render</b> — 17 items · 3 RESOLVED</summary>
+<details><summary><b>17.5 Streaming render</b> — 18 items · 3 RESOLVED</summary>
 
 - **MT-5.1** Tables render; code blocks highlighted; long code folds → 1.10, 1.11 · 2026-08-07
 - **MT-5.2** Thinking: shimmer + live seconds + token count; collapses to "Thought for Ns" with chevron → 1.12 · 2026-08-07
@@ -967,10 +1223,11 @@ auto-include selection, voice.
 - **MT-5.15** Code block language label + working copy button → 1.11 · 2026-08-07
 - **MT-5.16** WebSearch turn: tool line with query, summary beneath → 1.19 · 2026-08-07
 - **MT-5.17** Huge Bash result spilled to a file shows the persisted-output note **(hard to trigger)** → 1.5 · 2026-08-07
+- **MT-1.27** Ask for a long output (e.g. `seq 1 5000`) → under the OUT box the marker reads "⋯ +N lines · … not shown — open in editor"; click → a read-only tab "Bash output" holding every line; resume the same session → the replayed marker opens the same tab from the transcript; a persisted spill (`find / -type f` sized output) still reads "open full output" and opens the CLI's file → 1.27 · 2026-09-05 · RESOLVED 2026-09-05: live marker opened the "Bash output" tab with every line, and the replayed marker after a resume opened the same from the transcript (user: "both worked fine"); the spill case rests on fixture 84's unchanged-path step
 
 </details>
 
-<details><summary><b>17.6 Permissions</b> — 9 items · 2 RESOLVED</summary>
+<details><summary><b>17.6 Permissions</b> — 10 items · 2 RESOLVED</summary>
 
 - **MT-6.1** Bash card: capped command preview with cut marker, Accept/Reject → 3.1, 1.5 · 2026-08-07
 - **MT-6.2** Reject → ✗ Rejected; model acknowledges → 3.1 · 2026-08-07
@@ -981,6 +1238,7 @@ auto-include selection, voice.
 - **MT-6.6b** Every structured path reads the same: relative, middle-ellipsised, click intact → 1.4, 6.1 · 2026-08-15 · RESOLVED 2026-08-15: fixed (user request) — decision card printed the FULL absolute path while the tool line showed relative; `renderPermission` and `fillAppliedCard` now fill `<code>` via the same `fillPath()`, absolute path moves to `dataset.path` + `title` (click handler reads `dataset.path` FIRST); audit found three more: @-mention menu ellipsised at the END (`…/DesktopSid…`), `notebook_path` in neither `DESC_KEYS` nor `PATH_KEYS` (NotebookEdit drew no path; CliFileSync workaround now redundant), a `__gallery` fixture bypassing `fillPath`; one shared `pathParts()`; fixture 40 → 8 steps (6+2 red on negative control), mockup mirrored; left alone deliberately: paths in free prose (todos, task/progress/info/error lines, compaction summaries, IN/OUT, `.cmd`) and Bash command text
 - **MT-6.7** AskUserQuestion: tab per question, radio vs checkbox by multiSelect, Other row; submit sends; cancel → ✗ Cancelled → 1.6 · 2026-08-07
 - **MT-6.8** Plan card Approve / Keep planning; ✗ Kept planning on refusal → 5.1, 5.2 · 2026-08-07
+- **MT-1.28** Manual mode: send "run factor 97", wait for the Bash card, press Stop (the send button) → the card reads `✗ Withdrawn — Claude stopped waiting` with no buttons, then the "Stopped" line; clicking where Accept was does nothing; the same with an Edit card while its editor diff tab is open → the tab closes too → 1.28 · 2026-09-05 · RESOLVED 2026-09-05: both steps passed in the sandbox (Manual mode; Bash card and Edit card each settled as withdrawn with the Stopped line under them, no diff tab left in the editor). The CLI's own auto-deny OUT box above the card ("The user doesn't want to proceed…", pre-existing on every Stop over a live card) stays by the user's choice — "happy with the result"
 
 </details>
 
@@ -1019,7 +1277,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.9 Resilience & notices</b> — 11 items · 2 RESOLVED</summary>
+<details><summary><b>17.9 Resilience & notices</b> — 12 items · 2 RESOLVED</summary>
 
 - **MT-9.1** API retry storm: "… — retrying (n/m)" lines, not a silent stall **(hard to trigger:** disconnect the network mid-turn; a real network-off storm was user-verified) → 1.15 · 2026-08-09 · RESOLVED 2026-08-09: fixed, premise corrected — `api_retry`'s `error` is a five-code enum (529→`overloaded`, 429→`rate_limit`, 401|403→`authentication_failed`, ≥408→`server_error`, else `unknown` = no-status network failure); rich text is TUI-in-process only; `RETRY_REASONS` in chat.html ("API error — retrying (1/10)" for unknown), unknown codes degrade to raw; duplicate "(1/10)" = raw `api_error` + `api_retry` twin per attempt, deduped by consecutive attempt/max key (`retrySeen`, last-key not a Set so a restarted storm shows); fixture 09 (8 fail pre-fix, 11/11 after; 71/71 headless AND on real JCEF); live: ten "API error — retrying (n/10)" lines, then "Unable to connect to API (ENOTIMP)", Retry seeded, resend succeeded · replay half same day: CLI persists the concluding error BEFORE the buffered `api_error` records (session `afe39ca0…`: error at position 21 / 09:47:24, retries 24–33 / 09:44:20–09:46:45) — SessionStore inserts a retry timestamped before the last error item ahead of it (and its auth status), younger-than-error guard; replay wording richer by design (`error.formatted` persisted); pinned by `late-flushed retry records replay before the error that ended their storm`, `./gradlew probe`: user → retries 1–10 → error → resend
 - **MT-9.2** Auth failure (bad `ANTHROPIC_API_KEY` in the sandbox env) → "sign in from a terminal" → 1.15, 10.1 · 2026-08-07
@@ -1032,6 +1290,7 @@ auto-include selection, voice.
 - **MT-9.9** Editing a file yourself while Claude edits it → tool line notes the file changed underneath, not bare ✓ Applied **(hard to trigger:** modify the target in the editor between the Edit's read and its apply) → 3.4 · 2026-08-07
 - **MT-9.10** Commands discovered mid-session refresh the / roster → 7.2 · 2026-08-15 · RESOLVED 2026-08-15: fixed — CLI 2.1.228 WATCHES the project commands dir and pushes `commands_changed` itself (~2.5s after a file drop, ~1s after deletion, 45s quiet wait measured) — no longer hard to trigger; `/reload-skills` (now Enabled) is the manual fallback; user pass: dropped `fresh-cmd.md` appeared badged "project" without `/reload-skills`, deletion removed it; watch is PROJECT-dir only — `~/.claude/commands/` needed `/reload-skills` ("user" badge correct); payload carries the same suffixes as initialize so roster REPLACE re-syncs enablement; corrected the 2026-08-08 "no roster change" and a same-day probe that sent `/reload-skills` inside the debounce window
 - **MT-9.11** `set_model` refused by a `PreModelSwitch` hook → 9.11 · 2026-08-30 · user's hands-on pass in the sandbox (CLI 2.1.251, a deny hook in the testing repo's `settings.local.json`, removed after): (1) chip Fable 5 → Haiku: chip snapped back, red "Model switch blocked by a PreModelSwitch hook: probe deny", hook input `to_model haiku source sdk`, persisted value reverted; (2) hook off, Haiku accepted and persisted; hook on, New conversation: the refusal line is the first block of the new conversation and the chip falls back to Default (Opus 5), the turn runs on it; (3) hook off: Sonnet accepted with no line, turn on Sonnet, next New conversation comes up on Sonnet 5. Also observed: a switch BEFORE the first turn draws no `Set model to` line, one AFTER a turn does (9.1)
+- **MT-1.26** Sandbox, testing repo: ask the panel to `git commit` a scratch file → a muted "Committed on master" line under the Bash tool line (a `git push` → "Pushed master"); with a Stop hook that exits 2 in the testing repo's `.claude/settings.local.json` (`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"exit 2"}]}]}}`, delete afterwards) → a red "Stop hook error occurred" line (no "ctrl+o" tail) and the turn continues once → 1.26 · 2026-09-05 · RESOLVED 2026-09-05: all three steps passed in the sandbox — "Committed on master" after the decided card, "Pushed master" under the OUT box (auto mode, no card), the red hook line without the TUI tail followed by the CLI's one extra reply; the hook's feedback user frame is not drawn (pre-existing, noted)
 
 </details>
 

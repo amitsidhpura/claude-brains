@@ -15,6 +15,13 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
+- **A `/loop` tick shows a reply out of nowhere** (measured 2026-09-05, 2.1.261): the wire is
+  `command_lifecycle{started}` → fresh `system/init` → assistant → `result` → `command_lifecycle
+  {completed}`, with no user frame. The panel draws the reply with no prompt above it. If wanted:
+  draw a muted "/loop tick" line from `command_lifecycle{started}` (the frame is on the wire).
+- **A Stop hook's feedback is not drawn**: the CLI hands the model a `user` frame "Stop hook
+  feedback: …" between the two replies (measured 2026-09-05); the panel shows only the red
+  `notification` line (1.26) and the second reply. Pre-existing; the user did not ask for it.
 - **Title tooltips never show in the panel (Linux JCEF, measured by the user 2026-09-05 on every
   titled control incl. the header buttons).** `title` attributes are used in ~18 places in chat.html
   plus every card button/row; JBCefBrowser draws none of them unless the plugin handles

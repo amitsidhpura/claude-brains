@@ -329,6 +329,18 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val endLine = msg["endLine"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
                 if (!session.openFile(it, line, endLine)) notifyMissing(it)
             }
+            // 1.27: the cut marker on a LIVE IN/OUT box — the page still holds the whole text.
+            "openText" -> {
+                val text = msg["text"]?.jsonPrimitive?.contentOrNull ?: return
+                session.openText(msg["title"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: "Tool output", text)
+            }
+            // …and on a REPLAYED one, whose whole text only the transcript still has.
+            "openTool" -> {
+                val id = msg["id"]?.jsonPrimitive?.contentOrNull ?: return
+                val which = msg["which"]?.jsonPrimitive?.contentOrNull ?: "out"
+                val title = msg["title"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: "Tool output"
+                session.toolText(id, which)?.let { session.openText(title, it) } ?: notifyMissing(title)
+            }
             // The CLI keeps the task list on disk, keyed by session id; the webview asks after
             // any Task* call rather than us parsing the stream for them.
             "tasks" -> pushTasks(msg["id"]?.jsonPrimitive?.content)
@@ -732,6 +744,16 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 lastInitMeta = metaJson   // kept so a reloaded page can be seeded without a CLI restart
                 lastCommandsChanged = null // a fresh initialize is the newer roster; a push from the old CLI is stale
                 pushInitMeta(metaJson)
+            },
+            // A withdrawn ask (1.28): the card stops looking answerable and the editor half — the
+            // diff tab with its Accept / Reject bar — stops advertising a live decision, the same
+            // dismissal a card answer triggers.
+            onCancel = { requestId ->
+                pushFrame(buildJsonObject {
+                    put("type", "__perm_cancelled")
+                    put("id", requestId)
+                })
+                permDiffs.remove(requestId)?.let { permDiffReview.dismiss(it) }
             },
             // Carry the stderr tail on a NON-ZERO exit: "claude process exited (1)" with the reason
             // buried in idea.log is a dead end, and there is no terminal to check — the CLI that

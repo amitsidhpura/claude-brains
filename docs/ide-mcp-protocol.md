@@ -393,8 +393,13 @@ megabytes).
 | `conversation_reset` | "emitted by /clear, plan-mode exit, and fresh-session flows … mount a fresh transcript under new_conversation_id" |
 | `notification` | "loop-side text notification — mirrors the interactive REPL notification queue (key/priority/timeout)" |
 
-Stdin-only types: `user`, `bash_command` (@internal, CCR terminal UIs), `control_request`,
-`control_response`, `control_cancel_request`, `keep_alive`, `update_environment_variables`.
+Stdin-only types: `user`, `bash_command` (@internal, CCR terminal UIs), `keep_alive`,
+`update_environment_variables`. `control_request` / `control_response` / `control_cancel_request`
+travel BOTH ways — the cancel was wrongly listed stdin-only until 2026-09-05: MEASURED on 2.1.261, an
+interrupt over a parked `can_use_tool` makes the CLI send `{type:"control_cancel_request",
+request_id:<the ask's id>}` to the host, ahead of the auto-deny tool_result and the aborted `result`
+(checklist 1.28; the binary also sends it on shutdown with a parked question, on resume of a stale
+parked prompt, and when a hook answer supersedes a parked hook_callback).
 
 Internal QueryEvent types with **no public schema and explicit no-op switch arms** (the CLI
 consumes them itself; a client never sees them): `api_metrics`, `apply_flag_settings`,
@@ -421,6 +426,31 @@ hook_progress 1 | file_snapshot 1 | elicitation_complete 1 | control_request_pro
 commands_changed 1 | code_change_published 1 | bridge_status 1 | bridge_state 1 | away_summary 1
 api_error 1 | agents_killed 1        (+ schema-only: files_persisted, local_command_output, thinking)
 ```
+
+**The banner family, measured 2026-09-05 on 2.1.261 over stdio with the panel's own flags
+(checklist 1.26; scratchpad `probe_banners.py`, auto-allow on every ask):**
+- **On the wire (engine-emitted through the same push as `background_tasks_changed`):**
+  `vcs_state_changed {kind:"commit", branch:"master", cwd}` after a `git commit` via Bash and
+  `{kind:"push", branch:"master", cwd}` after a `git push`; `notification {key:"stop-hook-error",
+  text:"Stop hook error occurred · ctrl+o to see", priority:"immediate"}` after a Stop hook exited
+  2 (its stderr also arrives as a `user` frame "Stop hook feedback: …" and the turn continues once,
+  `num_turns:2`). Neither is persisted: the probe sessions' transcripts hold zero `system` records.
+- **Engine-emitted but unforced here:** `code_change_published` is gated on the CLI's forge-URL
+  allowlist and a trusted remote host (`o5e` / `dhe`) — a local bare remote whose hook prints
+  `https://github.com/acme/demo/pull/42` yields only the push frame; `memory_saved` /
+  `memory_recall` come from automemory extraction, not from a model-driven Write into the memory
+  dir (a "save this to memory" prompt produced none); `task_summary` never appeared in nine turns.
+- **REPL-only — their only call sites are TUI transcript reducers, never the stream:**
+  `agents_killed` (an interrupt with a live background agent gave `task_updated{killed}` +
+  `task_notification{stopped}` + the roster, no banner), `permission_retry` (only the
+  `/permissions` dialog's retry action; a `set_permission_mode` over a parked `can_use_tool`
+  switches the mode and leaves the ask parked), `scheduled_task_fire` (a `/loop 1m` tick arrives
+  as `command_lifecycle{state:"started"}` → a fresh `system/init` → assistant → `result` →
+  `command_lifecycle{completed}` with NO user frame), `away_summary`, `turn_duration`, and
+  `stop_hook_summary` (the internal camelCase message has no stream-json translator arm; the
+  blocking hook above produced only the `notification`).
+- The panel draws the whole family through one status-line renderer anyway (`bannerLine`,
+  50-blocks.js) and keeps the first frame of each subtype in `window.__bannerSeen`.
 
 Field notes worth keeping (schema doc strings, abridged):
 - `init` carries far more than we read: `agents, apiKeySource, betas, claude_code_version, cwd,
@@ -659,6 +689,11 @@ chrome/jupyter enable-disable), plugins/marketplaces (8), usage/auth
 `AskUserQuestion`, `Artifact` (auto-opens published URL), `mcp__claude-in-chrome__*` (per-action
 labels), generic `mcp__*` (server-name header), fallback (JSON IN/OUT dump). Message window cap:
 600 messages, sliced to newest 500.
+
+**`open_content` (VS Code host request, checklist 1.27):** `{content, fileName, editable}` → a temp
+file in a read-only editor; the webview calls it on a click anywhere in an IN/OUT body over 250
+chars or multiline. The panel's equivalent hangs on the cut marker instead (`openText` for a live
+row, `openTool` + `SessionStore.toolText` for a replayed one; a `LightVirtualFile`, 2026-09-05).
 
 **Webview system subtypes handled** (9 — fewer than the CLI emits): `init, status,
 compact_boundary, thinking_tokens, task_started, task_progress, task_notification,

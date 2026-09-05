@@ -4,6 +4,51 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-05 — Checklist rows fold: gist on the first line, evidence under "Read more…"; folds hold no nested lists
+**Why**: rows had grown to 2,300 chars of evidence; the user wanted "1-2 line description, Read
+more collapsed". Shown on §3 first (conventions § Docs), approved, then the file. Only rows with
+facts beyond the gist fold (68 of 140); the first line keeps the `**id** mark …` shape so the
+At-a-glance regex and every id citation survive. The fold opens with `<!-- --><details>…` and no
+blank lines, because a blank line inside a list item makes GitHub render every row as a spaced
+paragraph. Folds hold paragraphs only: a nested list inside one made marked (the user's viewer)
+close `</details>` inside the last bullet and outdent every later row.
+**Rejected**: uniform folds on every row (72 short rows gain nothing); dates/fixtures on the first
+line (evidence belongs under the fold); sub-bullets inside folds (the marked defect above).
+
+## 2026-09-05 — 1.26: draw the whole banner family through one status renderer, REPL-only ones included; per-kind glyphs (option C)
+**Why**: measured on 2.1.261 — only `vcs_state_changed` and `notification` are on this wire, four
+more are engine-emitted but unforceable, six are REPL-only (call sites are TUI transcript
+reducers; `stop_hook_summary` has no stream-json translator arm). One branch each against a
+public schema costs nothing and the panel does not go blind the day a translator arm lands; the
+first frame per subtype is kept in `window.__bannerSeen`. Glyphs: three candidates (bare / one
+muted dot / per kind) rendered in the REAL panel side by side; the user picked per-kind, supplied
+lucide link-2 for the PR line, kept the branch and bookmark as drawn. The notification's
+"· ctrl+o to see" tail is a TUI hint and is stripped (measured text).
+**Rejected**: bare lines (read as stray text between a card and the summary — my own first
+recommendation, overruled by the render); drawing `turn_duration` (the ✻ summary has the timing);
+per-kind icons for the six text-only subtypes (no natural glyph; they wear the open dot).
+
+## 2026-09-05 — 1.28: a withdrawn ask settles the card, sends nothing, and the CLI's auto-deny box stays
+**Why**: the frame is real BOTH ways (probed: interrupt over a parked ask → `control_cancel_request`
+with the ask's id, before the auto-deny tool_result). Correctness first, as the row said: Kotlin
+drops the pending entry before the panel hears of it, so a click racing the frame sends nothing;
+the editor diff tab is dismissed like an answered card. VS Code's "Answering your earlier
+questions" fold-in of late answers is not replicated. The CLI's own "The user doesn't want to
+proceed…" OUT box above the withdrawn card stays: offered its suppression (the 3.7 `cardDenies`
+idiom with the CLI's stock text), the user was "happy with the result".
+**Rejected**: forwarding the raw frame to the webview only (Kotlin must forget the entry first);
+VS Code's late-answer fold-in (no wire for it, and the row is about not lying).
+
+## 2026-09-05 — 1.27: the cut MARKER opens the whole text, live from the page and replay from the transcript
+**Why**: VS Code opens on a click anywhere in a body over 250 chars; ours cannot, because the
+row's own click is the fold toggle, so the affordance is the marker ("— open in editor"). A live
+row still holds its uncut text when it cuts (kept under a page-lifetime key, released on
+`__clear`); a replayed row only ever had the capped copy, so replay blocks now carry `toolId` and
+Kotlin scans the transcript (`SessionStore.toolText`) — keeping the wire capped, as docs/limits.md
+promises. Read-only `LightVirtualFile`, plain text, titled "Bash command" / "<Tool> output".
+**Rejected**: shipping full texts in replay frames (defeats the caps); live-only (the marker would
+lie on replay); a card's cut command preview opening too (the card is not a box the row owns).
+
 ## 2026-09-05 — 3.8 editable command: the grant FOLLOWS the edit, split per part; model confusion accepted
 **Why**: the user's calls, each probed before building. (1) A single-rule card keeps Always allow
 while edited: the CLI persists a rewritten `ruleContent` verbatim and honours it. (2) A compound

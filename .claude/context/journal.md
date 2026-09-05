@@ -3,6 +3,33 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-05 (ninth) — checklist folded; 1.26, 1.28 and 1.27 built, hand-tested; the audit is complete
+- Checklist reformat as a design task: §3 shown first, the user's "looks perfect", then the file.
+  The user's viewer (a browser markdown extension) exposed two traps the GitHub API missed: blank
+  lines inside a list item make every row a spaced paragraph (fixed with a leading `<!-- -->`
+  that closes the HTML block on its own line), and a nested list inside a fold closes `</details>`
+  inside the last bullet in marked, outdenting every later row (folds hold paragraphs only).
+  Verified through three parsers (GitHub API, marked, markdown-it). gotchas § Docs.
+- 1.26 measured first with a new stdio probe (`tools/probe_stdio.py`): of twelve `system`
+  subtypes only `vcs_state_changed` (commit/push) and `notification` (a failing Stop hook) are on
+  this wire; `stop_hook_summary` has no translator arm; six are REPL-only (their only call sites are
+  TUI transcript reducers). All twelve drawn anyway through one status-line renderer; the first
+  frame of each kept in `window.__bannerSeen`. Three glyph options rendered side by side in the
+  REAL panel; the user picked per-kind glyphs and supplied lucide link-2 for the PR line. The
+  real-panel screenshot caught the anchor in default blue → `.status a` rule.
+- 1.28 probed: the CLI DOES send `control_cancel_request` to the host (interrupt over a parked ask,
+  before its auto-deny tool_result) — the protocol doc had it stdin-only. Kotlin drops the pending
+  entry first, pushes `__perm_cancelled`, dismisses the editor diff; the card settles as withdrawn.
+  The user kept the CLI's auto-deny OUT box above the card.
+- 1.27: the cut marker opens the whole text in a read-only `LightVirtualFile`; a replayed row asks
+  Kotlin by tool id (`SessionStore.toolText`, new `toolId` on replay blocks). Marker, not body: the
+  body's click is the fold toggle.
+- Traps hit: `pgrep -f`/`pkill -f` matching its own shell (exit 144); `innerHTML` re-serialises
+  SVG so glyph asserts normalise through a scratch element; a `.click()` on a missing element
+  ABORTS the harness (control reads as nothing) — every fixture click is null-guarded.
+- Harness **776** (fixtures to 84), Kotlin **163**. Checklist 93 ✅ · 0 ⬜ · 47 ➖, every section ✅.
+  Committed and pushed on the user's ask (this save included).
+
 ## 2026-09-05 (eighth) — 4.8 closed, 4.9 deferred, 2.12, 3.7 (+3 fixes) and 3.8 built; two commits
 - Method that held all day: explain the row in plain words → the user decides → probe → build with
   the free negative control → hand test in the sandbox → MT row resolved. Committed `d1974c4`
@@ -194,28 +221,11 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Harness baseline **607 → 623** (fixtures to 72); Kotlin 137 untouched. Three fix commits +
   this save pushed on the user's ask.
 
-## 2026-09-04 — chat.css split into webview/css/*.css (the JS-split mechanism)
-- User: "same as js — let's split css also." The 1295-line `chat.css` → 10 tens-numbered files
-  under `plugin/src/main/resources/webview/css/`, cut ONLY at existing top-level comment
-  boundaries, order preserved; the concatenation diffed byte-identical to HEAD's chat.css modulo
-  the reworded top banner. chat.css deleted.
-- `WebviewAssets` gained `CSS_FILES` + `css()` (banner line per file); `loadUi` splices it at
-  `<!--CSS-->` as before. `RenderLimitsTest` +3: css manifest == directory, mockup `<link>` list
-  == `CSS_FILES` in order, no `</style>` in the splice. `./gradlew test` **137/0**.
-- `design/mockup.html` and the four `design/*-probe.html` carry ten `<link>` tags now;
-  `tools/marketplace_shots.py`'s `js_files()` generalized to `manifest(name, ext)` and reads both
-  manifests. Living chat.css comments (JS, Kotlin, limits.md, gotchas) re-pointed; historical
-  records (journal/decisions/fixture provenance/checklist) left as written.
-- The real file order surprised twice: the history panel sits at the END of `40-cards.css`, and
-  `50-side.css` also carries attachment chips, lightbox, todos, status lines and the compaction
-  marker — the manifest comments state it honestly.
-- End-to-end: marketplace shots 01/03 byte-identical; 02/04/05 showed only antialiasing jitter
-  (04/05 differ even between two runs of ONE build → new trap under gotchas § Webview: pixel-
-  compare, never byte-compare); jittered PNGs restored to HEAD. Live sandbox over CDP: 10 css
-  banners in the page, tokens resolve, gallery states styled. Committed and pushed on the user's
-  ask (this save included).
-
 ## Digest
+- **2026-09-04** — chat.css → 10 manifest files under `webview/css/` (`CSS_FILES`, cut only at
+  existing comment boundaries, byte-identical concatenation; `RenderLimitsTest` pins manifest ==
+  directory == mockup `<link>` order). Marketplace shots 04/05 jitter between runs of ONE build →
+  pixel-compare, never byte-compare (gotchas § Webview). Committed on the ask.
 - **2026-09-01 (fifth)** — Marketplace shots 01+03 regenerated for the files-changed rows: the
   600px panel clipped, so VISIBLE scene content was trimmed (the log is bottom-anchored — only that
   moves the cut line, gotchas § Webview). 02/04/05 unaffected. Committed and pushed on the ask.

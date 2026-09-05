@@ -210,8 +210,11 @@
             const rows = [];
             // cut metadata rides the same rows into the same builder as live, so a truncated result
             // reads identically whether it is streaming now or replayed from the transcript
-            if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut]);
-            if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile, it.note, it.interrupted]);
+            // `toolId` (1.27): a replayed box only ever holds the capped copy, so its cut marker
+            // asks Kotlin for the transcript's whole text by this id.
+            const src = { toolId: it.toolId, tool: it.text };
+            if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut, null, null, null, null, src]);
+            if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile, it.note, it.interrupted, src]);
             t.after(ioBox(rows));
           } else if (it.note) {
             // No IN/OUT box to carry it — an Edit or Write, whose result text RESULT_SKIP drops —

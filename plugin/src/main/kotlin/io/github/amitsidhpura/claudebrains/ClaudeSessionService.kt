@@ -75,6 +75,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     private var onPermissionCb: ((String, String, String, String?, String?) -> Unit)? = null
     private var onInitCb: ((String) -> Unit)? = null
     private var onExitCb: ((Int) -> Unit)? = null
+    private var onCancelCb: ((String) -> Unit)? = null   // a withdrawn ask (1.28), after its pending entry is gone
 
     /** requestId -> tool input, so the UI can answer allow/deny without echoing the payload. */
     private val pendingPermissions = ConcurrentHashMap<String, JsonObject>()
@@ -138,12 +139,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         onPermission: (requestId: String, toolName: String, inputJson: String, suggestionsJson: String?, reason: String?) -> Unit,
         onInit: (commandsJson: String) -> Unit,
         onExit: (Int) -> Unit,
+        onCancel: (requestId: String) -> Unit = {},
     ) {
         // Rebind BEFORE the guard: a ChatPanel recreated against a still-running service (the tool
         // window's content is rebuilt) would otherwise return here without ever being wired to the
         // CLI, leaving a panel that renders nothing and can never recover — while the composer and
         // the history list, which call the service directly, keep working and hide it.
         onEventCb = onEvent; onPermissionCb = onPermission; onInitCb = onInit; onExitCb = onExit
+        onCancelCb = onCancel
         if (server != null) return // already running
 
         port = PortFinder.findFree()
@@ -188,6 +191,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             },
             onInit = { commandsJson -> onInitCb?.invoke(commandsJson) },
             onExit = { code -> onExitCb?.invoke(code) },
+            // The CLI no longer waits on this ask (1.28): forget it here FIRST, so a click that
+            // races the frame finds nothing pending (respondPermission returns false, sends nothing),
+            // then let the panel retire the card.
+            onCancel = { requestId ->
+                pendingPermissions.remove(requestId)
+                pendingSuggestions.remove(requestId)
+                onCancelCb?.invoke(requestId)
+            },
             onHook = { id, input, respond ->
                 if (id == ClaudeCli.HOOK_AUTOSAVE) Autosave.handle(input, respond, turnChanges::snapshot)
                 else respond(kotlinx.serialization.json.buildJsonObject { put("continue", true) })
@@ -278,6 +289,24 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** Transcript the live CLI is writing, once known (null on a fresh session until it reports). */
     fun currentSessionId(): String? = cli?.sessionId
+
+    /** The uncut text behind a replayed IN/OUT box (1.27), read from the live session's transcript. */
+    fun toolText(toolId: String, which: String): String? = currentSessionId()?.let {
+        io.github.amitsidhpura.claudebrains.session.SessionStore.toolText(cwd.path, it, toolId, which)
+    }
+
+    /**
+     * Open [text] read-only in an editor tab named [title] (1.27) — VS Code's `open_content` with
+     * `editable:false`. A LightVirtualFile: nothing touches disk, the tab closes like any other.
+     */
+    fun openText(title: String, text: String) {
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
+            val vf = com.intellij.testFramework.LightVirtualFile(
+                title, com.intellij.openapi.fileTypes.PlainTextFileType.INSTANCE, text)
+            vf.isWritable = false
+            com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openFile(vf, true)
+        }
+    }
 
     /** Title of the live conversation, or null before it has a transcript worth naming. */
     fun currentTitle(): String? = currentSessionId()?.let { sessionTitle(it) }

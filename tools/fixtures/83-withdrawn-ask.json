@@ -1,0 +1,159 @@
+{
+ "item": "withdrawn asks (1.28): a control_cancel_request retires the live card as withdrawn, and a late answer for that id goes nowhere",
+ "branch": "ClaudeCli.route → onCancel → ClaudeSessionService drops pendingPermissions/pendingSuggestions → ChatPanel pushes __perm_cancelled {id} and dismisses the editor diff; 70-events.js: an AskUserQuestion card resolves through resolveAsk, any other card through permCards[id].lapse() (85-cards.js) — buttons gone, feedback field gone, contenteditable command frozen, plan separator gone, '✗ Withdrawn — Claude stopped waiting' on the decision line; the permCards entry is deleted so __perm_answered for the same id is a no-op",
+ "provenance": "The CLI frame is MEASURED 2026-09-05 over stdio on 2.1.261 with the panel's flags (scratchpad probe_banners.py --on-ask park --interrupt-after 12): a parked Bash can_use_tool (request_id 5529cc5c-…) followed by an interrupt produced, in order, control_cancel_request{request_id:5529cc5c-…} → control_response to the interrupt → user tool_result 'The user doesn't want to proceed with this tool use…' → user text '[Request interrupted by user for tool use]' → result{subtype:error_during_execution, is_error:true, terminal_reason:aborted_tools, permission_denials:[…]}. The binary (2.1.261) also writes the frame on shutdown with a parked question, on resume of a stale parked prompt from a prior worker, and when a hook answer supersedes a parked hook_callback; the schema text: 'Tells the other side that the sender no longer needs the answer to one of its own in-flight control_requests'. Before this row the frame reached the webview raw through ClaudeCli.route's else-branch and fell through the event switch unhandled; Kotlin kept the pending entry (respondPermission would still have refused a late answer, so the harm was the card LOOKING answerable). `__perm_cancelled` and `permission_request` are OUR frames (ChatPanel's shapes, fixture 11) — self-consistency for the page half; the Kotlin chain is proven by compileKotlin and the live hand test (§17 MT-1.28). NEGATIVE CONTROL: run against the sandbox still serving the pre-change webview — RUN 2026-09-05 (sandbox launched before the JS edit, fixture written first): 13 FAILED / 2 passed / 0 aborts; the two passes are GUARDs (the unknown-id no-throw step and the plan body surviving) that hold on both builds. After the edit, compileKotlin, `./gradlew test` 160 and a sandbox restart: 15/15; full harness 755/0 (740 + 15).",
+ "steps": [
+  {
+   "note": "Bash card with an editable command: the cancel freezes the command, drops the buttons and the note field, and writes the withdrawn line",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('factor it', []);",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "c1",
+     "tool": "Bash",
+     "input": "{\"command\":\"factor 97\",\"description\":\"Factor 97\"}"
+    },
+    {
+     "type": "__perm_cancelled",
+     "id": "c1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .card .card-b .no-t')||{}).textContent",
+     "contains": "Withdrawn",
+     "why": "the decision line says the ask was withdrawn"
+    },
+    {
+     "js": "document.querySelectorAll('#log .card .card-b button').length",
+     "equals": 0,
+     "why": "no button survives — nothing is waiting for a click"
+    },
+    {
+     "js": "document.querySelectorAll('#log .card .plan-fb').length",
+     "equals": 0,
+     "why": "the reject-note field leaves with the buttons"
+    },
+    {
+     "js": "document.querySelectorAll('#log .card .cmd[contenteditable]').length",
+     "equals": 0,
+     "why": "the command is no longer editable (3.8 surface frozen)"
+    },
+    {
+     "js": "typeof awaitingUser === 'undefined' ? null : awaitingUser",
+     "equals": false,
+     "why": "the panel no longer counts itself as waiting on the user"
+    }
+   ]
+  },
+  {
+   "note": "a late editor answer for the withdrawn id is a no-op: the registry entry died with the card",
+   "frames": [
+    {
+     "type": "__perm_answered",
+     "id": "c1",
+     "allow": true
+    }
+   ],
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .card .card-b .no-t')||{}).textContent",
+     "contains": "Withdrawn",
+     "why": "still withdrawn"
+    },
+    {
+     "js": "document.querySelectorAll('#log .card .card-b .ok-t').length",
+     "equals": 0,
+     "why": "no 'Accepted' was written over it"
+    }
+   ]
+  },
+  {
+   "note": "a cancel for an id nobody holds throws nothing and changes nothing",
+   "frames": [
+    {
+     "type": "__perm_cancelled",
+     "id": "never-seen"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card').length",
+     "equals": 1,
+     "why": "the one card is untouched (a throw would have aborted the harness)"
+    }
+   ]
+  },
+  {
+   "note": "AskUserQuestion card: the cancel resolves it through resolveAsk — inputs disabled, withdrawn line, no live ask left",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('ask me', []);",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "q1",
+     "tool": "AskUserQuestion",
+     "input": "{\"questions\":[{\"question\":\"Which one?\",\"options\":[{\"label\":\"A\"},{\"label\":\"B\"}]}]}"
+    },
+    {
+     "type": "__perm_cancelled",
+     "id": "q1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .ask.ask-done').length",
+     "equals": 1,
+     "why": "the ask card is in its settled state"
+    },
+    {
+     "js": "(document.querySelector('#log .ask .ask-b')||{}).textContent",
+     "contains": "Withdrawn",
+     "why": "its result line says withdrawn"
+    },
+    {
+     "js": "Array.from(document.querySelectorAll('#log .ask input')).every(function(i){return i.disabled})",
+     "equals": true,
+     "why": "every option is disabled"
+    },
+    {
+     "js": "typeof activeAsk === 'undefined' ? null : (activeAsk === null)",
+     "equals": true,
+     "why": "no live ask remains (Esc would otherwise cancel a dead card)"
+    }
+   ]
+  },
+  {
+   "note": "plan card: separator and feedback field go, the withdrawn line lands, the plan body stays",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('plan it', []);",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "p1",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\":\"# The plan\\n\\n1. do it\"}"
+    },
+    {
+     "type": "__perm_cancelled",
+     "id": "p1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.plan .plan-sep, #log .card.plan .plan-fb, #log .card.plan .card-b button').length",
+     "equals": 0,
+     "why": "no live decision surface left"
+    },
+    {
+     "js": "(document.querySelector('#log .card.plan .card-b .no-t')||{}).textContent",
+     "contains": "Withdrawn",
+     "why": "the plan card says withdrawn"
+    },
+    {
+     "js": "(document.querySelector('#log .card.plan .blk')||{}).textContent",
+     "contains": "The plan",
+     "why": "the plan body is still there to read"
+    }
+   ]
+  }
+ ]
+}

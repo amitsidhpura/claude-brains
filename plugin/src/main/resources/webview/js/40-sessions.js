@@ -153,6 +153,7 @@
     // block if the CLI ever reused one, and pending blocks would be stamped with the old message's id
     curMsgUuid = null; curMsgEls = []; evictedUuids.clear();
     permCards = Object.create(null);   // a cleared session's cards can no longer be answered
+    fullTexts = Object.create(null);   // the uncut IN/OUT texts kept for "open in editor" (1.27) go with their rows
     // A stream interrupted by the clear must not mark the NEXT session's first message as already
     // drawn — a /context opening the new conversation would render nothing (found by fixture 47
     // failing only in the full-suite order, exactly the cross-state leak fixture 44 documents).

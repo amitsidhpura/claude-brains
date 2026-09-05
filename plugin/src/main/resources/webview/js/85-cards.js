@@ -557,7 +557,22 @@
       // exactly as it is on replay.
       if (busy) showWorking(); // Claude resumes processing
     };
-    permCards[ev.id] = function (allow, tweak) {
+    // The CLI withdrew the ask (1.28, `__perm_cancelled` ← control_cancel_request — measured: an
+    // interrupt over a parked ask). Everything that made the card answerable leaves — buttons, the
+    // note field, the editable command, the plan separator and comment composer — and the decision
+    // line says so. Not done(): nothing is sent (Kotlin already dropped the pending entry, so a
+    // late click would send nothing either) and the reject text is not the user's.
+    const lapse = function () {
+      delete permCards[ev.id];
+      const cmdEl = card.querySelector('.cmd[contenteditable]');
+      if (cmdEl) { cmdEl.removeAttribute('contenteditable'); cmdEl.removeAttribute('title'); }
+      const fbEl = card.querySelector('.plan-fb'); if (fbEl) fbEl.remove();
+      if (isPlan) { hidePill(); finishComments(); }
+      const sepEl = card.querySelector('.plan-sep'); if (sepEl) sepEl.remove();
+      card.querySelector('.card-b').innerHTML = '<span class="no-t">✗ Withdrawn — Claude stopped waiting</span>';
+      awaitingUser = false;
+    };
+    permCards[ev.id] = { lapse: lapse, answer: function (allow, tweak) {
       // Tweak-travel (3.5): the pane the user accepted is not the block the model proposed.
       // Redraw the diff from what RAN (whole-file old/new — renderEditDiff trims the common
       // prefix/suffix, so only the changed region shows, same as a replayed structuredPatch)
@@ -576,7 +591,7 @@
         }
       }
       done(allow, null, true);
-    };
+    } };
     card.querySelector('.ok').onclick = function () { done(true); };
     card.querySelector('.no').onclick = function () { done(false); };
     Array.prototype.forEach.call(card.querySelectorAll('.card-b .alt:not(.more)'), function (b) {

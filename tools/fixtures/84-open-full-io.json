@@ -1,0 +1,286 @@
+{
+ "item": "open a tool's full IN/OUT in an editor tab (1.27): the cut marker on any IN/OUT box opens the WHOLE text read-only in the IDE",
+ "branch": "cutEl (50-blocks.js) makes the marker clickable when the row carries opts — a live row keeps its uncut text in fullTexts[] (dataset.full) and a replayed row carries its tool id (dataset.tool/which); the #log click delegate (00-core.js) sends {kind:'openText', title, text} or {kind:'openTool', id, which, title}; a spill marker (dataset.path) still sends {kind:'open', path} and reads 'open full output'; Kotlin: ChatPanel → ClaudeSessionService.openText (a read-only LightVirtualFile in FileEditorManager) / toolText (SessionStore.toolText scans the live transcript for the tool_use input or tool_result text). Card command previews (.cmd-cut) stay plain.",
+ "provenance": "Pure page behaviour driven through the wire: the Bash tool_use / tool_result frames are fixture 07's shapes with a long body (400 lines, > OUT_MAX 2000) and a long command (> CMD_MAX 4000) — the caps are RenderLimits' (docs/limits.md), nothing new is claimed about the CLI. `__transcript` items are what SessionStore serialises for a replayed tool (55-replay.js reads cmd/cmdCut/out/outCut/outTotal/outFile; `toolId` is new, pinned Kotlin-side by SessionStoreToolTextTest on the real replay-sample.jsonl). The bridge is taped for the fixture's duration and restored in the last step, so no click reaches the live IDE. What the IDE opens (LightVirtualFile, read-only) is Swing and out of this harness's reach — hand-verified in the sandbox (§17 MT-1.27). VS Code's contract for comparison (reference extension.js): `open_content(content, fileName, editable:false)` on click of any IN/OUT body over 250 chars — ours hangs it on the cut marker instead, because the row's own click is already the fold toggle. NEGATIVE CONTROL: run against the sandbox still serving the pre-change webview — RUN 2026-09-05 (sandbox launched before the JS edit, fixture written first): 14 FAILED / 7 passed / 0 aborts — the passes are GUARDs that hold on both builds (the marker count, the not-spill wording, the spill step and the card step); a first draft aborted the harness on `.click()` of a missing marker, so every click is null-guarded. After the edit, `./gradlew test` 163 (SessionStoreToolTextTest +3) and a sandbox restart: 21/21; full harness 776/0 (755 + 21).",
+ "steps": [
+  {
+   "note": "live OUT over OUT_MAX: the marker is clickable and reads 'open in editor' (not the spill wording)",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run it', []); if (!window.__realBridge84) { window.__realBridge84 = window.__bridge; } window.__tape84 = []; window.__bridge = function(j){ window.__tape84.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx84a",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"seq 1 400\", \"description\": \"Count\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx84a",
+        "content": "line 1 of the output\nline 2 of the output\nline 3 of the output\nline 4 of the output\nline 5 of the output\nline 6 of the output\nline 7 of the output\nline 8 of the output\nline 9 of the output\nline 10 of the output\nline 11 of the output\nline 12 of the output\nline 13 of the output\nline 14 of the output\nline 15 of the output\nline 16 of the output\nline 17 of the output\nline 18 of the output\nline 19 of the output\nline 20 of the output\nline 21 of the output\nline 22 of the output\nline 23 of the output\nline 24 of the output\nline 25 of the output\nline 26 of the output\nline 27 of the output\nline 28 of the output\nline 29 of the output\nline 30 of the output\nline 31 of the output\nline 32 of the output\nline 33 of the output\nline 34 of the output\nline 35 of the output\nline 36 of the output\nline 37 of the output\nline 38 of the output\nline 39 of the output\nline 40 of the output\nline 41 of the output\nline 42 of the output\nline 43 of the output\nline 44 of the output\nline 45 of the output\nline 46 of the output\nline 47 of the output\nline 48 of the output\nline 49 of the output\nline 50 of the output\nline 51 of the output\nline 52 of the output\nline 53 of the output\nline 54 of the output\nline 55 of the output\nline 56 of the output\nline 57 of the output\nline 58 of the output\nline 59 of the output\nline 60 of the output\nline 61 of the output\nline 62 of the output\nline 63 of the output\nline 64 of the output\nline 65 of the output\nline 66 of the output\nline 67 of the output\nline 68 of the output\nline 69 of the output\nline 70 of the output\nline 71 of the output\nline 72 of the output\nline 73 of the output\nline 74 of the output\nline 75 of the output\nline 76 of the output\nline 77 of the output\nline 78 of the output\nline 79 of the output\nline 80 of the output\nline 81 of the output\nline 82 of the output\nline 83 of the output\nline 84 of the output\nline 85 of the output\nline 86 of the output\nline 87 of the output\nline 88 of the output\nline 89 of the output\nline 90 of the output\nline 91 of the output\nline 92 of the output\nline 93 of the output\nline 94 of the output\nline 95 of the output\nline 96 of the output\nline 97 of the output\nline 98 of the output\nline 99 of the output\nline 100 of the output\nline 101 of the output\nline 102 of the output\nline 103 of the output\nline 104 of the output\nline 105 of the output\nline 106 of the output\nline 107 of the output\nline 108 of the output\nline 109 of the output\nline 110 of the output\nline 111 of the output\nline 112 of the output\nline 113 of the output\nline 114 of the output\nline 115 of the output\nline 116 of the output\nline 117 of the output\nline 118 of the output\nline 119 of the output\nline 120 of the output\nline 121 of the output\nline 122 of the output\nline 123 of the output\nline 124 of the output\nline 125 of the output\nline 126 of the output\nline 127 of the output\nline 128 of the output\nline 129 of the output\nline 130 of the output\nline 131 of the output\nline 132 of the output\nline 133 of the output\nline 134 of the output\nline 135 of the output\nline 136 of the output\nline 137 of the output\nline 138 of the output\nline 139 of the output\nline 140 of the output\nline 141 of the output\nline 142 of the output\nline 143 of the output\nline 144 of the output\nline 145 of the output\nline 146 of the output\nline 147 of the output\nline 148 of the output\nline 149 of the output\nline 150 of the output\nline 151 of the output\nline 152 of the output\nline 153 of the output\nline 154 of the output\nline 155 of the output\nline 156 of the output\nline 157 of the output\nline 158 of the output\nline 159 of the output\nline 160 of the output\nline 161 of the output\nline 162 of the output\nline 163 of the output\nline 164 of the output\nline 165 of the output\nline 166 of the output\nline 167 of the output\nline 168 of the output\nline 169 of the output\nline 170 of the output\nline 171 of the output\nline 172 of the output\nline 173 of the output\nline 174 of the output\nline 175 of the output\nline 176 of the output\nline 177 of the output\nline 178 of the output\nline 179 of the output\nline 180 of the output\nline 181 of the output\nline 182 of the output\nline 183 of the output\nline 184 of the output\nline 185 of the output\nline 186 of the output\nline 187 of the output\nline 188 of the output\nline 189 of the output\nline 190 of the output\nline 191 of the output\nline 192 of the output\nline 193 of the output\nline 194 of the output\nline 195 of the output\nline 196 of the output\nline 197 of the output\nline 198 of the output\nline 199 of the output\nline 200 of the output\nline 201 of the output\nline 202 of the output\nline 203 of the output\nline 204 of the output\nline 205 of the output\nline 206 of the output\nline 207 of the output\nline 208 of the output\nline 209 of the output\nline 210 of the output\nline 211 of the output\nline 212 of the output\nline 213 of the output\nline 214 of the output\nline 215 of the output\nline 216 of the output\nline 217 of the output\nline 218 of the output\nline 219 of the output\nline 220 of the output\nline 221 of the output\nline 222 of the output\nline 223 of the output\nline 224 of the output\nline 225 of the output\nline 226 of the output\nline 227 of the output\nline 228 of the output\nline 229 of the output\nline 230 of the output\nline 231 of the output\nline 232 of the output\nline 233 of the output\nline 234 of the output\nline 235 of the output\nline 236 of the output\nline 237 of the output\nline 238 of the output\nline 239 of the output\nline 240 of the output\nline 241 of the output\nline 242 of the output\nline 243 of the output\nline 244 of the output\nline 245 of the output\nline 246 of the output\nline 247 of the output\nline 248 of the output\nline 249 of the output\nline 250 of the output\nline 251 of the output\nline 252 of the output\nline 253 of the output\nline 254 of the output\nline 255 of the output\nline 256 of the output\nline 257 of the output\nline 258 of the output\nline 259 of the output\nline 260 of the output\nline 261 of the output\nline 262 of the output\nline 263 of the output\nline 264 of the output\nline 265 of the output\nline 266 of the output\nline 267 of the output\nline 268 of the output\nline 269 of the output\nline 270 of the output\nline 271 of the output\nline 272 of the output\nline 273 of the output\nline 274 of the output\nline 275 of the output\nline 276 of the output\nline 277 of the output\nline 278 of the output\nline 279 of the output\nline 280 of the output\nline 281 of the output\nline 282 of the output\nline 283 of the output\nline 284 of the output\nline 285 of the output\nline 286 of the output\nline 287 of the output\nline 288 of the output\nline 289 of the output\nline 290 of the output\nline 291 of the output\nline 292 of the output\nline 293 of the output\nline 294 of the output\nline 295 of the output\nline 296 of the output\nline 297 of the output\nline 298 of the output\nline 299 of the output\nline 300 of the output\nline 301 of the output\nline 302 of the output\nline 303 of the output\nline 304 of the output\nline 305 of the output\nline 306 of the output\nline 307 of the output\nline 308 of the output\nline 309 of the output\nline 310 of the output\nline 311 of the output\nline 312 of the output\nline 313 of the output\nline 314 of the output\nline 315 of the output\nline 316 of the output\nline 317 of the output\nline 318 of the output\nline 319 of the output\nline 320 of the output\nline 321 of the output\nline 322 of the output\nline 323 of the output\nline 324 of the output\nline 325 of the output\nline 326 of the output\nline 327 of the output\nline 328 of the output\nline 329 of the output\nline 330 of the output\nline 331 of the output\nline 332 of the output\nline 333 of the output\nline 334 of the output\nline 335 of the output\nline 336 of the output\nline 337 of the output\nline 338 of the output\nline 339 of the output\nline 340 of the output\nline 341 of the output\nline 342 of the output\nline 343 of the output\nline 344 of the output\nline 345 of the output\nline 346 of the output\nline 347 of the output\nline 348 of the output\nline 349 of the output\nline 350 of the output\nline 351 of the output\nline 352 of the output\nline 353 of the output\nline 354 of the output\nline 355 of the output\nline 356 of the output\nline 357 of the output\nline 358 of the output\nline 359 of the output\nline 360 of the output\nline 361 of the output\nline 362 of the output\nline 363 of the output\nline 364 of the output\nline 365 of the output\nline 366 of the output\nline 367 of the output\nline 368 of the output\nline 369 of the output\nline 370 of the output\nline 371 of the output\nline 372 of the output\nline 373 of the output\nline 374 of the output\nline 375 of the output\nline 376 of the output\nline 377 of the output\nline 378 of the output\nline 379 of the output\nline 380 of the output\nline 381 of the output\nline 382 of the output\nline 383 of the output\nline 384 of the output\nline 385 of the output\nline 386 of the output\nline 387 of the output\nline 388 of the output\nline 389 of the output\nline 390 of the output\nline 391 of the output\nline 392 of the output\nline 393 of the output\nline 394 of the output\nline 395 of the output\nline 396 of the output\nline 397 of the output\nline 398 of the output\nline 399 of the output\nline 400 of the output"
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .io-cut').length",
+     "equals": 1,
+     "why": "one cut marker (the short command has none)"
+    },
+    {
+     "js": "(document.querySelector('#log .io-cut')||{}).className",
+     "contains": "click",
+     "why": "the marker is clickable"
+    },
+    {
+     "js": "(document.querySelector('#log .io-cut')||{}).textContent",
+     "contains": "open in editor",
+     "why": "it says what the click does"
+    },
+    {
+     "js": "((document.querySelector('#log .io-cut')||{}).textContent||'').indexOf('open full output')",
+     "equals": -1,
+     "why": "not the spill wording — no file exists for this one"
+    },
+    {
+     "js": "!!(document.querySelector('#log .io-cut')||{dataset:{}}).dataset.full",
+     "equals": true,
+     "why": "the row kept its uncut text under a page-lifetime key"
+    }
+   ]
+  },
+  {
+   "note": "clicking the OUT marker hands Kotlin the WHOLE text with the tool's title (the click sits in this step's setup: the harness has no mid-frame hook)",
+   "setup": "(function(){ var m = document.querySelector('#log .io-cut.click'); if (m) m.click(); })();",
+   "expect": [
+    {
+     "js": "window.__tape84.length",
+     "equals": 1,
+     "why": "exactly one bridge frame"
+    },
+    {
+     "js": "(window.__tape84[0]||{}).kind",
+     "equals": "openText",
+     "why": "the live path sends the text itself"
+    },
+    {
+     "js": "(window.__tape84[0]||{}).title",
+     "equals": "Bash output",
+     "why": "named after the tool and the side"
+    },
+    {
+     "js": "((window.__tape84[0]||{}).text||'').length",
+     "equals": 9091,
+     "why": "the whole output, not the 2000-char cut (9091 chars)"
+    },
+    {
+     "js": "((window.__tape84[0]||{}).text||'').slice(-22)",
+     "equals": "line 400 of the output",
+     "why": "ends with the last line the box could not show"
+    }
+   ]
+  },
+  {
+   "note": "live IN over CMD_MAX: the command's marker opens the whole command under 'Bash command'",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run it', []); window.__tape84 = [];",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx84b",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"echo start; printf \\\"001\\\" && printf \\\"002\\\" && printf \\\"003\\\" && printf \\\"004\\\" && printf \\\"005\\\" && printf \\\"006\\\" && printf \\\"007\\\" && printf \\\"008\\\" && printf \\\"009\\\" && printf \\\"010\\\" && printf \\\"011\\\" && printf \\\"012\\\" && printf \\\"013\\\" && printf \\\"014\\\" && printf \\\"015\\\" && printf \\\"016\\\" && printf \\\"017\\\" && printf \\\"018\\\" && printf \\\"019\\\" && printf \\\"020\\\" && printf \\\"021\\\" && printf \\\"022\\\" && printf \\\"023\\\" && printf \\\"024\\\" && printf \\\"025\\\" && printf \\\"026\\\" && printf \\\"027\\\" && printf \\\"028\\\" && printf \\\"029\\\" && printf \\\"030\\\" && printf \\\"031\\\" && printf \\\"032\\\" && printf \\\"033\\\" && printf \\\"034\\\" && printf \\\"035\\\" && printf \\\"036\\\" && printf \\\"037\\\" && printf \\\"038\\\" && printf \\\"039\\\" && printf \\\"040\\\" && printf \\\"041\\\" && printf \\\"042\\\" && printf \\\"043\\\" && printf \\\"044\\\" && printf \\\"045\\\" && printf \\\"046\\\" && printf \\\"047\\\" && printf \\\"048\\\" && printf \\\"049\\\" && printf \\\"050\\\" && printf \\\"051\\\" && printf \\\"052\\\" && printf \\\"053\\\" && printf \\\"054\\\" && printf \\\"055\\\" && printf \\\"056\\\" && printf \\\"057\\\" && printf \\\"058\\\" && printf \\\"059\\\" && printf \\\"060\\\" && printf \\\"061\\\" && printf \\\"062\\\" && printf \\\"063\\\" && printf \\\"064\\\" && printf \\\"065\\\" && printf \\\"066\\\" && printf \\\"067\\\" && printf \\\"068\\\" && printf \\\"069\\\" && printf \\\"070\\\" && printf \\\"071\\\" && printf \\\"072\\\" && printf \\\"073\\\" && printf \\\"074\\\" && printf \\\"075\\\" && printf \\\"076\\\" && printf \\\"077\\\" && printf \\\"078\\\" && printf \\\"079\\\" && printf \\\"080\\\" && printf \\\"081\\\" && printf \\\"082\\\" && printf \\\"083\\\" && printf \\\"084\\\" && printf \\\"085\\\" && printf \\\"086\\\" && printf \\\"087\\\" && printf \\\"088\\\" && printf \\\"089\\\" && printf \\\"090\\\" && printf \\\"091\\\" && printf \\\"092\\\" && printf \\\"093\\\" && printf \\\"094\\\" && printf \\\"095\\\" && printf \\\"096\\\" && printf \\\"097\\\" && printf \\\"098\\\" && printf \\\"099\\\" && printf \\\"100\\\" && printf \\\"101\\\" && printf \\\"102\\\" && printf \\\"103\\\" && printf \\\"104\\\" && printf \\\"105\\\" && printf \\\"106\\\" && printf \\\"107\\\" && printf \\\"108\\\" && printf \\\"109\\\" && printf \\\"110\\\" && printf \\\"111\\\" && printf \\\"112\\\" && printf \\\"113\\\" && printf \\\"114\\\" && printf \\\"115\\\" && printf \\\"116\\\" && printf \\\"117\\\" && printf \\\"118\\\" && printf \\\"119\\\" && printf \\\"120\\\" && printf \\\"121\\\" && printf \\\"122\\\" && printf \\\"123\\\" && printf \\\"124\\\" && printf \\\"125\\\" && printf \\\"126\\\" && printf \\\"127\\\" && printf \\\"128\\\" && printf \\\"129\\\" && printf \\\"130\\\" && printf \\\"131\\\" && printf \\\"132\\\" && printf \\\"133\\\" && printf \\\"134\\\" && printf \\\"135\\\" && printf \\\"136\\\" && printf \\\"137\\\" && printf \\\"138\\\" && printf \\\"139\\\" && printf \\\"140\\\" && printf \\\"141\\\" && printf \\\"142\\\" && printf \\\"143\\\" && printf \\\"144\\\" && printf \\\"145\\\" && printf \\\"146\\\" && printf \\\"147\\\" && printf \\\"148\\\" && printf \\\"149\\\" && printf \\\"150\\\" && printf \\\"151\\\" && printf \\\"152\\\" && printf \\\"153\\\" && printf \\\"154\\\" && printf \\\"155\\\" && printf \\\"156\\\" && printf \\\"157\\\" && printf \\\"158\\\" && printf \\\"159\\\" && printf \\\"160\\\" && printf \\\"161\\\" && printf \\\"162\\\" && printf \\\"163\\\" && printf \\\"164\\\" && printf \\\"165\\\" && printf \\\"166\\\" && printf \\\"167\\\" && printf \\\"168\\\" && printf \\\"169\\\" && printf \\\"170\\\" && printf \\\"171\\\" && printf \\\"172\\\" && printf \\\"173\\\" && printf \\\"174\\\" && printf \\\"175\\\" && printf \\\"176\\\" && printf \\\"177\\\" && printf \\\"178\\\" && printf \\\"179\\\" && printf \\\"180\\\" && printf \\\"181\\\" && printf \\\"182\\\" && printf \\\"183\\\" && printf \\\"184\\\" && printf \\\"185\\\" && printf \\\"186\\\" && printf \\\"187\\\" && printf \\\"188\\\" && printf \\\"189\\\" && printf \\\"190\\\" && printf \\\"191\\\" && printf \\\"192\\\" && printf \\\"193\\\" && printf \\\"194\\\" && printf \\\"195\\\" && printf \\\"196\\\" && printf \\\"197\\\" && printf \\\"198\\\" && printf \\\"199\\\" && printf \\\"200\\\" && printf \\\"201\\\" && printf \\\"202\\\" && printf \\\"203\\\" && printf \\\"204\\\" && printf \\\"205\\\" && printf \\\"206\\\" && printf \\\"207\\\" && printf \\\"208\\\" && printf \\\"209\\\" && printf \\\"210\\\" && printf \\\"211\\\" && printf \\\"212\\\" && printf \\\"213\\\" && printf \\\"214\\\" && printf \\\"215\\\" && printf \\\"216\\\" && printf \\\"217\\\" && printf \\\"218\\\" && printf \\\"219\\\" && printf \\\"220\\\" && printf \\\"221\\\" && printf \\\"222\\\" && printf \\\"223\\\" && printf \\\"224\\\" && printf \\\"225\\\" && printf \\\"226\\\" && printf \\\"227\\\" && printf \\\"228\\\" && printf \\\"229\\\" && printf \\\"230\\\" && printf \\\"231\\\" && printf \\\"232\\\" && printf \\\"233\\\" && printf \\\"234\\\" && printf \\\"235\\\" && printf \\\"236\\\" && printf \\\"237\\\" && printf \\\"238\\\" && printf \\\"239\\\" && printf \\\"240\\\" && printf \\\"241\\\" && printf \\\"242\\\" && printf \\\"243\\\" && printf \\\"244\\\" && printf \\\"245\\\" && printf \\\"246\\\" && printf \\\"247\\\" && printf \\\"248\\\" && printf \\\"249\\\" && printf \\\"250\\\" && printf \\\"251\\\" && printf \\\"252\\\" && printf \\\"253\\\" && printf \\\"254\\\" && printf \\\"255\\\" && printf \\\"256\\\" && printf \\\"257\\\" && printf \\\"258\\\" && printf \\\"259\\\" && printf \\\"260\\\" && printf \\\"261\\\" && printf \\\"262\\\" && printf \\\"263\\\" && printf \\\"264\\\" && printf \\\"265\\\" && printf \\\"266\\\" && printf \\\"267\\\" && printf \\\"268\\\" && printf \\\"269\\\" && printf \\\"270\\\" && printf \\\"271\\\" && printf \\\"272\\\" && printf \\\"273\\\" && printf \\\"274\\\" && printf \\\"275\\\" && printf \\\"276\\\" && printf \\\"277\\\" && printf \\\"278\\\" && printf \\\"279\\\" && printf \\\"280\\\" && printf \\\"281\\\" && printf \\\"282\\\" && printf \\\"283\\\" && printf \\\"284\\\" && printf \\\"285\\\" && printf \\\"286\\\" && printf \\\"287\\\" && printf \\\"288\\\" && printf \\\"289\\\" && printf \\\"290\\\" && printf \\\"291\\\" && printf \\\"292\\\" && printf \\\"293\\\" && printf \\\"294\\\" && printf \\\"295\\\" && printf \\\"296\\\" && printf \\\"297\\\" && printf \\\"298\\\" && printf \\\"299\\\" && printf \\\"300\\\" && printf \\\"301\\\" && printf \\\"302\\\" && printf \\\"303\\\" && printf \\\"304\\\" && printf \\\"305\\\" && printf \\\"306\\\" && printf \\\"307\\\" && printf \\\"308\\\" && printf \\\"309\\\" && printf \\\"310\\\" && printf \\\"311\\\" && printf \\\"312\\\" && printf \\\"313\\\" && printf \\\"314\\\" && printf \\\"315\\\" && printf \\\"316\\\" && printf \\\"317\\\" && printf \\\"318\\\" && printf \\\"319\\\"; echo end\", \"description\": \"Long one\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .io-cut.click').length",
+     "equals": 1,
+     "why": "the IN marker is clickable"
+    }
+   ]
+  },
+  {
+   "note": "…and the click sends the uncut command",
+   "setup": "(function(){ var m = document.querySelector('#log .io-cut.click'); if (m) m.click(); })();",
+   "expect": [
+    {
+     "js": "(window.__tape84[0]||{}).kind + '|' + (window.__tape84[0]||{}).title",
+     "equals": "openText|Bash command",
+     "why": "IN of a Bash is 'Bash command'"
+    },
+    {
+     "js": "((window.__tape84[0]||{}).text||'').length",
+     "equals": 5122,
+     "why": "the whole command (5122 chars), not the 4000-char cut"
+    }
+   ]
+  },
+  {
+   "note": "replayed row: the transcript shipped the cut copy and a toolId, so the marker asks Kotlin by id instead",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape84 = [];",
+   "frames": [
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "user",
+       "text": "list it"
+      },
+      {
+       "role": "tool",
+       "text": "Bash",
+       "desc": "List",
+       "cmd": "ls -la",
+       "out": "total 0\\n(cut copy)",
+       "outCut": {
+        "lines": 120,
+        "bytes": 6000
+       },
+       "toolId": "toolu_r84"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .io-cut.click').length",
+     "equals": 1,
+     "why": "the replayed OUT marker is clickable"
+    },
+    {
+     "js": "(document.querySelector('#log .io-cut.click')||{dataset:{}}).dataset.tool + '|' + (document.querySelector('#log .io-cut.click')||{dataset:{}}).dataset.which",
+     "equals": "toolu_r84|out",
+     "why": "it carries the tool id and the side"
+    }
+   ]
+  },
+  {
+   "note": "…its click asks Kotlin for the transcript's copy",
+   "setup": "(function(){ var m = document.querySelector('#log .io-cut.click'); if (m) m.click(); })();",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape84[0]||{})",
+     "equals": "{\"kind\":\"openTool\",\"id\":\"toolu_r84\",\"which\":\"out\",\"title\":\"Bash output\"}",
+     "why": "the replay path sends id + side + title, no text"
+    }
+   ]
+  },
+  {
+   "note": "a spill (the CLI's own persisted output) keeps its wording and its file open — unchanged by this row",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape84 = [];",
+   "frames": [
+    {
+     "type": "__transcript",
+     "more": 0,
+     "items": [
+      {
+       "role": "tool",
+       "text": "Bash",
+       "desc": "Big",
+       "cmd": "cat big.log",
+       "out": "preview",
+       "outTotal": 412387,
+       "outFile": "/tmp/spill-84.txt",
+       "toolId": "toolu_r84s"
+      }
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .io-cut.click')||{}).textContent",
+     "contains": "open full output",
+     "why": "spill wording kept"
+    },
+    {
+     "js": "(function(){ var m = document.querySelector('#log .io-cut.click'); if (m) m.click(); return JSON.stringify(window.__tape84[0]||{}); })()",
+     "equals": "{\"kind\":\"open\",\"path\":\"/tmp/spill-84.txt\"}",
+     "why": "the CLI's file opens, as before"
+    }
+   ]
+  },
+  {
+   "note": "a permission card's cut command preview stays a plain marker (the card is not a box the row owns) — and the bridge is restored",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('x', []); window.__tape84 = [];",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pc84",
+     "tool": "Bash",
+     "input": "{\"command\": \"echo start; printf \\\"001\\\" && printf \\\"002\\\" && printf \\\"003\\\" && printf \\\"004\\\" && printf \\\"005\\\" && printf \\\"006\\\" && printf \\\"007\\\" && printf \\\"008\\\" && printf \\\"009\\\" && printf \\\"010\\\" && printf \\\"011\\\" && printf \\\"012\\\" && printf \\\"013\\\" && printf \\\"014\\\" && printf \\\"015\\\" && printf \\\"016\\\" && printf \\\"017\\\" && printf \\\"018\\\" && printf \\\"019\\\" && printf \\\"020\\\" && printf \\\"021\\\" && printf \\\"022\\\" && printf \\\"023\\\" && printf \\\"024\\\" && printf \\\"025\\\" && printf \\\"026\\\" && printf \\\"027\\\" && printf \\\"028\\\" && printf \\\"029\\\" && printf \\\"030\\\" && printf \\\"031\\\" && printf \\\"032\\\" && printf \\\"033\\\" && printf \\\"034\\\" && printf \\\"035\\\" && printf \\\"036\\\" && printf \\\"037\\\" && printf \\\"038\\\" && printf \\\"039\\\" && printf \\\"040\\\" && printf \\\"041\\\" && printf \\\"042\\\" && printf \\\"043\\\" && printf \\\"044\\\" && printf \\\"045\\\" && printf \\\"046\\\" && printf \\\"047\\\" && printf \\\"048\\\" && printf \\\"049\\\" && printf \\\"050\\\" && printf \\\"051\\\" && printf \\\"052\\\" && printf \\\"053\\\" && printf \\\"054\\\" && printf \\\"055\\\" && printf \\\"056\\\" && printf \\\"057\\\" && printf \\\"058\\\" && printf \\\"059\\\" && printf \\\"060\\\" && printf \\\"061\\\" && printf \\\"062\\\" && printf \\\"063\\\" && printf \\\"064\\\" && printf \\\"065\\\" && printf \\\"066\\\" && printf \\\"067\\\" && printf \\\"068\\\" && printf \\\"069\\\" && printf \\\"070\\\" && printf \\\"071\\\" && printf \\\"072\\\" && printf \\\"073\\\" && printf \\\"074\\\" && printf \\\"075\\\" && printf \\\"076\\\" && printf \\\"077\\\" && printf \\\"078\\\" && printf \\\"079\\\" && printf \\\"080\\\" && printf \\\"081\\\" && printf \\\"082\\\" && printf \\\"083\\\" && printf \\\"084\\\" && printf \\\"085\\\" && printf \\\"086\\\" && printf \\\"087\\\" && printf \\\"088\\\" && printf \\\"089\\\" && printf \\\"090\\\" && printf \\\"091\\\" && printf \\\"092\\\" && printf \\\"093\\\" && printf \\\"094\\\" && printf \\\"095\\\" && printf \\\"096\\\" && printf \\\"097\\\" && printf \\\"098\\\" && printf \\\"099\\\" && printf \\\"100\\\" && printf \\\"101\\\" && printf \\\"102\\\" && printf \\\"103\\\" && printf \\\"104\\\" && printf \\\"105\\\" && printf \\\"106\\\" && printf \\\"107\\\" && printf \\\"108\\\" && printf \\\"109\\\" && printf \\\"110\\\" && printf \\\"111\\\" && printf \\\"112\\\" && printf \\\"113\\\" && printf \\\"114\\\" && printf \\\"115\\\" && printf \\\"116\\\" && printf \\\"117\\\" && printf \\\"118\\\" && printf \\\"119\\\" && printf \\\"120\\\" && printf \\\"121\\\" && printf \\\"122\\\" && printf \\\"123\\\" && printf \\\"124\\\" && printf \\\"125\\\" && printf \\\"126\\\" && printf \\\"127\\\" && printf \\\"128\\\" && printf \\\"129\\\" && printf \\\"130\\\" && printf \\\"131\\\" && printf \\\"132\\\" && printf \\\"133\\\" && printf \\\"134\\\" && printf \\\"135\\\" && printf \\\"136\\\" && printf \\\"137\\\" && printf \\\"138\\\" && printf \\\"139\\\" && printf \\\"140\\\" && printf \\\"141\\\" && printf \\\"142\\\" && printf \\\"143\\\" && printf \\\"144\\\" && printf \\\"145\\\" && printf \\\"146\\\" && printf \\\"147\\\" && printf \\\"148\\\" && printf \\\"149\\\" && printf \\\"150\\\" && printf \\\"151\\\" && printf \\\"152\\\" && printf \\\"153\\\" && printf \\\"154\\\" && printf \\\"155\\\" && printf \\\"156\\\" && printf \\\"157\\\" && printf \\\"158\\\" && printf \\\"159\\\" && printf \\\"160\\\" && printf \\\"161\\\" && printf \\\"162\\\" && printf \\\"163\\\" && printf \\\"164\\\" && printf \\\"165\\\" && printf \\\"166\\\" && printf \\\"167\\\" && printf \\\"168\\\" && printf \\\"169\\\" && printf \\\"170\\\" && printf \\\"171\\\" && printf \\\"172\\\" && printf \\\"173\\\" && printf \\\"174\\\" && printf \\\"175\\\" && printf \\\"176\\\" && printf \\\"177\\\" && printf \\\"178\\\" && printf \\\"179\\\" && printf \\\"180\\\" && printf \\\"181\\\" && printf \\\"182\\\" && printf \\\"183\\\" && printf \\\"184\\\" && printf \\\"185\\\" && printf \\\"186\\\" && printf \\\"187\\\" && printf \\\"188\\\" && printf \\\"189\\\" && printf \\\"190\\\" && printf \\\"191\\\" && printf \\\"192\\\" && printf \\\"193\\\" && printf \\\"194\\\" && printf \\\"195\\\" && printf \\\"196\\\" && printf \\\"197\\\" && printf \\\"198\\\" && printf \\\"199\\\" && printf \\\"200\\\" && printf \\\"201\\\" && printf \\\"202\\\" && printf \\\"203\\\" && printf \\\"204\\\" && printf \\\"205\\\" && printf \\\"206\\\" && printf \\\"207\\\" && printf \\\"208\\\" && printf \\\"209\\\" && printf \\\"210\\\" && printf \\\"211\\\" && printf \\\"212\\\" && printf \\\"213\\\" && printf \\\"214\\\" && printf \\\"215\\\" && printf \\\"216\\\" && printf \\\"217\\\" && printf \\\"218\\\" && printf \\\"219\\\" && printf \\\"220\\\" && printf \\\"221\\\" && printf \\\"222\\\" && printf \\\"223\\\" && printf \\\"224\\\" && printf \\\"225\\\" && printf \\\"226\\\" && printf \\\"227\\\" && printf \\\"228\\\" && printf \\\"229\\\" && printf \\\"230\\\" && printf \\\"231\\\" && printf \\\"232\\\" && printf \\\"233\\\" && printf \\\"234\\\" && printf \\\"235\\\" && printf \\\"236\\\" && printf \\\"237\\\" && printf \\\"238\\\" && printf \\\"239\\\" && printf \\\"240\\\" && printf \\\"241\\\" && printf \\\"242\\\" && printf \\\"243\\\" && printf \\\"244\\\" && printf \\\"245\\\" && printf \\\"246\\\" && printf \\\"247\\\" && printf \\\"248\\\" && printf \\\"249\\\" && printf \\\"250\\\" && printf \\\"251\\\" && printf \\\"252\\\" && printf \\\"253\\\" && printf \\\"254\\\" && printf \\\"255\\\" && printf \\\"256\\\" && printf \\\"257\\\" && printf \\\"258\\\" && printf \\\"259\\\" && printf \\\"260\\\" && printf \\\"261\\\" && printf \\\"262\\\" && printf \\\"263\\\" && printf \\\"264\\\" && printf \\\"265\\\" && printf \\\"266\\\" && printf \\\"267\\\" && printf \\\"268\\\" && printf \\\"269\\\" && printf \\\"270\\\" && printf \\\"271\\\" && printf \\\"272\\\" && printf \\\"273\\\" && printf \\\"274\\\" && printf \\\"275\\\" && printf \\\"276\\\" && printf \\\"277\\\" && printf \\\"278\\\" && printf \\\"279\\\" && printf \\\"280\\\" && printf \\\"281\\\" && printf \\\"282\\\" && printf \\\"283\\\" && printf \\\"284\\\" && printf \\\"285\\\" && printf \\\"286\\\" && printf \\\"287\\\" && printf \\\"288\\\" && printf \\\"289\\\" && printf \\\"290\\\" && printf \\\"291\\\" && printf \\\"292\\\" && printf \\\"293\\\" && printf \\\"294\\\" && printf \\\"295\\\" && printf \\\"296\\\" && printf \\\"297\\\" && printf \\\"298\\\" && printf \\\"299\\\" && printf \\\"300\\\" && printf \\\"301\\\" && printf \\\"302\\\" && printf \\\"303\\\" && printf \\\"304\\\" && printf \\\"305\\\" && printf \\\"306\\\" && printf \\\"307\\\" && printf \\\"308\\\" && printf \\\"309\\\" && printf \\\"310\\\" && printf \\\"311\\\" && printf \\\"312\\\" && printf \\\"313\\\" && printf \\\"314\\\" && printf \\\"315\\\" && printf \\\"316\\\" && printf \\\"317\\\" && printf \\\"318\\\" && printf \\\"319\\\"; echo end\"}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card .cmd-cut').length",
+     "equals": 1,
+     "why": "the card shows its cut marker"
+    },
+    {
+     "js": "document.querySelectorAll('#log .card .cmd-cut.click').length",
+     "equals": 0,
+     "why": "…which is not clickable (guard: cards untouched)"
+    },
+    {
+     "js": "(function(){ window.__bridge = window.__realBridge84; return typeof window.__bridge; })()",
+     "equals": "function",
+     "why": "bridge restored"
+    }
+   ]
+  }
+ ]
+}

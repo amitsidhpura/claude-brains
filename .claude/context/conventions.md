@@ -69,8 +69,11 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 
 ## Docs
 - **A document reformat is a design task — show ONE section first, get a yes, then do the file**
-  (the 2026-08-28 checklist restructure was reverted as a "complete mess"). Docs are plain markdown;
-  the one exception is `<details>` around re-audit paragraphs and §17 groups.
+  (the 2026-08-28 checklist restructure was reverted as a "complete mess"; the 2026-09-05 fold
+  reformat went §3 → "looks perfect" → the file). Docs are plain markdown; the exceptions are
+  `<details>` around re-audit paragraphs, §17 groups, and the checklist rows' "Read more…" folds
+  (`<!-- --><details>…` with NO blank lines and NO nested lists — gotchas § Docs; verify a
+  reformat through three parsers, not GitHub alone).
 - **A doc outlives the decision that created it** — audit a doc's PREMISE when its subject changes,
   and that every relative link resolves (`release.md` said "no Marketplace" two weeks after listing).
 - **Never copy ids out of a numbered register into a summary — re-derive them** (state.md cited

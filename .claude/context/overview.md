@@ -24,9 +24,9 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 - `.github/workflows/marketplace-upload.yml` — the only CI: on `release: published` it re-posts the
   published GitHub asset to the JetBrains Marketplace. Nothing is built in CI
 - `docs/ide-mcp-protocol.md` — reverse-engineered protocol reference (READ FIRST)
-- `docs/feature-checklist.md` — feature register vs VS Code + TUI (re-audited against 2.1.250 on
-  2026-08-28): 128 rows with STABLE
-  `section.row` ids, colour tiers, effort tags — refer to features by id (e.g. 2.4)
+- `docs/feature-checklist.md` — feature register vs VS Code + TUI (last full-surface audit
+  2026-09-04 at 2.1.260, complete 2026-09-05): 140 rows with STABLE `section.row` ids, marks,
+  effort tags; long rows fold their evidence under "Read more…" — refer to features by id (e.g. 2.4)
 - `docs/limits.md` — every size cap (folded/scrolled/truncated/volume) and where it is set
 - `docs/slash-commands.md` — the slash-command allowlist and per-command verification status
 - `docs/release.md` — release process (Path B custom repo)
@@ -34,6 +34,8 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
   get ported into `plugin/src/main/resources/webview/chat.html`
 - `tools/cdp.py` — run JS in the live webview over CDP; `tools/live_harness.py` — live-path
   regression suite (replays recorded wire frames through `onClaudeEvent`); `tools/fixtures/`;
+  `tools/probe_stdio.py` — drive the CLI over stdio with the panel's flags and tape every frame
+  (park an ask, interrupt, scratch config dir);
   `tools/marketplace_shots.py` — regenerates `design/marketplace/*.png` headless from the real renderer
 - `reference/anthropic-claude-code/` — NOT in git (`/reference/` is ignored; was `vscode/` until
   2026-08-29). Extracted official VS Code extension (from `~/.vscode/extensions/anthropic.claude-code-<ver>/`,
