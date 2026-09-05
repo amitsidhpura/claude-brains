@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.12.5"
+version = "0.13.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,41 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.13.0</b>
+            <ul>
+              <li>Permission cards carry a "Tell Claude what to do instead" field after Reject —
+                  the note reaches Claude verbatim, Enter in the field rejects with it, and the
+                  decided line quotes it</li>
+              <li>The command on a Bash permission card is editable in place: Accept runs the
+                  edited text and the card says so; Always allow remembers the edited command,
+                  one exact rule per part of a compound command</li>
+              <li>Always allow is a split button — the main half keeps the CLI's own destination,
+                  the caret offers "This session only", "This project, shared" or "All
+                  projects"; the decided line records the scope</li>
+              <li>When Claude stops waiting on a permission card (you pressed Stop, the ask timed
+                  out) the card settles as "Withdrawn" instead of still looking answerable, and
+                  its diff tab closes</li>
+              <li>A never-picked mode chip starts on the CLI's own default (your
+                  <code>permissions.defaultMode</code>, else Auto on current CLIs) instead of a
+                  hardcoded Manual; a "Don't ask" mode set in settings is displayed without ever
+                  being offered</li>
+              <li>Content roots outside the project directory are passed to the CLI as working
+                  directories — reads there no longer raise "outside allowed working
+                  directories" cards</li>
+              <li>"Mention in Claude Brains" — first entry of the Project-view and editor context
+                  menus — adds the selected files or folders as @-mentions at the composer
+                  caret</li>
+              <li>@path mentions in a sent prompt render as chips that open the file on click,
+                  live and on resume</li>
+              <li>The CLI's one-line notices — a commit or push it saw, a failing hook, a published
+                  PR link — draw as muted status lines instead of being dropped</li>
+              <li>"open in editor" under a truncated tool input or output opens the whole text
+                  read-only in an editor tab, live and on resume</li>
+              <li>Fix: a rejection sent from a card no longer draws its own message again as a
+                  red error box above the card</li>
+              <li>Fix: on resume, a rejected edit no longer counts toward "N files changed", and
+                  the replayed card quotes the rejection note</li>
+            </ul>
             <b>0.12.5</b>
             <ul>
               <li>Local slash commands like <code>/context</code> render their output as normal
@@ -132,14 +167,6 @@ val changeNotesHtml = """
                   parenthesis is no longer repeated under the tool as one giant yellow caveat
                   line — genuine short caveats from Claude Code (like "the file had been
                   modified on disk") still show</li>
-            </ul>
-            <b>0.12.3</b>
-            <ul>
-              <li>The squashed, corner-sized first frame on project open is really gone. 0.12.2's
-                  fix made it show on EVERY open: it hid the browser until the page had loaded,
-                  and a hidden browser has no size, so the page still laid out small and was only
-                  resized when shown. The browser now stays visible and the page loads once the
-                  browser itself has the tool window's size</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
