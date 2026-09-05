@@ -1,15 +1,20 @@
 # State
 
 ## Current focus
-**2026-09-05 (ninth session, Linux): the 2026-09-04 full-surface audit is COMPLETE — all ten rows
-shipped or deferred; the checklist has no open row (93 ✅ · 0 ⬜ · 47 ➖, 140 rows, every section ✅).
-Everything since 0.12.5 is UNRELEASED on `main` (committed and pushed with this save).** The day's
-method held: explain the row in plain words → the user decides → probe/measure → build with the free
-negative control → the user hand-tests in the sandbox (MT-row) → next. Release only when asked.
-CLI on this box is now **2.1.261** (the checklist header still says 2.1.260 — a re-audit is the
-natural next ask; 2.1.261 changed nothing measured today).
+**2026-09-05 (tenth session, Linux): mockup parity pass — `design/mockup.html` now carries a static
+example of EVERY renderer state (0 of 214 CSS classes unexercised, was 13); a model-chip/menu
+mismatch was investigated, NOT reproduced, and parked (backlog § Next up). The 2026-09-04
+full-surface audit is complete (93 ✅ · 0 ⬜ · 47 ➖, 140 rows). Everything since 0.12.5 is
+UNRELEASED on `main` (committed and pushed with this save).** Release only when asked. CLI on this
+box is **2.1.261** (the checklist header still says 2.1.260 — a re-audit is the natural next ask).
 
 ### Shipped since 0.12.5 — the release-notes list, one line each (details: checklist rows)
+- **Mockup parity** (2026-09-05, tenth): static examples for 1.26 banners (all six glyph kinds),
+  1.28 withdrawn card (+ the auto-deny OUT box above it), 1.27 "open in editor" marker, 2.12
+  directory grant, 3.8 `cmd-compound`/`cmd-edited` (typing into the command hides per-rule rows),
+  card-menu `.up` flip, slash alias/source badges, fast-mode cooldown (devbar "fast"), stopping
+  bg-task row, side-panel Clear → empty placeholder, replay `t-sfx`/`ti-missing`/`und-t`, `hl-n`,
+  `ta-c`. Verified in a real browser over `http.server 8731` (gotchas § Webview).
 - **Checklist folds** (docs task, 2026-09-05): every long row is a 1–2 line gist + a collapsed
   "Read more…" fold; 68 folds; nothing dropped. Shape rules in conventions § Docs.
 - **1.26** banner-class `system` frames draw as muted status lines with a per-kind gutter glyph
@@ -25,6 +30,14 @@ natural next ask; 2.1.261 changed nothing measured today).
   deferred (no keyboard answers on cards).
 
 ## Open investigations
+- **Model chip says "Fable (1M)" while the menu checks NO row** (user screenshot 2026-09-05, "mid
+  session I think"; user: leave for future). NOT reproduced. Proven: that label comes only from
+  `prettyModel` (no roster row matched the selected id, even tag-stripped), which is also why no ✓
+  and the cursor sits on Default; the roster's Fable value is `fable[1m]` on 2.1.236 AND 2.1.261
+  (measured, bare `initialize`); PhpStorm persists exactly `fable[1m]`; the menu code is identical
+  in 0.12.5 and main. Inferred, unreproduced: 1M switch OFF on Default pins `claude-opus-5` (no
+  row matches by value → no ✓, chip "Opus 5"). Diagnostic next time: DevTools
+  `document.getElementById('modelChip').title` = the exact id. Details: backlog § Next up.
 - **Fold-verdict report NOT reproduced** (user's Windows screenshot 2026-09-04: a Read OUT box
   expanded, not collapsible). Every venue folds correctly here. WAITING on the user running the
   DevTools diagnostic snippet on the Windows box + Help→About. Do not guess-fix (conventions).
@@ -77,7 +90,9 @@ the feed (measured cutoff; policy no-floor/no-shims, hint only). verifyPlugin la
   a real transcript makes the best Kotlin test resource (`src/test/resources/fixtures/*.jsonl`).
 
 ## Next steps
-- [x] Audit rows 1.26, 1.28, 1.27 built + hand-tested 2026-09-05; committed and pushed with this save.
+- [x] Mockup parity pass 2026-09-05 (tenth); committed and pushed with this save.
+- [ ] **Model chip / menu mismatch** — parked; when it recurs, capture the chip title id + box + CLI
+      version + what preceded it (1M flip, fallback line, CLI restart). § Open investigations.
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About (§ Open investigations).
 - [ ] Testing repo carries the 2026-09-05 hand-test commit `bf46eb2 banner test` (+ `banner-test.txt`,
       and it swept in the staged deletion of `dummy-permission-test.txt`) — `git reset --soft HEAD~1`

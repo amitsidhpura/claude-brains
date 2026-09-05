@@ -556,6 +556,12 @@ re-read those before trusting memory here.
   externally, return true); the JS delegate is the polite first layer. Fixture 67.
 
 ## Webview / CSS / layout
+- **Viewing the mockup through the Playwright MCP**: `file:` URLs are blocked — serve the repo root
+  with `python3 -m http.server 8731 --bind 127.0.0.1` and open `/design/mockup.html`; stop it with the
+  bracketed `pkill -f 'http.serve[r] 8731'`. Element screenshots (`target: '#frame'`) save into the
+  REPO ROOT and the tool creates `.playwright-mcp/` there (ignored) — delete both before committing.
+  The log is a scroll box: scroll a target into view with `scrollIntoView` in `browser_evaluate`
+  first; `fullPage` shows nothing past the first screen.
 
 - **Never do offset/size arithmetic inside `#inputbar`'s popups — ID rules falsify it.**
   `#inputbar svg {width:18px}` resizes every glyph (beats `.pi-check svg` 16 and `.model-del svg`

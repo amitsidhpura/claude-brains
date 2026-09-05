@@ -64,6 +64,10 @@
   <button onclick="startRename(event)">rename</button>
   <button onclick="tgSide(event)">btw</button>
   <button onclick="document.getElementById('convTitle').classList.toggle('unnamed')">unnamed</button>
+  <!-- fast mode has three states: off, on, and cooling down (.on.cooldown — half-strength track) -->
+  <button onclick="(function(b){var s=b.classList.contains('cooldown')?'off':b.classList.contains('on')?'cooldown':'on';
+    b.classList.toggle('on',s!=='off'); b.classList.toggle('cooldown',s==='cooldown');
+    b.setAttribute('aria-checked',String(s!=='off')); b.title=s==='cooldown'?'Fast mode: cooling down':'Faster responses (Opus only)';})(document.getElementById('tglFast'))">fast</button>
   <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>
   <button class="wpreset" data-w="360">360</button>
@@ -265,14 +269,16 @@ total 196K
            the horizontal scroll box, so a marker inside it scrolls away with the text, and inside
            .io-v the fold would hide the very notice that content was cut. Second row: no newlines, so
            it reports size only; third: the CLI spilled the whole result to a file, so the true
-           total is shown and the marker opens it. -->
+           total is shown and the marker opens it. First (1.27): a cut row still holds its whole
+           text (live: kept on the page; replay: read back by tool id), so the marker is the click
+           that opens it read-only in an editor tab — the body's own click is the fold toggle. -->
       <div class="tool-line"><b>Bash</b><span class="t-desc">Index every log file</span></div>
       <div class="io">
         <div class="io-row fold" title="Show more" onclick="this.classList.toggle('open')"><span class="io-k">OUT</span><span class="io-v">/var/log/app-0.log
 /var/log/app-1.log
 /var/log/app-2.log
 /var/log/app-3.log
-/var/log/app-4.log</span></div><span class="io-cut">⋯ +842 lines · 19 KB not shown</span>
+/var/log/app-4.log</span></div><span class="io-cut click" data-title="Bash output">⋯ +842 lines · 19 KB not shown — open in editor</span>
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">{"rows":[{"id":1,"v":"x"},{"id":2,"v":"y"},…</span></div><span class="io-cut">⋯ +4.8 KB not shown</span>
         <div class="io-row"><span class="io-k">OUT</span><span class="io-v">Scanning 412 modules…</span></div><span class="io-cut click">⋯ 754 KB total, not shown here — open full output</span>
       </div>
@@ -349,7 +355,9 @@ total 196K
         <p>Here's the final helper with a docblock:</p>
         <div class="codeblock">
           <div class="cb-h"><span>php</span><button class="copy" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
-          <pre class="fold" title="Show more" onclick="this.classList.toggle('open')"><span class="hl-c">/** Greet a user by name. */</span>
+          <pre class="fold" title="Show more" onclick="this.classList.toggle('open')"><span class="hl-k">const</span> MAX_LEN = <span class="hl-n">64</span>;
+
+<span class="hl-c">/** Greet a user by name. */</span>
 <span class="hl-k">function</span> new_helper(<span class="hl-k">string</span> <span class="hl-v">$name</span>): <span class="hl-k">string</span> {
     <span class="hl-k">return</span> <span class="hl-s">"Hello, {$name}!"</span>;
 }</pre>
@@ -364,11 +372,11 @@ total 196K
         <!-- GFM table: .tbl is the horizontal scroller (the panel is narrow); the delimiter row's
              ':' markers become .ta-c / .ta-r on both the header cell and its column's body cells -->
         <div class="tbl"><table>
-          <thead><tr><th>Page</th><th>URL</th><th>Template</th><th class="ta-r">Hits</th></tr></thead>
+          <thead><tr><th>Page</th><th>URL</th><th>Template</th><th class="ta-c">Cached</th><th class="ta-r">Hits</th></tr></thead>
           <tbody>
-            <tr><td>Home</td><td><code class="ic">/</code></td><td><code class="ic">front-page.php</code></td><td class="ta-r">1,204</td></tr>
-            <tr><td>Shop</td><td><code class="ic">/shop/</code></td><td><code class="ic">woocommerce/archive-product.php</code></td><td class="ta-r">318</td></tr>
-            <tr><td>404</td><td><code class="ic">/no-such-page/</code></td><td><code class="ic">404.php</code></td><td class="ta-r">7</td></tr>
+            <tr><td>Home</td><td><code class="ic">/</code></td><td><code class="ic">front-page.php</code></td><td class="ta-c">✓</td><td class="ta-r">1,204</td></tr>
+            <tr><td>Shop</td><td><code class="ic">/shop/</code></td><td><code class="ic">woocommerce/archive-product.php</code></td><td class="ta-c">✓</td><td class="ta-r">318</td></tr>
+            <tr><td>404</td><td><code class="ic">/no-such-page/</code></td><td><code class="ic">404.php</code></td><td class="ta-c">✗</td><td class="ta-r">7</td></tr>
           </tbody>
         </table></div>
       </div>
@@ -475,10 +483,12 @@ total 196K
 
       <!-- permission card — compound command, so the CLI sends several addRules suggestions and
            "Always allow" becomes a SPLIT button: the main half grants every rule, the caret lists
-           them individually, then (4.8) offers the other places the whole grant can be kept. Click the caret. -->
-      <div class="card warn">
+           them individually, then (4.8) offers the other places the whole grant can be kept. Click the caret.
+           .cmd-compound (3.8): type into the command and the card gains .cmd-edited — the per-rule
+           rows hide (they name the ORIGINAL parts), Always allow and the destination rows stay. -->
+      <div class="card warn cmd-compound">
         <div class="card-h">Claude wants to run <b>Bash</b></div>
-        <pre class="cmd" contenteditable="plaintext-only" spellcheck="false" title="Edit the command here before accepting">./gradlew buildPlugin -q &amp;&amp; rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains</pre>
+        <pre class="cmd" contenteditable="plaintext-only" spellcheck="false" title="Edit the command here before accepting" data-orig="./gradlew buildPlugin -q &amp;&amp; rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains">./gradlew buildPlugin -q &amp;&amp; rm -rf ~/.local/share/JetBrains/PhpStorm2026.2/claude-brains</pre>
         <!-- The consent case for .io-cut: a command over CMD_MAX. Approving what the card only
              half-showed is the worst silent cut in the app, so the marker sits outside .cmd
              (which .card .cmd.fold collapses) and always renders. -->
@@ -503,6 +513,31 @@ total 196K
         <pre class="cmd" contenteditable="plaintext-only" spellcheck="false" title="Edit the command here before accepting">npm run build</pre>
         <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Accept</button><span class="split"><button class="alt" title="Allow from now on (saved to .claude/settings.local.json):&#10;npm run build"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>Always allow</button><button class="alt more" aria-haspopup="true" title="Choose where the rule is kept"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button><div class="popup card-menu"><div class="popup-item dest" data-d="session" title="Not saved: forgotten when this conversation ends"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">This session only</div></div></div><div class="popup-item dest" data-d="projectSettings" title="Saves to .claude/settings.json (committed with the project)"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">This project, shared</div></div></div><div class="popup-item dest" data-d="userSettings" title="Saves to ~/.claude/settings.json"><div class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg></div><div class="pi-body"><div class="pi-title">All projects</div></div></div></div></span><button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Reject</button><input class="plan-fb" placeholder="Tell Claude what to do instead"></div>
       </div>
+
+      <!-- ADDITIONAL DIRECTORY (2.12): a read outside the project's content roots arrives with an
+           addDirectories suggestion. The alt button grants the directory (decided line: "directory
+           allowed"); the CLI's own destination rides its title. No caret — one grant, one place. -->
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Read</b> on <code class="path" title="/home/me/Sites/shared-lib/src/Http/Client.php"><span class="p-head">/home/me/Sites/shared-lib/src/Http</span><span class="p-tail">/Client.php</span></code></div>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Accept</button><button class="alt" title="Allow file access to /home/me/Sites/shared-lib for this session"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>Allow /home/me/Sites/shared-lib</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Reject</button><input class="plan-fb" placeholder="Tell Claude what to do instead"></div>
+      </div>
+
+      <!-- WITHDRAWN ask (1.28): the CLI sent control_cancel_request for a parked card (measured
+           2026-09-05: an interrupt over it). Everything answerable leaves — buttons, the note field,
+           the editable command (contenteditable dropped, so it reads as a plain preview) — and the
+           decision line says why. The CLI's own auto-deny tool_result lands as an OUT box on the tool
+           line ABOVE the card (kept on purpose, user's call 2026-09-05); the interrupt's Stopped line
+           follows. Live-only: replay draws the auto-deny result instead. -->
+      <div class="tool-line fail"><b>Bash</b><span class="t-desc">Factor 97</span></div>
+      <div class="io">
+        <div class="io-row"><span class="io-k">OUT</span><span class="io-v">The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.</span></div>
+      </div>
+      <div class="card warn">
+        <div class="card-h">Claude wants to run <b>Bash</b></div>
+        <pre class="cmd">factor 97</pre>
+        <div class="card-b"><span class="no-t">✗ Withdrawn — Claude stopped waiting</span></div>
+      </div>
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg></span>Stopped</div>
 
       <!-- Ask WITH a reason (checklist 1.23): can_use_tool's `decision_reason` — the CLI's own
            words for why this ask escalated — sits between the header and the preview as a .t-note,
@@ -615,6 +650,27 @@ total 196K
     </div>
 
     <div class="turn">
+      <div class="msg-user">Commit this, push, and open a PR</div>
+      <div class="turn-body">
+      <!-- BANNER-CLASS system frames (1.26): the terminal's one-line notices, drawn as .status lines
+           with a per-KIND gutter glyph — git-branch for vcs_state_changed, link-2 for a published
+           change (the URL is an anchor; `.status a` keeps it in the muted blue, not default link
+           blue), bookmark for memories, an open dot for every other notice. A warning-level
+           notification (a failing Stop hook) keeps the alert glyph and the error tone through
+           infoLine's own ladder. Measured 2026-09-05: only vcs_state_changed and notification are on
+           this wire; the rest are drawn for the schema. Live-only — none of these is persisted. -->
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Commit the change</span></div>
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3.5" r="1.7"/><circle cx="4" cy="12.5" r="1.7"/><circle cx="12" cy="6" r="1.7"/><path d="M4 5.2v5.6M12 7.7c0 2.2-2.5 2.3-4.5 2.5C6 10.4 4.6 10.6 4 12"/></svg></span>Committed on main</div>
+      <div class="tool-line"><b>Bash</b><span class="t-desc">Push to origin</span></div>
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3.5" r="1.7"/><circle cx="4" cy="12.5" r="1.7"/><circle cx="12" cy="6" r="1.7"/><path d="M4 5.2v5.6M12 7.7c0 2.2-2.5 2.3-4.5 2.5C6 10.4 4.6 10.6 4 12"/></svg></span>Pushed main</div>
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg></span>Published to github · <a href="https://github.com/amitsidhpura/claude-brains/pull/42" onclick="return false">https://github.com/amitsidhpura/claude-brains/pull/42</a></div>
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v12l-4-3-4 3z"/></svg></span>Saved 2 memories</div>
+      <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></span>All background agents stopped</div>
+      <div class="status err"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>Stop hook failed: .claude/hooks/lint.sh exited with code 1</div>
+      </div>
+    </div>
+
+    <div class="turn">
       <div class="msg-user">Actually never mind, stop.</div>
       <div class="turn-body">
       <!-- status line: leading glyph hangs in the dot column, text at the shared 22px indent. -->
@@ -648,6 +704,12 @@ total 196K
 
       <!-- tool lines: path desc, query desc (ToolSearch/WebSearch/WebFetch), and a failure -->
       <div class="tool-line"><b>Read</b><span class="t-desc path" title="src/Greeter.php"><span class="p-head"></span><span class="p-tail">src/Greeter.php</span></span></div>
+      <!-- a windowed Read: the offset/limit suffix (.t-sfx, RenderLimits.descSuffix) is the fixed
+           part beside the path — fillPath's middle-ellipsis absorbs ALL the shrink -->
+      <div class="tool-line"><b>Read</b><span class="t-desc path" title="src/Greeter.php" data-line="40" data-end-line="119"><span class="p-head"></span><span class="p-tail">src/Greeter.php</span></span><span class="t-sfx">(lines 40-119)</span></div>
+      <!-- a replayed image past IMAGE_BUDGET: no base64 survives, but the chip still says one was here -->
+      <div class="tool-line"><b>Read</b><span class="t-desc path" title="design/marketplace/01-chat.png"><span class="p-head">design/marketplace</span><span class="p-tail">/01-chat.png</span></span></div>
+      <div class="tool-imgs"><div class="ti-missing">01-chat.png — image not kept in this replay</div></div>
       <div class="tool-line"><b>ToolSearch</b><span class="t-desc">select:ExitPlanMode</span></div>
       <div class="tool-line fail"><b>Bash</b><span class="t-desc">Run the test suite</span></div>
       <div class="io">
@@ -757,6 +819,13 @@ total 196K
         <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
         <div class="blk"><p>Rewrite the whole bootstrap sequence and swap the autoloader.</p></div>
         <div class="card-b"><span class="no-t">✗ Kept planning — “reuse fillPath instead of a second renderer”</span></div>
+      </div>
+      <!-- replayed plan card: NEVER decided — a tool_use with no tool_result on disk (the CLI died or
+           the session was reloaded with the card pending). Neutral, neither verdict colour. -->
+      <div class="card warn">
+        <div class="card-h"><b>Ready to code?</b> Here is my plan:</div>
+        <div class="blk"><p>Split the renderer into live and replay halves behind one block builder.</p></div>
+        <div class="card-b"><span class="und-t">◌ Interrupted — no decision recorded</span></div>
       </div>
 
       <!-- replayed edit: applied. "Applied", not "Accepted" — the transcript can't tell a
@@ -881,6 +950,8 @@ total 196K
               <div class="popup-h"><span>Background tasks</span></div>
               <div id="bgList">
                 <div class="popup-item bg-row"><div class="pi-body"><div class="pi-title" title="Download and unpack the Android command-line tools and accept licenses">Download and unpack the Android command-line tools and accept licenses</div><div class="pi-desc">Explore</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <!-- .stopping: the ✕ was clicked and the CLI has not answered with a new roster yet -->
+                <div class="popup-item bg-row stopping"><div class="pi-body"><div class="pi-title">Warm the build cache</div><div class="pi-desc">local_bash</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
                 <div class="popup-item bg-row"><div class="pi-body"><div class="pi-title">Run the full test suite</div><div class="pi-desc">general-purpose</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
               </div>
             </div>
@@ -1040,6 +1111,10 @@ total 196K
     if (p.classList.contains('show')) document.getElementById('sideInput').focus();
   }
   document.getElementById('sideClose').onclick = function (e) { tgSide(e); };
+  document.getElementById('sideClear').onclick = function (e) {
+    e.stopPropagation();
+    document.getElementById('sideList').innerHTML = '<div class="side-empty">Ask a quick question without interrupting the conversation.</div>';
+  };
   // history panel toggle (top edge tracks the real header height)
   function tgHist(e) {
     if (e) e.stopPropagation();
@@ -1209,6 +1284,7 @@ total 196K
     if (b) b.addEventListener('click', function (e) {
       e.stopPropagation();
       b.classList.toggle('on');
+      b.classList.remove('cooldown');   // a manual flip leaves the cooling-down state either way
       b.setAttribute('aria-checked', String(b.classList.contains('on')));
     });
   });
@@ -1238,6 +1314,10 @@ total 196K
   // ---- slash commands (list + live filtering) ----
   var SLASH = [
     { name: '/compact',         desc: 'Compact the conversation to free up context' },
+    // custom commands (.claude/commands/**.md, ~/.claude/commands) carry a source badge; aliases
+    // ride the title, muted. Both illustrative — the live roster supplies the real values.
+    { name: '/deploy',          desc: 'Build the plugin zip and upload it to the custom repo', src: 'project', aliases: ['ship'] },
+    { name: '/standup',         desc: 'Summarise today\'s commits for the standup', src: 'user' },
     { name: '/context',         desc: 'Show current context usage' },
     { name: '/config',          desc: 'Open settings' },
     { name: '/cost',            desc: 'Show token usage and cost for this session' },
@@ -1253,7 +1333,7 @@ total 196K
   ];
   var slashList = document.getElementById('slashList');
   // enabled allowlist mirrors chat.html cmdKind (compact/btw; /clear removed 2026-08-29); everything else hidden
-  var SLASH_ON = { '/compact': 1 };
+  var SLASH_ON = { '/compact': 1, '/deploy': 1, '/standup': 1 };
   function renderSlash(q) {
     var ql = (q || '').toLowerCase();
     var hits = SLASH.filter(function (c) {
@@ -1261,8 +1341,10 @@ total 196K
     });
     if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return; }
     slashList.innerHTML = hits.map(function (c, i) {
+      var aliases = c.aliases ? '<span class="pi-alias">' + c.aliases.map(function (a) { return '/' + a; }).join(' ') + '</span>' : '';
+      var src = c.src ? '<span class="pi-src">' + c.src + '</span>' : '';
       return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="' + c.name + '">' +
-        '<div class="pi-body"><div class="pi-title">' + c.name + '</div><div class="pi-desc">' + c.desc + '</div></div></div>';
+        '<div class="pi-body"><div class="pi-title">' + c.name + aliases + src + '</div><div class="pi-desc">' + c.desc + '</div></div></div>';
     }).join('');
   }
   slashList.addEventListener('click', function (e) {
@@ -1422,8 +1504,18 @@ total 196K
       var pop = b.parentNode.querySelector('.card-menu');
       var open = pop.classList.contains('show');
       closeCardMenus();
+      pop.classList.remove('up');
       pop.classList.toggle('show', !open);
       b.parentNode.classList.toggle('open', !open);
+      // .up: flip above the button only when the menu would run under the composer
+      if (!open && pop.getBoundingClientRect().bottom > composerEl.getBoundingClientRect().top - 8) pop.classList.add('up');
+    });
+  });
+  // Editable command (3.8): the card wears .cmd-edited while the text differs from the original,
+  // which hides a compound card's per-rule rows (they name the ORIGINAL parts).
+  document.querySelectorAll('.card .cmd[contenteditable]').forEach(function (c) {
+    c.addEventListener('input', function () {
+      if (c.dataset.orig !== undefined) c.closest('.card').classList.toggle('cmd-edited', c.textContent !== c.dataset.orig);
     });
   });
   document.addEventListener('click', function (e) {

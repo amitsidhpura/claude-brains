@@ -3,6 +3,23 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-05 (tenth) — mockup parity pass; model-chip mismatch investigated, parked
+- The user asked whether every plugin feature is in `design/mockup.html`. Static markup was fully
+  mirrored; the JS-rendered states from the 2026-09-04 audit were not (13 CSS classes had no
+  example). Added them all from the renderers' own markup; the class-coverage script (every
+  `.class` in `webview/css/*.css` grepped against the mockup) now reports 0 absent.
+- Verified in a real browser: the Playwright MCP blocks `file:` URLs — serve the repo with
+  `python3 -m http.server 8731 --bind 127.0.0.1` (kill with the bracketed `pkill -f 'http.serve[r]
+  8731'`); element screenshots land in the REPO ROOT and a `.playwright-mcp/` folder appears
+  (gitignored) — delete both after. gotchas § Webview.
+- Model chip "Fable (1M)" with no checked row (user screenshot): measured the CLI roster by a bare
+  `initialize` over stdio on 2.1.261 and 2.1.236 (Fable value `fable[1m]` on both), read every
+  writer of the selected id, diffed the menu code against 0.12.5 (identical). No path found that
+  produces that label from the persisted `fable[1m]`; one inferred inconsistency (1M OFF on
+  Default → `claude-opus-5`, unmatched by value). Not reproduced → no fix; parked at the user's ask.
+- A bare `initialize` probe (no prompt) writes NO transcript; the earlier `probe_stdio.py` run with
+  a prompt did, and was deleted.
+
 ## 2026-09-05 (ninth) — checklist folded; 1.26, 1.28 and 1.27 built, hand-tested; the audit is complete
 - Checklist reformat as a design task: §3 shown first, the user's "looks perfect", then the file.
   The user's viewer (a browser markdown extension) exposed two traps the GitHub API missed: blank

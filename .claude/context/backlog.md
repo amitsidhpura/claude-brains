@@ -15,6 +15,14 @@
   unchanged, only the rendering is shortened.
 
 ## Next up
+- **Model chip / menu mismatch** (user screenshot 2026-09-05, parked by the user): chip "Fable (1M)"
+  = `prettyModel` fallback = the selected id matched no roster row even tag-stripped; hence no ✓
+  and the cursor on Default. Roster Fable value is `fable[1m]` (2.1.236 and 2.1.261, measured);
+  persisted `fable[1m]` matches it, so the live id was something else — unknown. Inferred candidate
+  of the same SHAPE: 1M switch OFF on Default → `claude-opus-5` / ON → `claude-opus-5[1m]`; the ✓
+  match (`30-menus.js` renderModels) compares `value` only while `rosterFor` also accepts
+  `resolvedModel`. When it recurs: DevTools `document.getElementById('modelChip').title`, box, CLI
+  version, preceding action. Reproduce BEFORE changing the match (conventions).
 - **A `/loop` tick shows a reply out of nowhere** (measured 2026-09-05, 2.1.261): the wire is
   `command_lifecycle{started}` → fresh `system/init` → assistant → `result` → `command_lifecycle
   {completed}`, with no user frame. The panel draws the reply with no prompt above it. If wanted:

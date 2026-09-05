@@ -89,6 +89,9 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 - Styles ONLY in `webview/css/*.css` (split 2026-09-04; `WebviewAssets.CSS_FILES` is the only copy
   of the order, which IS cascade order — never reorder; the mockup mirrors it as `<link>` tags,
   pinned by `RenderLimitsTest`); chat.html markup changes are mirrored in `design/mockup.html`.
+  **Every renderer state gets a static example in the mockup, not only markup changes** (user,
+  2026-09-05: "add missing things"); check with the class-coverage grep (every `.class` in
+  `webview/css/*.css` must appear in the mockup) before calling parity done.
   No hardcoded colours, sizes or gaps: colours are `:root` tokens (`color-mix()` for tints),
   `font-size` is one of `--fs-base/-sm/-xs/-2xs` (13/12/11/10), spacing is `--block-gap` /
   `--attach-gap`. A literal px is a question waiting to be asked; a fifth size gets a token and a
