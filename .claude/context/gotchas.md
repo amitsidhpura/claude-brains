@@ -394,8 +394,12 @@ re-read those before trusting memory here.
 ## Build / toolchain / release
 - **Right after a Marketplace upload, `api/plugins/33274/updates` does NOT list the new version** — it
   returns approved updates only; the upload itself is proven by the `marketplace-upload` run log's
-  JSON (`"version":"0.12.2","approve":false`, update id). Approval followed within the hour on
-  0.12.1 and 0.12.2 (2026-08-30). Don't re-upload.
+  JSON (`"version":"0.12.2","approve":false`, update id; `gh run view <id> --log | grep -o
+  '{[^}]*"version"[^}]*}'`). Approval followed within the hour on 0.12.1, 0.12.2 (2026-08-30), 0.12.4,
+  0.12.5 and 0.13.0 (~35 min, 2026-09-05). Don't re-upload. Since 0.13.0 the Versions page shows an
+  extra **"IDE run" verifier row** ("No issues occurred during the IDE run with the plugin installed")
+  beside the 1.410 verifier rows — JetBrains now also boots an IDE with the plugin; a failure there
+  would land AFTER the version is spent, like every Marketplace verdict.
 
 - **A port-poll waiter hides a 2-second compile failure** (2026-08-30: `compileKotlin` died on
   `json.encodeToString` in a class with no `json` instance — use `buildJsonObject{}.toString()`, the

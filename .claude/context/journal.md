@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-05 (eleventh) — 0.13.0 released and Approved the same day
+- Load → "what are unreleased updates" → "next version?" (0.13.0: `docs/release.md` progression puts
+  ten [NEW] rows on the minor digit; the 2026-08-26 0.11.1-as-patch decision is the contrast) →
+  "Lets release updates." Steps 1–5 ran from one Python script that asserted EVERY exact token
+  before the first write (`version = "0.12.5"` once; `version="0.12.5"` once; the feed URL once —
+  the bare number appears three times in the feed, gotchas § Build) and dropped the 0.12.3 notes
+  block to keep exactly three.
+- `test buildPlugin` 8s, 163/0; zip = our jar + six OSS deps; plugin.xml INSIDE the jar checked for
+  `<version>0.13.0</version>` and the new notes (bytes, not clock). `verifyPlugin` in the background
+  to a scratch log with `VERIFY_EXIT` appended: **8/8 verdict files Compatible**, ladder PS-242.26775
+  → PS-263.3889 (was 7 at 0.12.4). No warnings files.
+- Notes drafted to scratch and shown WHOLE at the gate with a prep-status table; "Go ahead please"
+  → commit `a988d95`, tag, push, `gh release create --notes-file`, asset `cmp` identical, raw feed
+  advertised 0.13.0 on the first fetch, `marketplace-upload` green in 13s with receipt id 1162736.
+  The Marketplace API listed 0.12.5 right after (known lag); the user's screenshot ~35 min later:
+  **Approved**, plus a new "IDE run" verifier row (gotchas § Build).
+- Notes shape that worked: ✨ New (ten, one row each) · 🐛 Fixes (the two 3.7 follow-ups) · Install
+  · ⚠️ Notes carrying the live-only caveats (edited command, reject note, withdrawn card), the 4.9
+  deferral and the Fable thinking no-op. Internal work (folds, mockup parity, probe tool) left out.
+- The sandbox PhpStorm stayed up the whole time and interfered with nothing.
+
 ## 2026-09-05 (tenth) — mockup parity pass; model-chip mismatch investigated, parked
 - The user asked whether every plugin feature is in `design/mockup.html`. Static markup was fully
   mirrored; the JS-rendered states from the 2026-09-04 audit were not (13 CSS classes had no
@@ -210,35 +231,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   first; full harness against a stub-CLI sandbox fails 3 fixtures (need real-CLI init state) —
   gotchas § Testing. User's global launcher restored to 2.1.260 after the downgrade tests.
 
-## 2026-09-05 — three first-impression fixes (fixtures 70–72); fold report NOT reproduced
-- User's Windows screenshot: a Read OUT box fully expanded, not collapsible. NOT reproduced
-  despite live/off-screen/batch/replay-shaped mounts AND a real CLI Read in real JCEF — every
-  path folds (72px, "Show more"). Parked per "don't fix what you can't reproduce"; the user has
-  a DevTools snippet to run on the Windows box (Chromium version, `lh` support, per-holder
-  fold state) + a Help→About ask. Content-visibility does NOT zero foldBlock's rAF measurement
-  on Chrome 122 — that hypothesis is dead.
-- `/context` drawn as one giant red block (`aafbb1c`): CLI drift — since ~2.1.24x local
-  built-ins' output arrives `model:'<synthetic>'`, the tag the 2026-08-24 echo-dedupe treated
-  as "API error". Fix: `onResult` drains the stash by the RESULT's `is_error` (success → prose
-  `blk`); a real echo says subtype 'success' WITH is_error, so subtype can't discriminate.
-  Measured live on 2.1.260 (`/context` + `/list-agents`); fixture 70, free pre-fix control;
-  real `/context` re-verified in the panel (md tables, zero .error). Replay was never affected.
-- Read range suffix wrapped mid-token ("(lines 1-" / "150)", user's screenshot) (`6acb681`):
-  `.t-sfx` had no nowrap, so flex shrank it to min-content. Reproduced live pre-fix at 730px;
-  fix nowrap + `flex: 0 0 auto` (the path's middle-ellipsis absorbs all shrink). Fixture 71.
-- Friend's fresh install: unauthenticated claude.ai connectors drew ONE red line with real
-  failures (`92ede19`). `mcpNotice` now renders per fault: needs-auth muted, failed red,
-  disabled/pending/connected silent. Fixture 72; live-tested with a real unauthenticated
-  Linear MCP (`https://mcp.linear.app/mcp` → needs-auth on the wire; the old sse endpoint
-  reports `failed`), plus a manual sandbox demo for the user. Measured: locally-disabled
-  servers are OMITTED from the init roster entirely (gotchas § Protocol).
-- Friend's other screenshot DEFERRED: his old CLI rejects `--permission-mode manual` (vocab
-  `default`, pre-2.1.220) → exit 1. User rejected self-healing vocab translation as too much;
-  direction when picked up: a plain "supported CLI version" error (backlog § Immediate).
-- Harness baseline **607 → 623** (fixtures to 72); Kotlin 137 untouched. Three fix commits +
-  this save pushed on the user's ask.
-
 ## Digest
+- **2026-09-04 (first)** — three first-impression fixes (fixtures 70–72): `/context` as one red block = CLI drift (built-ins now arrive `model:'<synthetic>'`), fixed by draining the stash on the RESULT's `is_error`; `.t-sfx` nowrap + `flex:0 0 auto`; `mcpNotice` per fault (needs-auth muted, failed red; locally-disabled servers are OMITTED from the init roster). Windows fold report NOT reproduced (waiting on the DevTools snippet). Old-CLI vocab translation rejected → became the 2.1.200 floor hint.
 - **2026-09-04** — chat.css → 10 manifest files under `webview/css/` (`CSS_FILES`, cut only at
   existing comment boundaries, byte-identical concatenation; `RenderLimitsTest` pins manifest ==
   directory == mockup `<link>` order). Marketplace shots 04/05 jitter between runs of ONE build →
