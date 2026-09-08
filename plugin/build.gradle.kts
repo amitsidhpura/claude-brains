@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.13.0"
+version = "0.13.1"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,16 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.13.1</b>
+            <ul>
+              <li>Numbered lists in Claude's answers keep counting across a blank line between
+                  items, a wrapped line, a nested bullet or an indented code block — they used
+                  to restart at 1. after each one; a list that starts at another number keeps
+                  it, and a list resumed after a code block continues from where it left off</li>
+              <li>A code fence of four or more backticks — the shape Claude uses for a markdown
+                  block that contains a fence of its own — renders as one code block; it used to
+                  print a stray placeholder line and drop the whole block</li>
+            </ul>
             <b>0.13.0</b>
             <ul>
               <li>Permission cards carry a "Tell Claude what to do instead" field after Reject —
@@ -154,19 +164,6 @@ val changeNotesHtml = """
                   2.1.200, which the plugin's arguments need — the error output now reliably
                   appears (it could show empty) with a hint that the CLI may be out of date and
                   <code>claude update</code> fixes it</li>
-            </ul>
-            <b>0.12.4</b>
-            <ul>
-              <li>The "files changed" summary lists one file per row — project-relative path,
-                  per-file +added −removed counts, full path on hover; on Windows it used to
-                  print every file's full absolute path in one wrapped run. The Review link
-                  alone opens the review, not the whole block</li>
-              <li>A long background-task name stays on one line in the tasks popup — hovering
-                  its stop button used to rewrap the name to two lines</li>
-              <li>Large tool output that happens to contain "(note:" and end with a closing
-                  parenthesis is no longer repeated under the tool as one giant yellow caveat
-                  line — genuine short caveats from Claude Code (like "the file had been
-                  modified on disk") still show</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
