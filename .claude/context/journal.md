@@ -3,6 +3,21 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-09 (thirteenth) — 0.13.1 released as a patch; Approved within the hour
+- Load, then "list unreleased updates" → one commit since v0.13.0 (32c676c: fences + list parser,
+  renderer-only, no Kotlin), so the version question answered itself: patch, 0.13.1.
+- Release ran `docs/release.md` in order: bump + change notes (0.12.4 entry dropped to keep three)
+  + feed, all preconditions asserted before the first write; `test buildPlugin verifyPlugin` as ONE
+  background run (43 s warm); 163/0; **8** verdict files (PS-263.3889.75 has joined the
+  `recommended()` ladder), all `Compatible`, none with warnings; jar bytes checked for `mdList`,
+  the `{3,}` fence regex and the 0.13.1 notes; zip = our jar + six OSS deps.
+- Step-6 gate honoured: full notes shown, user said "Go ahead" → commit `8e19916`, tag, push,
+  `gh release create` from a notes file, asset `cmp` identical, feed already advertised 0.13.1.
+- `marketplace-upload` was already green by the time the checks ran; run log JSON: update id
+  1164877, `approve:false`. The user's screenshot then showed **Approved**, 9 Sep 2026, four
+  verifier rows incl. the IDE-run row, before the API listed it (as gotchas § Build predicts).
+- Context save committed and pushed on the user's own ask ("/context save · commit and push").
+
 ## 2026-09-08/09 (twelfth) — two renderer fixes: 4-backtick fences, CommonMark lists; both hand-tested
 - Load → user screenshot: an answer rendering as one sentence + the literal line `B0 \``. No
   transcript (session deleted), so the regex was reproduced in node: a ````markdown fence split at

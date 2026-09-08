@@ -396,7 +396,7 @@ re-read those before trusting memory here.
   returns approved updates only; the upload itself is proven by the `marketplace-upload` run log's
   JSON (`"version":"0.12.2","approve":false`, update id; `gh run view <id> --log | grep -o
   '{[^}]*"version"[^}]*}'`). Approval followed within the hour on 0.12.1, 0.12.2 (2026-08-30), 0.12.4,
-  0.12.5 and 0.13.0 (~35 min, 2026-09-05). Don't re-upload. Since 0.13.0 the Versions page shows an
+  0.12.5, 0.13.0 (~35 min, 2026-09-05) and 0.13.1 (within the hour, 2026-09-09). Don't re-upload. Since 0.13.0 the Versions page shows an
   extra **"IDE run" verifier row** ("No issues occurred during the IDE run with the plugin installed")
   beside the 1.410 verifier rows — JetBrains now also boots an IDE with the plugin; a failure there
   would land AFTER the version is spent, like every Marketplace verdict.
@@ -421,7 +421,8 @@ re-read those before trusting memory here.
   verifier that never ran look green. 2026-08-25: a background `cd plugin && ./gradlew
   verifyPlugin …; echo DONE` had its `cd` fail (Bash cwd persists across calls — it was already
   in plugin/), the `;`-chained echo still printed, exit 0 — and stale 0.10.0 verdicts sat on
-  disk looking complete. Glob for the NEW version's verdict files and count all seven; absolute
+  disk looking complete. Glob for the NEW version's verdict files and count them against the ladder the log
+  scheduled (SEVEN until 2026-09-09; EIGHT since PS-263 joined `recommended()`); absolute
   paths in background compound commands.
 - **Kotlin block comments NEST.** A literal `/*` inside a KDoc (writing the glob `js/*.js` in prose) opens
   a comment that never closes; the compiler reports "Unclosed comment" at the file's LAST line. Say "files

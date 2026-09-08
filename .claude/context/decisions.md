@@ -4,6 +4,15 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-09 — 0.13.1 ships the two renderer fixes alone, as a patch
+**Why**: both changes (3+-backtick fences, CommonMark lists) fix behaviour that already existed,
+touch only `webview/js/20-markdown.js` + one CSS rule, and the user was seeing the list bug daily
+— waiting to bundle more would hold a fix users hit constantly behind work nobody asked for.
+Plain semver in `docs/release.md`: fixes with no new capability → patch digit.
+**Rejected**: folding in the four known renderer gaps found on the way (indent-only code blocks,
+`*` inside inline code, mid-line fence leak, `~~~`) — each is a separate parser change needing
+its own fixture and control; they are named in the 0.13.1 notes as known instead.
+
 ## 2026-09-09 — Lists parse by CommonMark structure (content indent, loose/tight, `start`), not by consecutive marker lines
 **Why**: numbered lists restarted at `1.` "so many times" (user, three screenshots 2026-09-09,
 one of them the fix's own plan rendering as seven `1.`s). The old branches took consecutive

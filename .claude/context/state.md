@@ -1,17 +1,13 @@
 # State
 
 ## Current focus
-**2026-09-09 (twelfth session, Linux): two markdown-renderer fixes, hand-tested, committed.**
-0.13.0 stays the released version (2026-09-05, Marketplace-Approved). Unreleased on `main`:
-- **Code fences of 3+ backticks** (2026-09-08): a ````markdown fence used to print the literal
-  line `B0 \`` and drop the block (checklist 1.11 fold; fixture 85).
-- **CommonMark list parser** (2026-09-09): numbered lists no longer restart at `1.` after a blank
-  line, a wrapped line, a nested bullet or an indented fence; `<ol start>`; `1. 1. 1.` counts up;
-  loose items keep `<p>` (`.blk li > p`). Checklist 1.10 fold; fixture 86 (one step is the fix's
-  own plan text verbatim). Hand-tested by the user live + replay + plan card, wire shapes
-  confirmed by key. decisions.md 2026-09-09.
+**2026-09-09 (thirteenth session, Linux): 0.13.1 released and Marketplace-Approved the same day.**
+Released version is **0.13.1** (tag `v0.13.1`, commit `8e19916`, GitHub release + feed +
+Marketplace update id 1164877, Approved 2026-09-09 with the IDE-run verifier row green). It carries
+the two renderer fixes from the twelfth session only: 3+-backtick fences (checklist 1.11, fixture
+85) and the CommonMark list parser (1.10, fixture 86). `main` == released; nothing unreleased.
 CLI on this box is **2.1.263**; the checklist header still says 2.1.260 — the re-audit is the
-standing next ask. Release only when asked (these two fixes would be a **patch**, 0.13.1).
+standing next ask. The ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] during it.
 
 ## Open investigations
 - **Model chip says "Fable (1M)" while the menu checks NO row** (user screenshot 2026-09-05;
@@ -59,23 +55,27 @@ standing next ask. Release only when asked (these two fixes would be a **patch**
   render "verified" — the model picks its own fence length / indentation.
 - Fixture ids from page-lifetime counters (`sq1…`) must be read from the bridge tape; a
   panel-supplied slash entry (`CMD_LOCAL`) changes every fixture that COUNTS slash rows.
+- **Releases**: `docs/release.md` end to end, `./gradlew test buildPlugin verifyPlugin` as ONE
+  background run (~45 s warm, 8 verdict files since 263 joined the ladder 2026-09-09), then the
+  step-6 gate with the FULL notes before commit/tag/push (gotchas § Build).
 
 ## Next steps
-- [x] Fence fix (2026-09-08) and list parser (2026-09-09) built, harness 829/0, test 163/0,
-      hand-tested; committed with this save on the user's ask.
+- [x] 0.13.1 released 2026-09-09 (patch: fences + list parser); Approved the same day.
 - [ ] **Re-audit at 2.1.263** (runbook § Re-audit, step 8: header References/date, §2's "unchanged
-      in <ver>", the [NEW] legend — the ten 0.13.0 rows lose [NEW] once a release carries them).
-      Run the `update_settings` allowlist binary-grep watch during it (backlog § Next up).
-- [ ] Renderer follow-ups, all in backlog § Housekeeping, all pre-existing: indent-only code
-      blocks render as paragraphs (the model used one under a list item 2026-09-09); an asterisk
-      inside inline code italicises across it; mid-line fence placeholder leak; `~~~` fences.
+      in <ver>", the [NEW] legend — the ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] now
+      that a release carries them). Run the `update_settings` allowlist binary-grep watch during it
+      (backlog § Next up).
+- [ ] Renderer follow-ups, all in backlog § Housekeeping, all pre-existing and named in the 0.13.1
+      release notes as known: indent-only code blocks render as paragraphs; an asterisk inside
+      inline code italicises across it; mid-line fence placeholder leak; `~~~` fences.
 - [ ] **Model chip / menu mismatch** — parked; capture the chip title id when it recurs.
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About.
 - [ ] Testing repo carries hand-test commits (`bf46eb2 banner test` and the 2026-09-09 list-test
       turns' files) — the user's call whether to reset.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251).
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; Marketplace screenshots 01+03,
-      04+05 to `plugins.jetbrains.com/plugin/33274`; check the listing shows the 0.13.0 notes.
+      04+05 to `plugins.jetbrains.com/plugin/33274`; check the listing's description shows the
+      plugin.xml text after the 0.13.1 upload.
 
 ## Known gaps (deliberately left)
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by decision.
