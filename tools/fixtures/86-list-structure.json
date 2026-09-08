@@ -1,0 +1,561 @@
+{
+ "item": "1.10 Markdown lists (2026-09-09): CommonMark list structure — loose lists stay ONE list, numbering follows the first marker (start), indented content belongs to its item, `1. 1. 1.` counts up",
+ "branch": "onClaudeEvent text_delta → renderMd → mdBlocks list parser (20-markdown.js: LI_RE marker, item collection by content indent W, recursive mdBlocks per item with `tight`) → foldCode; the same renderMd serves replay (55-replay.js), retraction (75-retraction.js), plan cards (50-blocks.js) and the side question (67-side.js)",
+ "provenance": "Frame SHAPES are fixture 62's; nothing new is claimed about the CLI. Step 1 and 2 texts RECONSTRUCT the user's two 2026-09-09 screenshots (a five-item 'Files to write' list drawn as five `1.`s; a two-step recipe whose `2.` after a code block drew as `1.`) — those sessions are gone, so the exact source whitespace is inferred; step 7's text is REAL: the numbered list of the 2026-09-09 plan file (/home/syncroze/.claude/plans/fluttering-nibbling-abelson.md § Change) verbatim, which the user screenshotted rendering as `1.` five times then `1.` `2.` (continuation lines indented three spaces broke the list after every wrapped item; the adjacent items 6-7 merged into one list that ignored the `6.`). Steps 3-5 are CommonMark cases (nested list + indented fence under an item, lazy `1. 1. 1.` numbering, lazy continuation vs a paragraph after a loose list); step 6 is the gallery's own sample as the control for the common tight case. PRE-FIX MECHANISM (read from the code and reproduced by the control run): the list branches accepted CONSECUTIVE marker lines only and emitted <ol> with no start attribute, so any blank line, continuation line, nested bullet or code block ended the list and the next marker opened a fresh <ol> reading 1. NEGATIVE CONTROL RUN 2026-09-09 against the pre-fix build (sandbox on the 0.13.0 list code + the 2026-09-08 fence fix; fixture written first): 17 of 38 asserts FAILED, every one on a discriminating case — step 1 read 5 <ol>s, 0 li>p, fifth text not in a fifth li; step 2's second list start read null; step 3 read 2 <ol>s, 0 nested bullets, 0 fences in an li, an empty pre; step 5 read 2 <ul>s, the continuation outside its item, 2 top-level <p>s, 0 li>p; step 7 read 6 <ol>s and 6 top-level <p>s with the wrapped lines outside their items. Steps 4 (lazy numbering) and 6 (gallery control) passed on the old code, so they guard the paths that already worked.",
+ "steps": [
+  {
+   "note": "LOOSE ORDERED (screenshot 1) — five numbered items with blank lines between: ONE list, 1-5",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "Files to write (all under `/home/syncroze/Sites/syncroze-core/docs/`)\n\n1. `README.md` — index. One-paragraph product description, the three-repo layout, status legend, table of contents linking every file with a one-line summary.\n\n2. `architecture.md` — system overview: the four processes (dash :3000, api :8000, socket :3001, Messenger worker), datastores, request/response and event paths.\n\n3. `glossary.md` — the vocabulary a fresh developer gets wrong: workspace, peer, peer type, contribution, entity.\n\n4. `auth-and-accounts.md` — registration, login, logout (JSON 200 not 302, why), session cookie attributes, remember-me.\n\n5. `workspaces-and-peers.md` — workspace CRUD, slug rules, delete cascade order and why workspace goes last."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ol').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: pre-fix each item was its own <ol> (reads 5)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li').length",
+     "equals": 5,
+     "why": "all five items in the one list"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li > p').length",
+     "equals": 5,
+     "why": "a loose list keeps each item's paragraph wrapped in <p>"
+    },
+    {
+     "js": "(function(){var o=document.querySelectorAll('#log .blk ol')[0];return o?o.getAttribute('start'):'no-ol';})()",
+     "equals": null,
+     "why": "the list starts at 1, so no start attribute is written"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk > p').length",
+     "equals": 1,
+     "why": "the intro line is the only top-level paragraph — nothing between items leaks out of the list"
+    },
+    {
+     "js": "((document.querySelector('#log .blk ol > li:last-child')||{}).textContent||'').indexOf('workspaces-and-peers.md') >= 0",
+     "equals": true,
+     "why": "the fifth item's text is in the fifth li"
+    }
+   ]
+  },
+  {
+   "note": "INTERRUPTED (screenshot 2) — `1.`, an UNINDENTED code fence, then `2.`: two lists, the second numbered from 2",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "Step 2 of 2: an Edit card with its editor diff open\n\n1. Same conversation, still Manual. Send:\n\n```\nUse the Edit tool to change the word hello to goodbye in banner-test.txt\n```\n\n2. When the card appears, the editor also opens a diff tab with an Accept / Reject bar under it. Do not answer either. Click **Stop**.\n\n**What to look for:** the card settles as Withdrawn, and the diff tab closes on its own."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ol').length",
+     "equals": 2,
+     "why": "an unindented block after a blank line ends the list (CommonMark) — two lists, as before"
+    },
+    {
+     "js": "(function(){var o=document.querySelectorAll('#log .blk ol')[1];return o?o.getAttribute('start'):'no-ol';})()",
+     "equals": "2",
+     "why": "DISCRIMINATING: the second list carries start=2 so it reads `2.`; pre-fix it read null and drew `1.`"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk .codeblock').length",
+     "equals": 1,
+     "why": "the fence renders once"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk li .codeblock').length",
+     "equals": 0,
+     "why": "and sits between the lists, not inside an item"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li').length",
+     "equals": 2,
+     "why": "one item in each list"
+    }
+   ]
+  },
+  {
+   "note": "NESTED + INDENTED CODE — bullets under item 1, a ```js fence indented under item 2: one tight list",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "1. a\n   - x\n   - y\n2. b\n   ```js\n   const n = 1;\n   ```\n"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ol').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: nested bullets and the indented fence used to break the list (pre-fix: 2 ols)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li').length",
+     "equals": 2,
+     "why": "two ordered items"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li > ul > li').length",
+     "equals": 2,
+     "why": "the two bullets are a nested <ul> inside item 1"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li .codeblock').length",
+     "equals": 1,
+     "why": "the fence belongs to item 2"
+    },
+    {
+     "js": "((document.querySelector('#log .blk ol > li .codeblock pre')||{}).textContent||'').trim()",
+     "equals": "const n = 1;",
+     "why": "the fence's indentation is stripped from the body (CommonMark), no three leading spaces"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li > p').length",
+     "equals": 0,
+     "why": "no blank lines anywhere → tight list → item text is bare, not <p>-wrapped"
+    }
+   ]
+  },
+  {
+   "note": "LAZY NUMBERING — `1. 1. 1.` is one list that counts 1, 2, 3",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "1. one\n1. two\n1. three"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ol').length",
+     "equals": 1,
+     "why": "one list (this case already worked pre-fix — guards the common path)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li').length",
+     "equals": 3,
+     "why": "three items"
+    },
+    {
+     "js": "(function(){var o=document.querySelectorAll('#log .blk ol')[0];return o?o.getAttribute('start'):'no-ol';})()",
+     "equals": null,
+     "why": "first marker is 1 → no start attribute; the browser numbers 1-3"
+    }
+   ]
+  },
+  {
+   "note": "CONTINUATION vs END — a lazy continuation line joins its item; a paragraph after a loose list stays OUTSIDE it",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "- a\n  more a\n\n- b\n\nNot a list."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ul').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the continuation line used to end the list (pre-fix: 2 uls)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ul > li').length",
+     "equals": 2,
+     "why": "two bullets"
+    },
+    {
+     "js": "((document.querySelector('#log .blk ul > li:first-child')||{}).textContent||'').indexOf('more a') >= 0",
+     "equals": true,
+     "why": "the continuation line is part of item a"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk > p').length",
+     "equals": 1,
+     "why": "the trailing paragraph is not swallowed into the list"
+    },
+    {
+     "js": "((document.querySelector('#log .blk > p')||{}).textContent||'')",
+     "equals": "Not a list.",
+     "why": "and it is exactly the trailing sentence"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ul > li > p').length",
+     "equals": 2,
+     "why": "blank line between items → loose → <p> inside each li"
+    }
+   ]
+  },
+  {
+   "note": "CONTROL — the gallery's own tight bullet list + fence + table render exactly as before",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "An assistant **text block** with `inline code`, a [link](#), a list:\n\n- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```\n\n| Page | URL |\n|---|---|\n| Home | `/` |"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ul > li').length",
+     "equals": 2,
+     "why": "two tight bullets"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ul > li > p').length",
+     "equals": 0,
+     "why": "tight → no <p> inside li"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk .codeblock').length",
+     "equals": 1,
+     "why": "the fence is unaffected"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk .tbl table').length",
+     "equals": 1,
+     "why": "the table is unaffected"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk > p').length",
+     "equals": 1,
+     "why": "the intro paragraph"
+    }
+   ]
+  },
+  {
+   "note": "HARD-WRAPPED (REAL source: this plan's own § Change list) — seven items whose lines wrap with a three-space indent, no blank lines: ONE list, 1-7",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "1. **Marker regex**, on already-escaped text (safe: markers are `-*+` and digits):\n   `LI_RE = /^( {0,3})([-*+]|\\d{1,9}[.)])( {1,4}|$)(.*)$/`. Content indent `W` = indent + marker\n   length + spaces (spaces capped at 4; `$` case → marker + 1). Type = ul/ol; `start` = the\n   first item's number.\n2. **Item collection** from the marker line: take the rest of the line, then subsequent lines\n   while they are (a) blank, (b) indented ≥ W (strip W), or (c) LAZY: non-blank, previous\n   collected line non-blank, and not a block start (`LI_RE` at indent < W, heading, hr, quote,\n   fence placeholder, table-at). Stop on a same-type `LI_RE` at indent < W → next item; anything\n   else at indent < W → list ends. Trailing blank lines are dropped; a blank line between items\n   or between an item's blocks marks the list **loose**.\n3. **Render items recursively**: `mdBlocks(itemLines.join('\\n'), blocks, tight)` — the same\n   re-entry the blockquote branch already uses, so nested lists, tables and fence placeholders\n   inside items come free. New third parameter `tight`: the paragraph branch emits its text bare\n   (no `<p>`) when tight; nested lists decide their own tightness. Loose items keep `<p>`.\n4. **Emit** `<ol start=\"N\">` when N ≠ 1 (`<ol>` otherwise), `<ul>` for bullets. Placeholders\n   inside items resolve because de-indenting by W leaves the exact ` B<n> ` line.\n5. **Fence indent strip** in the fence callback: from the match `offset`, measure the whitespace\n   between the line start and the opener; drop up to that many leading spaces from each body\n   line (CommonMark) so a code block indented under `1. ` does not render with three leading\n   spaces. The placeholder keeps the line's indent in front of it — that is what the list parser\n   de-indents.\n6. **Paragraph branch**: stop condition uses `LI_RE` instead of the old `([-*+]|\\d+\\.)\\s` test.\n7. **CSS** `webview/css/30-blocks.css` next to `.blk li { margin: .2em 0; }`: `.blk li > p {\n   margin: .25em 0; }` (loose-item paragraphs tighter than body paragraphs; same em idiom as the\n   surrounding rules — no new token). Nested lists already inherit `.blk ul, .blk ol` padding."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk ol').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: pre-fix items 1-5 were five separate <ol>s (continuation lines as paragraphs between them) and 6-7 one <ol> reading 1., 2. — reads 6"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li').length",
+     "equals": 7,
+     "why": "all seven items in the one list"
+    },
+    {
+     "js": "(function(){var o=document.querySelectorAll('#log .blk ol')[0];return o?o.getAttribute('start'):'no-ol';})()",
+     "equals": null,
+     "why": "starts at 1 → no start attribute"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk > p').length",
+     "equals": 0,
+     "why": "no continuation line escapes the list as a top-level paragraph"
+    },
+    {
+     "js": "((document.querySelector('#log .blk ol > li:first-child')||{}).textContent||'').indexOf(\"first item's number\") >= 0",
+     "equals": true,
+     "why": "item 1's wrapped last line is inside item 1"
+    },
+    {
+     "js": "((document.querySelector('#log .blk ol > li:last-child')||{}).textContent||'').indexOf('padding') >= 0",
+     "equals": true,
+     "why": "item 7's wrapped last line is inside item 7"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk ol > li > p').length",
+     "equals": 0,
+     "why": "no blank lines → tight"
+    }
+   ]
+  }
+ ]
+}

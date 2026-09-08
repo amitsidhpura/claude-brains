@@ -3,6 +3,31 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-08/09 (twelfth) — two renderer fixes: 4-backtick fences, CommonMark lists; both hand-tested
+- Load → user screenshot: an answer rendering as one sentence + the literal line `B0 \``. No
+  transcript (session deleted), so the regex was reproduced in node: a ````markdown fence split at
+  three backticks, the leftover backtick broke the whole-line placeholder. Fix `(`{3,})…\1`*`;
+  fixture 85 written FIRST and run against the running pre-fix sandbox (8/15 failed), then the
+  edit, restart, 15/15; full harness 776→791; a real CDP turn confirmed by key to carry ````.
+- User's first hand test used a three-backtick fence (told them it proved nothing); the retest
+  with an explicit four-backtick ask and a README-with-inner-fence ask both carried ```` on the
+  wire (verified by key) and rendered right.
+- 2026-09-09: "numbered lists are always `1.`, I have seen it so many times" — three screenshots,
+  one of them the fix's own plan. Plan mode → CommonMark list parser (`mdList`, content indent,
+  loose/tight, `<ol start>`, recursive item bodies, fence indent strip, `.blk li > p`). Fixture 86
+  (38 asserts; step 7 = the plan's list verbatim) as the control: 17 failed pre-fix. Prototyped in
+  node with stubs before the restart — all shapes right first time. Harness 829/0, test 163/0.
+- The sandbox exited cleanly on its own twice (7 and 5.5 min after launch); one port-wait chain
+  never fired; a `grep -c` tail made a pass look like a failure; a transcript-by-key script
+  unbounded to the turn reported the same list for every prompt — all in gotchas § Testing.
+- The user ran the eight-prompt hand-test script (live, replay, plan card): every shape right, and
+  the transcripts confirm each prompt produced the shape it targeted (loose, hard-wrapped with
+  indented continuation, `1.`+unindented fence+`2.`, nested at indent 3 + indented fence, `1. 1.
+  1.`, bullets+fence+table). Recorded in the 1.10 fold.
+- Backlog gained three pre-existing renderer gaps found on the way: indent-only code blocks render
+  as paragraphs, inline code is not opaque to `*` emphasis, mid-line fence placeholder leak.
+- Context saved, committed and pushed on the user's ask ("save / commit and push").
+
 ## 2026-09-05 (eleventh) — 0.13.0 released and Approved the same day
 - Load → "what are unreleased updates" → "next version?" (0.13.0: `docs/release.md` progression puts
   ten [NEW] rows on the minor digit; the 2026-08-26 0.11.1-as-patch decision is the contrast) →
@@ -194,44 +219,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   (its mode memory is extension `globalState`), and empty-merge acceptance ≠ key coverage —
   new trap in gotchas § Protocol.
 
-## 2026-09-04 (third) — 0.12.5 released and Approved
-- User's "lets release updates" → steps 1–5 proactively: bump to 0.12.5, notes rewritten
-  (0.12.5/0.12.4/0.12.3, 0.12.2 dropped), and the owed "CLI 2.1.200+" line landed in README,
-  plugin.xml description AND the updatePlugins.xml feed description. `test buildPlugin` **137/0**
-  (own-version notes guard green), zip audited (our jar + OSS deps only), `verifyPlugin`
-  **8/8 Compatible** from the verdict files — the IDE ladder grew to 8 (PS-242 → PS-263).
-  STOPPED at the approval gate with the complete notes; shipped on "Go ahead please".
-- `a77a565`, tag `v0.12.5`; asset HTTP 200 and `cmp`-identical to the local zip, raw feed served
-  0.12.5 immediately, `marketplace-upload` run 33859713983 green in 12s. Marketplace **Approved**
-  within the hour (user's screenshot: verifier Success on 2026.1.5/2026.2.2/2026.3 EAP plus a
-  clean IDE run); a one-minute API poll via a background Monitor caught the listing flipping.
-- Notes framing: "first-impressions release" — four fixes as what-now-works, old behaviour in
-  trailing dash-clauses; the CLI floor stated in ⚠️ Notes as 2.1.200+ with `claude update` as
-  the fix.
-- Nothing unreleased on `main`. Marketplace screenshots (01/03/04/05) remain the user's manual
-  upload errand on the plugin 33274 edit page.
-
-## 2026-09-04 (second) — early-exit "CLI out of date" hint; `manual` cutoff measured at 2.1.200
-- (The "2026-09-05" entry below is this same day's EARLIER session — its commits are stamped
-  2026-09-04 12:50; the date was written a day ahead. Left as written for greppability.)
-- Backward-compat policy settled: no version floor, no shims — a non-zero exit before the CLI
-  ever spoke stream-json renders a muted "Your Claude CLI may be out of date — run `claude
-  update` in a terminal." under the ERR box. Kotlin `sawFrame` → `early:true` on `__exit`;
-  hint only when early. Update BUTTON designed, deferred by user. Fixture 73 (3 discriminating
-  asserts failed on the content-verified pre-fix build); harness 623 → **630**, Kotlin 137.
-- The stub e2e exposed TWO latent instant-death bugs, both fixed: (1) `waitFor()` returned
-  before the stderr thread drained → ERR box rendered empty (wait thread now joins both readers,
-  bounded 1s — also settles sawFrame); (2) `sendInitialize()` threw "Stream closed" on the dead
-  stdin, unwound out of `start()`, and left `ClaudeSessionService.cli` UNASSIGNED — exit frame
-  read stderr/sawFrame off null (writeLine now runCatching; `cli` assigned BEFORE `start()`).
-- Cutoff measured on real binaries by the user: v2.1.200 (2026-07-03) introduced `manual` and
-  the whole panel works on it (multi-turn, model switch, permission card); v2.1.199 rejects it
-  with the friend's exact error + our new hint. The friend just needs `claude update`.
-- Traps: gradle daemon caches its env — PATH-dependent sandbox launches need `./gradlew --stop`
-  first; full harness against a stub-CLI sandbox fails 3 fixtures (need real-CLI init state) —
-  gotchas § Testing. User's global launcher restored to 2.1.260 after the downgrade tests.
-
 ## Digest
+- **2026-09-04 (third)** — 0.12.5 released (`a77a565`, tag `v0.12.5`) and Marketplace-Approved within the hour: steps 1–5 proactive on "lets release updates", stopped at the approval gate; test/buildPlugin 137/0, verifyPlugin 8/8 Compatible (ladder grew to PS-263), asset `cmp`-identical, `marketplace-upload` green in 12s; the "CLI 2.1.200+" line landed in README, plugin.xml and the feed. Notes framed as "first impressions"; screenshots 01/03/04/05 remain the user's upload errand.
+- **2026-09-04 (second)** — early-exit "CLI may be out of date — run `claude update`" hint (Kotlin `sawFrame` → `early:true`; fixture 73; harness 630). The stub e2e exposed two instant-death bugs, both fixed: stderr thread not drained before `waitFor()` returned (ERR box empty), and `sendInitialize()` throwing on a dead stdin left `cli` unassigned (now runCatching, assigned before `start()`). `manual` cutoff measured on real binaries: 2.1.200 works fully, 2.1.199 rejects. Traps promoted to gotchas § Testing (gradle daemon caches PATH → `./gradlew --stop`; stub-CLI sandbox fails 3 fixtures).
 - **2026-09-04 (first)** — three first-impression fixes (fixtures 70–72): `/context` as one red block = CLI drift (built-ins now arrive `model:'<synthetic>'`), fixed by draining the stash on the RESULT's `is_error`; `.t-sfx` nowrap + `flex:0 0 auto`; `mcpNotice` per fault (needs-auth muted, failed red; locally-disabled servers are OMITTED from the init roster). Windows fold report NOT reproduced (waiting on the DevTools snippet). Old-CLI vocab translation rejected → became the 2.1.200 floor hint.
 - **2026-09-04** — chat.css → 10 manifest files under `webview/css/` (`CSS_FILES`, cut only at
   existing comment boundaries, byte-identical concatenation; `RenderLimitsTest` pins manifest ==

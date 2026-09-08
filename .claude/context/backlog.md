@@ -117,6 +117,20 @@
 - Voice input
 
 ## Housekeeping (one line each, do opportunistically)
+- **Indented code blocks (4+ spaces, no fence) render as paragraphs** (`20-markdown.js` has no
+  indented-code branch): seen 2026-09-09 in the live list check — asked for "a two-line bash code
+  block under item 2" the model wrote `       composer install` (7 spaces under a `2. ` item), which
+  drew as item text with a `<br>`. Numbering was right; only the code styling is missing. Fix = a
+  CommonMark indented-code branch (4 spaces relative to the item's content indent) → `.codeblock`.
+- **Inline code is not opaque to emphasis** (`20-markdown.js` inlineMd): the code pass runs first
+  but leaves its text in the string, so a `*` inside `` `-*+` `` still pairs with a later `*` and
+  italicises across the `<code>` (seen 2026-09-09 rendering fixture 86's plan text: `-<i>+</code>`).
+  Fix = placeholder the inline code spans the way fences are, then restore after the emphasis passes.
+- **Fenced-code placeholder can still leak mid-line** (`20-markdown.js` mdBlocks): the ` B<n> `
+  placeholder is restored only as a WHOLE line, so `text ```x``` more` prints "B0" literally, and
+  `~~~` fences are not fences at all. Rare (Claude closes fences on their own line, never emits
+  tildes); found while fixing the four-backtick case 2026-09-08 (fixture 85). Fix = restore
+  placeholders inside paragraphs too (or use a non-printable sentinel) + `(`{3,}|~{3,})`.
 - Marketplace-screenshot pipeline (mkshots.py/mkshots2.py/compose.py) lives only in the
   2026-08-16 session scratchpad — commit under `tools/` if refreshing the listing becomes routine.
 - **Does the OS's reduce-motion setting reach JCEF?** chat.css got a `@media

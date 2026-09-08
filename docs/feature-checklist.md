@@ -261,8 +261,36 @@ auto-include selection, voice.
 - **1.9** ✅ **Queued messages** — typed while busy, held in `#queue`, drained at `result`; replay
       shows mid-turn steered messages as user bubbles
 - **1.10** ✅ **Markdown** — headings, lists, links, code, blockquote, hr, GFM tables with alignment
+  <!-- --><details><summary>Read more…</summary>
+  Lists follow CommonMark structure since 2026-09-09: a blank line between items keeps ONE
+  (loose) list, a wrapped line indented under its item, a nested list and an indented fence all
+  belong to the item, numbering follows the first marker (`<ol start>`, so a list resumed after
+  an unindented code block reads 2.), and `1. 1. 1.` counts up. Before that the list branches
+  took consecutive marker lines only, so numbered lists restarted at `1.` after every blank line,
+  wrapped line or nested bullet — the user saw it "so many times" (three screenshots 2026-09-09,
+  one of them this very fix's plan rendering as seven `1.`s). Tight items render bare, loose
+  items keep their `<p>` (`.blk li > p`). Fixture 86 (38 asserts, one step being the plan's own
+  list verbatim; negative control on the pre-fix build: 17 failed, lazy numbering and the gallery
+  sample passed). Hand-tested by the user 2026-09-09 in the sandbox, live AND on replay, plus a
+  plan card: seven prompts whose wire shapes were confirmed by key in the testing project's
+  transcripts — five loose items (blank lines), four items hard-wrapped with indented
+  continuation lines, `1.` + an unindented fence + `2.` (drew `2.` via start), nested bullets at
+  indent 3 and a fence indented 3 under item 2 (no leading spaces in the body), `1. 1. 1.`
+  (drew 1-3), bullets + fence + table unchanged, and a five-step plan card. Not covered: a
+  bullet-character change does not split a list (forgiving on purpose); `~~~` fences and
+  indent-only code blocks (backlog).
+  </details>
 - **1.11** ✅ **Code blocks** — language label, copy button, offline syntax highlighter (keywords /
       strings / comments / numbers / php-vars; deliberately not a full grammar bundle)
+  <!-- --><details><summary>Read more…</summary>
+  A fence is a run of three OR MORE backticks and closes only on a run at least as long
+  (CommonMark), so a ````markdown fence may carry a ``` block or a table inside it. Fixed
+  2026-09-08: a ````markdown table answer used to render as its first sentence plus the literal
+  line `B0 \`` (the fenced-code placeholder with the backtick the three-backtick regex left
+  behind) and the whole block vanished; fixture 85 (15 asserts; negative control on the
+  pre-fix build: 8 failed, the plain-fence step passed). `~~~` fences and a fence closed on the
+  same line as prose are not handled (backlog).
+  </details>
 - **1.12** ✅ **Thinking blocks** — collapsible; real thinking-token count when the event carries it
       (chars/4 fallback)
 - **1.13** ✅ **Generating line** — streaming verb + in-flight gutter dot (pulsing → green/red);

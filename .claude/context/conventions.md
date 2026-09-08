@@ -29,6 +29,10 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 - **A third-party report is a SYMPTOM, not a diagnosis.** Ask what was on screen; take the exact
   wording as data ("dark bg on hover, lighter on leave" = two causes); **check the process tree /
   actual state before the code** ("chip says 2 tasks but there are none" — the chip was right).
+- **A rendering defect is fixed in the renderer, never by asking the model to write differently**
+  (user, 2026-09-09: "I cannot ask claude every time to give output without blank line" — lists
+  restarting at `1.` had once been explained away as the blank lines' fault). The panel takes
+  whatever markdown the model emits; if a shape breaks it, that shape becomes a fixture.
 - **"The CLI accepted it" is not "the panel rendered it."** User-facing claims are driven through
   the LIVE panel before being called verified; `docs/slash-commands.md` says which claim a tick
   stands for (a headless smoke run once "verified" 16 commands while `/context` rendered nothing).

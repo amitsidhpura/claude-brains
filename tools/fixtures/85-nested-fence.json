@@ -1,0 +1,121 @@
+{
+ "item": "1.11 Code blocks (2026-09-08): a fence of FOUR (or more) backticks renders as one code block; the placeholder never leaks as literal ' B0 `' text",
+ "branch": "onClaudeEvent text_delta → renderMd (20-markdown.js mdBlocks fence regex → ' B<n> ' placeholder → whole-line restore) → foldCode; the same renderMd serves replay (55-replay.js), retraction (75-retraction.js), plan cards (50-blocks.js) and the side question (67-side.js)",
+ "provenance": "Frame SHAPES are fixture 62's (message_start / content_block_start text / text_delta / content_block_stop / message_stop), nothing new is claimed about the CLI. The TEXT of step 1 reconstructs the user's 2026-09-08 sighting on the Linux box: the answer to 'Please give me timeline table in markdown' rendered as its first sentence followed by the literal line 'B0 `' and the whole table (1k output tokens) vanished. That session was deleted before diagnosis, so the fence shape is INFERRED from the rendered output and CONFIRMED by reproduction against the exact regex with node (2026-09-08): the old /```([^\\s`]*)\\n?([\\s\\S]*?)```/ took the first three of four opening backticks as the opener (lang ''), closed on the first three of the four closing ones, left one backtick behind, and ' B0 `' was no longer a whole-line placeholder, so it printed as a paragraph while the block was never emitted. A four-backtick fence is CommonMark's way to fence content that is itself markdown or contains ```, which is exactly what a 'table as raw markdown' answer is. NEGATIVE CONTROL RUN 2026-09-08 against the pre-fix build (sandbox started on the unedited sources, fixture written first): 8 of 15 asserts FAILED — step 1's `.codeblock` count read 0, the header read undefined, the 'B0 `' search read 344 (found), the pre body read -1; step 2 read 0 blocks, no '```js' in a pre, a leaked placeholder, and 3 paragraphs; step 3 (plain ```js fence + outside table) passed all five on the old regex, so it is the guard against over-tightening, not a discriminator.",
+ "steps": [
+  {
+   "note": "THE BUG — ````markdown fence around a table: one code block labelled markdown, table text inside it, no literal placeholder",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {"type": "stream_event", "event": {"type": "message_start", "message": {"usage": {}}}},
+    {"type": "stream_event", "event": {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}},
+    {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Here is the estimate table as raw markdown, ready to paste anywhere. It is not written to the docs or context files.\n\n````markdown\n| Phase | Estimate | Notes |\n|---|---|---|\n| Design | 2d | mockup first |\n| Build | 3d | fence regex |\n| Verify | 1d | harness + CDP |\n````\n"}}},
+    {"type": "stream_event", "event": {"type": "content_block_stop", "index": 0}},
+    {"type": "stream_event", "event": {"type": "message_stop"}}
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .codeblock').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: pre-fix the fence split at its first three backticks and no block was emitted at all — reads 0 on the old regex"
+    },
+    {
+     "js": "(document.querySelector('#log .codeblock .cb-h span')||{}).textContent",
+     "equals": "markdown",
+     "why": "DISCRIMINATING: the info string after a four-backtick opener is the language; pre-fix there is no header (undefined)"
+    },
+    {
+     "js": "(document.querySelector('#log').textContent||'').indexOf('B0 `')",
+     "equals": -1,
+     "why": "DISCRIMINATING: the sighting itself — the leaked placeholder plus the surviving backtick printed as a paragraph; reads >= 0 on the old regex"
+    },
+    {
+     "js": "((document.querySelector('#log .codeblock pre')||{}).textContent||'').indexOf('| Phase')",
+     "equals": 0,
+     "why": "the block body is the table verbatim, starting at its first pipe — not '`markdown' (the old body began with the stray fourth backtick)"
+    },
+    {
+     "js": "(document.querySelector('#log .blk p')||{}).textContent",
+     "equals": "Here is the estimate table as raw markdown, ready to paste anywhere. It is not written to the docs or context files.",
+     "why": "the sentence before the fence is the ONLY paragraph; nothing else is printed as prose"
+    },
+    {
+     "js": "document.querySelectorAll('#log .tbl table').length",
+     "equals": 0,
+     "why": "a table INSIDE a fence is code, not a rendered table — that is what the user asked for (raw markdown to paste)"
+    }
+   ]
+  },
+  {
+   "note": "NESTED — a ```` fence whose body contains a ``` block (the reason four backticks exist): ONE block, the inner fence kept verbatim",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {"type": "stream_event", "event": {"type": "message_start", "message": {"usage": {}}}},
+    {"type": "stream_event", "event": {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}},
+    {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Paste this into the README:\n\n````markdown\n## Usage\n\n```js\nconst x = add(1, 2);\n```\n````\n\nDone."}}},
+    {"type": "stream_event", "event": {"type": "content_block_stop", "index": 0}},
+    {"type": "stream_event", "event": {"type": "message_stop"}}
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .codeblock').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the inner ``` must NOT close the outer ```` fence — the closer has to be at least as long as the opener"
+    },
+    {
+     "js": "((document.querySelector('#log .codeblock pre')||{}).textContent||'').indexOf('```js') >= 0",
+     "equals": true,
+     "why": "the inner fence is body text of the outer block, shown verbatim"
+    },
+    {
+     "js": "(document.querySelector('#log').textContent||'').indexOf('B0') === -1 && (document.querySelector('#log').textContent||'').indexOf('B1') === -1",
+     "equals": true,
+     "why": "no placeholder leaks in either position"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk p').length",
+     "equals": 2,
+     "why": "the prose before and after the fence are the two paragraphs — the block sits between them, not inside one"
+    }
+   ]
+  },
+  {
+   "note": "CONTROL of the tightened closer — an ordinary ```js fence and a GFM table OUTSIDE it render exactly as before",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {"type": "stream_event", "event": {"type": "message_start", "message": {"usage": {}}}},
+    {"type": "stream_event", "event": {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}},
+    {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "The helper:\n\n```js\nfunction add(a, b) { return a + b; }\n```\n\n| Name | Value |\n|---|--:|\n| a | 1 |\n| b | 2 |\n"}}},
+    {"type": "stream_event", "event": {"type": "content_block_stop", "index": 0}},
+    {"type": "stream_event", "event": {"type": "message_stop"}}
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .codeblock').length",
+     "equals": 1,
+     "why": "a three-backtick fence still lifts out as one block (guards against over-tightening the closer)"
+    },
+    {
+     "js": "(document.querySelector('#log .codeblock .cb-h span')||{}).textContent",
+     "equals": "js",
+     "why": "the language label is unchanged for the common case"
+    },
+    {
+     "js": "((document.querySelector('#log .codeblock pre')||{}).textContent||'').trim()",
+     "equals": "function add(a, b) { return a + b; }",
+     "why": "body verbatim, trailing newline stripped as before"
+    },
+    {
+     "js": "document.querySelectorAll('#log .tbl table').length",
+     "equals": 1,
+     "why": "a table outside the fence still renders as a table"
+    },
+    {
+     "js": "document.querySelectorAll('#log .tbl th.ta-r').length",
+     "equals": 1,
+     "why": "the right-aligned delimiter cell still sets the column class — the table path is untouched"
+    }
+   ]
+  }
+ ]
+}

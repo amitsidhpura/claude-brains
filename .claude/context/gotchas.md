@@ -714,6 +714,25 @@ re-read those before trusting memory here.
   `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
 ## Testing, probes and sandboxes
+- **A background chain that waits on the CDP port with `until ! ss…; until ss…` can sit in its
+  loop forever** — on 2026-09-09 one such chain never printed PORT_UP through a whole sandbox
+  lifetime while a sibling chain with the same loops did; cause not found. Wait on a LOG LINE the
+  producer writes (`until grep -q 'passed, ' log`), or run the harness from the same task that
+  waited for the port. A chain that ENDS in `grep -c` exits 1 when the count is 0, so the task
+  notification says "failed" for a clean pass — put `; true` after it or read the file.
+- **The sandbox PhpStorm can exit cleanly on its own** (twice on 2026-09-09: 7 min and 5.5 min
+  after launch, "Save settings failed … ComposerSettings" as the last log line, `runIde` returns
+  BUILD SUCCESSFUL). Never seen before that day; the user may have closed the window. Every
+  CDP-dependent step after the exit hangs on `cdp.py` — `pkill -f 'tools/cdp.p[y]'` and relaunch.
+- **Transcript-by-key scripts must bound the search to ONE turn.** "Longest assistant text after
+  the prompt line" reported the same five-item list for seven different prompts in one session
+  (2026-09-09). Walk from the prompt's user frame to the NEXT user frame carrying text (tool_result
+  frames are also `type: user`), and only then pick the text.
+- **A renderer change can be prototyped in node before any sandbox restart**: `new Function` over
+  `20-markdown.js` with stubs for `esc`, `SVG_COPY`/`SVG_CHECK` and `log.addEventListener`, then
+  `renderMd` on each fixture text (2026-09-09, `proto.js` in the session scratchpad). It rendered
+  every fixture-86 shape correctly first time and exposed a pre-existing inline-code/emphasis
+  bug (backlog) — a sandbox restart costs ~2 min, the prototype ~2 s.
 - **`addUserMessage(...)` over CDP SENDS a real prompt when the panel has a live CLI session** —
   a screenshot injection on 2026-09-05 started a real turn in the sandbox (the earlier ones were
   silent only because no session was up). For renders, feed `renderPermission(...)` / frames only,

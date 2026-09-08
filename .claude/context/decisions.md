@@ -4,6 +4,30 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-09 — Lists parse by CommonMark structure (content indent, loose/tight, `start`), not by consecutive marker lines
+**Why**: numbered lists restarted at `1.` "so many times" (user, three screenshots 2026-09-09,
+one of them the fix's own plan rendering as seven `1.`s). The old branches took consecutive
+marker lines only and never wrote `start`, so a blank line, a wrapped line, a nested bullet or an
+indented fence ended the list. The user refused the prompting workaround ("I cannot ask claude
+every time to give output without blank line") — the renderer must take what the model writes.
+Implemented in `20-markdown.js` as `mdList`: an item owns blank lines and lines indented ≥ its
+content indent plus lazy continuation; a blank between items or between an item's blocks makes
+the list loose (items keep `<p>`, `.blk li > p`), else tight (bare text); items re-enter
+`mdBlocks` (nested lists, tables, fences free); `<ol start>` from the first marker. Fences
+indented under an item drop their indent (CommonMark). Fixture 86, control 17/38 failed pre-fix.
+**Rejected**: `start` only (fixes the number, still splits the list and leaves wrapped lines as
+paragraphs between items); splitting a list on a bullet-character change (CommonMark does; the
+model never mixes markers inside one list, and forgiving costs nothing); indented (no-fence)
+code blocks and `~~~` fences (backlog — never seen from the model except once under a list item).
+
+## 2026-09-08 — A code fence is a run of 3+ backticks and closes only on a run at least as long
+**Why**: a ````markdown fence (the model's way to fence markdown or a ``` block) split at its first
+three backticks, the leftover backtick made ` B0 \`` no longer a whole-line placeholder, and the
+block (a whole table, 1k tokens) vanished while `B0 \`` printed (user screenshot 2026-09-08).
+`(`{3,})…\1`*` in `20-markdown.js`; fixture 85, control 8/15 failed pre-fix; confirmed by key on a
+real turn the same day. **Rejected**: anchoring fences to line start (would drop the inline
+```x``` form, a separate backlog item); `~~~` fences (never emitted).
+
 ## 2026-09-05 — Checklist rows fold: gist on the first line, evidence under "Read more…"; folds hold no nested lists
 **Why**: rows had grown to 2,300 chars of evidence; the user wanted "1-2 line description, Read
 more collapsed". Shown on §3 first (conventions § Docs), approved, then the file. Only rows with

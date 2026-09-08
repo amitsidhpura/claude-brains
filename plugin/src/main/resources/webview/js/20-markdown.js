@@ -61,21 +61,94 @@
     return lines[i].indexOf('|') >= 0 && i + 1 < lines.length && mdIsSep(lines[i + 1]);
   }
   function renderMd(srcRaw) { return mdBlocks(esc(srcRaw), []); }
+  /* List item marker (CommonMark): indent, `-`/`*`/`+` or 1-9 digits + `.`/`)`, then 1-4 spaces
+     (or nothing). The indent is unbounded on purpose — the renderer has no indented-code block,
+     so a bullet four spaces in is still a bullet, not code. Groups: indent, marker, gap, text. */
+  const LI_RE = /^( *)([-*+]|\d{1,9}[.)])( {1,4}|$)(.*)$/;
+  // A line that would interrupt a paragraph (and so ends a list item's lazy continuation).
+  function mdBlockStart(lines, i) {
+    const l = lines[i];
+    return /^ B\d+ $/.test(l) || /^(#{1,6})\s/.test(l) || /^\s*(-{3,}|\*{3,})\s*$/.test(l) ||
+      MD_QUOTE.test(l) || LI_RE.test(l) || mdTableAt(lines, i);
+  }
+  /**
+   * One list starting at lines[i] (which matches LI_RE). Returns {html, i} with i past the list.
+   * CommonMark structure, which is what stops numbered lists restarting at `1.` (the user saw it
+   * "so many times", 2026-09-09): the OLD branches took consecutive marker lines only, so a
+   * blank line between items, a wrapped line indented under its item, a nested bullet or an
+   * indented fence all ended the list, and the next marker opened a fresh <ol> with no `start`.
+   * Rules: an item owns every following line that is blank or indented at least W (its content
+   * indent = indent + marker + gap), plus LAZY lines (unindented text directly after a non-blank
+   * line that is not a block start). A blank line followed by a sibling marker, or between an
+   * item's own blocks, makes the list LOOSE (items keep their <p>); otherwise it is tight and
+   * item text is emitted bare. Item bodies re-enter mdBlocks, so nested lists, tables and fence
+   * placeholders inside items come for free. Numbering follows the first marker (`start`), and
+   * `1. 1. 1.` counts up because the browser numbers the <li>s. A bullet-character change does
+   * NOT split a list (more forgiving than CommonMark; the model is consistent within one list).
+   */
+  function mdList(lines, i, blocks) {
+    const head = lines[i].match(LI_RE);
+    const ordered = /\d/.test(head[2]);
+    const items = [];
+    let loose = false;
+    while (i < lines.length) {
+      const m = lines[i].match(LI_RE);
+      if (!m || /\d/.test(m[2]) !== ordered) break;
+      const W = m[1].length + m[2].length + (m[3].length || 1);
+      const item = [m[4]];
+      i++;
+      let blanks = 0;
+      while (i < lines.length) {
+        const l = lines[i];
+        if (/^\s*$/.test(l)) { blanks++; i++; continue; }
+        const ind = l.match(/^ */)[0].length;
+        if (ind >= W) {
+          if (blanks) { loose = true; item.push(''); blanks = 0; }
+          item.push(l.slice(W)); i++; continue;
+        }
+        if (blanks || mdBlockStart(lines, i)) break;
+        item.push(l); i++;                       // lazy continuation
+      }
+      items.push(item);
+      if (blanks && i < lines.length) {
+        const n = lines[i].match(LI_RE);
+        if (n && /\d/.test(n[2]) === ordered) loose = true;
+      }
+    }
+    const tag = ordered ? 'ol' : 'ul';
+    const start = ordered ? parseInt(head[2], 10) : 1;
+    const attr = ordered && start !== 1 ? ' start="' + start + '"' : '';
+    return { i: i, html: '<' + tag + attr + '>' + items.map(function (it) {
+      return '<li>' + mdBlocks(it.join('\n'), blocks, !loose) + '</li>';
+    }).join('') + '</' + tag + '>' };
+  }
   /**
    * Block parser over ALREADY-ESCAPED markdown. Split out of renderMd so a blockquote can
    * re-enter it for its own contents — a quoted list stays a list instead of collapsing into one
    * run-on paragraph — without escaping the text a second time. `blocks` (fenced-code
    * placeholders) is shared with nested calls so a placeholder made by the outer pass still
-   * resolves when a nested one emits it.
+   * resolves when a nested one emits it. `tight` (a tight list item's body) emits paragraphs
+   * bare, without <p>, the way CommonMark renders them.
    */
-  function mdBlocks(src, blocks) {
+  function mdBlocks(src, blocks, tight) {
     // [^\s`]* not \w*: a language can carry punctuation, and \w* left the remainder in the body
     // (```c++ parsed as lang "c" + body "++\n…"). Unlabelled fences read as "code" so the header
     // is never an empty strip with a lone copy button.
-    src = src.replace(/```([^\s`]*)\n?([\s\S]*?)```/g, (m, lang, code) => {   // fenced code
+    // A fence is a run of THREE OR MORE backticks and closes only on a run at least as long
+    // (CommonMark; the extra backticks of a longer closer are eaten by the trailing `*). A fixed
+    // ``` used to split a ````markdown fence at its first three backticks: lang read "", the body
+    // began with the stray fourth backtick, the closer matched three of its four, and the one
+    // left behind made " B0 `" — no longer a whole-line placeholder — print literally while the
+    // block (a whole table) vanished (user sighting 2026-09-08; fixture 85).
+    // An indented fence (under a list item) drops up to its own indent from every body line, as
+    // CommonMark does; the indent itself stays in front of the placeholder so the list parser
+    // can claim the line for its item. The trailing strip also eats an indented closer's spaces.
+    src = src.replace(/(`{3,})([^\s`]*)\n?([\s\S]*?)\1`*/g, (m, fence, lang, code, offset, str) => {   // fenced code
+      const pre = str.slice(str.lastIndexOf('\n', offset - 1) + 1, offset);
+      if (/^ +$/.test(pre)) code = code.replace(new RegExp('^ {1,' + pre.length + '}', 'gm'), '');
       blocks.push('<div class="codeblock"><div class="cb-h"><span>' + esc(lang || 'code') +
         '</span><button class="copy" title="Copy">' + SVG_COPY + '</button></div><pre>' +
-        highlight(code.replace(/\n$/, '')) + '</pre></div>');
+        highlight(code.replace(/\n[ \t]*$/, '')) + '</pre></div>');
       return ' B' + (blocks.length - 1) + ' ';
     });
     const lines = src.split('\n');
@@ -114,24 +187,17 @@
         }).join('') + '</tr></thead>' + (rows ? '<tbody>' + rows + '</tbody>' : '') + '</table></div>';
         continue;
       }
-      if (/^\s*([-*+])\s+/.test(line)) {
-        let buf = [];
-        while (i < lines.length && /^\s*([-*+])\s+/.test(lines[i])) { buf.push('<li>' + inlineMd(lines[i].replace(/^\s*([-*+])\s+/, '')) + '</li>'); i++; }
-        out += '<ul>' + buf.join('') + '</ul>'; continue;
-      }
-      if (/^\s*\d+\.\s+/.test(line)) {
-        let buf = [];
-        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { buf.push('<li>' + inlineMd(lines[i].replace(/^\s*\d+\.\s+/, '')) + '</li>'); i++; }
-        out += '<ol>' + buf.join('') + '</ol>'; continue;
+      if (LI_RE.test(line)) {
+        const lst = mdList(lines, i, blocks);
+        out += lst.html; i = lst.i; continue;
       }
       // paragraph: gather consecutive normal lines
       let buf = [];
-      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^ B\d+ $/.test(lines[i]) &&
-             !/^(#{1,6})\s/.test(lines[i]) && !/^\s*([-*+]|\d+\.)\s/.test(lines[i]) && !MD_QUOTE.test(lines[i]) &&
-             !mdTableAt(lines, i)) {
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !mdBlockStart(lines, i)) {
         buf.push(lines[i]); i++;
       }
-      out += '<p>' + inlineMd(buf.join('\n')).replace(/\n/g, '<br>') + '</p>';
+      const para = inlineMd(buf.join('\n')).replace(/\n/g, '<br>');
+      out += tight ? para : '<p>' + para + '</p>';
     }
     return out;
   }

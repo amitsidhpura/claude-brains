@@ -12,6 +12,9 @@
 .blk p { margin: .45em 0; }
 .blk ul, .blk ol { margin: .4em 0; padding-left: 1.5em; }
 .blk li { margin: .2em 0; }
+/* a LOOSE list (blank lines between items) keeps each item's <p>; tighter than body paragraphs
+   so the list still reads as one list (CommonMark lists, 2026-09-09) */
+.blk li > p { margin: .25em 0; }
 .blk a { color: var(--blue); text-decoration: none; }
 .blk a:hover { text-decoration: underline; }
 .blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;

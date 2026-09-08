@@ -11,6 +11,9 @@
     const b = el('blk', '');
     b.innerHTML = renderMd('An assistant **text block** with `inline code`, a [link](#), a list:\n\n' +
       '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```\n\n' +
+      // a LOOSE ordered list starting past 1, with a nested bullet and a wrapped line
+      '3. Third step, loose (blank lines between items)\n\n4. Fourth step\n   - a nested bullet\n' +
+      '   - another one\n\n5. Fifth step, wrapped onto\n   a second line\n\n' +
       '| Page | URL | Template | Hits |\n|---|---|---|--:|\n' +
       '| Home | `/` | `front-page.php` | 1,204 |\n' +
       '| Shop | `/shop/` | `woocommerce/archive-product.php` | 318 |\n' +

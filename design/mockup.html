@@ -191,6 +191,23 @@
           <li>The null-safe operator <code>?-&gt;</code> short-circuits the whole chain.</li>
           <li>Prefer <code>str_contains($haystack, $needle)</code> over <code>strpos(...) !== false</code>.</li>
         </ul>
+        <!-- CommonMark lists (2026-09-09): a LOOSE ordered list keeps <p> per item and may start past 1; an
+             item owns its nested list and an indented fence; a tight nested list stays bare -->
+        <ol start="3">
+          <li><p>Third step, loose — blank lines between items keep this ONE list, numbered from the first marker.</p></li>
+          <li><p>Fourth step, with a nested tight list:</p>
+            <ul>
+              <li>a nested bullet</li>
+              <li>another one</li>
+            </ul>
+          </li>
+          <li><p>Fifth step, with a fence indented under the item:</p>
+            <div class="codeblock">
+              <div class="cb-h"><span>bash</span><button class="copy" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
+              <pre>composer <span class="hl-k">install</span> --no-dev</pre>
+            </div>
+          </li>
+        </ol>
         <p>See <a href="#">strict typing</a> and the <a href="#">RFC that introduced it</a> for the original rationale.</p>
       </div>
       </div>
