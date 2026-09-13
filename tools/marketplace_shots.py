@@ -181,16 +181,15 @@ idle();
 S3_RIGHT = COMMON + r"""
 window.onClaudeEvent(JSON.stringify({type:'__title', text:'Add CSV export'}));
 user('Approved — go ahead with the plan.');
-tool('Edit', '/home/you/shop/src/api/reports.js', true);
-tool('Write', '/home/you/shop/src/api/csv.js', true);
-tool('Bash', 'Run the CSV tests').after(ioBox([['IN','npm test -- --grep csv'],['OUT','✓ quotes fields with commas\n✓ empty report → header only\n2 passing (96ms)']]));
-md('The serializer streams rows — a 200k-line report never sits in memory.');
+// 1.29: a Bash command that edits a file gets its diff drawn under the IN/OUT box, through the
+// real builder — the CLI's bashEditDiff sidecar shape, one card per file.
+{ const box = ioBox([['IN','sed -i "s/max: 100/max: 500/" src/api/csv.js && npm test -- --grep csv'],['OUT','2 passing (96ms)']]);
+  tool('Bash', 'Raise the row cap, re-run the CSV tests').after(box);
+  appendBashDiff(box, { files: [{ filePath: '/home/you/shop/src/api/csv.js', created: false,
+    hunks: [{ oldStart: 8, oldLines: 1, newStart: 8, newLines: 1, lines: ['-const MAX_ROWS = { max: 100 };', '+const MAX_ROWS = { max: 500 };'] }] }], moreFiles: 0, changedFiles: [] }); }
 window.onClaudeEvent(JSON.stringify({type:'__files_changed', turn:1, files:[
   {path:'/home/you/shop/src/api/reports.js', added:1, removed:0, isNew:false},
-  {path:'/home/you/shop/src/api/csv.js', added:38, removed:0, isNew:true},
-  {path:'/home/you/shop/test/csv.test.js', added:22, removed:0, isNew:true}]}));
-queue = [{ text:'also add a test for the empty case', images:[] }];
-renderQueue();
+  {path:'/home/you/shop/src/api/csv.js', added:38, removed:0, isNew:true}]}));
 working('Wiring…', '9s', '304'); setContext(210000);
 """
 
