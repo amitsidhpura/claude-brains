@@ -1318,7 +1318,7 @@ auto-include selection, voice.
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
       — gotchas)
 - **16.4** ✅ **Plugin Verifier + Marketplace** — 0 warnings on PhpStorm 242→263; upload automated
-      on `release: published`; releases 0.4.0 → 0.13.1 all Approved
+      on `release: published`; releases 0.4.0 → 0.14.0 all Approved
 - **16.5** ✅ **Manual-test checklist completed** — 102/102 passed (the old "92" undercounted), 0
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below

@@ -392,11 +392,20 @@ re-read those before trusting memory here.
   a literal `--` inside an SVG comment kills the parse and the icon silently renders as nothing.
 
 ## Build / toolchain / release
+- **`gh release create` can return HTTP 500 and still leave a DRAFT release behind** (2026-09-13,
+  0.14.0): the draft (`untagged-…` URL, `isDraft:true`) had the title and notes but NO asset, and the
+  feed on `main` was already pushed — custom-repo users 404 until the asset exists. Recovery that
+  worked: `gh release view v0.14.0` (finds the draft by tag) → `gh release upload v0.14.0 <zip>
+  --clobber` → `gh release edit v0.14.0 --draft=false --notes-file …` (that call ALSO printed a 500,
+  yet the release came out published with `publishedAt` set — re-read the state, do not retry
+  blindly). Publishing the draft fires `release: published`, so the Marketplace upload still ran.
+  Order lesson stands: check `gh release view` before assuming a failed create did nothing.
 - **Right after a Marketplace upload, `api/plugins/33274/updates` does NOT list the new version** — it
   returns approved updates only; the upload itself is proven by the `marketplace-upload` run log's
   JSON (`"version":"0.12.2","approve":false`, update id; `gh run view <id> --log | grep -o
   '{[^}]*"version"[^}]*}'`). Approval followed within the hour on 0.12.1, 0.12.2 (2026-08-30), 0.12.4,
-  0.12.5, 0.13.0 (~35 min, 2026-09-05) and 0.13.1 (within the hour, 2026-09-09). Don't re-upload. Since 0.13.0 the Versions page shows an
+  0.12.5, 0.13.0 (~35 min, 2026-09-05), 0.13.1 (within the hour, 2026-09-09) and 0.14.0 (within the hour,
+  2026-09-13). Don't re-upload. Since 0.13.0 the Versions page shows an
   extra **"IDE run" verifier row** ("No issues occurred during the IDE run with the plugin installed")
   beside the 1.410 verifier rows — JetBrains now also boots an IDE with the plugin; a failure there
   would land AFTER the version is spent, like every Marketplace verdict.

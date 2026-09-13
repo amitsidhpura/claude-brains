@@ -25,7 +25,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   re-pinned (control 3/41 fail); `.card-b .plan-fb` override deleted. MT-6.10.
 - Totals: test 164/0, harness 856 → 870/0. The "readable sentences" webview diff was minifier noise at
   a ten-version hop — dropped (gotchas). `ls` is `eza` in Bash-tool shells: `ls -t` hung a background
-  task 22 min (gotchas). Everything committed and pushed on the user's ask at the end.
+  task 22 min (gotchas). Everything committed and pushed on the user's ask; then **0.14.0 released**
+  on the user's "go" after the full-notes gate (test 164/0, 8 verdicts Compatible, zip = jar + 6 OSS
+  deps): `gh release create` hit a GitHub HTTP 500 and left a DRAFT without the asset while the feed
+  already said 0.14.0 → view/upload/edit-publish recovered it in ~2 min (gotchas § Build); asset
+  `cmp` equal, `marketplace-upload` green, update id 1169274; **Approved** within the hour (user's
+  screenshot: IDE-run row + verifier rows all green). Context saved, committed and pushed on ask.
 
 ## 2026-09-09 (thirteenth) — 0.13.1 released as a patch; Approved within the hour
 - Load, then "list unreleased updates" → one commit since v0.13.0 (32c676c: fences + list parser,
