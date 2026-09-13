@@ -395,14 +395,19 @@
           if (box) { (t.io || t.el).after(box); maybeScroll(); }
         }
       }
+      // The result SIDECAR. The live user frame carries it as snake-case `tool_use_result`
+      // (measured 2026-09-13 on 2.1.270: stdout/stderr/interrupted/isImage/noOutputExpected/
+      // bashEditDiff — the 2026-08-05 "live carries no toolUseResult" finding predates that);
+      // the transcript spells it `toolUseResult`. Read both, so either wire shape works.
+      const tur = ev.tool_use_result || ev.toolUseResult || {};
       let txt = stripPlumbing((resultRaw || '').trim());   // tags off BEFORE the cut, same as replay (5.9)
-      if (!txt) return;
+      // Bash edit diff (1.29): drawn even when the result text is empty — the diff IS the record.
+      if (!txt) { appendBashDiff(t.io || t.el, tur.bashEditDiff); maybeScroll(); return; }
       if (!t.io) { t.io = ioBox([]); t.el.after(t.io); }
-      // The CLI's own truncation, above ours. Its facts live on `toolUseResult` for replay, but the
-      // live event carries none (probed 2026-08-05) — so read that if it ever appears, and otherwise
-      // parse the <persisted-output> wrapper out of the result text, which is where live gets them.
+      // The CLI's own truncation, above ours. Its facts ride the sidecar when present
+      // (persistedOutputSize/Path — not yet observed on the live frame), else parse the
+      // <persisted-output> wrapper out of the result text, which is where live gets them.
       // Unwrapping also keeps the raw tag off screen and makes what we cut real output.
-      const tur = ev.toolUseResult || {};
       const spill = persistedOutput(txt);
       const shown = spill ? spill.preview : txt;
       const cut = cutInfo(shown, LIM.outMax);
@@ -410,6 +415,7 @@
         tur.persistedOutputSize || (spill && spill.bytes),
         tur.persistedOutputPath || (spill && spill.path),
         undefined, undefined, { full: shown, tool: t.name }));   // 1.27: the marker opens all of it
+      appendBashDiff(t.io, tur.bashEditDiff);   // 1.29: the edit cards sit under the IN/OUT box
       maybeScroll();
     });
   }

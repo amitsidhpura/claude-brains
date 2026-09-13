@@ -108,7 +108,9 @@ re-probed headlessly at 2.1.241, 2.1.246, 2.1.250 and 2.1.251: no drops, no hint
 description change is `/dataviz`'s text at 2.1.251). 2026-09-04: the 2.1.260 roster (re-probed
 headlessly, 54 → 55 wire entries) added `/advisor` and `/reload-plugins` and dropped
 `/artifact-design` (its row stays, marked removed; the only other change is
-`/artifact-capabilities`' description text).
+`/artifact-capabilities`' description text). 2026-09-13: the 2.1.270 roster (re-probed headlessly, the 2.1.260 vsix binary as
+baseline, 56 → 57 wire entries) added `/output-style` only — no drops, no hint or description
+changes.
 Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
 relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
 are visible in the menu; every other built-in is hidden.
@@ -173,6 +175,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/import` | Hidden | [ ] |  | Import config from another AI coding agent |
 | `/insights` | Hidden | [ ] |  | Generate a report analyzing your Claude Code sessions |
 | `/mcp` | Hidden | [ ] |  | Manage MCP servers |
+| `/output-style` | Hidden | [ ] |  | List output styles or switch to one — hint `[style]`. Joined the roster at 2.1.269 (measured on 2.1.270, 2026-09-13); output styles are configuration, the terminal's half |
 | `/reload-plugins` | Hidden | [ ] |  | Activate pending plugin changes in the current session — hint `[--force]` **New in 2.1.260** (headless roster 2026-09-04; not yet driven through the panel) |
 | `/run-skill-generator` | Hidden | [ ] |  | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use wh… |
 | `/schedule` | Hidden | [ ] | `/routines` | Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule. |

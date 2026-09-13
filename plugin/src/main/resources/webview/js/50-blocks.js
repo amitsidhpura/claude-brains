@@ -48,6 +48,37 @@
     if (truncated) rows += diffRow('ctx', '  ', null, '… diff truncated');
     return rows;
   }
+  /* Bash edit diff (checklist 1.29). Since CLI 2.1.269 a Bash command that edits files reports the
+     edits in its result SIDECAR — `tool_use_result.bashEditDiff` on the live user frame,
+     `toolUseResult.bashEditDiff` on the transcript record — as {files:[{filePath, hunks:[…
+     structuredPatch-shaped: oldStart/oldLines/newStart/newLines/lines …], created}], moreFiles,
+     changedFiles}; the tool_result TEXT is unchanged ("(Bash completed with no output)"). MEASURED
+     2026-09-13 on 2.1.270 — fixture 87 step 1 is the real frame. One resolved edit card per file,
+     through fillAppliedCard: the surface an auto-approved Edit gets (4.4) and the same "✓ Applied"
+     reading — the record is that the edit ran. Drawn AFTER the IN/OUT box by both paths (live
+     onUserEvent, replay renderBlocks) through this one function, so they cannot drift. The CLI
+     already caps what it reports (`moreFiles` counts the rest); MAX_BASH_DIFF_FILES caps what we
+     draw, and both remainders fold into one ↳ note (docs/limits.md). Rows share MAX_DIFF_ROWS. */
+  const MAX_BASH_DIFF_FILES = 10;
+  function appendBashDiff(anchor, bed) {
+    if (!anchor || !bed || typeof bed !== 'object') return anchor;
+    const files = Array.isArray(bed.files) ? bed.files : [];
+    let last = anchor;
+    files.slice(0, MAX_BASH_DIFF_FILES).forEach(function (f) {
+      if (!f || !Array.isArray(f.hunks) || !f.hunks.length) return;
+      const card = document.createElement('div'); card.className = 'card warn';
+      if (!fillAppliedCard(card, { text: 'Bash', file: f.filePath, patch: f.hunks })) return;
+      last.after(card); last = card;
+      foldBlock(card.querySelector('.diff'));
+    });
+    const hidden = Math.max(0, files.length - MAX_BASH_DIFF_FILES) +
+      (typeof bed.moreFiles === 'number' && bed.moreFiles > 0 ? bed.moreFiles : 0);
+    if (hidden > 0) {
+      const n = noteLine('+' + hidden + ' more file' + (hidden > 1 ? 's' : '') + ' changed — diff not shown');
+      if (n) { last.after(n); last = n; }
+    }
+    return last;
+  }
 
   /* ---------- shared block builders ----------
      Live and replay draw the same structures through these, so the two paths cannot drift —

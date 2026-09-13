@@ -42,6 +42,22 @@
     t2.innerHTML = '<b>Bash</b><span class="t-desc">Run the test suite</span>';
     t2.after(ioBox([['IN', 'npm test'], ['OUT', 'PASS  2 passed, 0 failed']]));
 
+    // Bash edit diff (1.29) — the result sidecar's cards under the IN/OUT box, through
+    // appendBashDiff itself: two reported files plus the CLI's own `moreFiles` folded into the note.
+    const t2b = el('tool-line', '');
+    t2b.innerHTML = '<b>Bash</b><span class="t-desc">Bump the rate and add a changelog entry</span>';
+    const t2bBox = ioBox([
+      ['IN', "sed -i 's/rate = 0.1/rate = 0.15/' src/util/math.ts && echo '- rate 0.15' >> CHANGELOG.md"],
+      ['OUT', '(Bash completed with no output)']]);
+    t2b.after(t2bBox);
+    appendBashDiff(t2bBox, { files: [
+      { filePath: (projectRoot || '/home/you/project') + '/src/util/math.ts', created: false,
+        hunks: [{ oldStart: 41, oldLines: 2, newStart: 41, newLines: 2,
+          lines: [' // pricing', '-export const rate = 0.1;', '+export const rate = 0.15;'] }] },
+      { filePath: (projectRoot || '/home/you/project') + '/CHANGELOG.md', created: false,
+        hunks: [{ oldStart: 11, oldLines: 0, newStart: 12, newLines: 1, lines: ['+- rate 0.15'] }] },
+    ], moreFiles: 2, changedFiles: [] });
+
     // tool line — failure (red dot)
     const t3 = el('tool-line', ''); t3.classList.add('fail');
     t3.innerHTML = '<b>Bash</b><span class="t-desc">Lint the project</span>';

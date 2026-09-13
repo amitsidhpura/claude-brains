@@ -1,7 +1,7 @@
 {
  "item": "checklist 5.6",
  "branch": "plan comments: select → pill → anchored row; comments ride the deny message in the reference client's format, or the approve notes; rows survive as the decided card's record",
- "provenance": "permission_request is ChatPanel's synthetic shape, copied from fixture 48. The deny wire format (prefix + 'Comments on the plan:' + [Re: \"…\"] lines) is the VS CODE CLIENT'S OWN, measured byte-for-byte off its transcript 2026-08-23 (~/.claude/projects/-home-syncroze-Sites-claude-vscode/4327de3b…); RenderLimitsTest pins the same strings in window.LIMITS. The selection→pill→composer flow and the full-decision-surface-with-comments behaviour are this feature's own (user's call 2026-08-23, diverging from the reference client's forced keep-planning) — self-consistency evidence. __bridge is taped (sandbox-only run). Negative control: run against a build lacking the 5.6 commit — the DISCRIMINATING rows fail null-safe.",
+ "provenance": "permission_request is ChatPanel's synthetic shape, copied from fixture 48. The deny wire format (prefix + 'Comments on the plan:' + [Re: \"…\"] lines) is the VS CODE CLIENT'S OWN, measured byte-for-byte off its transcript 2026-08-23 (~/.claude/projects/-home-syncroze-Sites-claude-vscode/4327de3b…); RenderLimitsTest pins the same strings in window.LIMITS. The selection→pill→composer flow and the full-decision-surface-with-comments behaviour are this feature's own (user's call 2026-08-23, diverging from the reference client's forced keep-planning) — self-consistency evidence. __bridge is taped (sandbox-only run). Negative control: run against a build lacking the 5.6 commit — the DISCRIMINATING rows fail null-safe. 2026-09-13 (option 2 + 5, user's report that a second selection while composing does nothing and nothing says why): steps 8-9 and the step-2 placeholder assert are this feature's own behaviour (self-consistency); step 5's 'typed, not entered' + Approve already pinned draft-on-decision since 2026-08-23. NEGATIVE CONTROL RUN 2026-09-13 against the pre-change build (the sandbox still on the 1.29 + tab-menu JS; steps written first): 10 of the 14 new asserts FAILED — the placeholder text, and in steps 8-9 every post-selection reading (rows 0 instead of 1, composer still open, pill 0, mark count unchanged); the 4 that passed are the precondition asserts (draft typed / composer open on A / A's mark on). The 45 pre-existing asserts all passed. On the new build 2026-09-13: 59/59; full harness 870/0.",
  "steps": [
   {
    "note": "plan card arrives; select text in the body → the comment pill appears",
@@ -55,8 +55,8 @@
    "expect": [
     {
      "js": "(function(){ var p=document.querySelector('.plan-add'); if(!p) return 'no pill'; p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); return ci ? ci.placeholder : 'no composer'; })()",
-     "equals": "Comment on this part of the plan",
-     "why": "DISCRIMINATING: composer row opens with its own placeholder"
+     "equals": "Comment on this part — Enter adds, Esc cancels",
+     "why": "DISCRIMINATING (2026-09-13, option 5): the composer's placeholder states the commit rule"
     },
     {
      "js": "(function(){ var cs=document.querySelector('.plan-cs'); if(!cs) return 'no cs'; var p=cs.previousElementSibling, n=cs.nextElementSibling; return (p?p.className:'-')+'|'+(n?n.className:'-'); })()",
@@ -323,6 +323,106 @@
      "js": "(function(){ window.__bridge = window.__realBridge53 || window.__bridge; return true; })()",
      "equals": true,
      "why": "GUARD: bridge untaped for later fixtures"
+    }
+   ]
+  },
+  {
+   "note": "2026-09-13 option 2: a FILLED draft + a new selection → the draft commits as a row, the pill appears for the new selection, clicking it composes on the new anchor",
+   "setup": "",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pc3",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Wrap network calls in a retry helper\\n2. Backfill the tests\"}",
+     "suggestions": "[]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); var tn=blk.querySelectorAll('li')[0].firstChild; var r=document.createRange(); r.setStart(tn,5); r.setEnd(tn,18); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ var p=document.querySelector('.plan-add'); if(!p) return res('no pill'); p.onclick(); var ci=document.querySelector('.plan-cs .compose input'); if(!ci) return res('no composer'); ci.value='note A'; res('draft typed'); }, 50); }); })()",
+     "equals": "draft typed",
+     "why": "composer open on anchor A with a typed, uncommitted draft"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); var tn=blk.querySelectorAll('li')[1].firstChild; var r=document.createRange(); r.setStart(tn,0); r.setEnd(tn,8); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ res((function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()); }, 50); }); })()",
+     "contains": "\"rows\":1",
+     "why": "DISCRIMINATING: the second selection COMMITS the draft (was: silently ignored while composing)"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"rowText\":\"note A\"",
+     "why": "the committed row carries the typed text"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"compose\":false",
+     "why": "the old composer is closed — one open draft at a time, settled rather than blocked"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"pill\":1",
+     "why": "DISCRIMINATING: the pill appears for the new selection"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"marks\":1",
+     "why": "A keeps its committed mark; B has none until its composer opens"
+    },
+    {
+     "js": "(function(){ var p=document.querySelector('.plan-add'); if(!p) return 'no pill'; p.onclick(); return (function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })(); })()",
+     "contains": "\"composeAnchor\":\"“Backfill”\"",
+     "why": "clicking the pill composes on the NEW anchor"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"marks\":2",
+     "why": "A committed + B pending, both marked"
+    }
+   ]
+  },
+  {
+   "note": "2026-09-13 option 2: an EMPTY draft + a new selection → the empty draft is cancelled (its mark unwrapped), the pill appears for the new selection",
+   "setup": "",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "pc4",
+     "tool": "ExitPlanMode",
+     "input": "{\"plan\": \"## Steps\\n1. Wrap network calls in a retry helper\\n2. Backfill the tests\"}",
+     "suggestions": "[]"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); var tn=blk.querySelectorAll('li')[0].firstChild; var r=document.createRange(); r.setStart(tn,5); r.setEnd(tn,18); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ var p=document.querySelector('.plan-add'); if(!p) return res('no pill'); p.onclick(); res((function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()); }, 50); }); })()",
+     "contains": "\"compose\":true",
+     "why": "composer open on anchor A, nothing typed"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"marks\":1",
+     "why": "A's pending mark is on"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); var tn=blk.querySelectorAll('li')[1].firstChild; var r=document.createRange(); r.setStart(tn,0); r.setEnd(tn,8); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); blk.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); return new Promise(function(res){ setTimeout(function(){ res((function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()); }, 50); }); })()",
+     "contains": "\"rows\":0",
+     "why": "DISCRIMINATING: an empty draft is cancelled, not committed as an empty row"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"compose\":false",
+     "why": "the empty composer is gone"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"marks\":0",
+     "why": "DISCRIMINATING: A's pending mark was unwrapped"
+    },
+    {
+     "js": "(function(){ var cards=document.querySelectorAll('.card.plan'); var card=cards[cards.length-1]; var blk=card.querySelector('.blk'); return JSON.stringify({rows: card.querySelectorAll('.plan-cs .plan-c:not(.compose)').length, rowText: (card.querySelector('.plan-cs .plan-c:not(.compose) .c-t')||{}).textContent||'', compose: !!card.querySelector('.plan-c.compose'), composeAnchor: (card.querySelector('.plan-c.compose .c-a')||{}).textContent||'', marks: blk.querySelectorAll('mark.plan-anchor').length, pill: card.querySelectorAll('.plan-add').length}); })()",
+     "contains": "\"pill\":1",
+     "why": "DISCRIMINATING: the pill appears for the new selection"
     }
    ]
   }

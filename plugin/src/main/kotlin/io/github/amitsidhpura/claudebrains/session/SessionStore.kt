@@ -496,6 +496,9 @@ object SessionStore {
         var uuid: String? = null
         var isError: Boolean = false
         var patch: JsonElement? = null     // structuredPatch hunks (authoritative diff + line numbers)
+        // Bash's `bashEditDiff` sidecar (1.29, CLI 2.1.269+): {files:[{filePath, hunks, created}],
+        // moreFiles, changedFiles} — passed through whole; the renderer (appendBashDiff) caps it.
+        var bashDiff: JsonObject? = null
         var tweaked = false                // the applied edit differs from the proposed one (3.5)
         var input: JsonObject? = null      // the tool_use input, for the tweak comparison; never serialized
         var files: List<String>? = null    // paths the request's edit tools touched (3.6, on `done`)
@@ -573,6 +576,7 @@ object SessionStore {
             level?.let { put("level", it) }
             if (isError) put("isError", true)
             patch?.let { put("patch", it) }
+            bashDiff?.let { put("bashDiff", it) }
             content?.let { put("content", it) }
             oldStr?.let { put("oldStr", it) }
             newStr?.let { put("newStr", it) }
@@ -1447,6 +1451,12 @@ object SessionStore {
 
         res?.get("structuredPatch")?.takeIf { it is JsonArray && it.jsonArray.isNotEmpty() }
             ?.let { item.patch = it }
+        // Bash edit diff (1.29): the CLI (2.1.269+, measured 2.1.270 on 2026-09-13) reports the files
+        // a Bash command edited as structuredPatch-shaped hunks on the sidecar. Passed through whole
+        // so live (which reads the same object off `tool_use_result`) and replay draw identical
+        // cards from one builder; the file and row caps are the renderer's (MAX_BASH_DIFF_FILES,
+        // MAX_DIFF_ROWS).
+        (res?.get("bashEditDiff") as? JsonObject)?.takeIf { it["files"] is JsonArray }?.let { item.bashDiff = it }
         // Tweak-travel (3.5): the patch above already shows the edit that RAN; this says why it
         // differs from the block the model proposed. Needs the original input, kept on the item.
         if (res != null && item.input != null && item.text in setOf("Edit", "Write")) {

@@ -807,6 +807,12 @@ most of them.
   only after held-back results flush) that could harden the queue drain if `onResult` proves racy.
 - **`elicitation`** — MCP elicitation forwarded as a control request; answered `{action:"decline"}`
   since 2026-08-29 (the bare `{}` ack was schema-invalid). No form; no local MCP server elicits.
+- **2.1.270 host-facing controls** (audit 2026-09-13) — `get_hooks_listing` → `{eventCatalog,
+  events, hooks, policy}`, `list_permission_rules` → `{state}`, `reload_output_styles` →
+  `{available_output_styles}`, `get_memory_dialog` (`@internal`) → `{auto_dream, auto_memory,
+  files, folders}`: all answer `success` over stdio with the panel's flags — the data behind VS
+  Code's Hooks / Permission-rules / output-style dialogs, the terminal's half (checklist 11.1).
+  `system/dev_intent` (`kind:"ios_app"…`) is schema-only, unprobed.
 
 **The by-design list is a decision against EXISTING capability, not a bet on a missing one**
 (2.1.222 sweep): `claude_authenticate` + OAuth callbacks (login), `get_usage` / `get_context_usage`
@@ -868,6 +874,17 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
   returns a `tool_reference` content block live (12).
 - A PreToolUse hook `permissionDecision:"deny"` yields no hook event — only a `tool_result` with
   `is_error:true` whose content is the hook's reason (22).
+- **`bashEditDiff`** (CLI 2.1.269+, MEASURED 2.1.270 2026-09-13): when a Bash command edits files
+  the sidecar gains `bashEditDiff {files:[{filePath, hunks:[{oldStart, oldLines, newStart,
+  newLines, lines:["+…"]}], created}], moreFiles, changedFiles}` — live in the user frame's
+  `tool_use_result`, persisted in `toolUseResult`; the `tool_result` text is unchanged. Gated by
+  the `bashEditDiffEnabled` setting — MEASURED 2026-09-13: attached in `auto` (and, per the binary,
+  `bypassPermissions`) by default, NOT in `default` or `acceptEdits`, and in any mode once the user
+  setting is `true`; `CLAUDE_CODE_BASH_EDIT_DIFF` overrides. Drawn as resolved edit cards under the IN/OUT box
+  (checklist 1.29, built 2026-09-13). Same measurement, wider fact: the LIVE user frame now carries
+  the whole sidecar as snake-case `tool_use_result` (stdout, stderr, interrupted, isImage,
+  noOutputExpected, bashEditDiff) — the 2026-08-05 "live carries no toolUseResult" note is out of
+  date; `onUserEvent` reads both spellings.
 
 ### `system/*` subtype fields (live)
 - `system/informational` `level ∈ info|notice|suggestion|warning`; a `UserPromptSubmit` hook exit 2

@@ -100,10 +100,9 @@
 .card .cmd[contenteditable]:focus { outline: none; border-color: var(--warn-border); }
 .card.cmd-edited.cmd-compound .card-menu .popup-item:not(.dest),
 .card.cmd-edited.cmd-compound .card-menu .popup-h { display: none; }
-/* The same field inline in an ordinary card's button row (3.7): fills what the buttons leave,
-   wraps under them when the row is tight (.card-b wraps), and drops the block-level margin the
-   plan card's placement needs. 160px is the least width a short note stays readable at. */
-.card-b .plan-fb { flex: 1 1 160px; width: auto; margin-top: 0; }
+/* The same field on an ordinary card (3.7) sits ABOVE the button row too, since 2026-09-13 — it
+   was inline in .card-b until then, and as a 34px flex item it stretched every 26px button beside
+   it (user's screenshot). The block rule above is all it needs; no per-placement override. */
 
 /* Plan comments (checklist 5.6): select text in the plan body, anchor a note to it. Comment
    rows sit between the plan body and the decision surface. The FULL decision surface stays —

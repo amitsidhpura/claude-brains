@@ -235,6 +235,48 @@ class SessionStoreTest {
     }
 
     /**
+     * Bash edit diff (1.29): `toolUseResult.bashEditDiff` (CLI 2.1.269+; the record below is the
+     * real 2.1.270 shape measured 2026-09-13) travels to the renderer whole as `bashDiff`, beside
+     * the unchanged OUT text; a Bash record without the sidecar sends nothing.
+     */
+    @Test
+    fun `a Bash edit diff sidecar travels as bashDiff`() {
+        val jsonl = listOf(
+            """{"type":"user","timestamp":"2026-09-13T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"append a line"}]}}""",
+            """{"type":"assistant","timestamp":"2026-09-13T10:00:01.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"bash1","name":"Bash","input":{"command":"printf 'probe line\n' >> probe_bash_diff.txt","description":"Append a probe line"}}]}}""",
+            """{"type":"user","timestamp":"2026-09-13T10:00:02.000Z","toolUseResult":{"stdout":"","stderr":"","interrupted":false,"isImage":false,"noOutputExpected":false,"bashEditDiff":{"files":[{"filePath":"/home/syncroze/Sites/claude-brains-testing/probe_bash_diff.txt","hunks":[{"oldStart":0,"oldLines":0,"newStart":1,"newLines":1,"lines":["+probe line"]}],"created":true}],"moreFiles":0,"changedFiles":["/home/syncroze/Sites/claude-brains-testing/probe_bash_diff.txt"]}},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"bash1","content":"(Bash completed with no output)"}]}}""",
+            """{"type":"assistant","timestamp":"2026-09-13T10:00:03.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"bash2","name":"Bash","input":{"command":"echo hi"}}]}}""",
+            """{"type":"user","timestamp":"2026-09-13T10:00:04.000Z","toolUseResult":{"stdout":"hi","stderr":"","interrupted":false,"isImage":false,"noOutputExpected":false},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"bash2","content":"hi"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-bashdiff", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "bashdiff.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val tools = SessionStore.readTranscript(CWD, "bashdiff")
+                .filter { it["role"]?.jsonPrimitive?.content == "tool" && it["text"]?.jsonPrimitive?.content == "Bash" }
+            assertEquals(2, tools.size)
+            val withDiff = tools[0]
+            val files = withDiff["bashDiff"]!!.jsonObject["files"]!!.jsonArray
+            assertEquals(1, files.size, "one reported file, one card")
+            assertEquals(
+                "+probe line",
+                files[0].jsonObject["hunks"]!!.jsonArray[0].jsonObject["lines"]!!.jsonArray[0].jsonPrimitive.content,
+                "the hunk travels verbatim — the renderer numbers rows off oldStart/newStart itself",
+            )
+            assertEquals("(Bash completed with no output)", withDiff["out"]!!.jsonPrimitive.content,
+                "the OUT box keeps the unchanged result text beside the diff")
+            assertNull(tools[1]["bashDiff"], "a Bash record without the sidecar sends no bashDiff")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * A LOCAL built-in's output (`/context`, `/recap`, …) persists as `system/local_command` with
      * the text inside `<local-command-stdout>…</local-command-stdout>` — while the live wire spells
      * the SAME content as a bare whole-message assistant frame (measured 2026-08-15, CLI 2.1.233,

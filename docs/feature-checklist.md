@@ -3,22 +3,25 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.260, last full re-audit 2026-09-04)
-- VS Code extension — 2.1.260 from the Marketplace vsix (runbook step 3; `~/.vscode/extensions/`
-  still held 2.1.251, VS Code had not auto-updated); the local `reference/anthropic-claude-code/`
-  extraction is kept at the newest audited version as the diff base for the NEXT audit
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.260`; the 2.1.251 baseline binary (no
-  longer on disk) came out of the 2.1.251 vsix's `resources/native-binary/`; headless roster in
+**References** (both on 2.1.270, last re-audit 2026-09-13; last FULL-SURFACE audit 2026-09-04 at 2.1.260)
+- VS Code extension — 2.1.270 from `~/.vscode/extensions/anthropic.claude-code-2.1.270-linux-x64`
+  (auto-updated this time), diffed against the 2.1.260 extraction; the local
+  `reference/anthropic-claude-code/` extraction is re-synced to the newest audited version after
+  each audit as the diff base for the NEXT one
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.270`; the 2.1.260 baseline binary (no
+  longer on disk) came out of the 2.1.260 vsix's `resources/native-binary/`; headless roster in
   `docs/slash-commands.md`
+- Public CHANGELOG (`reference/claude-code-log`, a clone of `anthropics/claude-code`) — read
+  2.1.261 → 2.1.270 for LEADS only (runbook step 3b, first used 2026-09-13); no mark rests on it
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.260, 2026-09-04 full-surface audit) — 93 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 47 ➖ (140 rows) — no open rows
+**At a glance** (2.1.270, re-audit 2026-09-13; full-surface audit 2026-09-04 at 2.1.260) — 94 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 47 ➖ (141 rows) — no open rows
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** none — the user is taking ALL ten [NEW] rows of the 2026-09-04
-  full-surface audit ("finish all even if small"); 6.9, 6.5, 4.7, 4.8, 2.12, 3.7 and 3.8 shipped, 4.9
-  deferred 2026-09-05. none — the last three (1.26 banner frames, 1.28 withdrawn asks, 1.27 full IN/OUT in an editor)
-  shipped 2026-09-05; 13.3 stays deferred
+- **Awaiting a decision ([DECIDE]):** none — 1.29 (the one row the 2.1.270 audit added) was taken
+  and built the same day, 2026-09-13. The ten rows of the 2026-09-04 full-surface audit are settled:
+  1.26–1.28, 2.12, 3.7, 3.8, 4.7, 4.8, 6.5 and 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3
+  deferred 2026-09-04
 
 **Status marks**
 
@@ -44,7 +47,7 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Row shape** — `**id** mark [effort] **Name** [tags] — gist`, the gist one to two lines of what
@@ -93,6 +96,54 @@ has no literal in the binary and § 12 has zero local records — unknown if it 
 `task_summary`/`turn_duration` (not on a plain turn); SandboxNetworkAccess asks (a bespoke card
 header, needs sandbox on); `post_turn_summary`/`away_summary` (`@internal`). Agent transcripts
 and inventories in the 2026-09-04 session scratchpad (`full/`).
+
+</details>
+
+<details><summary><b>Re-audit 2026-09-13 (2.1.260 → 2.1.270)</b></summary>
+
+Ten versions in one hop, everything measured; the first audit to read the public CHANGELOG
+(`reference/claude-code-log`, 2.1.261 → 2.1.270, runbook step 3b) for LEADS before the diffs —
+no mark below rests on a changelog line. Extension (2.1.270 from `~/.vscode/extensions/`, diffed
+against the 2.1.260 extraction): the same twelve `tool("…")` registrations (counted both sides,
+not a vacuous diff), no new `tengu_*` gate; `contributes` gained one command
+(`claude-vscode.focusLastMessage`, a11y — 12.4) and one setting (`archiveInactiveSessions`,
+default 14 days — 8.10) and LOST the session-tab context menus (Rename / Add to group / Mark
+unread — 8.10 fact updated); 26 new `case` labels, all host RPC for the terminal's half or
+internals: a Hooks dialog (`get_hooks_listing`, `edit_hook`), a Permission-rules dialog
+(`list_permission_rules`, `add_permission_rules`, `remove_permission_rule`), MCP add/remove
+(`add_mcp_server`, `remove_mcp_server`), an output-style builder (`create_output_style`,
+`get_output_style_locations`), `update_plugin`, `reload_plugins`, `refresh_claude_settings`,
+`get_applied_settings` (all 11.1); an agent map (`stop_subagent`, `get_subagent_transcript` —
+11.4); `accept_diff`, `bridgeSpawn`, `await_config_home_request`, `webview_focused` and six enum
+values (`any class cli literal star busy waiting`) — internals; `exec` removed. Behaviour
+changes with NO new label, surfaced only by the changelog: the current-file chip's X (no such
+chip here), a fold button on prompt cards (ours are inline in the transcript — nothing to fold,
+3.2), the flat model list (9.1), Left/Right to pick the always-allow destination (4.8; we bind no
+keys, 12.4), Cancel on Switch account (10.1), subagent progress rows in Focus view (12.6), a
+CRLF diff-accept fix (3.2 — our own Windows CRLF check is still owed). Settings schema:
+`bashEditDiffEnabled`, `bashOutputMaxChars`, `taskOutputMaxChars`, `maxEffortLevel` (top-level
+and per `modelSettings`), `prependPlugins`/`appendPlugins`, `gatewayInternalNetworks`;
+`keybindingFlavor` deprecated — all the terminal's half. CLI typed vocabulary grew five subtypes
+(98 → 103): `get_hooks_listing`, `list_permission_rules`, `reload_output_styles`,
+`get_memory_dialog` (`@internal`) — all four PROBED over stdio 2026-09-13 with the panel's
+flags, all answer `success` (`{eventCatalog, events, hooks, policy}`, `{state}`,
+`{available_output_styles}`, `{auto_dream, auto_memory, files, folders}`) — and the `system`
+subtype `dev_intent` (`kind:"ios_app"…`, schema-only, unprobed; unlisted `system` subtypes fall
+through `70-events.js` untouched — 1.26). `update_settings` allowlist still
+`new Set(["outputStyle"])` (13.3 watch, unchanged). Bare `initialize` on both binaries: two new
+top-level keys (`remote_control_auto_connect_default:true`, `user_output_styles_dir`), same
+5-model roster; commands 56 → 57: `/output-style` (`[style]`, "List output styles or switch to
+one") added, no drops, no hint or description changes (`docs/slash-commands.md`). MEASURED on a
+real turn (2.1.270, `tools/probe_stdio.py`, testing repo): a Bash command that appends to a
+file now carries `bashEditDiff {files:[{filePath, hunks:[{oldStart, oldLines, newStart,
+newLines, lines:["+…"]}], created}], moreFiles, changedFiles}` in the user frame's
+`tool_use_result` sidecar AND in the transcript's `toolUseResult` (replayable); the
+`tool_result` content itself is unchanged ("(Bash completed with no output)") — new row
+**1.29**, built the same day. `/effort max` under a scratch `maxEffortLevel:"medium"`: the CLI answers
+"Effort 'max' exceeds the cap … set to 'medium' instead (this session only)" as the turn's text
+— the slider's confirmation line already carries it (9.2). Housekeeping: § 16 counts refreshed;
+the [NEW] tags of the ten 2026-09-04 rows came off (shipped in 0.13.0). Tapes and label sets in
+the 2026-09-13 session scratchpad (`cli/`, `ext/`).
 
 </details>
 
@@ -361,7 +412,7 @@ auto-include selection, voice.
   `onClaudeEvent` proves the render, a real grace window is unforceable by design (MT-9.6
   pattern).
   </details>
-- **1.26** ✅ **Banner-class `system` frames** [NEW] — the CLI's one-line notices (a git commit or
+- **1.26** ✅ **Banner-class `system` frames** — the CLI's one-line notices (a git commit or
   push it saw, a hook error, memories saved, a published PR link…) draw as muted status lines
   instead of being dropped; the CLI's live "what it's doing" phrase pins the working verb.
   <!-- --><details><summary>Read more…</summary>
@@ -395,8 +446,11 @@ auto-include selection, voice.
   warning-level line keeps the alert. `infoLine` grew an optional glyph parameter for it. The
   real-panel screenshot of the glyph build caught the PR anchor in the browser's default blue —
   `.status a` now wears `--blue` like `.blk a` (control: 1 fail on the rule-less build).
+  2.1.270 audit (2026-09-13): the CLI added a `dev_intent` `system` subtype (`kind:"ios_app"…`,
+  schema-only, unprobed); unlisted `system` subtypes fall through `70-events.js` untouched, so
+  nothing to do.
   </details>
-- **1.27** ✅ **Open a tool's full IN/OUT in an editor tab** [NEW] — the cut marker under a
+- **1.27** ✅ **Open a tool's full IN/OUT in an editor tab** — the cut marker under a
   truncated IN or OUT box reads "open in editor" and opens the whole text, read-only, in an
   editor tab; live and replayed rows alike. The CLI's own spills keep opening their file.
   <!-- --><details><summary>Read more…</summary>
@@ -417,7 +471,7 @@ auto-include selection, voice.
   `SessionStoreToolTextTest` (3) on the real replay-sample.jsonl, `./gradlew test` 163.
   Hand-tested 2026-09-05 (MT-1.27): live and resumed markers both opened the full output.
   </details>
-- **1.28** ✅ **Withdrawn asks: `control_cancel_request`** [NEW] — when the CLI stops waiting on a
+- **1.28** ✅ **Withdrawn asks: `control_cancel_request`** — when the CLI stops waiting on a
   permission card (you pressed Stop, the ask timed out, the CLI retired it), the card settles as
   "✗ Withdrawn — Claude stopped waiting" and a late click sends nothing; the editor diff tab
   closes with it.
@@ -447,8 +501,49 @@ auto-include selection, voice.
   CLI's auto-deny OUT box above a withdrawn card is left as is (user's call; suppressing it would be
   the 3.7 `cardDenies` idiom with the CLI's stock text).
   </details>
+- **1.29** ✅ **Bash edit diff** [NEW] — since CLI 2.1.269 a Bash command that edits files carries
+  a per-file unified diff in its result sidecar; the panel draws one resolved edit card per file
+  under the Bash line's IN/OUT box, the way an auto-approved Edit is drawn, live and on replay.
+  The CLI attaches it in auto / bypassPermissions by default and in every mode once
+  `bashEditDiffEnabled: true` is in the user's settings — the terminal's half.
+  <!-- --><details><summary>Read more…</summary>
+  Built 2026-09-13 (user's "lets implement 1.29", the same day the audit found it). MEASURED on
+  2.1.270 (`tools/probe_stdio.py`, one Bash `printf … >> file` turn in the testing repo): the
+  `tool_result` content is unchanged ("(Bash completed with no output)"); the diff rides the user
+  frame's `tool_use_result` (live — the whole sidecar now reaches the live wire, snake-case; the
+  2026-08-05 "live carries no toolUseResult" note is out of date) and the transcript's
+  `toolUseResult` (replay) as `bashEditDiff {files:[{filePath, hunks:[{oldStart, oldLines,
+  newStart, newLines, lines:["+…"]}], created}], moreFiles, changedFiles}`, gated by the CLI
+  setting `bashEditDiffEnabled` (default on; it was on for the default-mode probe with nothing
+  written — because that probe came up in AUTO mode, see the gate below). ONE builder,
+  `appendBashDiff` in `50-blocks.js`: `fillAppliedCard` per file (the 4.4
+  surface — "<b>Bash</b> on <code>path</code>", `patchRows` over the CLI's own hunks with their
+  line numbers, "✓ Applied": the record is that the edit ran), folded like every diff, placed
+  after the IN/OUT box; drawn on every result, error or not (the edit happened). Caps: the CLI
+  caps first (`moreFiles`), `MAX_BASH_DIFF_FILES` = 10 caps what we draw, and both remainders add
+  up in one ↳ note "+N more files changed — diff not shown" (docs/limits.md); rows share
+  `MAX_DIFF_ROWS`. Live: `onUserEvent` (75-retraction.js) reads `ev.tool_use_result ||
+  ev.toolUseResult`. Replay: `SessionStore.applyToolResult` passes `bashEditDiff` through whole as
+  `bashDiff`, `renderBlocks` calls the same builder in the same slot. Fixture 87 (27 asserts: the
+  real frame, two files + moreFiles, the twelve-file cap, an is_error result, the replay twin via
+  `renderBlocks`, a no-sidecar control; NEGATIVE CONTROL on the pre-change build 22 fail / 5 pass,
+  the 5 guarding untouched paths); harness 829 → 856; `SessionStoreTest` "a Bash edit diff sidecar
+  travels as bashDiff" (163 → 164); mockup + gallery carry a two-file example with the note.
+  THE GATE, measured 2026-09-13 after the first real-panel turn (plan → manual) drew NO card:
+  `--mode default` → no sidecar; `--mode acceptEdits` → none; `--mode default` with a scratch
+  user `settings.json {"bashEditDiffEnabled": true}` → present; the real panel switched to auto →
+  card drawn ("Bash on live_probe.txt", `+ live probe line`, ✓ Applied, under the IN/OUT box;
+  screenshot in the 2026-09-13 session scratchpad `live_1_29.png`). The binary agrees:
+  `CLAUDE_CODE_BASH_EDIT_DIFF` env wins, then the setting (`false` anywhere kills it, `true` in
+  user/flag/policy enables it), else `mode === "auto" || "bypassPermissions"`; the CLI also drops
+  the whole diff over 400 lines or 64 000 chars (constants read from 2.1.270, not probed). No panel
+  toggle for it — configure in the terminal. Hand-tested 2026-09-13 (MT-1.29, § 17.5): gated case,
+  live card in Auto, replay twin, and a two-file `sed && printf` command drawing a -/+ pair with a
+  context line plus a second card — so multi-file sidecars ARE now seen on the wire (two files,
+  `moreFiles` 0); a `moreFiles > 0` sidecar still is not — fixture steps 2-3 prove our capping only.
+  </details>
 
-## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.260)
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.270)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -482,7 +577,7 @@ auto-include selection, voice.
   </details>
 - **2.11** ✅ **Stale lock sweep** — `~/.claude/ide/*.lock` files with a dead pid deleted on every
       lock write (the CLI's own rule; `IdeLockFile.sweepStale`); 17 → 2 on first run, 2026-08-17
-- **2.12** ✅ **Additional content roots as working directories** [NEW] — every content root
+- **2.12** ✅ **Additional content roots as working directories** — every content root
   outside the project base is passed to the CLI as `--add-dir`, so reads there no longer raise
   "outside allowed working directories" cards. Read at launch; a root attached mid-session waits
   for the next New/resume.
@@ -503,6 +598,12 @@ auto-include selection, voice.
 - **3.1** ✅ **Permission gate** — `can_use_tool` via `--permission-prompt-tool stdio`
 - **3.2** ✅ **Accept / Reject card** — diff inline (old→new for Edit/MultiEdit multi-hunk,
       additions for Write); under acceptEdits the diff is built optimistically from the tool input
+  <!-- --><details><summary>Read more…</summary>
+  2.1.270 audit (2026-09-13): VS Code 2.1.261 added a fold button to its prompt cards so the
+  conversation behind them can be read — ours sit inline in the transcript, nothing to fold. VS
+  Code 2.1.267 fixed accepting an edit in its diff view on a CRLF file ("String not found in
+  file"); our own Windows CRLF splice check is still owed (state.md).
+  </details>
 - **3.3** ✅ **Editor accept/reject** — the same edit shows as a card AND as an IDE diff tab with an
   under-diff bar (Accept ✓ / Accept all edits / Reject ✕); the first answer wins.
   <!-- --><details><summary>Read more…</summary>
@@ -544,12 +645,19 @@ auto-include selection, voice.
   (count + names) without Review (backlog). Built and hand-verified 2026-08-28 (two files in one
   turn, chain navigation); fixture 60; `TurnChangesTest`.
   </details>
-- **3.7** ✅ **Deny with a message on tool cards** [NEW] — every ordinary permission card carries a
-  "Tell Claude what to do instead" field inline after Reject; the note rides the denial to the
-  model verbatim, Enter in the field rejects with it, and the decided line quotes it.
+- **3.7** ✅ **Deny with a message on tool cards** — every ordinary permission card carries a
+  "Tell Claude what to do instead · applies to Reject" field above the buttons, the plan card's
+  arrangement; the note rides the denial to the model verbatim, Enter in the field rejects with
+  it, and the decided line quotes it.
   <!-- --><details><summary>Read more…</summary>
-  Built 2026-09-05. The field is the plan card's `.plan-fb` (VS Code's placement,
-  `rejectMessageInput`), filling the row and wrapping under the buttons when tight. Rides DENY
+  Built 2026-09-05. The field is the plan card's `.plan-fb`; until 2026-09-13 it sat inline in the
+  button row (VS Code's `rejectMessageInput` placement), where as a 34px flex item it stretched
+  the 26px Accept / Always-allow / Reject buttons to its height (user's screenshot) — moved ABOVE
+  the row, the plan card's arrangement, so buttons are one size on every card; the placeholder
+  gained "· applies to Reject" (user's wording) because the field no longer sits beside that
+  button and a note before Accept is dropped. Fixture 78 re-pinned (control: exactly the 3
+  rewritten asserts fail on the old JS); mockup's six cards moved; hand-tested 2026-09-13 (MT-6.10,
+  § 17.6: layout, note on Reject, note ignored on Accept). Rides DENY
   only — the message reaches the model verbatim as the tool_result (probed 2.1.233); a note typed
   before Accept is dropped, not quoted, because an ordinary allow has no wire for it. Enter
   rejecting is a text-field convention, not a card shortcut — 4.9 stays deferred. The decided line
@@ -569,7 +677,7 @@ auto-include selection, voice.
   now extracts the deny message for denied edit items too and the replayed diff card quotes it
   (fixture 80; Bash cards still vanish on replay, so their note stays live-only).
   </details>
-- **3.8** ✅ **Edit the Bash command in the permission card** [NEW] — the command on a Bash card is
+- **3.8** ✅ **Edit the Bash command in the permission card** — the command on a Bash card is
   editable in place; Accept runs the edited text and the card says "edited in the IDE before
   accepting"; Always allow follows the edit, one exact rule per part of a compound command.
   <!-- --><details><summary>Read more…</summary>
@@ -620,7 +728,7 @@ auto-include selection, voice.
   </details>
 - **4.6** ➖ **`allowDangerouslySkipPermissions` / `initialPermissionMode`** — the flag turns every
       mode into a bypass (probed); persistence covers the initial-mode need
-- **4.7** ✅ **`dontAsk` mode** [NEW] — VS Code's rule: the mode menu shows `Don't ask` only while
+- **4.7** ✅ **`dontAsk` mode** — VS Code's rule: the mode menu shows `Don't ask` only while
   it is the current mode and never offers it; a never-picked chip starts on the CLI's default
   (`auto` on 2.1.260) instead of a hardcoded Manual.
   <!-- --><details><summary>Read more…</summary>
@@ -643,7 +751,7 @@ auto-include selection, voice.
   The visible change (never-picked chip on the CLI's default) is a change-notes line for the next
   release.
   </details>
-- **4.8** ✅ **"Don't ask again" destination** [NEW] — Always allow is a split button: the main half
+- **4.8** ✅ **"Don't ask again" destination** — Always allow is a split button: the main half
   keeps the CLI's own destination, the caret offers `This session only` / `This project, shared`
   / `All projects`; the decided line records the scope.
   <!-- --><details><summary>Read more…</summary>
@@ -661,6 +769,8 @@ auto-include selection, voice.
   0 abort on the pre-fix build), `PermissionDestinationsTest`. Not remembered across cards (VS
   Code keeps the last pick in localStorage) — the main half is always the default, by the user's
   spec; revisit only if the session-only pick turns out to be the common one.
+  VS Code 2.1.268 added Left/Right arrow keys to move the destination pick (a11y); no keys here
+  by 12.4.
   </details>
 - **4.9** ➖ **Number-key answers on cards** [NEW] — deferred by the user 2026-09-05 ("no keyboard
   shortcuts for now"), extending the 2026-08-16 plan-card rule to every card.
@@ -687,7 +797,9 @@ auto-include selection, voice.
       the user 2026-08-16, backlog § Next up
 - **5.6** ✅ **Anchored plan comments** — select text in the plan card, click the floating Comment
   pill, and a note row quoting the anchor sits between the plan and the decision buttons; the
-  notes ride the deny or the approve, and replay draws them back with their highlights.
+  notes ride the deny or the approve, and replay draws them back with their highlights. A new
+  selection settles the open draft (commits it if typed, cancels it if empty) and a decision
+  button commits it too — a draft is never a dead end.
   <!-- --><details><summary>Read more…</summary>
   Decided cards keep the rows WITH the anchor highlights; replay parses them back identically
   (`highlightAnchors` / `planCommentRows`, shared by live and replay). Deny sends the VS Code
@@ -696,7 +808,15 @@ auto-include selection, voice.
   `PLAN_NOTES_MARKER` append. Two deliberate divergences: the full approve surface stays
   available with comments pending (VS Code collapses to keep-planning), and VS Code's plan-file
   preview tab is not replicated (the card body is the preview). Shipped 0.9.0 (2026-08-23);
-  fixture 53; history in journal digest 2026-08-23.
+  fixture 53; history in journal digest 2026-08-23. 2026-09-13 (user's report: "I select again and
+  cannot, and a new user would not know to commit first"): the card's `mouseup` no longer ignores
+  a selection made while composing — `settleDraft()` (extracted from `finishComments`, which has
+  committed a filled draft on a decision button since 2026-08-23) commits a typed draft or cancels
+  an empty one, then the pill appears for the new selection as on a first one; a mere click keeps
+  the draft. Placeholder now reads "Comment on this part — Enter adds, Esc cancels" (mockup's three
+  composer examples too). Fixture 53 steps 8-9 + the placeholder assert (negative control 10/14
+  fail on the pre-change build, the 4 passes are preconditions); harness 856 → 870. Hand-tested
+  2026-09-13 (MT-6.9, § 17.6): all three cases. Options weighed: decisions.md.
   </details>
 - **5.7** ➖ **`/ultraplan`** — cloud-drafted plan; a cloud product surface, not a panel feature
 
@@ -713,8 +833,9 @@ auto-include selection, voice.
 - **6.4** ➖ **@-mention symbols** — deferred by the user 2026-08-29 (backlog; [MD], a second
       picker source over the IDE symbol index). Files cover most mentions
 - **6.5** ✅ **Mention from the IDE** — "Mention in Claude Brains" is the first entry of the
-  Project-view and editor context menus: every selected file or folder lands as an `@path` token
-  at the composer caret and the tool window comes forward. No shortcut, mappable in Keymap.
+  Project-view, editor and editor-tab context menus: every selected file or folder lands as an
+  `@path` token at the composer caret and the tool window comes forward. No shortcut, mappable in
+  Keymap.
   <!-- --><details><summary>Read more…</summary>
   Built 2026-09-04 on the user's request (a screenshot of the Project-view context menu: "select
   items, right-click, first option adds these files as a mention to the composer").
@@ -725,7 +846,11 @@ auto-include selection, voice.
   the page is seeded is parked in `ChatPanel.insertMentions` and flushed after `seedUi()`.
   Spacing/caret rule in fixture 75 (negative control 5/6 fails on the pre-change build). No
   shortcut (12.4) — VS Code's Alt+K equivalent is the unbound action itself, mappable in Keymap.
-  Supersedes the 2026-08-29 deferral.
+  Supersedes the 2026-08-29 deferral. Editor-TAB menu (`EditorTabPopupMenu`, first) added
+  2026-09-13 on the user's screenshot of the tab popup; the action now falls back from
+  `VIRTUAL_FILE_ARRAY` to `VIRTUAL_FILE` because a tab's context carries one file and is not
+  obliged to provide the array. Hand-tested 2026-09-13 (MT-2.15, § 17.2): tab, editor body and a
+  two-file Project-view selection, all three as expected.
   </details>
 - **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
 - **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
@@ -735,7 +860,7 @@ auto-include selection, voice.
   alternative source if a gap ever does show.
   </details>
 - **6.8** ➖ **`@terminal`** [NEW] — `get_terminal_contents`; the panel does not own a terminal
-- **6.9** ✅ **Mention chips** [NEW] — every path-shaped `@token` in a sent prompt renders as an
+- **6.9** ✅ **Mention chips** — every path-shaped `@token` in a sent prompt renders as an
   inline capsule that opens the file on click, live and on replay. The composer itself stays a
   plain textarea by design.
   <!-- --><details><summary>Read more…</summary>
@@ -749,6 +874,9 @@ auto-include selection, voice.
   `inputMentionChip` needs its contenteditable) — the sent bubble is where the chip pays.
   Fixture 74 (6 asserts; negative control 3/3 discriminating fails on the pre-change build);
   harness 630 → 636; mockup + gallery carry an example.
+  VS Code 2.1.267 fixed @-mentions dropping paths with spaces; our chip rule ends a token at
+  whitespace by construction, and whether the CLI resolves an unquoted spaced `@path` from our
+  picker is unmeasured.
   </details>
 
 ## 7. ✅ Slash commands (`docs/slash-commands.md` is the source of truth)
@@ -840,6 +968,10 @@ auto-include selection, voice.
   grew the sidebar: archive/unarchive (an "Archived sessions" section) REPLACES `delete_session`
   (which only ever hid), plus mark-as-unread, status filters ("needs input / working / unread",
   Active/Open/Closed), tab rename/groups commands — same verdict, still behind tabs.
+  2.1.270 audit (2026-09-13): `archiveInactiveSessions` setting (Never/1/2/7/14 days, default
+  14; open, running, waiting or unread sessions never auto-archived), a hollow ring for sessions
+  open elsewhere, and the session-tab context-menu commands (Rename / Add to group / Mark unread)
+  REMOVED from `contributes` ("could not act on the tab the menu was opened on") — same verdict.
   </details>
 - **8.11** ✅ [MD] **Side question** [NEW] — `/btw` (bare = open, `/btw question` = ask) opens a
   panel floating above the composer; the answer renders there as markdown and never enters the
@@ -880,6 +1012,8 @@ auto-include selection, voice.
   `<local-command-stdout>` user frame — since 2.1.251 only AFTER the session's first turn
   (headless probe: no echo before any turn, 2.1.250 echoed there too; the user's hands-on switch
   after a turn drew the line — both 2026-08-30). Rejection by a `PreModelSwitch` hook: 9.11.
+  VS Code 2.1.261 changed its picker to one flat list of every model, older spellings last; ours
+  is roster-driven with search — no change.
   </details>
 - **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, the last row of the model-menu
   footer; the level shows only on the footer's own "Effort" label, never on a chip.
@@ -890,6 +1024,11 @@ auto-include selection, voice.
   line (gotchas § Protocol). Retire path when wanted: `apply_flag_settings
   {settings:{effortLevel}}` is accepted over stdio and takes effect (probed 2026-08-23). The
   CLI's `/effort` hint also accepts `ultracode|auto` beyond the slider's five stops.
+  `maxEffortLevel` (CLI 2.1.267, top-level or per `modelSettings`) MEASURED 2026-09-13 over stdio
+  with a scratch `settings.json {"maxEffortLevel":"medium"}`: `/effort max` returns the turn text
+  "Effort 'max' exceeds the cap for <model> set by your settings or organization; set to 'medium'
+  instead (this session only)" — the same confirmation line the slider already draws, so the cap
+  is visible; the slider dot keeps the pick, as the TUI's does.
   </details>
 - **9.3** ✅ **Context gauge** — a ring on the composer showing context use, reset on compaction;
   click = `/compact`.
@@ -982,11 +1121,21 @@ auto-include selection, voice.
   <!-- --><details><summary>Read more…</summary>
   `disableLoginPrompt` is the terminal's. Confirmed a decision, not a missing capability
   (`claude_authenticate` + OAuth callbacks exist in the CLI).
+  2.1.269: VS Code's Switch-account screen got a Cancel button — still the terminal's half.
   </details>
 
 ## 11. ✅ Extensibility (MCP / plugins / skills / hooks / subagents)
 - **11.1** ➖ **Plugin / MCP / hooks / agents management UI** — the terminal's half (`/plugin`,
       `/mcp`, `/hooks`, `/agents`, `~/.claude`)
+  <!-- --><details><summary>Read more…</summary>
+  2.1.270 audit (2026-09-13): VS Code grew a Hooks dialog (`get_hooks_listing`/`edit_hook`;
+  user/project/local editable, managed/plugin/session hooks read-only), a Permission-rules dialog
+  (`list_permission_rules`/`add_permission_rules`/`remove_permission_rule`), MCP Add-server /
+  Remove (`add_mcp_server`/`remove_mcp_server`), an output-style builder (`create_output_style`,
+  `get_output_style_locations`; `/output-style [style]` joined the roster) and `update_plugin`;
+  the CLI side is `get_hooks_listing`, `list_permission_rules`, `reload_output_styles` (all
+  probed `success` 2026-09-13). All configuration — the terminal's half, verdict unchanged.
+  </details>
 - **11.2** ✅ **What the panel shows from this family** — MCP server failure notice at init, MCP
   prompts and skills in the / menu, hook output, sub-agent progress line + prompt + final report,
   background task roster, Todo/Task checklist.
@@ -1017,6 +1166,9 @@ auto-include selection, voice.
   `completed|failed|stopped` (a panel ✕ = `killed`/`stopped`); the summary prose is the only
   signal, and colouring from prose was rejected 2026-08-13. VS Code's
   `handleTaskNotification` only deletes the task from its map — it shows no outcome either.
+  2.1.269: VS Code added an agent map (an "N agents" footer pill → per-agent cards, Stop agent,
+  read-only transcripts via `stop_subagent`/`get_subagent_transcript`) — lifecycle chrome, no
+  outcome signal; our `bg` chip and the 11.2 lines stay.
   </details>
 - **11.5** ➖ [SM] **Elicitation** — an MCP server asking the user a question is answered with a
   decline, the honest no-answer; no form, because no local MCP server elicits. Deferred.
@@ -1049,6 +1201,7 @@ auto-include selection, voice.
   proved unreliable across setups); users can map the tool window's own Show action in Keymap.
   <!-- --><details><summary>Read more…</summary>
   VS Code's: focus/blur input, Ctrl+N new conversation, Ctrl+Shift+T reopen.
+  2.1.268: `claude-vscode.focusLastMessage` (keyboard focus to the newest message, a11y).
   </details>
 - **12.5** ➖ **Terminal mode** — `useTerminal`; that is just the terminal
 - **12.6** ➖ **Focus view** [NEW] — deferred by the user 2026-08-29 ("not needed for now"): a
@@ -1057,6 +1210,8 @@ auto-include selection, voice.
   VS Code `toggleFocusView` / `set_focus_view` / `focusView` setting, TUI `/focus`, `/brief`
   (cards always shown). Revivable as [MD], mockup first; folded IN/OUT boxes already do half of
   it.
+  2.1.269: live progress rows for running subagents under the tool-call groups in Focus view —
+  still deferred.
   </details>
 - **12.7** ➖ **Light theme / configurable colours** — decided 2026-08-07 (dark only)
 
@@ -1103,6 +1258,7 @@ auto-include selection, voice.
   achievable ONLY by the plugin writing the file itself (Kotlin read-merge-write; clobber risk
   against the CLI's own "always allow" rule writes into the same file), not through the CLI —
   offered 2026-09-04, not taken.
+  Re-checked at 2.1.270 (2026-09-13): the allowlist is still `new Set(["outputStyle"])`.
   </details>
 
 ## 14. ✅ Worktrees & git
@@ -1154,20 +1310,20 @@ auto-include selection, voice.
   </details>
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (163, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (164, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 84, 776 assertions,
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 87, 870 assertions (2026-09-13),
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
       — gotchas)
-- **16.4** ✅ **Plugin Verifier + Marketplace** — 0 warnings on PhpStorm 242→262; upload automated
-      on `release: published`; releases 0.4.0 → 0.12.5 all Approved
+- **16.4** ✅ **Plugin Verifier + Marketplace** — 0 warnings on PhpStorm 242→263; upload automated
+      on `release: published`; releases 0.4.0 → 0.13.1 all Approved
 - **16.5** ✅ **Manual-test checklist completed** — 102/102 passed (the old "92" undercounted), 0
       open; the self-contained `docs/manual-test.md` was deleted 2026-08-28 and its full record is
       § 17 below
 
-## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 106/106 passed 2026-08-07→08-30)
+## 17. ✅ Manual verification record (from the retired docs/manual-test.md, 110/110 passed 2026-08-07→09-13)
 - Source: `git show 9bd1683:docs/manual-test.md` (deleted 2026-08-28; §16.5). Setup was `cd plugin && ./gradlew runIde`, open the Claude Brains tool window; items were ticked by number ("3.4 done"); **(hard to trigger)** items carry their exact trigger recipe below.
 - Defect markers were exactly two: `ISSUE (date):` = open, `RESOLVED (date) — how:` = closed, *how* ∈ fixed / removed / not a bug; `grep -c '\*\*ISSUE'` was the open count. Final state: 31 RESOLVED, 0 ISSUE.
 - Undated items below were ticked on the first pass (2026-08-07/08); later dates come from the item's own note. Cross-cutting caveat (6.4): grants from 2026-08-07/08 persist in the testing project's `settings.local.json`, so permission cards only reappear for novel commands (the pass used `factor`/`mcookie`/`openssl`/`base32`, never granted).
@@ -1184,7 +1340,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.2 Composer basics</b> — 14 items · 3 RESOLVED</summary>
+<details><summary><b>17.2 Composer basics</b> — 15 items · 3 RESOLVED</summary>
 
 - **MT-2.1** Ctrl+Enter sends; Enter newline → 1.2 · 2026-08-07
 - **MT-2.2** Reply streams token by token → 1.1 · 2026-08-07
@@ -1202,7 +1358,7 @@ auto-include selection, voice.
 - **MT-3.8** Manual mode, a Bash card: click into the command, change it (e.g. `factor 97` → `factor 91`) → Always allow disappears; Accept → the edited command runs (OUT shows `91: 7 13`), the card reads `✓ Accepted · edited in the IDE before accepting`; revert the text before accepting → Always allow is back; edit then click Always allow → `settings.local.json` gains the EDITED command → 3.8 · 2026-09-05 · RESOLVED 2026-09-05 (all steps incl. the grant-follows-the-edit ones: a compound `factor 91; factor 95` edited to `factor 91; factor 97` + "This project, shared" wrote `Bash(factor 91)` and `Bash(factor 97)` to `.claude/settings.json`): passed on the real CLI (user) — edit hid Always allow, Accept ran `factor 91` (OUT `91: 7 13`), note on the card, revert restored the split. Observed: the model, seeing its original command beside the edited output, called the mismatch unexplainable — the CLI's design (the transcript never carries the edit). VS Code measured identical the same day (user's screenshots): its dialog edits the command in place, its IN box keeps `factor 97` over `91: 7 13`, and its model reran the command to verify. One deliberate difference: VS Code still offers "Yes, allow factor 97 for this project" beside an edited command; ours hides the rule while the text differs
 - **MT-2.13** [/] button opens slash menu same as typing `/` → 7.1 · 2026-08-07
 - **MT-2.14** Delete forward-deletes in composer and model search (alone, with selection, Ctrl+Delete word), no stray char → 1.2, 9.1 · 2026-08-09 · RESOLVED 2026-08-09: fixed — Delete inserted a tofu char (JCEF-on-Linux sends AWT keyChar 0x7F as TEXT); document-level two-layer fix in chat.html (keydown manual forward-delete, selection-aware, Ctrl+Delete = word, native cancelled; capture-phase input filter strips control chars except \t \n, caret preserved — also kills ESC 0x1B); covers `#modelSearch`; headless 7/7 (mid, selection, Ctrl-word, end-noop, 0x7F strip, \t\n survive, mention re-filter); D1 proves no double-delete in a compliant browser; real-JCEF hardware key pending runIde
-
+- **MT-2.15** Sandbox, testing repo · 2026-09-13: right-click an editor TAB → "Mention in Claude Brains" is the first item with the claude icon → tool window forward, composer reads `@README.md `; right-click in the editor body → the same token appended; Ctrl-select two files in the Project view → two tokens in selection order, each with a trailing space → 6.5 (all three surfaces after the `VIRTUAL_FILE` fallback)
 </details>
 
 <details><summary><b>17.3 Slash commands & effort</b> — 8 items · 3 RESOLVED</summary>
@@ -1232,7 +1388,7 @@ auto-include selection, voice.
 
 </details>
 
-<details><summary><b>17.5 Streaming render</b> — 18 items · 3 RESOLVED</summary>
+<details><summary><b>17.5 Streaming render</b> — 19 items · 3 RESOLVED</summary>
 
 - **MT-5.1** Tables render; code blocks highlighted; long code folds → 1.10, 1.11 · 2026-08-07
 - **MT-5.2** Thinking: shimmer + live seconds + token count; collapses to "Thought for Ns" with chevron → 1.12 · 2026-08-07
@@ -1251,11 +1407,12 @@ auto-include selection, voice.
 - **MT-5.15** Code block language label + working copy button → 1.11 · 2026-08-07
 - **MT-5.16** WebSearch turn: tool line with query, summary beneath → 1.19 · 2026-08-07
 - **MT-5.17** Huge Bash result spilled to a file shows the persisted-output note **(hard to trigger)** → 1.5 · 2026-08-07
+- **MT-1.29** Sandbox, testing repo, four steps · 2026-09-13: (1) Manual mode, `printf 'hand test 1\n' >> hand_test.txt` via Bash → IN/OUT box, accepted card, NO diff card (the CLI's gate); (2) Auto mode, the same with `hand test 2` → "Bash on hand_test.txt" card under the box: line 1 dimmed context, `2 + hand test 2` green, ✓ Applied; (3) switch to another conversation and back → the same card replays under a "Resumed" line; (4) `sed -i … && printf … > hand_test_2.txt` → two cards in order, the first with `1 - hand test 1` / `1 + hand test one` and line 2 as context, the second with `1 + second file`, no note line. All four as expected (user's screenshots).
 - **MT-1.27** Ask for a long output (e.g. `seq 1 5000`) → under the OUT box the marker reads "⋯ +N lines · … not shown — open in editor"; click → a read-only tab "Bash output" holding every line; resume the same session → the replayed marker opens the same tab from the transcript; a persisted spill (`find / -type f` sized output) still reads "open full output" and opens the CLI's file → 1.27 · 2026-09-05 · RESOLVED 2026-09-05: live marker opened the "Bash output" tab with every line, and the replayed marker after a resume opened the same from the transcript (user: "both worked fine"); the spill case rests on fixture 84's unchanged-path step
 
 </details>
 
-<details><summary><b>17.6 Permissions</b> — 10 items · 2 RESOLVED</summary>
+<details><summary><b>17.6 Permissions</b> — 12 items · 2 RESOLVED</summary>
 
 - **MT-6.1** Bash card: capped command preview with cut marker, Accept/Reject → 3.1, 1.5 · 2026-08-07
 - **MT-6.2** Reject → ✗ Rejected; model acknowledges → 3.1 · 2026-08-07
@@ -1267,7 +1424,8 @@ auto-include selection, voice.
 - **MT-6.7** AskUserQuestion: tab per question, radio vs checkbox by multiSelect, Other row; submit sends; cancel → ✗ Cancelled → 1.6 · 2026-08-07
 - **MT-6.8** Plan card Approve / Keep planning; ✗ Kept planning on refusal → 5.1, 5.2 · 2026-08-07
 - **MT-1.28** Manual mode: send "run factor 97", wait for the Bash card, press Stop (the send button) → the card reads `✗ Withdrawn — Claude stopped waiting` with no buttons, then the "Stopped" line; clicking where Accept was does nothing; the same with an Edit card while its editor diff tab is open → the tab closes too → 1.28 · 2026-09-05 · RESOLVED 2026-09-05: both steps passed in the sandbox (Manual mode; Bash card and Edit card each settled as withdrawn with the Stopped line under them, no diff tab left in the editor). The CLI's own auto-deny OUT box above the card ("The user doesn't want to proceed…", pre-existing on every Stop over a live card) stays by the user's choice — "happy with the result"
-
+- **MT-6.9** Sandbox, Plan mode · 2026-09-13: select text → Comment → type a note WITHOUT Enter → select another passage → the note commits as a row and the pill appears for the new selection; open a composer, type nothing, select a third passage → the empty composer and its highlight vanish, no empty row, pill on the third; type a draft and click Approve → the footer counts it → 5.6 (three steps, user's screenshots/confirmation)
+- **MT-6.10** Sandbox, Manual mode · 2026-09-13: a Bash card draws the note field on its own line ABOVE the buttons, placeholder "Tell Claude what to do instead · applies to Reject", Accept and Reject one height; type a note + Reject → red dot, no error box, `✗ Rejected — "…"` quoting it, Claude's reply repeats the note verbatim; fresh card, type a note + Accept → `✓ Accepted` with no quote, the command runs, the reply never mentions the note → 3.7 (user's screenshots)
 </details>
 
 <details><summary><b>17.7 Context gauge & background tasks</b> — 9 items · 4 RESOLVED</summary>

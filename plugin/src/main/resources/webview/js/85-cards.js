@@ -5,15 +5,18 @@
     const shown = t.length > 72 ? t.slice(0, 71) + '…' : t;
     return ' — “' + esc(shown) + '”';
   }
-  // fbPlaceholder (3.7): a reject-note field after the buttons — the plan card's .plan-fb dress,
-  // placed inline the way VS Code places its rejectMessageInput beside the reject button. It rides
-  // DENY only: the message reaches the model verbatim as the tool_result (probed 2.1.233), while a
-  // note on an ordinary allow has no wire to travel on (`feedback` is dropped there — same probe).
+  // fbPlaceholder (3.7): a reject-note field ABOVE the button row — the plan card's .plan-fb dress
+  // and the plan card's placement (2026-09-13, user's screenshot: inline in the row, VS Code's
+  // rejectMessageInput placement, the 34px field stretched every button to its height because
+  // .card-b stretches its items; the plan card never had the problem). Its placeholder says
+  // "applies to Reject" now that it no longer sits beside that button. It rides DENY only: the
+  // message reaches the model verbatim as the tool_result (probed 2.1.233), while a note on an
+  // ordinary allow has no wire to travel on (`feedback` is dropped there — same probe).
   function cardBtns(okLabel, okSvg, noLabel, noSvg, suggBtns, fbPlaceholder) {
-    return '<div class="card-b"><button class="ok">' + okSvg + okLabel + '</button>' +
+    return (fbPlaceholder ? '<input class="plan-fb" placeholder="' + escA(fbPlaceholder) + '">' : '') +
+      '<div class="card-b"><button class="ok">' + okSvg + okLabel + '</button>' +
       (suggBtns || '') +
       '<button class="no">' + noSvg + noLabel + '</button>' +
-      (fbPlaceholder ? '<input class="plan-fb" placeholder="' + escA(fbPlaceholder) + '">' : '') +
       '</div>';
   }
   // Where a "don't ask again" rule can live (4.8). The grant's OWN destination — localSettings on
@@ -334,7 +337,7 @@
         '<div class="card-h">Claude wants to run <b>' + esc(toolLabel(ev.tool)) + '</b>' +
           (file ? ' on <code></code>' : '') + '</div>' +
         previewHtml(ev.tool, inp, ev.lineStart) +
-        cardBtns('Accept', SVG_CHECK, 'Reject', SVG_X, suggBtns, 'Tell Claude what to do instead');
+        cardBtns('Accept', SVG_CHECK, 'Reject', SVG_X, suggBtns, 'Tell Claude what to do instead · applies to Reject');
     }
     // Same renderer as the tool line, so one file is never named two ways in one turn: relative,
     // middle-ellipsised, with the ABSOLUTE path on dataset.path + title (which is what keeps the
@@ -383,7 +386,7 @@
         (withComposer ? '<div class="plan-c compose"><span class="c-a" title="' + escA(anchorText) + '">“' + esc(anchorText) + '”</span>' +
           '<div class="c-btns"><button class="c-x" title="Cancel comment">' + SVG_X + '</button>' +
           '<button class="c-ok" title="Add comment (Enter)">' + SVG_ENTER + '</button></div>' +
-          '<div class="c-row"><input placeholder="Comment on this part of the plan"></div></div>' : '');
+          '<div class="c-row"><input placeholder="Comment on this part — Enter adds, Esc cancels"></div></div>' : '');
       // Rows live BELOW the separator, above the feedback input (user pick 2026-08-23); once the
       // card is decided the separator is gone and the rows re-anchor after the plan body — which
       // is exactly the replayed card's order.
@@ -462,11 +465,16 @@
     if (isPlan) {
       blkEl.addEventListener('mouseup', function () {
         setTimeout(function () {             // selection is finalized after mouseup returns
-          if (composing) return;
           const sel = window.getSelection();
-          if (!sel || sel.isCollapsed || !sel.rangeCount) { hidePill(); return; }
+          // While a draft is open, a mere click (collapsed selection) must not discard it — the
+          // input keeps its text and focus is the user's to move. Only a REAL new selection acts.
+          if (!sel || sel.isCollapsed || !sel.rangeCount) { if (!composing) hidePill(); return; }
           const r = sel.getRangeAt(0);
-          if (!blkEl.contains(r.commonAncestorContainer) || !r.toString().trim()) { hidePill(); return; }
+          if (!blkEl.contains(r.commonAncestorContainer) || !r.toString().trim()) { if (!composing) hidePill(); return; }
+          // A new selection while composing SETTLES the draft (commit if typed, cancel if empty)
+          // and then proceeds exactly as a first selection would — the pill, not a second
+          // composer. Rows are rebuilt outside the plan body, so the selection survives it.
+          if (composing) { settleDraft(); renderComments(false); }
           showPill(r);
         }, 0);
       });
@@ -474,17 +482,22 @@
         if (pillEl && e.target !== pillEl && !pillEl.contains(e.target)) hidePill();
       });
     }
-    function finishComments() {
-      hidePill();
-      // A FILLED composer that was never Entered still counts: clicking a decision button is as
-      // deliberate as Enter, and silently dropping typed text loses user input (user report,
-      // real-IDE pass 2026-08-23).
+    // The open composer, settled: a FILLED draft becomes a row — clicking a decision button (user
+    // report, real-IDE pass 2026-08-23) or starting the NEXT selection (user report 2026-09-13:
+    // "I select again and nothing happens, and a new user would not know to press Enter first")
+    // is as deliberate as Enter, and silently dropping typed text loses input — while an EMPTY
+    // one is cancelled and its pending mark unwrapped. One draft at a time, settled, never blocked.
+    function settleDraft() {
       const ci = csEl && csEl.querySelector('.compose input');
       if (ci && ci.value.trim()) {
         comments.push({ a: pendAnchor, t: ci.value.trim(), n: pendOcc, mark: pendMark });
         pendMark = null;
       }
       unwrapMark(pendMark); pendMark = null; composing = false;
+    }
+    function finishComments() {
+      hidePill();
+      settleDraft();
       // The precise selection marks are unwrapped and the anchors RE-highlighted by the shared
       // text-search highlighter — the same function replay runs on planComments — so the decided
       // card and its replay are produced by one code path and cannot drift (round 9).

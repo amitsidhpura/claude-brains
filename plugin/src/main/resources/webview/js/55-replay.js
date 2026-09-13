@@ -206,6 +206,7 @@
             }
           }
           if (it.todos) todoList(it.todos);
+          let anchor = t;   // where the Bash edit-diff cards go: under the IN/OUT box, as live (1.29)
           if (it.cmd || it.out) {
             const rows = [];
             // cut metadata rides the same rows into the same builder as live, so a truncated result
@@ -215,7 +216,9 @@
             const src = { toolId: it.toolId, tool: it.text };
             if (it.cmd) rows.push(['IN', it.cmd, it.cmdCut, null, null, null, null, src]);
             if (it.out) rows.push(['OUT', it.out, it.outCut, it.outTotal, it.outFile, it.note, it.interrupted, src]);
-            t.after(ioBox(rows));
+            const box = ioBox(rows);
+            t.after(box);
+            anchor = box;
           } else if (it.note) {
             // No IN/OUT box to carry it — an Edit or Write, whose result text RESULT_SKIP drops —
             // so the caveat gets its own line (item 11). With a box, the note already rides in the
@@ -230,6 +233,9 @@
             const box = toolImages(it.images);
             if (box) t.after(box);
           }
+          // Bash edit diff (1.29): SessionStore passes `toolUseResult.bashEditDiff` through as
+          // `bashDiff`; the same builder live uses draws the same cards in the same slot.
+          if (it.bashDiff) appendBashDiff(anchor, it.bashDiff);
           replayCard(it);
           break;
         }

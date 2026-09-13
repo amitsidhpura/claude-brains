@@ -114,6 +114,7 @@ this cap was future-proofing rather than a live fix.
 | what | limit | where | says so? |
 |---|---|---|---|
 | diff rows | 400 | `MAX_DIFF_ROWS`, live + replay | ✅ "… diff truncated" |
+| Bash edit-diff files | 10 | `MAX_BASH_DIFF_FILES` (`appendBashDiff`, live + replay, 1.29); the CLI caps first and reports the rest as `moreFiles` — both remainders add up in one note. Above us the CLI drops the WHOLE diff past 400 lines / 64 000 chars (2.1.270 binary constants), and attaches one at all only in auto / bypassPermissions or with `bashEditDiffEnabled: true` (measured 2026-09-13) | ✅ `.t-note` "+N more files changed — diff not shown"; ❌ nothing marks a diff the CLI dropped |
 | Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number | ✅ `.io-cut` |
 | Bash output | 2000 chars | `RenderLimits.OUT_MAX` (live + replay) | ✅ `.io-cut` |
 | any cut IN/OUT box | — | the `.io-cut` marker reads "open in editor" and opens the WHOLE text read-only in an editor tab (1.27, 2026-09-05): a live row from the text it still holds, a replayed row via `SessionStore.toolText` by tool id; a persisted spill keeps "open full output" (the CLI's file) | ✅ |

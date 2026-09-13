@@ -1,0 +1,725 @@
+{
+ "item": "1.29 Bash edit diff (2026-09-13): a Bash result's bashEditDiff sidecar draws one resolved edit card per changed file under the Bash line, after its IN/OUT box; a file-count cap and moreFiles surface as a note; live and replay share appendBashDiff",
+ "branch": "onClaudeEvent user/tool_result -> onUserEvent (75-retraction.js) reads ev.tool_use_result.bashEditDiff -> appendBashDiff (50-blocks.js: fillAppliedCard per file, patchRows over the CLI's hunks, noteLine for hidden files) after t.io; replay: SessionStore.applyToolResult copies toolUseResult.bashEditDiff to item.bashDiff -> renderBlocks 'tool' (55-replay.js) -> the same appendBashDiff",
+ "provenance": "Step 1's user frame is the REAL 2.1.270 record from the 2026-09-13 stdio probe (tools/probe_stdio.py, one `printf 'probe line\\n' >> probe_bash_diff.txt` turn in the testing repo; tape in the 2026-09-13 session scratchpad cli/bashdiff.jsonl): content '(Bash completed with no output)', tool_use_result {stdout, stderr, interrupted, isImage, noOutputExpected, bashEditDiff{files:[{filePath, hunks:[{oldStart:0, oldLines:0, newStart:1, newLines:1, lines:['+probe line']}], created:true}], moreFiles:0, changedFiles}} - note the LIVE frame carries the sidecar as snake-case `tool_use_result` (the 2026-08-05 'live carries no toolUseResult' note is out of date at 2.1.270). Steps 2-4 EXTEND that shape (an edit hunk with - and +, two files, moreFiles>0, twelve files, is_error:true) - those combinations were NOT observed on the wire; they prove our own capping and error paths, nothing about the CLI. Step 5 feeds our replay JSON (`bashDiff` as SessionStore serialises it) through renderBlocks - self-consistency of the two paths, pinned by SessionStoreTest on the Kotlin side. Step 6 is the pre-existing no-sidecar path (control). NEGATIVE CONTROL RUN 2026-09-13 against the pre-change build (0.13.1 sources in the sandbox; fixture written first): 22 of 27 asserts FAILED, every one on a discriminating case (0 cards, no header, no rows, no footer, no note in steps 1-5); the 5 that passed guard the untouched paths — the IN+OUT rows in step 1, the no-note case, the red dot in step 4, and both step-6 control asserts. POST-BUILD, REAL PANEL 2026-09-13 (sandbox, real CLI 2.1.270, testing repo): a first turn in plan→manual mode drew NO card — the CLI attaches bashEditDiff only in auto/bypassPermissions by default (three more stdio probes: --mode default none, --mode acceptEdits none, --mode default + user settings bashEditDiffEnabled:true present; the step-1 probe had come up in auto, which is why it carried one). The same turn in auto mode drew 'Bash on live_probe.txt' / '+ live probe line' / ✓ Applied under the IN/OUT box (screenshot live_1_29.png in that session's scratchpad). Fixture 87 on the new build: 27/27; full harness 856/0.",
+ "steps": [
+  {
+   "note": "REAL frame: one created file -> one card after the OUT box, Applied, one + row",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit via bash', []);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx87a",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"printf 'probe line\\\\n' >> probe_bash_diff.txt\", \"description\": \"Append a probe line\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx87a",
+        "content": "(Bash completed with no output)",
+        "is_error": false
+       }
+      ]
+     },
+     "tool_use_result": {
+      "stdout": "",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false,
+      "bashEditDiff": {
+       "files": [
+        {
+         "filePath": "/home/syncroze/Sites/claude-brains-testing/probe_bash_diff.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+probe line"
+           ]
+          }
+         ],
+         "created": true
+        }
+       ],
+       "moreFiles": 0,
+       "changedFiles": [
+        "/home/syncroze/Sites/claude-brains-testing/probe_bash_diff.txt"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "why": "one card for the one file",
+     "equals": 1
+    },
+    {
+     "js": "(document.querySelector('#log .card.warn .card-h')||{}).textContent||''",
+     "why": "the header names the file",
+     "contains": "probe_bash_diff.txt"
+    },
+    {
+     "js": "((document.querySelector('#log .card.warn .card-h')||{}).textContent||'').indexOf('Bash')",
+     "why": "the header says which tool edited it",
+     "atLeast": 0
+    },
+    {
+     "js": "document.querySelectorAll('#log .card.warn .diff .add').length",
+     "why": "the hunk's one added line",
+     "equals": 1
+    },
+    {
+     "js": "(document.querySelector('#log .card.warn .diff .add')||{}).textContent||''",
+     "why": "the added text is the CLI's line",
+     "contains": "probe line"
+    },
+    {
+     "js": "(document.querySelector('#log .card.warn .card-b')||{}).textContent||''",
+     "why": "the footer records that it ran",
+     "contains": "Applied"
+    },
+    {
+     "js": "!!(document.querySelector('#log .io')||{}).nextElementSibling && document.querySelector('#log .io').nextElementSibling.classList.contains('card')",
+     "why": "the card sits right after the IN/OUT box, not above it",
+     "equals": true
+    },
+    {
+     "js": "document.querySelectorAll('#log .io-row').length",
+     "why": "the OUT row is still drawn (IN + OUT)",
+     "equals": 2
+    },
+    {
+     "js": "document.querySelectorAll('#log .t-note').length",
+     "why": "no hidden-files note when moreFiles is 0",
+     "equals": 0
+    }
+   ]
+  },
+  {
+   "note": "two files + moreFiles 2: two cards in file order, a -/+ hunk numbered off the CLI's starts, a note for the two the CLI withheld",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit via bash', []);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx87b",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"sed -i 's/1/2/' src/app.js && echo body > NEW.md\", \"description\": \"Bump x and add NEW.md\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx87b",
+        "content": "(Bash completed with no output)",
+        "is_error": false
+       }
+      ]
+     },
+     "tool_use_result": {
+      "stdout": "",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false,
+      "bashEditDiff": {
+       "files": [
+        {
+         "filePath": "/home/syncroze/Sites/claude-brains-testing/src/app.js",
+         "hunks": [
+          {
+           "oldStart": 14,
+           "oldLines": 1,
+           "newStart": 14,
+           "newLines": 1,
+           "lines": [
+            "-const x = 1;",
+            "+const x = 2;"
+           ]
+          }
+         ],
+         "created": false
+        },
+        {
+         "filePath": "/home/syncroze/Sites/claude-brains-testing/NEW.md",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 2,
+           "lines": [
+            "+# New",
+            "+body"
+           ]
+          }
+         ],
+         "created": true
+        }
+       ],
+       "moreFiles": 2,
+       "changedFiles": [
+        "/a",
+        "/b",
+        "/c",
+        "/d"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "why": "one card per reported file",
+     "equals": 2
+    },
+    {
+     "js": "(document.querySelectorAll('#log .card.warn .card-h')[0]||{}).textContent||''",
+     "why": "first card = first file",
+     "contains": "app.js"
+    },
+    {
+     "js": "(document.querySelectorAll('#log .card.warn .card-h')[1]||{}).textContent||''",
+     "why": "second card = second file",
+     "contains": "NEW.md"
+    },
+    {
+     "js": "(document.querySelectorAll('#log .card.warn')[0]||{querySelectorAll:function(){return []}}).querySelectorAll('.diff .del').length",
+     "why": "the edit hunk's removed line",
+     "equals": 1
+    },
+    {
+     "js": "(document.querySelectorAll('#log .card.warn')[0]||{querySelectorAll:function(){return []}}).querySelectorAll('.diff .add').length",
+     "why": "and its added line",
+     "equals": 1
+    },
+    {
+     "js": "((document.querySelectorAll('#log .card.warn')[0]||{querySelector:function(){return null}}).querySelector('.diff .del .ln')||{}).textContent||''",
+     "why": "line numbers come from the hunk's oldStart",
+     "equals": "14"
+    },
+    {
+     "js": "document.querySelectorAll('#log .t-note').length",
+     "why": "one note for the withheld files",
+     "equals": 1
+    },
+    {
+     "js": "(document.querySelector('#log .t-note')||{}).textContent||''",
+     "why": "it says how many",
+     "contains": "2 more files"
+    }
+   ]
+  },
+  {
+   "note": "twelve files: the file cap draws ten cards and folds the rest into the note",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit via bash', []);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx87c",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"for i in 0 1 2 3 4 5 6 7 8 9 10 11; do echo line $i > /tmp/f$i.txt; done\", \"description\": \"Write twelve files\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx87c",
+        "content": "(Bash completed with no output)",
+        "is_error": false
+       }
+      ]
+     },
+     "tool_use_result": {
+      "stdout": "",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false,
+      "bashEditDiff": {
+       "files": [
+        {
+         "filePath": "/tmp/f00.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 0"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f01.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 1"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f02.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 2"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f03.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 3"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f04.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 4"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f05.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 5"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f06.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 6"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f07.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 7"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f08.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 8"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f09.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 9"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f10.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 10"
+           ]
+          }
+         ],
+         "created": true
+        },
+        {
+         "filePath": "/tmp/f11.txt",
+         "hunks": [
+          {
+           "oldStart": 0,
+           "oldLines": 0,
+           "newStart": 1,
+           "newLines": 1,
+           "lines": [
+            "+line 11"
+           ]
+          }
+         ],
+         "created": true
+        }
+       ],
+       "moreFiles": 0,
+       "changedFiles": [
+        "/tmp/f00.txt",
+        "/tmp/f01.txt",
+        "/tmp/f02.txt",
+        "/tmp/f03.txt",
+        "/tmp/f04.txt",
+        "/tmp/f05.txt",
+        "/tmp/f06.txt",
+        "/tmp/f07.txt",
+        "/tmp/f08.txt",
+        "/tmp/f09.txt",
+        "/tmp/f10.txt",
+        "/tmp/f11.txt"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "why": "MAX_BASH_DIFF_FILES cards",
+     "equals": 10
+    },
+    {
+     "js": "(document.querySelector('#log .t-note')||{}).textContent||''",
+     "why": "the two over the cap are counted",
+     "contains": "2 more files"
+    }
+   ]
+  },
+  {
+   "note": "a FAILED command that still edited a file: red dot on the line, the diff is still drawn (it happened)",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit via bash', []);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx87d",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"echo x >> a.txt && exit 1\", \"description\": \"Append then fail\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx87d",
+        "content": "Exit code 1",
+        "is_error": true
+       }
+      ]
+     },
+     "tool_use_result": {
+      "stdout": "",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false,
+      "bashEditDiff": {
+       "files": [
+        {
+         "filePath": "/x/a.txt",
+         "hunks": [
+          {
+           "oldStart": 3,
+           "oldLines": 0,
+           "newStart": 4,
+           "newLines": 1,
+           "lines": [
+            "+x"
+           ]
+          }
+         ],
+         "created": false
+        }
+       ],
+       "moreFiles": 0,
+       "changedFiles": [
+        "/x/a.txt"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .tool-line.fail').length",
+     "why": "the line failed",
+     "equals": 1
+    },
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "why": "the diff is a record of what ran, error or not",
+     "equals": 1
+    }
+   ]
+  },
+  {
+   "note": "REPLAY twin: the same card from SessionStore's `bashDiff` item field through renderBlocks",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit via bash', []); renderBlocks([{role:'tool', text:'Bash', desc:'Append a probe line', cmd:\"printf 'probe line' >> probe_bash_diff.txt\", out:'(Bash completed with no output)', toolId:'toolu_fx87e', bashDiff:{\"files\": [{\"filePath\": \"/home/syncroze/Sites/claude-brains-testing/probe_bash_diff.txt\", \"hunks\": [{\"oldStart\": 0, \"oldLines\": 0, \"newStart\": 1, \"newLines\": 1, \"lines\": [\"+probe line\"]}], \"created\": true}], \"moreFiles\": 0, \"changedFiles\": [\"/home/syncroze/Sites/claude-brains-testing/probe_bash_diff.txt\"]}}]);",
+   "frames": [],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "why": "one replayed card",
+     "equals": 1
+    },
+    {
+     "js": "document.querySelectorAll('#log .card.warn .diff .add').length",
+     "why": "same one added row as live",
+     "equals": 1
+    },
+    {
+     "js": "(document.querySelector('#log .card.warn .card-b')||{}).textContent||''",
+     "why": "same footer as live",
+     "contains": "Applied"
+    },
+    {
+     "js": "!!(document.querySelector('#log .io')||{}).nextElementSibling && document.querySelector('#log .io').nextElementSibling.classList.contains('card')",
+     "why": "same slot as live: after the IN/OUT box",
+     "equals": true
+    }
+   ]
+  },
+  {
+   "note": "CONTROL: a Bash result with no sidecar draws no card (the common path is untouched)",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('edit via bash', []);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx87f",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\": \"echo hi\", \"description\": \"Say hi\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx87f",
+        "content": "hi",
+        "is_error": false
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .card.warn').length",
+     "why": "nothing to draw",
+     "equals": 0
+    },
+    {
+     "js": "document.querySelectorAll('#log .io-row').length",
+     "why": "IN + OUT as before",
+     "equals": 2
+    }
+   ]
+  }
+ ]
+}
