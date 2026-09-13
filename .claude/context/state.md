@@ -5,7 +5,8 @@
 Tag `v0.14.0`, commit `03caea1`, GitHub release published 09:01Z, asset `cmp`-identical to the local
 zip, feed on `main` advertises 0.14.0, `marketplace-upload` run green (update id 1169274), the
 user's screenshot shows **Approved** 13 Sep 2026 with the IDE-run verifier row and the 1.410 rows
-all green. `main` == released; this context save is the last commit.
+all green. `main` == released plus two follow-up commits: the Marketplace screenshot 03 reshoot
+(scene script + PNG) and this context save.
 Contents of 0.14.0: 1.29 Bash edit diff cards (CLI-gated: auto/bypass by default, else user
 `bashEditDiffEnabled: true`), 6.5 on the editor-tab menu, 5.6 draft settles on the next selection,
 3.7 reject-note field above the buttons — all hand-tested (§ 17 MT-1.29, MT-2.15, MT-6.9, MT-6.10);
@@ -80,8 +81,11 @@ CLI on this box **2.1.270**; the sandbox PhpStorm was left RUNNING on the 0.14.0
 - [ ] Testing repo carries hand-test leftovers (`hand_test.txt`, `hand_test_2.txt`, earlier modified
       files, the 2026-09-13 sandbox sessions) — the user's call whether to reset.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251).
-- [ ] **User errands**: Windows `./gradlew test` + VFS click check; Marketplace screenshots 01+03,
-      04+05 to `plugins.jetbrains.com/plugin/33274`.
+- [x] Marketplace screenshots: the user uploaded all five 2026-09-13; the listing now matches
+      `design/marketplace/` (03 regenerated the same day: note field above the buttons on both
+      cards, a Bash edit-diff card on the right — scene trimmed to fit). Uncommitted: the scene
+      script + `03-control.png`.
+- [ ] **User errands**: Windows `./gradlew test` + VFS click check.
 
 ## Known gaps (deliberately left)
 - **The Thinking switch is INERT on Fable** — measured 2026-08-26, "document only" by decision.

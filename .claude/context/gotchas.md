@@ -717,7 +717,11 @@ re-read those before trusting memory here.
   log's top whitespace; more clips the first visible row mid-line (the 0.12.4 files-block rows
   clipped 01's think row and pushed 03's Bash tool line off — fixed by trimming visible rows in
   the scenes). Early probe reads are transient (same log: scrollH 1191 at 300ms, 686 settled) —
-  measure after layout settles, and treat the final PNG as the only verdict. (4) A byte-diff on
+  measure after layout settles, and treat the final PNG as the only verdict.
+  **A scene that overflows the 600px panel loses its TOP, not its bottom** (2026-09-13, scene 03): the
+  log is pinned to the newest content, so the first tool line and IN row scroll out of the capture
+  while the composer stays — read the top edge of every regenerated panel, and trim the scene
+  (bare tool lines, a queued message, an OUT line, a files-changed row) until the first block shows. (4) A byte-diff on
   the PNGs is NOT a verdict: scenes 04/05 produce different bytes on two runs of the SAME build
   (antialiasing jitter; 2026-09-04 the CSS-split check read three "changed" files, all noise —
   32 of 3.6M pixels at max channel delta 4). Prove no-change by pixel-diffing (PIL

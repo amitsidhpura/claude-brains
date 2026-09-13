@@ -23,14 +23,16 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - 3.7: the inline note field stretched Accept/Always-allow/Reject (34px flex item, stretch row). Four
   options; user picked the plan-card layout (field above) and wrote the placeholder wording. Fixture 78
   re-pinned (control 3/41 fail); `.card-b .plan-fb` override deleted. MT-6.10.
-- Totals: test 164/0, harness 856 → 870/0. The "readable sentences" webview diff was minifier noise at
-  a ten-version hop — dropped (gotchas). `ls` is `eza` in Bash-tool shells: `ls -t` hung a background
-  task 22 min (gotchas). Everything committed and pushed on the user's ask; then **0.14.0 released**
-  on the user's "go" after the full-notes gate (test 164/0, 8 verdicts Compatible, zip = jar + 6 OSS
-  deps): `gh release create` hit a GitHub HTTP 500 and left a DRAFT without the asset while the feed
-  already said 0.14.0 → view/upload/edit-publish recovered it in ~2 min (gotchas § Build); asset
-  `cmp` equal, `marketplace-upload` green, update id 1169274; **Approved** within the hour (user's
-  screenshot: IDE-run row + verifier rows all green). Context saved, committed and pushed on ask.
+- Totals: test 164/0, harness 856 → 870/0. Two traps to gotchas: the "readable sentences" webview
+  diff is minifier noise across a ten-version hop; `ls` is `eza` in Bash-tool shells (`ls -t` hung a
+  background task 22 min). Committed and pushed on the user's ask.
+- **0.14.0 released** on the user's "go" after the full-notes gate (8 verdicts Compatible, zip = jar +
+  6 OSS deps). `gh release create` hit a GitHub HTTP 500 and left a DRAFT without the asset while the
+  feed already said 0.14.0 — view/upload/edit-publish recovered it in ~2 min (gotchas § Build); asset
+  `cmp` equal, `marketplace-upload` green (update id 1169274), **Approved** within the hour.
+- Marketplace screenshots reviewed: only 03 was stale (its cards predate the 0.13.0 note field);
+  regenerated with the field above the buttons and a 1.29 Bash edit-diff card on the right, scene
+  trimmed to fit (gotchas § Webview: overflow cuts the TOP). The user uploaded all five.
 
 ## 2026-09-09 (thirteenth) — 0.13.1 released as a patch; Approved within the hour
 - Load, then "list unreleased updates" → one commit since v0.13.0 (32c676c: fences + list parser,
