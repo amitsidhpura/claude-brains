@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.13.1"
+version = "0.14.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,24 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.14.0</b>
+            <ul>
+              <li>A Bash command that edits files shows a diff card per changed file under its
+                  IN/OUT box — the same card an accepted edit gets — live and on resume. The CLI
+                  sends the diff in Auto and Bypass modes by default; in Manual, Accept-edits and
+                  Plan modes add <code>"bashEditDiffEnabled": true</code> to
+                  <code>~/.claude/settings.json</code> (CLI 2.1.269 or newer)</li>
+              <li>"Mention in Claude Brains" is also the first entry of an editor tab's right-click
+                  menu, beside the editor and Project-view menus</li>
+              <li>Plan comments: selecting another passage while a comment is still being typed
+                  adds that comment (or discards it if empty) and offers the Comment pill for the
+                  new selection — it used to do nothing until Enter was pressed; the field's
+                  placeholder now says "Enter adds, Esc cancels"</li>
+              <li>The "Tell Claude what to do instead" field on Bash and Write permission cards
+                  sits on its own line above the buttons, so Accept, Always allow and Reject keep
+                  one height; the placeholder adds "applies to Reject", since a note before
+                  Accept is not sent</li>
+            </ul>
             <b>0.13.1</b>
             <ul>
               <li>Numbered lists in Claude's answers keep counting across a blank line between
@@ -148,22 +166,6 @@ val changeNotesHtml = """
                   red error box above the card</li>
               <li>Fix: on resume, a rejected edit no longer counts toward "N files changed", and
                   the replayed card quotes the rejection note</li>
-            </ul>
-            <b>0.12.5</b>
-            <ul>
-              <li>Local slash commands like <code>/context</code> render their output as normal
-                  prose — on recent CLI versions it used to arrive as one giant red error
-                  block</li>
-              <li>A tool line's range suffix (like "(lines 1-150)") stays on one line in narrow
-                  panels — it used to wrap mid-token; the file path still shortens in the
-                  middle</li>
-              <li>Startup notice for claude.ai connectors and MCP servers that just need
-                  re-authentication is now a muted hint naming them; only servers that actually
-                  failed show in red</li>
-              <li>If the CLI exits immediately on launch — typically a version older than
-                  2.1.200, which the plugin's arguments need — the error output now reliably
-                  appears (it could show empty) with a hint that the CLI may be out of date and
-                  <code>claude update</code> fixes it</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
