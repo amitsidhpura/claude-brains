@@ -3,6 +3,30 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-13 (fourteenth) — runbook step 3b; re-audit → 2.1.270; 1.29, 6.5-tab, 5.6, 3.7 built + hand-tested
+- Load found CLI 2.1.270 (state said .263). The unused `reference/claude-code-log` clone became runbook
+  step 3b: the public CHANGELOG supplies LEADS only, never evidence. It paid off at once — chip X,
+  prompt fold, flat model list, arrow-key destination, Cancel on Switch account have no new `case`
+  label and surfaced only there. The 2.1.260 CLI baseline came from the 2.1.260 vsix (background).
+- Audit: 26 new extension labels (all terminal's-half dialogs/internals), 5 CLI subtypes (4 probed
+  `success`), roster +`/output-style`, `update_settings` allowlist unchanged, `maxEffortLevel` clamp
+  text measured; ONE real find: `bashEditDiff` in the Bash result sidecar → 1.29, taken the same day.
+- 1.29 built on the 4.4 resolved-edit surface (no CSS); fixture 87 written first (control 22/27 fail).
+  The real panel then drew NOTHING: the CLI attaches the sidecar only in auto/bypass by default — the
+  discovery probe had come up in auto (`probe_stdio.py` without `--mode` ≠ default, gotchas). Three
+  more probes + the binary's gate function pinned it; documented on the row. Hand test MT-1.29 (4 steps).
+- 6.5 on the editor-tab menu: one `add-to-group` + a `VIRTUAL_FILE` fallback; group id verified in the
+  IDE's `PlatformActions.xml` first. MT-2.15.
+- 5.6: a second selection while a comment draft was open did nothing, silently. Five options; user
+  picked settle-on-next-selection + a rule-stating placeholder (draft-on-decision already existed).
+  Fixture 53 +2 steps (control 10/14 fail). MT-6.9.
+- 3.7: the inline note field stretched Accept/Always-allow/Reject (34px flex item, stretch row). Four
+  options; user picked the plan-card layout (field above) and wrote the placeholder wording. Fixture 78
+  re-pinned (control 3/41 fail); `.card-b .plan-fb` override deleted. MT-6.10.
+- Totals: test 164/0, harness 856 → 870/0. The "readable sentences" webview diff was minifier noise at
+  a ten-version hop — dropped (gotchas). `ls` is `eza` in Bash-tool shells: `ls -t` hung a background
+  task 22 min (gotchas). Everything committed and pushed on the user's ask at the end.
+
 ## 2026-09-09 (thirteenth) — 0.13.1 released as a patch; Approved within the hour
 - Load, then "list unreleased updates" → one commit since v0.13.0 (32c676c: fences + list parser,
   renderer-only, no Kotlin), so the version question answered itself: patch, 0.13.1.
@@ -213,28 +237,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Trap: `ls -t` over `build/idea-sandbox/` found a stale `PS-2024.2/…0.8.0.jar`; the running
   IDE's jar is under the dir its `-Didea.plugins.path` names (PS-2024.2.6). gotchas § Testing.
 
-## 2026-09-04 (fourth) — 2.1.260 re-audit; 13.3 probed to the wall and deferred
-- Re-audit 2.1.251 → 2.1.260 per runbook, all measured (details block in the checklist): VS Code
-  session sidebar grew archive/unread/groups/filters (`delete_session` gone), CLI vocabulary
-  +`cloud_session_delta` +`update_settings`, roster 54 → 55 (+`/advisor` +`/reload-plugins`
-  −`/artifact-design`), fable row now **Fable 5.1** (roster-driven, panel unaffected;
-  `/fable/i` checks still match). Nothing else moved: tool set, tengu gates, initialize keys,
-  `set_model` response all flat. Checklist now 83 ✅ · 47 ➖ (130 rows); §16 counts swept;
-  slash doc updated; `reference/` re-extracted to 2.1.260.
-- Method: both vsixes downloaded from the Marketplace — 2.1.260 for the new extension, 2.1.251
-  for its `native-binary/claude` as the CLI BASELINE (no longer under `versions/`); runbook
-  step 3 updated. User then updated the real VS Code extension → `cmp`-identical to the
-  audited copy, no re-audit.
-- 13.3 ("implement it") died on measurement: `update_settings` allows ONLY `outputStyle`
-  (binary allowlist; `model`/`permissions` refused by name). But the CLI honors `model` and
-  `permissions.defaultMode` FROM `.claude/settings.local.json` at spawn (flag beats file).
-  Direct plugin file-write offered; user chose "wait for Anthropic" → 13.3 ➖, backlog
-  watch-item (grep the allowlist each re-audit), decisions.md has both entries.
-- Two same-day audit corrections from the attempt: VS Code doesn't ride `update_settings`
-  (its mode memory is extension `globalState`), and empty-merge acceptance ≠ key coverage —
-  new trap in gotchas § Protocol.
-
 ## Digest
+- **2026-09-04 (fourth)** — re-audit 2.1.251 → 2.1.260, all measured (VS Code session sidebar grew archive/unread/groups; CLI +`cloud_session_delta` +`update_settings`; roster +`/advisor` +`/reload-plugins` −`/artifact-design`; Fable 5.1 row). Both vsixes fetched from the Marketplace, the 2.1.251 one for its native binary as the CLI baseline (runbook step 3). 13.3 died on measurement: `update_settings` allows only `outputStyle`; the CLI honours `model`/`permissions.defaultMode` from `.claude/settings.local.json` at spawn — user chose "wait for Anthropic" (➖, backlog watch-item). Lesson (gotchas § Protocol): subtype acceptance ≠ key coverage.
 - **2026-09-04 (third)** — 0.12.5 released (`a77a565`, tag `v0.12.5`) and Marketplace-Approved within the hour: steps 1–5 proactive on "lets release updates", stopped at the approval gate; test/buildPlugin 137/0, verifyPlugin 8/8 Compatible (ladder grew to PS-263), asset `cmp`-identical, `marketplace-upload` green in 12s; the "CLI 2.1.200+" line landed in README, plugin.xml and the feed. Notes framed as "first impressions"; screenshots 01/03/04/05 remain the user's upload errand.
 - **2026-09-04 (second)** — early-exit "CLI may be out of date — run `claude update`" hint (Kotlin `sawFrame` → `early:true`; fixture 73; harness 630). The stub e2e exposed two instant-death bugs, both fixed: stderr thread not drained before `waitFor()` returned (ERR box empty), and `sendInitialize()` throwing on a dead stdin left `cli` unassigned (now runCatching, assigned before `start()`). `manual` cutoff measured on real binaries: 2.1.200 works fully, 2.1.199 rejects. Traps promoted to gotchas § Testing (gradle daemon caches PATH → `./gradlew --stop`; stub-CLI sandbox fails 3 fixtures).
 - **2026-09-04 (first)** — three first-impression fixes (fixtures 70–72): `/context` as one red block = CLI drift (built-ins now arrive `model:'<synthetic>'`), fixed by draining the stash on the RESULT's `is_error`; `.t-sfx` nowrap + `flex:0 0 auto`; `mcpNotice` per fault (needs-auth muted, failed red; locally-disabled servers are OMITTED from the init roster). Windows fold report NOT reproduced (waiting on the DevTools snippet). Old-CLI vocab translation rejected → became the 2.1.200 floor hint.

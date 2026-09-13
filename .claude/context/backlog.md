@@ -62,7 +62,7 @@
   persistence of the panel's chips (the CLI already HONORS `model` and `permissions.defaultMode`
   from `.claude/settings.local.json` at spawn — measured 2026-09-04; `PropertiesComponent` stays
   the fallback). Check the allowlist during each CLI re-audit (grep the binary for
-  `update_settings keys not allowed`).
+  `update_settings keys not allowed`). Last checked 2.1.270 (2026-09-13): still `outputStyle` only.
 - Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.

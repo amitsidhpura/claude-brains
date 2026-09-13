@@ -4,6 +4,51 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-13 — The ordinary card's reject note sits ABOVE the buttons, placeholder "… · applies to Reject"
+Supersedes the 2026-09-05 inline placement (3.7, VS Code's `rejectMessageInput` beside Reject).
+**Why:** the field is 34px and the buttons 26px; as a flex item in `.card-b` (default stretch) it
+grew every button on Bash/Write cards while the plan card, whose field is on its own line, kept
+26px — two heights for one control family (user's screenshot). Moving the field up makes the
+three cards one structure and gives the note the full width. Shrinking only the inline field was
+rejected by the user (inconsistent with the plan and ask fields); growing every button (34px
+footers on all cards) and `align-items: center` (fixes the stretch, leaves an uneven row) were
+the other options. **Wording:** the user's "Tell Claude what to do instead · applies to Reject",
+lower-case after the middle dot per the footer-suffix house style — needed because the field no
+longer sits beside Reject and a note before Accept is dropped (no wire for it).
+
+## 2026-09-13 — A plan-comment draft is settled by the next selection, never blocks it
+While a comment composer is open, a new selection in the plan body commits a typed draft (or
+cancels an empty one) and then shows the pill as usual; a bare click leaves the draft alone; a
+decision button still commits it (since 2026-08-23). Placeholder states the rule. **Why:** the
+old `if (composing) return` made a second selection silently do nothing — the user hit it
+repeatedly and a newcomer has no way to learn "press Enter first". Committing is recoverable
+(every row has ✕); ignoring is not discoverable. **Rejected:** several open composers at once
+(one pending mark per row — the bookkeeping where the 2026-08-23 delete-while-composing bug
+lived); a hint/flash explaining the block (leaves the dead end in place); commit-on-blur (fires
+on stray clicks, and the decision-button case it would add is already covered); a labelled Add
+button (the icon dress was the user's round-4 pick).
+
+## 2026-09-13 — 1.29 Bash edit diff draws as resolved edit cards, no panel toggle for the CLI's gate
+One card per changed file through `fillAppliedCard` ("Bash on <path>", the CLI's own hunks via
+`patchRows`, "✓ Applied"), under the IN/OUT box, drawn on error results too (the edit happened), live
+and replay through one `appendBashDiff`; `MAX_BASH_DIFF_FILES` = 10 with the CLI's `moreFiles` folded
+into one ↳ note. **Why:** the 4.4 auto-approved-edit surface already says exactly this ("the record is
+that the edit ran"), so no new CSS, no new wording, and the mockup/gallery parity cost is one example.
+**The gate stays the CLI's** (auto/bypass by default, `bashEditDiffEnabled: true` elsewhere): a panel
+switch would be a second implementation of a settings key — configure in the terminal; the release
+notes say where to turn it on. **Rejected:** one combined card for all files (loses the per-file
+path header that opens the file); a custom compact block (new CSS + mockup states for one feature);
+hiding the diff on `is_error` (it is a record, not a verdict).
+
+## 2026-09-13 — The public changelog is a re-audit LEAD source, never evidence
+`reference/claude-code-log/` (clone of `anthropics/claude-code`, cloned 2026-09-05, unused until now) is read at
+runbook step 3b before the binary/extension diffs. **Why:** the `case`-label and subtype diffs only catch new
+identifiers; behaviour changes that reuse existing labels (chip X replacing Hide, prompt fold button, flat model
+list) surface nowhere else, and By-design items (Hooks / Permission-rules / MCP dialogs) need only existence to
+earn ➖ — no probe. **Boundary kept:** a note creates a candidate row or probe target; steps 4-7 still measure,
+and the row cites the measurement. **Rejected:** keeping the blanket "nothing read from release notes" rule — it
+had no recorded war story behind it (the gotchas section it cited never existed) and cost coverage.
+
 ## 2026-09-09 — 0.13.1 ships the two renderer fixes alone, as a patch
 **Why**: both changes (3+-backtick fences, CommonMark lists) fix behaviour that already existed,
 touch only `webview/js/20-markdown.js` + one CSS rule, and the user was seeing the list bug daily
@@ -313,521 +358,54 @@ retry/vocab-translation rejection stands.
   model still receives it); the `strings` sweep of each CLI re-audit is the tripwire, and the fix
   is bumping `NOTE_MAX`.
 
-## 2026-08-30 (fifth) — First-paint flash, second attempt: visible browser, load on ITS first bounds, CEF paints the dark bg
-- Why: 0.12.2's fix made the flash DETERMINISTIC. It hid the JCEF child (`isVisible=false`) until
-  `onLoadEnd`, but an invisible `BorderLayout` child gets NO bounds, so CEF kept its default
-  ~300×180 surface, the page loaded at that size and was resized only when shown — the squashed
-  frame on every open (user's screenshot in the real IDE). The correct mechanism: keep
-  `browser.component` visible and laid out, run `loadUi()` on the BROWSER component's own first
-  non-empty `componentResized` (the CEF surface tracks that component, so the viewport is the tool
-  window's before the page lays out), and `browser.setPageBackgroundColor("#1a1a1a")` so the
-  pre-load frame is dark instead of white.
-- Simplified at the user's ask ("optimized to remove unnecessary last fix?"): the `JPanel` wrapper,
-  the hide/show in `onLoadEnd`, the `java.awt.Color` mirror and three imports are gone;
-  `component` is `get() = browser.component` again, `PAGE_BG` is a `const val "#1a1a1a"`. Net
-  change vs pre-0.12.2: `loadUi()` moved from the constructor into a one-shot listener + one
-  `setPageBackgroundColor` call. Verified by the user in the real IDE from a zip, twice (with and
-  without the wrapper).
-- Rejected: an opaque wrapper behind the browser (only a dark ground for a HIDDEN child; with the
-  child visible, JCEF is heavyweight and covers it anyway).
-
-## 2026-08-30 — Defer the webview load until the tool window has bounds; factory DumbAware
-**SUPERSEDED (same day, below): the hidden-child half was the bug; the deferral and DumbAware stand.**
-- Why: the first frame on project open was the page laid out at CEF's default ~300×180 surface
-  (`loadHTML` ran in the `ChatPanel` constructor, before `addContent`). Loading on the wrapper's
-  first non-empty resize and showing the JCEF child only at `onLoadEnd` makes the first visible
-  frame the right one; the wrapper's `PAGE_BG` (= `--bg`) covers the gap. `DumbAware` because the
-  platform otherwise hides the whole tool window behind an "indexes are built" placeholder — the
-  panel never reads indexes.
-- Accepted cost: the CLI process starts when the panel is first shown rather than at project open
-  (a collapsed tool window loads nothing until clicked).
-- Rejected: `JBCefBrowser.createBuilder().setOffScreenRendering/…` background tricks (the flash is
-  a LAYOUT-size problem, not a colour one); keeping the constructor-time load and re-layout after
-  attach (the wrong-size frame would still paint once).
-
-## 2026-08-30 — Settings-schema staleness: wait for SchemaStore, no code
-- Why: the IDE fetches Anthropic's schema from `json.schemastore.org/claude-code-settings.json`
-  (13.2, nothing bundled); SchemaStore is hand-synced ~monthly and sat at 2.1.220, so 2.1.251's
-  `PreModelSwitch`/`PostModelSwitch` show as a warning in `settings.local.json`. A warning, not an
-  error; the hook works.
-- Rejected: bundling the extension's `claude-code-settings.schema.json` (redistribution + a plugin
-  release per CLI release, reversing 13.2's design); preferring the locally installed VS Code
-  extension's copy with SchemaStore fallback ([SM], offered as the recommendation — user chose to wait;
-  revisit if the lag becomes a nuisance).
-
-## 2026-08-30 — 9.11 built the day it was found; optimistic switch kept, revert on error
-- Why: a `PreModelSwitch` hook can now refuse the chip's `set_model` and the chip would lie. Kept
-  the optimistic flip (instant chip, as before) and added the revert on the error answer instead of
-  waiting for the response before flipping — no perceived latency in the common case.
-- Rejected: pessimistic switch (chip waits for the control_response); a "model change silent"
-  confirmation line of our own (the 2026-08-24 marker decision stands; the CLI's own echo still
-  draws after the first turn).
-
-## 2026-08-30 — Re-audit run at 2.1.251 on the user's ask, one version after 2.1.250
-- Why: the user asked; the "wait a few versions" deferral (2026-08-29) was a plan, not a rule.
-  Outcome justified it: a real behaviour change (`set_model` rejection) surfaced.
-- Lesson recorded in gotchas § Protocol: a headless probe with no turn is not the panel's usual
-  state — measure post-turn too before calling a frame "gone".
-
-## 2026-08-29 — GitHub Copilot Chat audited once, adopted nothing but one probe; not a reference client
-- Why: the user used Copilot and found it bloat; the audit (built-in 0.63.0: 9 participants, 38+~20
-  tools, 191 contributed + ~330 hidden settings, four ways to run an agent) confirmed growth is
-  horizontal — surfaces and experiments, not depth on the loop. Its local Claude Code harness was
-  removed between 0.44 and 0.63, so a lean Claude Code panel is a niche it vacated. Copilot now reads
-  `.claude/skills` and `.claude/settings.json` hooks — validates "configure in the terminal".
-- Kept: **terminal last command/output as attachable context** — the only many-times-an-hour gap
-  (only when the USER ran the command; the CLI already sees its own). Probe the JetBrains terminal API
-  first (backlog § Next up). Not to be re-proposed from Copilot: worktree-per-session shape, model
-  family aliasing, per-phase models, tool-result spill/cache probes, OTel traces, NES.
-- Rejected: keeping Copilot extractions under `reference/` (deleted the same session); naming any
-  third-party client other than `anthropic-claude-code` in docs or context procedures.
-
-## 2026-08-29 — Third-party reference material lives under `reference/<vendor-product>/`
-- Why: `vscode/` was a one-off name for Anthropic's extension; a second extraction needed a home and
-  `/reference/` was already gitignored. Now `reference/anthropic-claude-code/`; runbook step 2 and
-  the protocol doc's § 8 point there. Nothing else is kept there today.
-- Rejected: leaving `vscode/` in place next to `reference/` (two conventions for one thing).
-
-## 2026-08-29 — External links open in the system browser; the webview never navigates or pops up
-- Why: the panel is an off-screen JCEF browser. `target="_blank"` asked CEF for a popup window that
-  had no surface to draw on (blank PhpStorm windows, user report); a middle-click, which fires no
-  popup, loaded the URL in the panel's own main frame. Three guards, each covering what the others
-  cannot: JS `click`+`auxclick` delegate → `browse` frame → `BrowserUtil.browse` (honours the IDE's
-  Web Browsers setting); `onBeforePopup` for `window.open` and the like; `onBeforeBrowse` cancelling
-  any main-frame http(s) navigation. Bare URLs autolink while there.
-- Rejected: opening in the webview (no back button, no chrome, kills the panel); a JCEF child
-  window (same OSR problem); `setOpenLinksInExternalBrowser` (not in the 2024.2 platform API used).
-
-## 2026-08-29 — Effort selector is a pill slider in the .tgl idiom (CSS only)
-- Why: it sat under three `.tgl` switches drawn in a different idiom; the user brought a screenshot
-  of a pill track with ticks and a knob. Same DOM/classes, so `setEffortUI` and fixtures 51/55/58
-  are untouched; fill picked per level with `:has()`. Every stop is a fixed 12px slot so centres
-  never move; knob inset 2px and fill 2px past the knob in every state — the switch's own numbers.
-- Rejected: "Effort (High)" bracketed label (bold level kept); a blue track like the screenshot
-  (accent token only, no new colour constants); JS-computed fill (CSS can do it).
-
-## 2026-08-29 — Marketplace change notes carry the last THREE versions + a GitHub releases link
-- `changeNotesHtml` had grown to 14 versions (0.4.0 → 0.11.1) under the rule "keep what users update
-  FROM"; the What's New page showed the whole wall. User chose: last three, then a link to
-  `github.com/amitsidhpura/claude-brains/releases` (every tag has full notes). Rule updated in the
-  kdoc and release.md 1b: add at the top, drop the oldest, keep the link.
-
-## 2026-08-29 — Undo and branching belong to git, not Claude: 8.7 NO, 14.2/14.4 NO, 14.1/14.3 later
-- User's principle: "depend on concrete de facto git for such things rather than Claude". Rewind via
-  `rewind_files` needs `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` (bloats every transcript), only
-  covers turns Claude made, only lives as long as the transcript — while `git diff` / `git checkout --`
-  / PhpStorm Local History are universal and already habitual. A panel-side undo would also teach the
-  habit of not committing before letting Claude loose. Fork: New button + `/resume` cover it.
-- 14.2 host git actions and 14.4 `get_workspace_diff` are thin-client git for a webview without git;
-  the IDE's git client and diff viewer are native → ➖ by design.
-- 14.1 create worktree + 14.3 git-aware diff → deferred as ONE "worktrees" backlog bundle: they are
-  panel-vs-terminal convenience, not Claude-vs-git, but a worktree is a new project window in JetBrains
-  so the IDE-side design comes first. With this every checklist section is ✅ (82 ✅ · 46 ➖).
-- Rejected: "rewind files → later" (my first suggestion) — dropped to NO on the user's principle.
-
-## 2026-08-29 — `/clear` removed from the panel (7.6); the New button is the panel's /clear
-- 2.1.241 gave `/clear` an optional `[name]` hint, so a menu pick INSERTED `/clear ` instead of
-  running, and the native branch dropped the typed name. Options were A) pass the name through as
-  the new conversation's title (needs a pending-title held in Kotlin until `system/init` gives the
-  new session id, plus a fixture), B) pin pick-runs and ignore the name, or C) remove `/clear`.
-- User chose C: `#newBtn` already sends the same `{kind:'new'}`, naming already lives in the header
-  pencil (7.9), and `/clear` is a terminal command — same treatment as `/model` and `/rename`.
-  `CMD_NATIVE` is now `{'btw'}`; typed `/clear`, `/new`, `/reset` get the "isn't available in the
-  IDE" refusal. Known loss: no keyboard-only new conversation (the plugin binds no shortcuts).
-
-## 2026-08-29 — 8.14 reloaded-webview log replay: NO (declined, not deferred)
-- A webview reload happens only from a DevTools reload or a JCEF renderer crash; none observed in
-  the wild since `seedUi()` (2026-08-13) began healing the chrome. The log half would need the
-  transcript pushed WITHOUT restarting the CLI and reconciled against mid-turn frames ([LG]).
-- User's call: "does not seem very important" — `refresh` / reopening the session already brings
-  the conversation back after a crash. Removed from `backlog.md`; re-mark only if a real reload is
-  ever seen. Leaves 8.7 as §8's sole open row.
-
-## 2026-08-29 — Destructive hover stays red (roster ✕, history delete); everything else white
-- The two hover-revealed DESTRUCTIVE controls (`.bg-x:hover`, `.hist-del:hover`) go `--red`;
-  every other hover-revealed control (`.rm`, `.model-del`, `.t-edit`) goes `--fg`. User asked
-  whether the red was a one-off, was shown it is a deliberate pair, and kept it. Do not
-  re-propose unifying to white.
-
-## 2026-08-29 — 8.11 side question built as a floating panel over the composer, opened by /btw
-- Placement: a full-composer-width box anchored above the composer (not a right-side panel like
-  history, not inline in the log) — the answer needs prose width, and "outside the log" is the
-  whole point. User approved the mockup render before wiring. Bare `/btw` opens, `/btw q` asks;
-  the panel has its own single-line input that grows (Ctrl+Enter; the 2-row first cut left dead space above Send — user, 2026-08-29), ✕ clear, close, Escape; a new/resumed
-  conversation resets it (its answers were about the thread that went away).
-- The roster carries no `/btw` (54 entries, 2.1.251 measured) — the panel supplies the entry
-  (`CMD_LOCAL`), as the TUI and VS Code do; `cmdKind('btw')` = native.
-- History is threaded by the client (`{question, response}` pairs of ANSWERED rows only); the
-  CLI keeps none. Row ids are page-lifetime monotonic so a late answer can never land on a new
-  row — fixture 66 therefore reads ids from its bridge tape, never literals.
-- Rejected: a slash-command that sends the question as a hidden turn (would enter the transcript
-  and burn a turn); rendering answers inline in the log (defeats the purpose).
-
-## 2026-08-29 — §15 closed: 15.5 debugger hand-off later, 15.6 MCP toggles no
-- **15.5** `ask_debugger_help` → ➖ later (backlog "Debugger MCP tools" [LG]). The VS Code message
-  itself is a no-op ack; the substance is a per-debug-session MCP server exposing stack/variables/
-  breakpoints. Buildable on `XDebuggerManager`, but a new tool surface nobody has asked for and
-  untestable without an Xdebug sandbox. Rejected: build now.
-- **15.6** Chrome/Jupyter MCP enable/disable → ➖ no, by design: MCP configuration is the
-  terminal's half (Philosophy). Rejected: later (it is not a queue position, it is a scope rule).
-
-## 2026-08-29 — Goal: every checklist section ✅ by 2026-08-30 EOD; sections carry one mark
-- `## N. ✅|⬜ Title` in `docs/feature-checklist.md`; ✅ = every row ✅ or ➖. User rejected a
-  richer form (a `— ✅ complete` / `⏳ pending (3 🟥 · 2 ⬜)` suffix + At-a-glance section line):
-  "let's not complicate it". Work order: one section at a time, first to last, each row explained
-  in plain language, user says build / later / no.
-- Closed by decision this way: 1.25 later · 6.4, 6.5 later · 6.7 no · 12.3 no ("not needed") ·
-  12.6 later ("not needed for now", mockup first if revived) · 9.7 later + WATCH.
-
-## 2026-08-29 — 1.22 tool_progress declined on measurement, not opinion
-- A foreground 12 s Bash under `-p --output-format stream-json` (2.1.251) emitted zero
-  `tool_progress` frames; the binary's own SDK adapter drops the heartbeat kind. ➖ with the
-  measurement in the row; revisit only if the wire changes.
-
-## 2026-08-29 — 13.2 settings schema: point at SchemaStore, bundle nothing
-- `ClaudeSettingsSchemaProviderFactory` maps `.claude/settings.json` + `settings.local.json` to
-  `https://json.schemastore.org/claude-code-settings.json` (the `$schema` Anthropic's docs recommend).
-  Why: bundling VS Code's `claude-code-settings.schema.json` would breach the never-redistribute
-  rule; a hand-written schema (the first plan) would rot against 150+ keys per release. Rejected:
-  doing nothing — the IDE's SchemaStore catalog matches only `settings.json`, never the local file.
-- Packaging: optional depends on `com.intellij.modules.json` (2024.3+ split; core on 2024.2), the
-  JCEF pattern. verifyPlugin Compatible ×7.
-
-## 2026-08-29 — 9.7 Fable overage gate: watch first, build after a real frame
-- No `supportedDialogKinds` declared → the consent never reaches the panel and the chip could
-  keep the old model name after a fallback. Cannot be triggered on demand. Rejected: building the
-  consent card from the binary's schema alone. Instead `system/model_fallback` → `window.__modelFallbackSeen`
-  + one console warning (fixture 65); the build starts when one has been captured.
-
-## 2026-08-29 — Error results: `errors[]` text before the subtype token
-- Measured `--max-turns 1`: `result{subtype:error_max_turns, is_error:true, terminal_reason:max_turns,
-  errors:[…]}` with NO `result` key. `onResult` now shows `errors.join('\n')` when `result` is absent;
-  the raw subtype is the last resort. Found while testing 1.24, fixed under it.
-
-## 2026-08-29 — Wrong-value negative controls accepted for fixtures 62–64's JS halves
-- The sandbox had been relaunched after the edits, so no free pre-fix build existed and a stash
-  control would have cost two restarts. Per conventions (either form is valid) the flipped-
-  expectation copies were run (10/10 flipped asserts failed) and each fixture's provenance says
-  exactly that. Later additions (63's geometry assert, 64's errors[] assert, 65) got true pre-fix
-  controls because the sandbox happened to still serve the old bytes.
-
-## 2026-08-29 — Checklist: 🚫 mark retired; ➖ = "not implemented", the row says why
-- User's call after an audit found the two closed marks drifting: 9.6 / 12.4 / 8.12 sat on ➖
-  while being decisions, and 6.6 / 8.9 / 15.2 / 5.5 sat on 🚫 while being "do last" deferrals.
-  *Why:* one mark, reason in the row — whether it is the terminal's half, declined or deferred is
-  prose, and all three can be revisited later. *Rejected:* a third mark for "deferred" (more
-  taxonomy to keep straight); ⬜ for deferrals (understates "wanted"). The glossary's By design /
-  Declined / Deferred distinction still governs release PROSE, just not the mark.
-
-## 2026-08-29 — 11.6 extensibility status view: declined; 11.5 elicitation: decline ack, form deferred
-- **11.6 ➖ declined** (user, after a plain-language walkthrough). *Why:* it is the terminal's half — looked
-  at while configuring, not many times an hour; the `system/init` frame's `mcp_servers/agents/
-  skills/plugins` are already used for the actionable half (11.2 failure notice, / menu); VS Code
-  has no such view; a second copy drifts per CLI release. *Rejected:* "later" as an [SM] popup
-  listing `server · status` from the init frame — revivable if ever wanted.
-- **11.5**: `ClaudeCli.handleControlRequest` answers `elicitation` with `{action:"decline"}`
-  (the old bare `{}` was schema-invalid — enum `accept|decline|cancel`). *Rejected for now:* an
-  elicitation form; parked in backlog § Someday behind a stdio MCP probe server, only if a server
-  the user uses ever elicits. VS Code passes no `onElicitation` handler.
-
-## 2026-08-29 — The roster ✕ has no confirm step, and never removes a row itself
-Kill a background task (11.3) from a hover-✕ on the roster row, copying the conversations-list
-gutter idiom WHOLE (fixed popup width, gutter reserved only on hover) but NOT its arm/confirm step
-— user's call after the hand-test. *Why*: a killed task costs one re-ask; a deleted conversation is
-gone, which is what the confirm there is for. The row dims and stays until the CLI's next
-`background_tasks_changed` REPLACES the set. *Rejected*: optimistic removal — `stop_task` answers
-success for unknown ids too, so the response proves nothing; only the roster frame does.
-
-## 2026-08-29 — 11.4 sub-agent work outcome is DECLINED on a measurement, not a hunch
-An Explore agent whose Bash returned `is_error:true` and which replied "FAILED: …" ended
-`task_updated{status:"completed"}` + `task_notification{status:"completed", summary:"FAILED: …"}`
-(2.1.250, wire tape). Task status is the task's lifecycle (`completed|failed|stopped`; a panel kill
-= `killed`/`stopped`), never the work's verdict; the summary prose is the only signal and colouring
-from prose was rejected 2026-08-13. VS Code renders no outcome either. *Rejected*: re-building the
-dot on the summary text; keying on the agent's last `is_error` tool result (it is the agent's, not
-the task's, and a recovered failure would paint red).
-
-## 2026-08-29 — `ambient` tasks are filtered on the schema's word, with a witness for the first one
-2.1.250's roster item schema describes `ambient` as housekeeping "hosts should exclude from
-activity indicators". Filtered from the roster AND the suspend count (an ambient non-`local_bash`
-task would otherwise park the turn on Stop forever — the 2026-08-12 shell bug from a new source).
-No live frame has carried the field, so the first one is stored verbatim as `window.__ambientSeen`
-plus one console warning — measure-before-believing satisfied by instrumenting rather than waiting.
-*Rejected*: ignoring the field until seen (the failure mode is a stuck panel, not a cosmetic one).
-
-## 2026-08-28 — The card note's gap is `--attach-gap` (8px), not a literal
-**Decision:** `.card .t-note { margin: var(--attach-gap) 0 0 2px }`. **Why:** the 6px first shipped
-was eyeballed; the user asked how it was derived and it wasn't. The card's own rhythm is the token
-(`.card-h` margin-bottom, `.card .blk` margin-top) and the note already sits at `--attach-gap` under
-a tool line, so one token keeps the note-to-diff distance identical in both places. Approved on the
-real panel 2026-08-28. **Rejected:** keeping 6px (unjustified); 10px to match `.card-b` (that is the
-footer's step, not a content gap). The 2px left nudge stays by eye — it aligns ↳ with the box border.
-
-## 2026-08-28 — Tweak-travel sends a WHOLE-FILE edit, and MultiEdit rides it too
-**Decision:** an edited permission-diff pane goes back as `updatedInput` in VS Code's own shape —
-Edit `{old_string: whole current file, new_string: whole pane}`, Write `content`, MultiEdit
-`edits:[that one edit]` (`EditProposals.tweakedInput`). An untouched pane answers with the
-ORIGINAL input (byte-identical to pre-3.5). The card redraws its diff from what ran and adds
-"edited in the IDE before accepting"; replay derives the same flag by replaying input and
-`toolUseResult` onto `originalFile`. **Why:** measured — VS Code 2.1.250's `rf(…,"single")` is a
-100 000-line-context diff, i.e. the whole file, and the CLI applied our whole-file answer over
-stdio without complaint (probe f63143c3); the whole file is trivially unique for `old_string`,
-so no hunk-minimising diff code is needed on either path. **Rejected:** a minimal-hunk diff
-(more code, same result, and a non-unique minimal old_string could FAIL the CLI's check);
-leaving the pane read-only (the verdict already carried the pane text — it was being thrown
-away); sending MultiEdit to the card only, as VS Code does (the schema accepts the whole-file
-edit and the card path is unchanged).
-
-## 2026-08-28 — 3.6 multi-file review: analysed, not started — data before UI
-**Outcome (same day):** built as decided — probe showed `get_workspace_diff` is git HEAD vs
-working tree (user edits included), so baselines come from the autosave PreToolUse hook; the
-line is PER-TURN (what the hook sees cleanly), not per-session like VS Code; Review is live-only,
-the resumed-session variant is parked in backlog. Hand-verified 2026-08-28.
-
-**Decision:** build order for 3.6 is (1) probe `get_workspace_diff` headlessly and snapshot
-per-file baselines in the existing PreToolUse Autosave hook, (2) only then a "Files changed (n)"
-summary line opening a `SimpleDiffRequestChain`. **Why:** the UI half is nearly free
-(`DiffReview` already opens a `ChainDiffVirtualFile`); what VS Code has and we lack is the
-`{old,new}` map, fed there by a `file_updated` MCP notification to its in-process
-`claude-vscode` sdkMcpServer (we use an external ws server via `--mcp-config`) plus a checkpoint
-store on load. **Rejected for now:** `ChangeListManager` (working tree vs HEAD) as the source —
-mixes the user's own edits with Claude's; adopting sdkMcpServers just to receive `file_updated`
-(unprobed whether the CLI would notify a ws server at all).
-
-## 2026-08-28 — Closed audit docs are deleted, not archived; their knowledge moves to the reference tier
-**Decision:** `docs/verifier-matrix.md`, `docs/renderer-parity.md` and `docs/client-parity.md` deleted
-(user, 2026-08-28). Rule going forward: a doc whose every item is closed is history — promote the
-measured facts and standing traps (gotchas / `ide-mcp-protocol.md`), leave a `git show <sha>:path`
-pointer where it was cited, delete the file. **Why:** the three carried 2,090 lines with zero open
-work; a fresh session reading them as live registers would re-audit closed items, and the feature
-checklist is the one register. **Rejected:** keeping them as "archives" in-tree (still read, still
-drift), and deleting without promotion (the client-parity wire evidence — e.g. `staleRecovered` is
-what fires, failed Bash `toolUseResult` is a string — exists nowhere else and cost real probes).
-
-## 2026-08-26 — 0.11.1 is a PATCH, its notes get a "Changed" section, and the Fable caveat ships
-
-The effort-slider relocation shipped as 0.11.1, not 0.12.0: `docs/release.md` reserves the minor
-bump for new capability, and moving a control between two menus adds none. The GitHub notes used
-a **🧭 Changed** heading in place of the template's ✨ New / 🐛 Fixes, because the release was
-neither — filing a relocation under Fixes would have implied something was broken. And the
-measured Fable thinking no-op went into ⚠️ Notes as a plain sentence.
-
-*Why:* users read notes to learn what they will SEE; an honest heading and a stated limitation
-beat a template fit. *Rejected:* 0.12.0 (offered at the gate, declined by omission); filing under
-Fixes; leaving the Fable no-op out (it is real, measured, and users on Fable will hit it).
-*Precedent:* the notes template in `docs/release.md` now has a third shape in practice — a
-Changed-only release — without the doc being edited for it; edit the doc if it recurs.
-
-## 2026-08-26 — Effort lives in the MODEL menu, and its level shows on NO chip
-
-The slider moved out of `#modeMenu`'s `.popup-f` into `#modelFooter` as its last row, under the
-1M / fast / thinking switches; the popup header became "Models". The level is displayed in exactly
-one place — the footer's own `Effort <b id="efName">` label.
-
-*Why:* the level applies to the model, so it belongs in the popup that picks one; a chip must label
-the popup it opens, or it advertises a control that is not there.
-
-*The suffix took three tries, all rendered before deciding.* Moving it to the model chip produced
-`Default (Opus 5) (High)` — two bracket groups, rejected on sight, because the model label already
-carries a parenthetical (`Default (Opus 5)`, `Opus (1M)`). Six candidates were then injected as real
-`.chip-btn` nodes INSIDE `#inputbar` — so the 18px svg ID rule and the 6px inline-flex gap applied
-exactly as on the live chip — and screenshotted over CDP: two-brackets / middot / merged-bracket /
-muted-word / icon+level / none. The middot `Default (Opus 5) · High` was picked, built, verified…
-and then also rejected: **"better is to hide effort"**. Final state drops the suffix entirely, and
-`setModelChip` is byte-identical to its pre-session body.
-
-*Rejected:* keeping `(High)` on the mode chip (points at a popup that no longer holds the control);
-the middot (still noise on a chip that is better one fact wide); an icon+level group (busier still).
-
-*Consequence:* `.ef-row` is deliberately NOT `.tgl-row` — it carries a dot slider, not a switch, and
-separate class names are what let fixture 55 keep counting exactly three TOGGLE rows while fixture 51
-measures the moved one.
-
-## 2026-08-26 — The Thinking switch stays live on Fable, with the no-op documented instead of gated
-
-`set_max_thinking_tokens {max_thinking_tokens: 0}` returns `success` on `claude-fable-5[1m]` and the
-next turn STILL streams a thinking block — measured against a same-prompt control run that produced
-an identical single block (CLI 2.1.246, headless probe with the panel's flags). The same 0 verifiably
-kills thinking on the default/Opus model (9.5's 2026-08-24 check). So the switch is inert on Fable.
-
-*Decision (user, "document only"):* no UI change. Recorded in `docs/feature-checklist.md` 9.5,
-gotchas § Protocol (and the since-deleted `docs/manual-test.md` 3.5).
-
-*Why not gate it:* no roster field discriminates Fable — `supportsAdaptiveThinking` is `true` for
-sonnet, opus AND fable alike — so gating would need a model-name sniff, a new idiom bought for one
-model's quirk. *Rejected:* disabling the switch on Fable; a warning-only tooltip.
-
-## 2026-08-26 — Roster capability flags do NOT gate the effort slider or the Thinking switch
-
-An article argued model-dependent controls would let users "toggle things that silently do nothing",
-and the CLI does send `supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking` that we
-ignore. Building the gate was proposed and then ABANDONED on evidence: with `haiku` selected — the
-one roster entry carrying none of those three flags — `/effort max` is accepted with the CLI's full
-confirmation line and the next turn emits a real thinking block (user's own screenshot, 2026-08-26).
-
-*Why:* the flags say what a model menu should OFFER as a per-model sub-control; `/effort` is a
-session-global setting ("this session only") that any model accepts. Gating on them would have
-DISABLED two controls that visibly work — a regression dressed as a fix. `supportsFastMode` remains
-the only flag we gate on, and only because delivery was probed separately.
-
-*Rejected:* rendering the dot count from `supportedEffortLevels` (every non-haiku model returns all
-five today; the shorter-list case could not be reproduced — no 4.6 models on this roster).
-*Standing and unchanged:* the 1M switch carries no client-side validity logic (2026-08-24).
-
-## 2026-08-25 — Chip/slider command turns show ONE confirmation line, no bubble, live and resumed
-*Why*: the CLI writes a command trio (`isMeta` caveat + `<command-name>` wrapper +
-stdout/local_command confirmation) to the transcript for BOTH the chip's `set_model` control
-request and the slider's `/effort` turn (measured 2026-08-25, CLI 2.1.245) — so resume showed
-`/model haiku` / `/effort high` bubbles live never drew, and a wrapper could become a derived
-session TITLE. User picked hide-on-resume for /model (AskUserQuestion) and then asked for /effort
-to "show like a model change": `cleanInjected` drops exactly {`/model`, `/effort`} wrappers; the
-`effortMuted` gate draws the CLI's synthetic-assistant confirmation live (the normal path stashes
-synthetic text into `syntheticEcho` and draws nothing). **Supersedes** the 2026-07-30 "/effort
-bubble stays on resume as audit trail" acceptance — the audit trail is now the confirmation line
-both paths render. Also corrects 2026-08-24's premise that model changes leave no transcript
-record: on 2.1.245 they demonstrably do. *Rejected*: showing the bubble live too (chip clicks
-would paint command bubbles); replay filtering by promptSource (no discriminating key exists);
-a title-only fix (leaves the parity drift).
-
-## 2026-08-25 — The custom row's × overlays the ✓ inside `.pi-check`; no offset arithmetic near #inputbar
-*Why*: two rounds of stylesheet-derived offsets were falsified by ID rules (`#inputbar svg` 18px
-resizes both glyphs; `#inputbar button {padding:4px}` beat `.model-del{padding:0}` and
-flex-squeezed the × svg to 10px). Nesting the button in the check span with `inset` makes the
-centers coincide by construction; an ID-scoped `#inputbar .model-del{padding:0}` kills the
-squeeze. Corollary pinned in fixture 57: center-equality asserts pass under SYMMETRIC shrink —
-size equality must be asserted separately. *Rejected*: `right`/`top` magic numbers (twice).
-
-## 2026-08-24 — 1M / fast / thinking live as switches in the model-menu footer (9.9, 9.4, 9.5)
-*Why*: "Sonnet with 1M context" had no surface — the `[1m]` opt-in existed only as a typed raw id.
-All three are model-adjacent settings, so they stack in one `.popup-f pf-stack` footer under the
-model list, as toggle switches (`.tgl` — the panel's first switch idiom; user picked switches over
-checkbox/segmented). *Rejected*: separate composer chips (crowds the bar); VS Code's command-menu
-placement (we have no command menu). 9.5 built despite the checklist's "likely redundant beside
-effort" take — the user's explicit call.
-
-## 2026-08-24 — The 1M switch carries NO client-side validity logic
-*Why*: user decision at plan review ("I don't want any hardcoded logic"). `set_model` never rejects
-(measured: `haiku[1m]` → success) so validity can't be asked of the CLI; a hardcoded haiku/fable
-table would drift with every roster change. An unsupported combo fails on the NEXT turn with the
-API's own error, rendered by the existing error path (measured: "400 The long context beta is not
-yet available for this subscription"). *Rejected*: the plan's original disabled-states table
-(haiku off+disabled, fable on+disabled, default disabled); erroring at toggle time (no CLI surface
-for it). Corollary the user then asked for: the switch reconciles to the REAL window from
-`result.modelUsage[].contextWindow` after each model's first turn (`reconcileFromResult`),
-cleared per model change — CLI truth over both the tag and our seed.
-
-## 2026-08-24 — Thinking ON = max_thinking_tokens null, not VS Code's 31999
-*Why*: the CLI schema defines null as "reset to session default"; VS Code's `(31999,"summarized")`
-pins a pre-adaptive budget that would silently cap models whose default differs. OFF = 0.
-*Rejected*: byte-for-byte VS Code parity (a two-line change in ClaudeCli if ever wanted).
-
-## 2026-08-24 — Effort/model conversation markers: dropped by the user
-**Superseded in part 2026-08-25**: the user themselves asked for effort visibility — /effort now
-draws the CLI's confirmation line on both paths (see the 2026-08-25 entry); the marker-style
-display and the model half stay dropped.
-*Why*: asked originally ("show effort in live and replay"), then withdrawn at plan review after
-learning a model-switch marker could never replay (mid-session model changes leave NO transcript
-record — measured by key). Do not re-propose unprompted. The muted `/effort` turn stays as is.
-
-## 2026-08-24 — An API error draws ONCE: dedupe by exact text, never by kind
-*Why*: the CLI echoes an error twice on the live wire (synthetic assistant message + result
-is_error, identical strings) while the transcript keeps only the assistant record — replay was
-always single (SessionStore already maps `isApiErrorMessage` → error item); live now stashes
-synthetic texts and drops only a text the result's error block literally re-shows. Everything
-else — differing text, second synthetic message, non-error result, interrupt — draws its own
-error block. *Rejected*: dedupe by kind/flag alone (the user's "could this swallow a message?"
-exposed that a differing text WAS silently dropped — fixture 56's second control proved it).
-
-## 2026-08-24 — The context skill stays lean: rules only, and it is shared via the gist
-The skill (`.claude/skills/context/SKILL.md`) is general-purpose — the user includes it in other
-projects from gist `b2d033439ba4ca5bcd018f4fe5eef773` — so it carries no project-specific numbers,
-and after the tiered-load change it was compressed 141 → 96 lines at the user's direction: dedupe
-(the CLAUDE.md check stated once, in the policy section), no rationale paragraphs (a rule keeps at
-most a one-line why), `decisions.md` prepend not append, gotchas under topic sections not dated
-ones, Retention model as two budgets. **Stop point agreed:** compression ends when only normative
-text remains — further cuts drop the why-half-clauses that make rules self-enforcing, which is
-deferred information loss.
-**Rejected:** keeping the measured 41k/29k load figures in the skill (project evidence belongs in
-this file, not a shared skill); compressing below ~96 lines (nothing left but rules and the table).
-
-## 2026-08-24 — `/context load` reads a briefing TIER, not the whole folder
-The skill's load step now reads `state.md`, `overview.md`, `conventions.md` in full plus the
-NEWEST journal entry, and explicitly does NOT read `decisions.md`, `gotchas.md`, `backlog.md`,
-`glossary.md` or `runbook.md` — those are reference, consulted by `grep` when the work touches
-them. `save` gained the matching obligation: `state.md` must carry forward the few traps and
-backlog items that bear on the next steps, one line each, pointing at the file with the detail.
-**Why:** a full-folder load measured **~41k tokens, of which ~29k was read and discarded** — the
-user reported `/context load` alone filling 7% of the window. `decisions.md` (8.4k), `glossary.md`
-and `runbook.md` contributed literally nothing to the briefing, and `gotchas.md` contributed two
-lines out of 497. The tier costs ~8k, an 80% cut, with nothing deleted: the reference files are
-unchanged and one grep away. Consolidation alone could never have fixed this — the waste was in
-eager reading, not in file size.
-**Rejected:** cutting the reference files further (the user had already declined fact loss, and
-even a 100-line `gotchas.md` would still be read-and-discarded); splitting them into
-load/reference directories (same outcome, but moves files and breaks every path already recorded);
-summarising them into `state.md` at save time (a second copy that drifts — the thing this whole
-memory design exists to avoid).
-
-## 2026-08-24 — A replayed card may not claim a decision the transcript does not hold
-Replay gained a THIRD plan-card state: `undecided` (SessionStore emits it when a plan tool_use has no
-tool_result), drawn as neutral "◌ Interrupted — no decision recorded" (`.und-t`). The CLI's own
-auto-deny text (`RenderLimits.PERMISSION_ABORT_PREFIX`) joins REJECT_MESSAGE as machinery filtered out
-of `planFeedback`. `refresh`/`resume` call `ClaudeSessionService.stopForReplay()` before reading.
-**Why:** a two-way `denied ? kept : approved` branch treats "no record" as approval. Measured on the
-user's own session: a CLI killed with a permission pending flushes its auto-deny within ms, so a replay
-read too early rendered "✓ Approved" for a decision never made, and the next reload quoted the CLI's
-error as if the user had typed it. Absence of evidence must render as absence, never as consent.
-**Rejected:** inferring from surrounding records (the transcript genuinely does not say); suppressing
-the card when undecided (it is the record that Claude asked); waiting unconditionally (see below).
-
-## 2026-08-24 — A correctness wait is scoped to the state that needs it
-`stopForReplay()` waits (`awaitExit(1_500)`) only when `pendingPermissions.isNotEmpty()`.
-**Why:** the wait exists for ONE measured record — a pending permission's auto-deny flush. Made
-unconditional it charged every ordinary reload a few hundred ms for nothing, which the user noticed
-within a day. The service already tracks the state, so the guard is free.
-**Rejected:** dropping the wait (reintroduces the one-reload-late bug); a shorter blanket timeout
-(still pays on the common path, still races on the rare one); reading asynchronously and patching the
-card afterwards (a second render path for one edge case).
-
-## 2026-08-24 — The sandbox tracks a PATCHED IDE build, not the .0 of its line
-`plugin/build.gradle.kts` pins `phpstorm("2024.2.6")`.
-**Why:** 2024.2.0's JCEF fabricates key-event storms in OSR on Linux (IJPL-161111, fixed in 2024.2.2+).
-Pinning the .0 of a line means developing against every bug that line ever had — it cost three
-speculative guards, a full revert, and a day chasing a defect no user could hit. `sinceBuild = "242"`
-is unaffected; users were never exposed. The verifier ladder's own floor is 2024.2.6, so the dev
-environment now matches the lowest build we have a compatibility guarantee for.
-**Rejected:** 2024.3 (bigger jump, re-opens documented sandbox quirks); staying on 2024.2.0 and
-guarding in-panel (guarding the dev environment inside shipped code); raising `sinceBuild` past the
-buggy builds (locks out users over an intermittent glitch on one surface).
-
-## 2026-08-24 — `verifyPlugin` runs on every release, and the docs say so once
-`docs/release.md` step 3b makes it mandatory; the contradicting "not a per-release ritual" language in
-gotchas and the Marketplace section is gone.
-**Why:** the two docs disagreed, which licensed skipping it on 0.9.0 — that passed, but only by luck
-confirmed after the version number was already spent. The Marketplace runs its own verifier on upload,
-but that verdict lands too late to gate anything. The judgement "did this diff touch platform API?" is
-exactly the one not to trust.
-**Rejected:** keeping it discretionary for non-platform changes (the reasoning that failed).
-
-## 2026-08-24 — The confirm-card path stays one-line-ellipsised (user call)
-The permission card's header path continues to wrap to a second line AND middle-ellipsise at narrow
-widths. A CSS-only plan to let it wrap and show the path whole was written and **rejected by the
-user**; do not re-propose unprompted.
-
-## 2026-08-23 — Plan comments live ON the plan card, and approval stays open with comments
-Checklist 5.6 (`c0df900`): select text in the plan card's body → anchored comment rows.
-**Why in-panel, not an editor tab:** VS Code renders the plan in a markdown preview tab
-(`open_markdown_preview` + `plan_comment` webview↔extension internals with NO stdio counterpart); our
-panel already renders the plan through `planCardHtml`, so the card IS the preview and the whole build
-cost was the selection/comment UI. **Why the full decision surface stays** (the reference collapses to
-keep-planning once a comment exists): the user's explicit call. Approve-with-comments rides the
-existing `PLAN_NOTES_MARKER`; deny wears the VS Code client's byte-exact message (`PLAN_DENY_PREFIX` +
-free text + `PLAN_COMMENTS_HEADER` + `[Re: "anchor"] note`, measured off its transcript), so the model
-reads a format it already knows. Format strings live once in `RenderLimits`; rows render through one
-shared builder (`planCommentRows`) live and replayed; decided cards keep the rows as the record.
-**Rejected:** an IDE markdown-preview surface (second host for one feature; the plan file in
-`~/.claude/plans/` + `get_plan` make it possible later); comments forcing keep-planning (reference
-behaviour, overruled); inventing our own wire format (byte-compatibility costs nothing).
+## Digest — decisions 2026-08-23 → 2026-08-30 (compressed 2026-09-13; full text via `git show 8831b12:.claude/context/decisions.md`)
+- **2026-08-30 first-paint flash, final** — keep the JCEF child visible, `loadUi()` on the browser component's first non-empty resize, `setPageBackgroundColor("#1a1a1a")`; the 0.12.2 hide-until-load made the squashed frame deterministic (an invisible child has no bounds). Rejected: an opaque wrapper behind a hidden child. (The same-day "defer load + DumbAware" entry is SUPERSEDED in its hidden-child half; deferral and DumbAware stand — cost: the CLI starts on first show.)
+- **2026-08-30 settings-schema staleness** — wait for SchemaStore, no code; rejected bundling the extension's schema (redistribution) and preferring the local VS Code copy (offered, user chose to wait).
+- **2026-08-30 9.11** — optimistic `set_model` chip flip kept, revert on the error answer; rejected a pessimistic switch and a confirmation line of our own.
+- **2026-08-30 re-audit at 2.1.251** on the user's ask one version after 2.1.250 — surfaced a real change (`set_model` rejection); lesson: a no-turn headless probe is not the panel's usual state, measure post-turn too.
+- **2026-08-29 GitHub Copilot Chat** audited once, not a reference client; kept only "terminal last command/output as attachable context" as a probe idea; rejected keeping its extraction or naming it in procedures.
+- **2026-08-29 `reference/<vendor-product>/`** for third-party material (was `vscode/`).
+- **2026-08-29 external links** open in the system browser via three guards (JS click delegate → `BrowserUtil.browse`, `onBeforePopup`, `onBeforeBrowse` cancel); rejected in-webview navigation, a JCEF child window, `setOpenLinksInExternalBrowser` (not in 2024.2).
+- **2026-08-29 effort selector** is a pill slider in the `.tgl` idiom, CSS only, 12px stops; rejected a bracketed label, a blue track, JS-computed fill.
+- **2026-08-29 Marketplace change notes** carry the last THREE versions + a GitHub releases link (was 14).
+- **2026-08-29 undo/branching belong to git** — 8.7 rewind NO, 14.2/14.4 host git NO, 14.1/14.3 worktrees later as one bundle; user's principle "de facto git, not Claude"; rejected "rewind → later".
+- **2026-08-29 `/clear` removed** (7.6); the New button is the panel's /clear; `CMD_NATIVE = {btw}`; known loss: no keyboard-only new conversation.
+- **2026-08-29 8.14 reloaded-webview replay: NO** (declined) — no real reload seen since `seedUi()`.
+- **2026-08-29 destructive hover stays red** (roster ✕, history delete), every other hover control white — a deliberate pair, do not unify.
+- **2026-08-29 8.11 side question** as a floating panel above the composer opened by `/btw` (panel-supplied `CMD_LOCAL` entry; client-threaded history; page-lifetime row ids); rejected a hidden turn and inline answers.
+- **2026-08-29 §15 closed** — 15.5 debugger hand-off later ([LG] backlog), 15.6 MCP toggles NO (terminal's half).
+- **2026-08-29 goal: every section ✅** by 2026-08-30 EOD; sections carry one mark; rejected a richer suffix ("let's not complicate it"). Closed: 1.25 later · 6.4/6.5 later · 6.7 no · 12.3 no · 12.6 later · 9.7 later + watch.
+- **2026-08-29 1.22 tool_progress declined on measurement** — zero frames on a 12 s Bash under stream-json (2.1.251).
+- **2026-08-29 13.2 settings schema** → SchemaStore URL for both `.claude/settings*.json`, nothing bundled; optional dep on `com.intellij.modules.json`.
+- **2026-08-29 9.7 Fable overage gate** — watch first (`__modelFallbackSeen` + warning, fixture 65), build after a real frame.
+- **2026-08-29 error results** — `errors[]` text before the subtype token (measured `--max-turns 1`).
+- **2026-08-29 wrong-value negative controls** accepted for fixtures 62–64 (no pre-fix build available), provenance says so.
+- **2026-08-29 checklist marks** — 🚫 retired; ➖ = not implemented, the row says why (terminal's half / declined / deferred); rejected a third mark.
+- **2026-08-29 11.6 extensibility view declined; 11.5 elicitation** answered `{action:"decline"}` (bare `{}` was schema-invalid), form deferred behind a real eliciting server.
+- **2026-08-29 roster ✕** — no confirm step, never removes a row itself (the `background_tasks_changed` frame does; `stop_task` succeeds for unknown ids).
+- **2026-08-29 11.4 sub-agent outcome DECLINED on measurement** — task status is lifecycle, the summary prose the only signal; VS Code shows none either.
+- **2026-08-29 `ambient` tasks filtered** on the schema's word, first live one stored as `window.__ambientSeen`.
+- **2026-08-28 card note gap = `--attach-gap`** (8px), not a literal; the 2px left nudge stays by eye.
+- **2026-08-28 tweak-travel sends a WHOLE-FILE edit** (`EditProposals.tweakedInput`, MultiEdit rides it); measured: VS Code's own shape and the CLI applies it; rejected a minimal-hunk diff.
+- **2026-08-28 3.6 multi-file review** — data before UI: baselines from the autosave PreToolUse hook, per-TURN line, live-only; built the same day; rejected `ChangeListManager` (mixes user edits) and adopting sdkMcpServers for `file_updated`.
+- **2026-08-28 closed audit docs are deleted**, their facts promoted to the reference tier, a `git show` pointer left.
+- **2026-08-26 0.11.1 is a PATCH** with a "Changed" notes section and the Fable thinking caveat.
+- **2026-08-26 effort lives in the MODEL menu**, level shown on NO chip (six suffix candidates rendered in the real bar, all rejected: "better is to hide effort"); `.ef-row` ≠ `.tgl-row` on purpose.
+- **2026-08-26 Thinking switch stays live on Fable**, no-op documented, not gated (no discriminating roster field).
+- **2026-08-26 roster capability flags do NOT gate** effort/Thinking — haiku (no flags) honours `/effort max` visibly; only `supportsFastMode` gates.
+- **2026-08-25 chip/slider command turns show ONE confirmation line**, no bubble, live and resumed (`cleanInjected` drops `/model` + `/effort` wrappers; `effortMuted` draws the CLI's line). Supersedes 2026-07-30 and corrects 2026-08-24's premise.
+- **2026-08-25 custom row's ×** overlays the ✓ inside `.pi-check`; ID-scoped padding reset; no offset arithmetic near `#inputbar`.
+- **2026-08-24 1M / fast / thinking** as `.tgl` switches in the model-menu footer (9.9, 9.4, 9.5).
+- **2026-08-24 the 1M switch has NO client-side validity logic** ("no hardcoded logic"); reconciles to `result.modelUsage[].contextWindow` after the first turn.
+- **2026-08-24 Thinking ON = `max_thinking_tokens: null`**, not VS Code's 31999; OFF = 0.
+- **2026-08-24 effort/model conversation markers dropped** (superseded in part 2026-08-25: /effort draws the CLI's line).
+- **2026-08-24 API error draws ONCE**, dedupe by exact text never by kind (fixture 56's second control).
+- **2026-08-24 the context skill stays lean** (rules only, shared via gist `b2d033439ba4ca5bcd018f4fe5eef773`, 96 lines) and **`/context load` reads a briefing TIER** — full-folder load measured ~41k tokens with ~29k discarded; rejected trimming reference files or summarising them into state.
+- **2026-08-24 a replayed card may not claim a decision the transcript lacks** — third plan-card state `undecided` ("◌ Interrupted — no decision recorded"); `stopForReplay()` waits only while a permission is pending (a correctness wait scoped to its state).
+- **2026-08-24 sandbox tracks a PATCHED IDE build** (2024.2.6; IJPL-161111 on .0); `sinceBuild 242` unchanged.
+- **2026-08-24 `verifyPlugin` on every release**, docs say so once (0.9.0 skipped it and got lucky).
+- **2026-08-24 confirm-card path stays one-line-ellipsised** — a wrap plan was rejected by the user; do not re-propose.
+- **2026-08-23 plan comments live ON the plan card**, approval stays open with comments (user's call vs the reference's forced keep-planning); deny wears the VS Code client's byte-exact message; rows through one shared builder.
 
 ## Digest — decisions before 2026-08-22
 

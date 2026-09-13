@@ -990,6 +990,21 @@ re-read those before trusting memory here.
   afterwards; a `--cfg` scratch dir holds a credentials copy — delete it the same session. A memory
   "save" the MODEL performs with a Write is not the memory subsystem (no `memory_saved` frame).
 
+- **A stdio probe's own `--timeout` must sit well under the Bash tool's timeout** — `probe_stdio.py
+  --timeout 150` plus CLI startup overran a 200 s Bash call on 2026-09-13 and the call was moved to
+  the background mid-audit (it had finished fine; the output just arrived as a task file). Give the
+  Bash call ≥ probe timeout + 60 s, or run the probe in the background from the start.
+- **`probe_stdio.py` without `--mode` is NOT "default" mode** — on 2026-09-13 a flag-less run came up
+  `permissionMode: auto` (init frame; no `defaultMode` in `~/.claude/settings.json`, source unknown),
+  which is why the 1.29 discovery probe carried `bashEditDiff` while the real panel in manual mode
+  did not. Pass `--mode` explicitly whenever the behaviour under test could be mode-gated, and READ
+  the init frame's `permissionMode` before trusting a probe.
+- **`ls` is `eza` in Bash-tool shells on the Linux box** — `ls -t` (eza needs `-t <field>`) hung a
+  backgrounded task for 22 minutes on 2026-09-13; use `/bin/ls` or eza's own flags.
+- **The webview "readable sentences" diff is useless across a big hop** — 2.1.260 → 2.1.270 produced
+  5661 "added" strings from minifier renames alone (2026-09-13). Use it only for a one-or-two-version
+  hop; the public CHANGELOG (`reference/claude-code-log`, runbook step 3b) covers that surface.
+
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with
   16px margins. A `<details>` body needs a blank line to render markdown, so the checklist's folds

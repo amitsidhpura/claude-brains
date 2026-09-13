@@ -40,6 +40,9 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 - `reference/anthropic-claude-code/` — NOT in git (`/reference/` is ignored; was `vscode/` until
   2026-08-29). Extracted official VS Code extension (from `~/.vscode/extensions/anthropic.claude-code-<ver>/`,
   minus the binary). Re-extract locally; used to reverse-engineer protocols and styles.
+- `reference/claude-code-log/` — NOT in git. Clone of `github.com/anthropics/claude-code` (public
+  changelog + feed + example hooks/settings, no binaries). Read at re-audit step 3b for LEADS only
+  (runbook); `git pull` it first — it lags the installed CLI (2.1.261 vs 2.1.270 on 2026-09-13).
 - `_local/` — personal scratch, not in git.
 
 ## Architecture (all verified working end-to-end)

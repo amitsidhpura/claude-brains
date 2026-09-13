@@ -1,14 +1,28 @@
 # State
 
 ## Current focus
-**2026-09-09 (thirteenth session, Linux): 0.13.1 released and Marketplace-Approved the same day.**
-Released version is **0.13.1** (tag `v0.13.1`, commit `8e19916`, GitHub release + feed +
-Marketplace update id 1164877, Approved 2026-09-09 with the IDE-run verifier row green). It carries
-the two renderer fixes from the twelfth session only: 3+-backtick fences (checklist 1.11, fixture
-85) and the CommonMark list parser (1.10, fixture 86). `main` == released; nothing unreleased.
-CLI on this box is **2.1.263**; the checklist header still says 2.1.260 — the re-audit is the
-standing next ask. The ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] during it.
-
+**2026-09-13 (fourteenth session, Linux): five units of work done and hand-tested, committed and
+pushed at the end of the session (two commits: features + docs, then the context save).**
+Released version is still **0.13.1** (tag `v0.13.1`, commit `8e19916`). Unreleased on `main` since:
+1. **Re-audit 2.1.260 → 2.1.270** (checklist header, `<details>` block, twelve row folds, § 16 counts,
+   nine shipped [NEW] tags dropped; `docs/slash-commands.md` `/output-style`; protocol doc § 11/12
+   facts) — and **runbook step 3b**: `reference/claude-code-log` (public CHANGELOG clone) read for
+   LEADS only before the diffs.
+2. **1.29 Bash edit diff** — `appendBashDiff` (`webview/js/50-blocks.js`) draws one resolved edit
+   card per file under the Bash IN/OUT box, live (`75-retraction.js`, reads `ev.tool_use_result ||
+   ev.toolUseResult`) and replay (`SessionStore.applyToolResult` → `bashDiff`, `55-replay.js`).
+   **The CLI gates the sidecar**: auto/bypassPermissions by default, any mode with user
+   `bashEditDiffEnabled: true` — no panel toggle (terminal's half); release notes must say so.
+3. **6.5 on the editor-tab menu** — `EditorTabPopupMenu` first + `MentionAction.files()` falls back
+   to `VIRTUAL_FILE`.
+4. **5.6 plan-comment draft settles on the next selection** (commit if typed, cancel if empty;
+   `settleDraft` in `85-cards.js`), placeholder "Comment on this part — Enter adds, Esc cancels".
+5. **3.7 reject-note field ABOVE the buttons** on ordinary cards (plan-card layout; the inline field
+   had stretched the buttons), placeholder "Tell Claude what to do instead · applies to Reject".
+Verified: `./gradlew test` 164/0; harness **870**/0 (fixtures to 87); hand tests MT-1.29, MT-2.15,
+MT-6.9, MT-6.10 all passed with the user (§ 17). Next release = **0.14.0 (minor)**, only on the
+user's ask. CLI on this box **2.1.270**; extension extraction re-synced to 2.1.270.
+The sandbox PhpStorm was left RUNNING on the final build (CDP 9222, mode chip Manual).
 ## Open investigations
 - **Model chip says "Fable (1M)" while the menu checks NO row** (user screenshot 2026-09-05;
   user: leave for future). NOT reproduced. Diagnostic next time: DevTools
@@ -22,7 +36,7 @@ standing next ask. The ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] durin
   unattended, it is a real finding (gotchas § Testing).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **829** (fixtures to **86**); `./gradlew test` **163**.
+- `python3 tools/live_harness.py` baseline **870** (fixtures to **87**); `./gradlew test` **164**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` blocks until the IDE exits** and then
@@ -60,18 +74,18 @@ standing next ask. The ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] durin
   step-6 gate with the FULL notes before commit/tag/push (gotchas § Build).
 
 ## Next steps
-- [x] 0.13.1 released 2026-09-09 (patch: fences + list parser); Approved the same day.
-- [ ] **Re-audit at 2.1.263** (runbook § Re-audit, step 8: header References/date, §2's "unchanged
-      in <ver>", the [NEW] legend — the ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] now
-      that a release carries them). Run the `update_settings` allowlist binary-grep watch during it
-      (backlog § Next up).
+- [x] Re-audit at 2.1.270; 1.29, 6.5-tab, 5.6-draft, 3.7-layout built and hand-tested (2026-09-13).
+- [ ] **Release 0.14.0 when the user asks** (`docs/release.md`; notes: Bash edit diff + its
+      `bashEditDiffEnabled` gate, tab-menu mention, comment-draft settling, note-field layout).
 - [ ] Renderer follow-ups, all in backlog § Housekeeping, all pre-existing and named in the 0.13.1
       release notes as known: indent-only code blocks render as paragraphs; an asterisk inside
       inline code italicises across it; mid-line fence placeholder leak; `~~~` fences.
 - [ ] **Model chip / menu mismatch** — parked; capture the chip title id when it recurs.
-- [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About.
-- [ ] Testing repo carries hand-test commits (`bf46eb2 banner test` and the 2026-09-09 list-test
-      turns' files) — the user's call whether to reset.
+- [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About; the Windows CRLF
+      splice check (VS Code fixed its own CRLF diff-accept at 2.1.267 — checklist 3.2 fold); Windows
+      look of the 1.29 card header path.
+- [ ] Testing repo carries hand-test leftovers (`hand_test.txt`, `hand_test_2.txt`, earlier modified
+      files, the 2026-09-13 sandbox sessions) — the user's call whether to reset.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251).
 - [ ] **User errands**: Windows `./gradlew test` + VFS click check; Marketplace screenshots 01+03,
       04+05 to `plugins.jetbrains.com/plugin/33274`; check the listing's description shows the
@@ -84,12 +98,13 @@ standing next ask. The ten 0.13.0 rows and the two 0.13.1 folds lose [NEW] durin
   only surfaces. No keyboard-only new conversation; no shortcuts on any card.
 - Banner frames, task frames and withdrawn asks are live-only; replay draws the CLI's own auto-deny
   result. Decided Bash cards vanish on replay; a Bash card's reject note and edited command are
-  live-only. A note typed before Accept on an ordinary card is dropped.
+  live-only. A note typed before Accept on an ordinary card is dropped (the field says
+  "applies to Reject" since 2026-09-13).
 - Markdown: a bullet-character change does not split a list (forgiving on purpose); the offline
   highlighter colours its keyword set inside EVERY language, prose fences included (1.11, by design).
 - plugin.xml "Not there yet" list unchanged: dark UI only, one conversation, no auto-context.
 
 ## Which machine — check FIRST, both are real
-2026-08-26 → 2026-09-09 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
+2026-08-26 → 2026-09-13 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
 Paths for both boxes in overview.md § External references. Windows still owes the CRLF splice
 check and the fold diagnostic.

@@ -1,8 +1,9 @@
 # Runbook
 
 ## Re-audit `docs/feature-checklist.md` against a new CLI / extension version
-Used 2026-08-17 (2.1.222→233), 2026-08-23 (233→241), 2026-08-28 (246→250), 2026-08-30 (250→251). Everything is measured, nothing read
-from release notes. Gotchas § "Auditing the reference clients" has the traps.
+Used 2026-08-17 (2.1.222→233), 2026-08-23 (233→241), 2026-08-28 (246→250), 2026-08-30 (250→251). Every MARK is measured;
+the public changelog (step 3b) supplies LEADS only — a note never changes a row on its own. Gotchas § "Testing, probes and
+sandboxes" has the traps (extraction is the only extension diff base; whitelist Sets don't prove acceptance).
 
 1. **Versions on disk**: `claude --version`; `ls ~/.local/share/claude/versions/`;
    `ls ~/.vscode/extensions/ | grep claude`.
@@ -23,6 +24,15 @@ from release notes. Gotchas § "Auditing the reference clients" has the traps.
    Extra cheap diffs that catch what the `case` diff misses: `tool("…")` registrations, `tengu_*`
    gates, the settings schema (`jq -S` both sides), and the webview's readable sentences (a
    `comm` of quoted strings ≥ 25 chars with ≥ 3 words — minifier renames drown a plain string diff).
+3b. **Changelog leads** (added 2026-09-13): `git -C reference/claude-code-log pull` (clone of
+   `github.com/anthropics/claude-code`, not in git; holds `CHANGELOG.md` + `feed.xml`, no binaries), then
+   read every entry between the last audited version and the current one — `[VSCode]`-tagged lines are the
+   extension, untagged lines the CLI. Sort each line into three piles: **By design** under the scope rule
+   (Hooks / Permission-rules / MCP dialogs, account screens → a ➖ row needs only existence, no probe);
+   **candidate row** → a probe target for steps 4-7 (behaviour changes that reuse existing labels — chip
+   X replacing Hide, prompt fold button, flat model list — are invisible to the `case`/subtype diffs and
+   this is the only place they surface); **no-op**. The row's evidence cites the measurement, never the
+   note; record the version range read in the checklist header.
 4. **Extension diff**: package.json `contributes` (commands/configuration/keybindings/views)
    old-vs-new; `grep -o 'case"[a-z_0-9]*"' extension.js | sort -u` both sides, `comm -13` under
    `LC_ALL=C`. New labels get context reads (`grep -o '.\{120\}case"<w>".\{160\}'`) — most are
