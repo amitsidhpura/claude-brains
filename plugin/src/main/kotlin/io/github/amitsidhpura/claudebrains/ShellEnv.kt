@@ -2,7 +2,9 @@ package io.github.amitsidhpura.claudebrains
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.EnvironmentUtil
 import com.intellij.util.concurrency.AppExecutorUtil
+import java.io.File
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -48,6 +50,28 @@ object ShellEnv {
         warm()
         return runCatching { captured.get(timeoutMs, TimeUnit.MILLISECONDS) }.getOrElse { emptyMap() }
     }
+
+    /**
+     * The shell layer applied over the IDE's own environment wherever the CLI is concerned —
+     * the platform's snapshot (macOS only, see the class doc) under our capture, shell values
+     * winning. ONE copy: the spawn and the executable lookup must read the same PATH. They did
+     * not until 2026-09-27: the lookup read the bare IDE PATH (a snap PhpStorm has no
+     * `~/.local/bin`), missed the 2.1.283 install and fell back to the VS Code extension's
+     * 2.1.270 binary — while the child it spawned was handed a PATH that did have it.
+     */
+    fun overlay(): Map<String, String> =
+        LinkedHashMap(EnvironmentUtil.getEnvironmentMap()).apply { putAll(get()) }
+
+    /** The overlaid PATH — the one the CLI runs under — or the IDE's own when no shell layer exists. */
+    fun path(): String? = overlay()["PATH"] ?: System.getenv("PATH")
+
+    /** First executable named [exe] on [path] (PATH-separator-split, empty entries skipped), or null. */
+    fun which(exe: String, path: String?): String? =
+        path?.split(File.pathSeparator)
+            ?.filter { it.isNotEmpty() }
+            ?.map { File(it, exe) }
+            ?.firstOrNull { it.isFile && it.canExecute() }
+            ?.absolutePath
 
     private fun capture(): Map<String, String> {
         if (System.getProperty("os.name").startsWith("Windows")) return emptyMap()

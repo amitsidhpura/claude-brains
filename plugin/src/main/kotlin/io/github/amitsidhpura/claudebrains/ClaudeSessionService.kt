@@ -533,8 +533,11 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     }
 
     /**
-     * Resolve the `claude` binary: `-Dclaude.executable` override -> PATH ->
-     * the binary bundled with the installed VS Code extension (personal fallback).
+     * Resolve the `claude` binary: `-Dclaude.executable` override -> the PATH the CLI is
+     * spawned under (the user's SHELL PATH, `ShellEnv.path()`, not the IDE's bare one — a
+     * desktop-launched IDE misses `~/.local/bin`, where the standalone installer puts it) ->
+     * the binary bundled with the installed VS Code extension (personal fallback, and a trap:
+     * it pins the panel to whatever version that extension last shipped).
      */
     private fun resolveExecutable(): String {
         System.getProperty("claude.executable")?.let { if (File(it).exists()) return it }
@@ -542,12 +545,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         val windows = System.getProperty("os.name").startsWith("Windows")
         val exe = if (windows) "claude.exe" else "claude"
 
-        // Search PATH.
-        val sep = File.pathSeparator
-        System.getenv("PATH")?.split(sep)?.forEach { dir ->
-            val f = File(dir, exe)
-            if (f.canExecute()) return f.absolutePath
-        }
+        ShellEnv.which(exe, ShellEnv.path())?.let { return it }
 
         // Fallback: the native binary shipped with the installed VS Code extension.
         findVsCodeExtensionBinary(exe)?.let { return it }

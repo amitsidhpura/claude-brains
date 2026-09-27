@@ -67,7 +67,8 @@ open past conversations, and start a new one.
   terminal** — the plugin has no login flow of its own.
 - An IntelliJ-platform IDE, build **2024.2 or newer** (PhpStorm, IntelliJ IDEA, WebStorm, …).
 
-The CLI is resolved from `-Dclaude.executable=<path>`, then `PATH`, then the binary inside an
+The CLI is resolved from `-Dclaude.executable=<path>`, then your shell's `PATH` (the IDE's own
+environment is not consulted — a desktop-launched IDE has no `~/.local/bin`), then the binary inside an
 installed VS Code Claude Code extension.
 
 ## Install
