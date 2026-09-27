@@ -38,6 +38,10 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
   stands for (a headless smoke run once "verified" 16 commands while `/context` rendered nothing).
 - **When output is missing, tape the wire** (wrap `onClaudeEvent` — JCEF swallows throws silently)
   before blaming either side. It is what found the `/security-review` drop.
+- **Probes never mutate the user's own `~/.claude.json` or accept a trust dialog on their behalf**
+  (2026-09-27): drive the TUI from a directory already trusted there, or use the scratch
+  `CLAUDE_CONFIG_DIR` recipe (gotchas § Testing); delete the transcript a probe writes and restore
+  the project's `lastSessionId` afterwards.
 - Enable slash commands one at a time, each verified in `runIde`, then ticked in
   `docs/slash-commands.md`; the menu is an allowlist.
 - Test fixtures state their `provenance` (a shape copied from our own handler proves

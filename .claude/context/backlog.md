@@ -23,6 +23,10 @@
   match (`30-menus.js` renderModels) compares `value` only while `rosterFor` also accepts
   `resolvedModel`. When it recurs: DevTools `document.getElementById('modelChip').title`, box, CLI
   version, preceding action. Reproduce BEFORE changing the match (conventions).
+  **New candidate 2026-09-27 (inferred, same shape):** 2.1.28x rosters carry NO `[1m]` values —
+  Fable is `claude-fable-5-1`, Opus is `opus` — so a persisted `fable[1m]` from an older roster
+  matches no row after a CLI update: chip falls to `prettyModel` "Fable (1M)", no ✓. Check on the
+  next recurrence whether the persisted value predates the running CLI's roster shape.
 - **A `/loop` tick shows a reply out of nowhere** (measured 2026-09-05, 2.1.261): the wire is
   `command_lifecycle{started}` → fresh `system/init` → assistant → `result` → `command_lifecycle
   {completed}`, with no user frame. The panel draws the reply with no prompt above it. If wanted:
@@ -147,6 +151,10 @@
   so the `/context` workflow itself does NOT travel to a fresh clone — un-ignore if wanted.
 
 ## Someday / conditional
+- **Fold the pinned previous-version roster rows** (2.1.28x lists `claude-opus-5`/`-4-8`/`-4-7`/`-4-6`,
+  `claude-fable-5`, `claude-sonnet-4-6` after the aliases; no flag distinguishes them, the TUI shows
+  all 11 too — measured 2026-09-27) under a "Previous versions" divider keyed off the `claude-*-N-N`
+  value shape. Offered 2026-09-27, not asked for; mockup first if ever taken.
 - **11.5 Elicitation form** (deferred 2026-08-29; the decline ack shipped that day): only if a
   server the user actually uses elicits. First a ~30-line stdio MCP probe server in
   `~/Sites/claude-brains-testing/.mcp.json` whose one tool calls `elicitation/create` (form mode,

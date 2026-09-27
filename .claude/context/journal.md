@@ -3,6 +3,34 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-09-27 (fifteenth) — the panel had been running the VS Code 2.1.270 binary; executable lookup moved to the shell PATH
+- User: "why is it not showing Opus 5.5?" (TUI had it, panel had "Opus 5 (1M)"). Measured by key:
+  every panel transcript (this session included) `"version":"2.1.270"`, terminal ones 2.1.283;
+  `/proc/<pid>/exe` of both real-IDE CLIs = `.vscode/extensions/anthropic.claude-code-2.1.270-linux-x64/
+  resources/native-binary/claude`; the snap PhpStorm's PATH has no `~/.local/bin`; the TUI's own
+  row 6 said "Update to 2.1.280+ to use Opus 5.5". Cause: `resolveExecutable()` walked the IDE's
+  bare PATH while `ClaudeCli` spawned under the shell overlay (gotchas § JCEF, the ShellEnv bullet).
+- Fix on the user's "Fix it properly": `ShellEnv.overlay()` (one copy of the layering) feeds both
+  the spawn and the lookup; `ShellEnv.path()` / `which()`; `ShellEnvTest` (4). `./gradlew test`
+  168/0. Negative control with `runIde` launched under a PATH stripped of `~/.local/bin` (after
+  `./gradlew --stop`): pre-fix build → VS Code 2.1.270 binary (pid 862539), fixed → `versions/2.1.283`
+  (pid 865376); the user's sandbox screenshots showed Opus 5 (1M) then Opus 5.5.
+- User: "why so many models in the panel and not the terminal?" — 2.1.283's `initialize` roster
+  has 11 rows with no distinguishing flag; 2.1.283's TUI `/model`, driven through a pty in a trusted
+  dir, lists the same 11 ("… +1 model"); the user's 6-row terminal screenshot was an older binary,
+  confirmed by their own 2.1.283 screenshot. Folding offered, not asked for (backlog § Someday).
+- Traps (gotchas § Testing): `pgrep -x claude` misses the versioned binary (comm = `2.1.283`);
+  `strings` on the 2.1.28x binary yields only the string table, never picker logic; a pty-driven
+  TUI needs a trusted dir, writes a transcript and moves `lastSessionId` (both undone). The
+  interactive TUI shows the trust dialog for `/home/syncroze` and both claude-brains dirs.
+- 2.1.283 leads for the next re-audit (NOT audited): roster values carry no `[1m]` tag (Fable is
+  `claude-fable-5-1`), so the panel's 1M switch read OFF; `chipName()` parses the version out of the
+  description, which no longer leads with it for named rows; new-looking `initialize` keys
+  (`fast_mode_disabled_reason`, `ide_rc_auto_enable_gate`, `remote_control_*`, `session_state`,
+  `available_output_styles`, `user_output_styles_dir`, `analytics_disabled`).
+- The real PhpStorm keeps its 2.1.270 CLI until a build with the fix is installed. Committed and
+  pushed on the user's ask (fix + this context save).
+
 ## 2026-09-13 (fourteenth) — runbook step 3b; re-audit → 2.1.270; 1.29, 6.5-tab, 5.6, 3.7 built + hand-tested
 - Load found CLI 2.1.270 (state said .263). The unused `reference/claude-code-log` clone became runbook
   step 3b: the public CHANGELOG supplies LEADS only, never evidence. It paid off at once — chip X,
@@ -218,33 +246,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Trap: writing ANY `.claude/settings*.json` is blocked by the permission classifier (Bash and
   Write alike), so the settings-file cells ran in a scratchpad dir and the user made the real edit.
 
-## 2026-09-04 (fifth) — full-surface audit (ten rows); 6.9 and 6.5 built; mention facts measured
-- User: "detailed complete audit of vscode claude extension and tui, whether we are not missing
-  any feature". Inventoried EVERYTHING at 2.1.260 (package.json, 288 host `case` labels → 97 RPC
-  types, ~100 webview UI features via two background agents, 98 control + 46 `system` subtypes
-  with `describe()` text, the binary's 128-name command map, CHANGELOG 2.1.200→260), grepped
-  every identifier against the docs, hand-judged the misses. Verdict: no missing feature AREA;
-  ten small gaps → rows 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9, all [DECIDE]; terminal's-half
-  verdicts recorded in a "Full-surface audit" details block so they are never re-judged.
-  Measured while judging: `dontAsk` accepted by `set_permission_mode`; `control_cancel_request`
-  has five emission sites and NO handler here; a plain one-tool turn emits none of the
-  banner-class `system` frames; click-to-compact on our gauge already existed (agent miss).
-- User: "finish all even if small — do 6.9 first." Built: `mentionHtml` (50-blocks.js) wraps
-  path-shaped `@tokens` in `.mention` capsules (attachment-chip surface), textContent unchanged,
-  `data-path` → the delegated open-in-editor handler; composer half cut by design (textarea).
-  Fixture 74: 3/3 discriminating fails on the pre-change sandbox (free control), 6/6 after.
-- User's screenshot request: Project-view right-click → first entry adds the selection as
-  mentions. Built 6.5: `MentionAction` (first in `ProjectViewPopupMenu` + `EditorPopupMenu`,
-  claude icon), pure `MentionPaths.tokens` (+4 tests), `ChatPanel.insertMentions` parks the list
-  until `seedUi()`; webview `__mention` inserts `@path ` at the caret. Fixture 75 5/6 fail
-  pre-change → 6/6. Harness **642**, Kotlin **141**. Sandbox left up for the user's hand-test.
-- Measured for the user's questions: @-mention = CLI attaches the file before the model runs
-  (1 turn); plain path = the model Reads it (2 turns). 200 KB file → cut at 2,000 lines
-  silently; 2 MB file → nothing attached, model fell back to `wc -l`. Threshold unpinned.
-- Trap: `ls -t` over `build/idea-sandbox/` found a stale `PS-2024.2/…0.8.0.jar`; the running
-  IDE's jar is under the dir its `-Didea.plugins.path` names (PS-2024.2.6). gotchas § Testing.
-
 ## Digest
+- **2026-09-04 (fifth)** — full-surface audit at 2.1.260 (288 host `case` labels → 97 RPC types, ~100 webview features, 98 control + 46 `system` subtypes, the binary's 128-name command map, changelog 200→260): no missing feature AREA, ten small gaps → rows 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9; terminal's-half verdicts recorded in the checklist's "Full-surface audit" block. Built 6.9 (`mentionHtml` sent-bubble capsules, fixture 74) and 6.5 (`MentionAction` first in both popup menus, `MentionPaths.tokens`, list parked until `seedUi()`, fixture 75); harness 642, Kotlin 141. Measured: an @-mention attaches before the model runs (1 turn) vs a plain path Read (2 turns); 200 KB cut at 2,000 lines silently, 2 MB not attached at all (threshold unpinned). Trap → gotchas § Testing: the running sandbox's jar is under the dir `-Didea.plugins.path` names, not `ls -t`'s pick.
 - **2026-09-04 (fourth)** — re-audit 2.1.251 → 2.1.260, all measured (VS Code session sidebar grew archive/unread/groups; CLI +`cloud_session_delta` +`update_settings`; roster +`/advisor` +`/reload-plugins` −`/artifact-design`; Fable 5.1 row). Both vsixes fetched from the Marketplace, the 2.1.251 one for its native binary as the CLI baseline (runbook step 3). 13.3 died on measurement: `update_settings` allows only `outputStyle`; the CLI honours `model`/`permissions.defaultMode` from `.claude/settings.local.json` at spawn — user chose "wait for Anthropic" (➖, backlog watch-item). Lesson (gotchas § Protocol): subtype acceptance ≠ key coverage.
 - **2026-09-04 (third)** — 0.12.5 released (`a77a565`, tag `v0.12.5`) and Marketplace-Approved within the hour: steps 1–5 proactive on "lets release updates", stopped at the approval gate; test/buildPlugin 137/0, verifyPlugin 8/8 Compatible (ladder grew to PS-263), asset `cmp`-identical, `marketplace-upload` green in 12s; the "CLI 2.1.200+" line landed in README, plugin.xml and the feed. Notes framed as "first impressions"; screenshots 01/03/04/05 remain the user's upload errand.
 - **2026-09-04 (second)** — early-exit "CLI may be out of date — run `claude update`" hint (Kotlin `sawFrame` → `early:true`; fixture 73; harness 630). The stub e2e exposed two instant-death bugs, both fixed: stderr thread not drained before `waitFor()` returned (ERR box empty), and `sendInitialize()` throwing on a dead stdin left `cli` unassigned (now runCatching, assigned before `start()`). `manual` cutoff measured on real binaries: 2.1.200 works fully, 2.1.199 rejects. Traps promoted to gotchas § Testing (gradle daemon caches PATH → `./gradlew --stop`; stub-CLI sandbox fails 3 fixtures).

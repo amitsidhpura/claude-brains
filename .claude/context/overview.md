@@ -80,7 +80,9 @@ See conventions.md for the vocabulary rules this imposes; decisions.md for what 
 type-check; `buildPlugin` → installable zip in `build/distributions/`; `./gradlew test` (plain
 JUnit 5 over SessionStore/RenderLimits); `./gradlew probe --args="<projectPath> <sessionId>"`
 dumps replay blocks without the IDE. Resource-only changes (chat.html, webview/js/, webview/css/) need only a `runIde`
-restart. `claude` resolved from `-Dclaude.executable` → PATH → installed VS Code extension binary.
+restart. `claude` resolved from `-Dclaude.executable` → the SHELL PATH (`ShellEnv.path()`, the same
+overlay the CLI is spawned under — never the IDE's bare env) → installed VS Code extension binary
+(a trap: it silently pins the panel to that extension's CLI version; gotchas § JCEF).
 Sandbox JCEF debug port: `-PjcefDebugPort=<n>` on runIde + `CLAUDE_BRAINS_CDP_PORT` for
 tools/cdp.py — but a hand-set sandbox Registry value still wins (gotchas).
 Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bearing — gotchas.md.
@@ -88,8 +90,8 @@ Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bea
 ### Which debug route — pick by symptom, not by habit
 | Symptom | Route |
 |---|---|
-| "Does the CLI even send this?" | grep `~/.claude/projects/*/*.jsonl` **by key**, or run `claude --output-format stream-json` in a terminal |
-| Payload NEVER persisted (task frames, launch results) | `strings -n 8 ~/.local/share/claude/versions/<ver>` — read it verbatim from the binary |
+| "Does the CLI even send this?" | grep `~/.claude/projects/*/*.jsonl` **by key** (and its `"version"` — the panel's CLI can differ from the terminal's), or run `claude --output-format stream-json` in a terminal |
+| Payload NEVER persisted (task frames, launch results) | `strings -n 8 ~/.local/share/claude/versions/<ver>` — strings only, never logic (bytecode bundle); "what does the TUI show" → drive it through a pty (gotchas § Testing) |
 | Wrong blocks after resume | `./gradlew probe` — splits a PARSER bug from a RENDERER bug, no IDE |
 | A transient state renders wrong | `window.__gallery()` — every state, without driving the CLI |
 | Live render misbehaving mid-session | `python tools/cdp.py` — the only view of real JCEF |

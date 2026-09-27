@@ -4,6 +4,28 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-09-27 — The `claude` executable is resolved on the SHELL PATH, the same layer the CLI is spawned under
+**Why**: the panel had been running the VS Code extension's bundled 2.1.270 for weeks while the
+terminal ran 2.1.283 — the user noticed only because Opus 5.5 was missing from the picker.
+`resolveExecutable()` searched the IDE's bare `System.getenv("PATH")` (a snap PhpStorm has no
+`~/.local/bin`) while `ClaudeCli` spawned the child under the `EnvironmentUtil` + `ShellEnv`
+overlay; the lookup and the spawn disagreed about what PATH is. Now ONE `ShellEnv.overlay()` feeds
+both, `ShellEnv.path()` is the PATH searched, `ShellEnv.which()` is the walk (4 tests). Proven with a
+negative control: `runIde` with `~/.local/bin` stripped → pre-fix build spawns
+`.vscode/extensions/…/native-binary/claude`, fixed build spawns `versions/2.1.283`.
+**Alternatives rejected**: preferring the NEWEST binary across all sources (hides which one runs and
+still drifts when the extension leads); documenting `-Dclaude.executable` as the answer (per-machine,
+silent, leaves every other user on the fallback); dropping the VS Code fallback (still the only
+route when nothing is on any PATH — kept, and now named as the trap it is in README/overview).
+
+## 2026-09-27 — The picker shows the CLI's whole roster, pinned previous versions included; no folding
+**Why**: 2.1.28x's `initialize` roster has 11 rows (aliases + `claude-opus-5`, `-4-8`, `-4-7`,
+`-4-6`, `claude-fable-5`, `claude-sonnet-4-6`) with no flag separating them, and 2.1.283's own
+TUI `/model` lists all 11 (measured through a pty). The panel passes the list through verbatim, so
+the two clients agree on the same CLI; the user's 6-row terminal screenshot was an older binary.
+**Not taken** (offered, no ask): folding the pinned `claude-*-N-N` rows under a "Previous versions"
+divider keyed off the value shape — backlog § Someday.
+
 ## 2026-09-13 — The ordinary card's reject note sits ABOVE the buttons, placeholder "… · applies to Reject"
 Supersedes the 2026-09-05 inline placement (3.7, VS Code's `rejectMessageInput` beside Reject).
 **Why:** the field is 34px and the buttons 26px; as a flex item in `.card-b` (default stretch) it
@@ -49,314 +71,31 @@ earn ➖ — no probe. **Boundary kept:** a note creates a candidate row or prob
 and the row cites the measurement. **Rejected:** keeping the blanket "nothing read from release notes" rule — it
 had no recorded war story behind it (the gotchas section it cited never existed) and cost coverage.
 
-## 2026-09-09 — 0.13.1 ships the two renderer fixes alone, as a patch
-**Why**: both changes (3+-backtick fences, CommonMark lists) fix behaviour that already existed,
-touch only `webview/js/20-markdown.js` + one CSS rule, and the user was seeing the list bug daily
-— waiting to bundle more would hold a fix users hit constantly behind work nobody asked for.
-Plain semver in `docs/release.md`: fixes with no new capability → patch digit.
-**Rejected**: folding in the four known renderer gaps found on the way (indent-only code blocks,
-`*` inside inline code, mid-line fence leak, `~~~`) — each is a separate parser change needing
-its own fixture and control; they are named in the 0.13.1 notes as known instead.
-
-## 2026-09-09 — Lists parse by CommonMark structure (content indent, loose/tight, `start`), not by consecutive marker lines
-**Why**: numbered lists restarted at `1.` "so many times" (user, three screenshots 2026-09-09,
-one of them the fix's own plan rendering as seven `1.`s). The old branches took consecutive
-marker lines only and never wrote `start`, so a blank line, a wrapped line, a nested bullet or an
-indented fence ended the list. The user refused the prompting workaround ("I cannot ask claude
-every time to give output without blank line") — the renderer must take what the model writes.
-Implemented in `20-markdown.js` as `mdList`: an item owns blank lines and lines indented ≥ its
-content indent plus lazy continuation; a blank between items or between an item's blocks makes
-the list loose (items keep `<p>`, `.blk li > p`), else tight (bare text); items re-enter
-`mdBlocks` (nested lists, tables, fences free); `<ol start>` from the first marker. Fences
-indented under an item drop their indent (CommonMark). Fixture 86, control 17/38 failed pre-fix.
-**Rejected**: `start` only (fixes the number, still splits the list and leaves wrapped lines as
-paragraphs between items); splitting a list on a bullet-character change (CommonMark does; the
-model never mixes markers inside one list, and forgiving costs nothing); indented (no-fence)
-code blocks and `~~~` fences (backlog — never seen from the model except once under a list item).
-
-## 2026-09-08 — A code fence is a run of 3+ backticks and closes only on a run at least as long
-**Why**: a ````markdown fence (the model's way to fence markdown or a ``` block) split at its first
-three backticks, the leftover backtick made ` B0 \`` no longer a whole-line placeholder, and the
-block (a whole table, 1k tokens) vanished while `B0 \`` printed (user screenshot 2026-09-08).
-`(`{3,})…\1`*` in `20-markdown.js`; fixture 85, control 8/15 failed pre-fix; confirmed by key on a
-real turn the same day. **Rejected**: anchoring fences to line start (would drop the inline
-```x``` form, a separate backlog item); `~~~` fences (never emitted).
-
-## 2026-09-05 — Checklist rows fold: gist on the first line, evidence under "Read more…"; folds hold no nested lists
-**Why**: rows had grown to 2,300 chars of evidence; the user wanted "1-2 line description, Read
-more collapsed". Shown on §3 first (conventions § Docs), approved, then the file. Only rows with
-facts beyond the gist fold (68 of 140); the first line keeps the `**id** mark …` shape so the
-At-a-glance regex and every id citation survive. The fold opens with `<!-- --><details>…` and no
-blank lines, because a blank line inside a list item makes GitHub render every row as a spaced
-paragraph. Folds hold paragraphs only: a nested list inside one made marked (the user's viewer)
-close `</details>` inside the last bullet and outdent every later row.
-**Rejected**: uniform folds on every row (72 short rows gain nothing); dates/fixtures on the first
-line (evidence belongs under the fold); sub-bullets inside folds (the marked defect above).
-
-## 2026-09-05 — 1.26: draw the whole banner family through one status renderer, REPL-only ones included; per-kind glyphs (option C)
-**Why**: measured on 2.1.261 — only `vcs_state_changed` and `notification` are on this wire, four
-more are engine-emitted but unforceable, six are REPL-only (call sites are TUI transcript
-reducers; `stop_hook_summary` has no stream-json translator arm). One branch each against a
-public schema costs nothing and the panel does not go blind the day a translator arm lands; the
-first frame per subtype is kept in `window.__bannerSeen`. Glyphs: three candidates (bare / one
-muted dot / per kind) rendered in the REAL panel side by side; the user picked per-kind, supplied
-lucide link-2 for the PR line, kept the branch and bookmark as drawn. The notification's
-"· ctrl+o to see" tail is a TUI hint and is stripped (measured text).
-**Rejected**: bare lines (read as stray text between a card and the summary — my own first
-recommendation, overruled by the render); drawing `turn_duration` (the ✻ summary has the timing);
-per-kind icons for the six text-only subtypes (no natural glyph; they wear the open dot).
-
-## 2026-09-05 — 1.28: a withdrawn ask settles the card, sends nothing, and the CLI's auto-deny box stays
-**Why**: the frame is real BOTH ways (probed: interrupt over a parked ask → `control_cancel_request`
-with the ask's id, before the auto-deny tool_result). Correctness first, as the row said: Kotlin
-drops the pending entry before the panel hears of it, so a click racing the frame sends nothing;
-the editor diff tab is dismissed like an answered card. VS Code's "Answering your earlier
-questions" fold-in of late answers is not replicated. The CLI's own "The user doesn't want to
-proceed…" OUT box above the withdrawn card stays: offered its suppression (the 3.7 `cardDenies`
-idiom with the CLI's stock text), the user was "happy with the result".
-**Rejected**: forwarding the raw frame to the webview only (Kotlin must forget the entry first);
-VS Code's late-answer fold-in (no wire for it, and the row is about not lying).
-
-## 2026-09-05 — 1.27: the cut MARKER opens the whole text, live from the page and replay from the transcript
-**Why**: VS Code opens on a click anywhere in a body over 250 chars; ours cannot, because the
-row's own click is the fold toggle, so the affordance is the marker ("— open in editor"). A live
-row still holds its uncut text when it cuts (kept under a page-lifetime key, released on
-`__clear`); a replayed row only ever had the capped copy, so replay blocks now carry `toolId` and
-Kotlin scans the transcript (`SessionStore.toolText`) — keeping the wire capped, as docs/limits.md
-promises. Read-only `LightVirtualFile`, plain text, titled "Bash command" / "<Tool> output".
-**Rejected**: shipping full texts in replay frames (defeats the caps); live-only (the marker would
-lie on replay); a card's cut command preview opening too (the card is not a box the row owns).
-
-## 2026-09-05 — 3.8 editable command: the grant FOLLOWS the edit, split per part; model confusion accepted
-**Why**: the user's calls, each probed before building. (1) A single-rule card keeps Always allow
-while edited: the CLI persists a rewritten `ruleContent` verbatim and honours it. (2) A compound
-card keeps Always allow + the three destinations and hides only its per-rule rows: a rule for the
-whole compound string is persisted but NEVER matches (the CLI checks parts separately), so
-`EditProposals.splitCommand` (&&, ||, ;, |, lone & outside quotes/parens) yields one exact rule per
-part — the shape the CLI's own suggestions take; a split the CLI would do differently can only
-re-ask, never widen. (3) The model seeing its original command beside the edited output is the
-CLI's design (the transcript never records the edit); VS Code measured identical; the user: "ok
-with model's confusion". Live-only on replay, like 3.5.
-**Alternatives rejected**: hiding Always allow on any edit (first cut — safe but threw away a grant
-the CLI accepts); a whole-string rule (measured useless); updating the tool line's IN box to the
-edited command (offered, not asked for — a live-only cosmetic).
-
-## 2026-09-05 — 3.7 reject-note field: inline after Reject, DENY only, Enter submits
-**Why**: VS Code's placement (`rejectMessageInput` beside its reject button) costs no card height,
-unlike the plan card's full-width row; the plan card keeps its own layout (5.2). Deny only because
-the deny message reaches the model verbatim as the tool_result while an ordinary allow has no wire
-for a note (`feedback` dropped, stdin steer arrives late — both probed 2.1.233); a note typed before
-Accept is dropped, never quoted as if delivered. Enter rejects with the note: a text-field
-convention, not a card shortcut (4.9 stays deferred). Three side defects found by the hand test were
-fixed the same day rather than backlogged (user: "let's fix both", then the replay note): the
-duplicate error OUT box, replay's "1 file changed" for a rejected edit, and the replayed edit card's
-missing note — the plan card and the edit card now replay their notes the same way.
-**Alternatives rejected**: field hidden until "Reject with a note" (extra click, and the plan card
-shows its field always); note on Accept (undeliverable).
-
-## 2026-09-05 — 2.12 extra content roots as `--add-dir`, read at launch only
-**Why**: measured — a Read in an attached root asks on every touch ("Path is outside allowed working
-directories"), with `--add-dir` it runs silently. `WorkspaceRoots.extraDirs` = content roots outside
-`project.basePath`, nested ones dropped; one flag per root as VS Code's host does for every
-workspace folder that is not the cwd. Roots attached mid-session wait for the next New/resume.
-**Alternatives rejected**: the runtime `register_repo_root` control (follow-up only if a live attach
-ever matters); "always allow" path rules as the workaround (one rule per pattern, saved into
-permission settings, for a folder the IDE already calls part of the project).
-
-## 2026-09-05 — 4.9 number-key card answers DEFERRED: no keyboard shortcuts on any card
-**Why**: the user's call after the plain-language walk-through ("let's skip this, no keyboard
-shortcuts for now"). It extends the 2026-08-16 plan-card rule to every card and sits beside the
-2026-08-09 removal of all IDE-level chords (12.4). Nothing technical blocks it — a keydown handler
-scoped to the focused card would work in JCEF — the user simply does not want keys answering cards.
-**Alternatives rejected**: 1/2/3/Esc on the focused card as VS Code does (XS build).
-**Reopen only if** the user asks for keyboard answers.
-
-## 2026-09-04 — 4.8 builds as a SPLIT BUTTON: main half = the CLI's default destination, caret = the other targets
-**Why**: the user's call after the plain-language walk-through. The default (the suggestion's own
-`destination`, `localSettings` on every measured card) stays one click, so the hot path is unchanged;
-the deliberate choices (session-only / project-shared / all projects) sit behind the caret, the same
-idiom the compound-command partial grant already uses on the card. VS Code's picker (webview
-`vY0`) cycles `Ss=[localSettings,userSettings,projectSettings,session]` (never `cliArg`), remembers
-the last pick in localStorage, and on accept stamps the chosen destination on every NON-setMode
-suggestion (`setMode` keeps its own). Labels: `fs0` short ("this project (just you)" / "all
-projects" / "this project (shared)" / "this session"), `ys0` tooltips (file paths).
-**Alternatives rejected**: decline + label-only (my recommendation: the default is right nearly
-always and the rest is terminal config) — the user wants parity with one-click default kept;
-a cycling link like VS Code (a click that silently changes the target reads as a mode toggle).
-**Precondition**: probe which echoed `destination` values 2.1.260 honours BEFORE the UI.
-
-## 2026-09-04 — 4.7 taken as VS Code's rule: honour `defaultMode` on a first run, DISPLAY dontAsk, never offer it
-- The row said "a fifth mode in both clients; VS Code's picker lists six incl. bypass". The user's
-  screenshot showed four — ours exactly. The extension builds the picker per session
-  (`webview/index.js` `c4()`); `dontAsk` is unshifted ONLY while current, bypass only under
-  `allowDangerouslySkipPermissions`. So "six" was the maximum, never a session.
-- Measured on 2.1.260 before deciding: the flag beats the settings file, and we always passed it
-  from `selectedMode()` — which cannot return `dontAsk` — so the panel could never BE in dontAsk
-  and a display-only row would have been dead code. The defect underneath was bigger: a user's
-  `permissions.defaultMode` was ignored on every launch.
-- Taken (user: "So VS Code one is the recommended one right?" → "lets go for it"): **(a)** nothing
-  persisted → NO `--permission-mode` flag, and the chip is seeded from the `initialize` response's
-  `current_permission_mode` (`ChatPanel.pushInitMeta`); **(b)** a `Don't ask` row hidden unless
-  current. Once a mode is picked, 4.5's persistence is unchanged and beats the file.
-- Alternatives rejected: ➖ "unreachable by design" (defensible — VS Code offers it no more than we
-  do — but it leaves the first-run bug for every mode, not just dontAsk); offering dontAsk as a
-  fifth pick (goes beyond both official clients, and Plan already covers "explore, change nothing").
-- Consequence to state in the next release notes: a never-picked chip now starts on the CLI's
-  default (`auto` on 2.1.260) instead of a hardcoded Manual.
-
-## 2026-09-04 — Full-surface audit: every gap gets built, small ones included; 6.9 and 6.5 first
-- The audit (checklist details block "Full-surface audit 2026-09-04") found no missing feature
-  AREA and ten small gaps, all filed [DECIDE]. The user's call: "I am planning to finish all even
-  if small" — so the [DECIDE] gate is spent for all ten; they are built one at a time on the
-  user's pick, each with the fixture-first free-control loop. Terminal's-half verdicts (config
-  dialogs, session infrastructure, composer chrome the IDE owns, VS Code's hamburger/surveys)
-  are written into that block so the next full audit does not re-judge them.
-- 6.9 built as SENT-BUBBLE chips only. Why: a `<textarea>` cannot host a chip (VS Code's
-  `inputMentionChip` rides a contenteditable), and the bubble is where the chip pays — the
-  prompt is already sent. The chip keeps the typed `@` and the bubble's textContent stays
-  byte-identical, so copy/select never lies. Rule: path-shaped token (slash or dotted extension),
-  `@` at start or after whitespace, sentence-final punctuation outside. Rejected: a
-  contenteditable composer (rewrites 6.1's picker and every caret rule); validating tokens against
-  the `files` roster (replay could render before the roster arrives — one deterministic rule).
-- 6.5 built from the user's screenshot as a CONTEXT-MENU action, first in both
-  `ProjectViewPopupMenu` and `EditorPopupMenu`, no shortcut (12.4 stance; VS Code's Alt+K is the
-  unbound action, mappable). Paths project-relative like the picker's own, folders `dir/`,
-  outside-project absolute — the CLI reads all three. The list is PARKED in `ChatPanel` until
-  `seedUi()` because a cold tool window's page has no `onClaudeEvent` yet and `pushEvent` would
-  drop the frame silently. Rejected: inserting only into an already-open panel (the first use is
-  exactly the cold one); reading file contents IDE-side (the CLI expands `@path` itself).
-
-## 2026-09-04 — 13.3 per-project persistence DEFERRED: wait for the `update_settings` allowlist to grow
-- The user's call ("wait for Anthropic — we already persist our way") after the implementation
-  attempt hit a measured wall: the 2.1.260 `update_settings` control allows exactly ONE key —
-  the binary's allowlist is `new Set(["outputStyle"])`, string values only, "deletion is not
-  supported"; `model` and `permissions` are refused by name ("update_settings keys not
-  allowed"). The outputStyle write itself works and file-merges cleanly (probed end-to-end).
-- What stays true and makes the revival cheap: the CLI HONORS `model` and
-  `permissions.defaultMode` from `.claude/settings.local.json` at spawn (measured 2026-09-04
-  with the panel's flags; `--permission-mode` beats the file, `model` needs no flag at all), and
-  `ChatPanel` seeds the chips from `session.selectedModel()`/`selectedMode()` — so adoption is a
-  precedence change in those two functions plus a write path, whenever the channel opens.
-- Alternatives rejected: the plugin writing `.claude/settings.local.json` itself via Kotlin
-  read-merge-write ([MD], offered with a recommendation, not taken — the CLI also writes that
-  file on every "always allow" grant, so simultaneous writes can drop each other's change);
-  dropping the idea entirely (the binary's own description — "the scope host UIs need so their
-  writes land exactly where /config's do" — signals the allowlist will grow; backlog watch-item:
-  grep the binary for `update_settings keys not allowed` each re-audit).
-- Checklist 13.3 re-marked ➖ with the full measured story; `PropertiesComponent` persistence
-  (IDE-global) remains the mechanism of record.
-
-## 2026-09-04 — Re-audit run at 2.1.260, nine versions after 2.1.251, on the user's ask
-- Findings folded into `docs/feature-checklist.md` (details block "Re-audit 2026-09-04") and
-  `docs/slash-commands.md`: VS Code's session sidebar grew (archive/unread/groups/filters;
-  `delete_session` removed), CLI vocabulary +`cloud_session_delta` +`update_settings`, roster
-  54 → 55 (+`/advisor` +`/reload-plugins` −`/artifact-design`), fable row now Fable 5.1 —
-  roster-driven, no panel change needed. `set_model` response, IDE-MCP tool set, tengu gates,
-  initialize keys: unchanged. One new row (13.3); §16 stale counts swept.
-- Method note that saved the audit: the Marketplace vsix supplies BOTH sides — the new
-  extension AND, via `extension/resources/native-binary/claude`, the OLD CLI baseline
-  (2.1.251 was no longer under `~/.local/share/claude/versions/`). Runbook step 3 updated.
-- Two same-day corrections after deeper measurement (both folded into the audit block): VS Code
-  does NOT use `update_settings` (its `persist_session_permission_mode` writes extension
-  `globalState`), and the control's generic description oversells a one-key allowlist. Lesson in
-  gotchas § Protocol: subtype acceptance says nothing about key coverage.
-
-## 2026-09-04 — CLI backward compat: no version floor, no shims — a muted hint on early death
-- The policy, settled with the user: the plugin never branches on CLI version and never declares
-  a minimum it hasn't tested ("we might be supporting still below but we have not tested, so
-  let's not think of floor"). Instead, a non-zero exit BEFORE the process ever produced a
-  parseable stream-json frame (`early:true` on the `__exit` frame, set from `ClaudeCli.sawFrame`)
-  renders one muted line under the ERR box: "Your Claude CLI may be out of date — run
-  `claude update` in a terminal." A mid-session crash never carries it. Fixture 73.
-- The `manual` cutoff is now MEASURED, both sides, on real binaries: v2.1.200 (released
-  2026-07-03) introduced `--permission-mode manual` (changelog: accepted alongside `default`) and
-  the full panel works against it; v2.1.199 rejects it with the friend's exact error and the
-  panel shows the new hint end-to-end. The friend's CLI simply predates 2026-07-03. Old binaries
-  via `claude install <version>` (kept side-by-side in `~/.local/share/claude/versions/`).
-- Alternatives rejected: a version floor with `claude --version` probing (untested ≠ unsupported,
-  and 2.1.200 proved the panel works far below the audited range); stderr pattern-matching to
-  gate the hint (early-death detection covers every shape without text matching); vocab
-  translation stays rejected (2026-09-05 entry). A one-click "Update Claude Code" button
-  (run `claude update` with the resolved binary, auto-restart on success) was designed and
-  DEFERRED by the user — backlog § Next up.
-
-## 2026-09-05 — MCP notice split by severity: needs-auth is a notice, failed is an error
-- Why: a friend's fresh install read the combined red line as "the plugin is broken" — an
-  unauthenticated claude.ai connector is an expected fresh-machine state with a known fix, not an
-  incident. One `statusLine` per fault now: `failed` keeps `status err`, `needs-auth` the muted
-  default dress; MCP_BAD table and the set-keyed dedupe untouched (fixture 72).
-- Alternatives rejected: keeping one combined red line (the complaint itself); dropping the
-  notice (13a exists because silently-missing tools are worse).
-
-## 2026-09-05 — old-CLI `--permission-mode` rejection: deferred, and the direction is a plain error
-**SUPERSEDED 2026-09-04 (the later session; this entry's date was written a day ahead):** the
-hint shipped, and the cutoff is 2.1.200, not 2.1.220 — see "CLI backward compat" above. The
-retry/vocab-translation rejection stands.
-- A pre-2.1.220 CLI spells the ask-mode `default` and rejects our `manual` → process exit 1,
-  cryptic first impression. User REJECTED the self-healing design (parse the failure stderr's
-  allowed-choices list, translate manual↔default, retry once, persist vocab) as too much
-  machinery — when picked up, show a clear "Claude Brains needs claude 2.1.220+ (tested 2.1.25x),
-  run `claude update`" message on the matching stderr instead. Parked in backlog § Immediate;
-  do not re-propose the retry design.
-
-## 2026-09-04 — `<synthetic>` frames drain by the RESULT's `is_error`, not by tag or subtype
-- Why: the CLI now uses `model:'<synthetic>'` for BOTH API-error echoes and local built-ins'
-  output (`/context`, `/list-agents` — drift arriving between 2.1.234 and 2.1.251), and a real
-  API echo carries `subtype:'success'` WITH `is_error:true`, so is_error is the only signal that
-  separates them. Success → the stash renders as prose; error → the red echo with exact-text
-  dedupe, unchanged (fixtures 56 + 70).
-- Alternative rejected: classifying at stash time in the whole-message branch — the frame alone
-  cannot say which kind it is; only its result can.
-
-## 2026-09-04 — webview CSS split into 10 manifest files (`webview/css/`, `CSS_FILES`)
-- Why: 1295-line monolith; the 2026-08-19 JS split had already proven the concat-splice seam, the
-  banner-per-file DevTools mapping, and the manifest-vs-directory test. User asked for "same as js".
-- Shape: cut ONLY at existing top-level comment boundaries, order preserved — concatenation order
-  IS cascade order (the file documents real specificity fights), verified byte-identical to the
-  old chat.css modulo the top banner. `WebviewAssets.CSS_FILES` is the only copy of the order;
-  the mockup mirrors it as `<link>` tags, pinned to the manifest by `RenderLimitsTest`.
-- Alternatives rejected: regrouping rules by component while splitting (cascade risk for zero
-  benefit — a rule moved past another flips ties); keeping chat.css as a generated artifact for
-  the mockup (a second copy that drifts; ten `<link>` tags + the pinning test instead).
-
-## 2026-09-01 (third) — files block: the `Review` span alone is the click target
-- Why: user request from a live screenshot — the whole-block action meant any stray click on a
-  file row opened the review, and the block-wide pointer cursor oversold what was clickable.
-- Alternatives rejected: keeping whole-block click with rows opting out (inverted logic for the
-  same result); making file rows open their FILE on click (would overload the block with two
-  different actions and was not asked for — the abs path already rides the tooltip).
-
-## 2026-09-01 (second) — files-changed block: one row per file, PROJECT-RELATIVE paths; bg popup gets the idiom's fixed width
-- Why: the single comma-run wrapped into an unreadable blob (worst on Windows, where a basename
-  bug showed full `D:\…` paths). User picked per-row + relative paths from three rendered
-  candidates (compact filename line, per-row basenames, per-row relative). Rows draw through the
-  SHARED `fillPath()` so tool lines and file rows cannot drift; counts right-aligned.
-- Bg-tasks popup: long titles now one-line ellipsised with the full name on the tooltip, and
-  `#bgMenu` is FIXED at 330px — the conversations-list idiom's stability comes from its fixed
-  width (#histPanel/.card-menu are both fixed); nowrap without it would WIDEN the popup.
-- Alternatives rejected: keeping the compact line with just the Windows fix (user preferred
-  scannable rows); always-reserved ✕ gutter (standing 2026-08-09 rule: never reserve space for
-  hover affordances); a second path-shortener for file rows (fillPath exists, fixture 40 pins it).
-
-## 2026-09-01 — `(note: …)` caveat: bound by every structural property the real emitter has; over the bound, DROP, never truncate
-- Why: the end-anchored regex alone misread large output containing a literal `(note:` and ending
-  `)` as a caveat — the whole tail rendered as one giant amber `.t-note` (user sighting
-  2026-08-30, reproduced on the real wire). Two guards, licensed by measuring every note template
-  in the 2.1.252 binary with `strings`: `NOTE_MAX = 400` (all real notes ≤ ~200 chars, collapsed)
-  and reject a match at position 0 of the trimmed result (all real notes are APPENDED after other
-  text — three join with a leading space, Edit's escape-swap with `\n`). One copy each, in
-  `RenderLimits.kt`, spliced as `LIM.noteMax`; JS mirrors the predicate.
-- Alternatives rejected: TRUNCATING an over-bound capture (a slice of misread output shown in
-  amber is noise dressed as a warning — the output is already in the OUT box, so drop is lossless
-  on screen); a single-line-note rule (RenderLimitsTest pins multi-line notes as valid — the
-  collapse exists for them); capping the permission-card `reason` (a dedicated field, never
-  parsed from output, never observed large).
-- Accepted residual, explicitly: a sub-400 parenthetical appended after text at the very end of a
-  result is byte-identical to a real caveat and still renders — irreducible without the CLI
-  marking notes structurally. Failure mode is one plausible-looking amber line, not a wall.
-- If a future CLI ships a genuine note > 400 chars the panel silently drops its display (the
-  model still receives it); the `strings` sweep of each CLI re-audit is the tripwire, and the fix
-  is bumping `NOTE_MAX`.
+## Digest — decisions 2026-09-01 → 2026-09-09 (compressed 2026-09-27; full text via `git show 34bc25c:.claude/context/decisions.md`)
+- **2026-09-09 — 0.13.1 ships the two renderer fixes alone, as a patch** · fixes to behaviour the user hit daily; plain semver · rejected bundling the four known renderer gaps (each needs its own fixture; named as known in the notes).
+- **2026-09-09 — Lists parse by CommonMark structure** (`mdList` in `20-markdown.js`: content indent, loose/tight, `<ol start>`, lazy continuation, items re-enter `mdBlocks`) · numbered lists restarted at `1.`; the user refused the prompting workaround — the renderer takes what the model writes; fixture 86, control 17/38 · rejected `start`-only, splitting on a marker change, indented code blocks and `~~~` (backlog).
+- **2026-09-08 — A fence is 3+ backticks and closes only on a run at least as long** · a ````markdown fence split at three and a whole table vanished behind a `B0 \`` leak; fixture 85, control 8/15 · rejected line-start anchoring (drops inline ```x```), `~~~`.
+- **2026-09-05 — Checklist rows fold**: gist line + "Read more…" (`<!-- --><details>`, no blank lines, no nested lists) · 2,300-char rows; §3 shown first, approved, then the file · rejected uniform folds, dates on the first line, sub-bullets in folds (the marked defect).
+- **2026-09-05 — 1.26 banner family through ONE status renderer, REPL-only subtypes included, per-kind glyphs** (three candidates rendered side by side in the real panel) · only `vcs_state_changed`/`notification` on the wire at 2.1.261; a branch per public schema costs nothing; first frame per subtype kept in `window.__bannerSeen` · rejected bare lines, drawing `turn_duration`, icons for text-only subtypes.
+- **2026-09-05 — 1.28 a withdrawn ask settles the card, sends nothing; the CLI's auto-deny box stays** · `control_cancel_request` probed real; Kotlin forgets the entry BEFORE the panel hears, so a racing click sends nothing · rejected VS Code's late-answer fold-in (no wire).
+- **2026-09-05 — 1.27 the cut MARKER opens the whole text** (live from the page-lifetime copy, replay via `SessionStore.toolText` by `toolId`; read-only `LightVirtualFile`) · the row's own click is the fold toggle; the wire stays capped · rejected full texts in replay frames, live-only.
+- **2026-09-05 — 3.8 editable command: the grant FOLLOWS the edit, split per part** (`EditProposals.splitCommand`; single-rule cards keep Always allow) · a whole-compound rule never matches (the CLI checks parts); the model seeing the original beside the edited output is the CLI's design, user "ok with model's confusion" · rejected hiding Always allow on edit, a whole-string rule, updating the IN box.
+- **2026-09-05 — 3.7 reject-note field: DENY only, Enter submits** (inline after Reject — layout superseded 2026-09-13: above the buttons) · deny text reaches the model as the tool_result; an allow has no wire for a note (probed 2.1.233); three side defects fixed the same day · rejected hidden-until-click field, note on Accept.
+- **2026-09-05 — 2.12 extra content roots as `--add-dir`, read at launch only** (`WorkspaceRoots.extraDirs`) · measured: a Read in an attached root asks on every touch without it · rejected runtime `register_repo_root`, path rules as the workaround.
+- **2026-09-05 — 4.9 number-key card answers DEFERRED; no keyboard shortcuts on any card** · the user's call; extends the 2026-08-16 plan-card rule and the 12.4 no-chords stance · reopen only on the user's ask.
+- **2026-09-04 — 4.8 as a SPLIT BUTTON**: main half = the suggestion's own `destination`, caret = session / project-shared / all projects · hot path unchanged with parity kept (the user overruled my decline recommendation) · rejected VS Code's cycling link; precondition: probe which echoed destinations 2.1.260 honours.
+- **2026-09-04 — 4.7 as VS Code's rule**: no `--permission-mode` flag when nothing is persisted (chip seeded from `initialize`'s `current_permission_mode`), a `Don't ask` row only while current · the flag had beaten the user's `permissions.defaultMode` on every launch; "six modes" was the picker's maximum, never a session · rejected ➖ unreachable-by-design, offering dontAsk as a fifth pick.
+- **2026-09-04 — Full-surface audit: every gap gets built, small ones included** · user "finish all even if small"; terminal's-half verdicts written into the checklist block so they are never re-judged; 6.9 = sent-bubble chips only (a textarea cannot host a chip), 6.5 = context-menu action, list parked until `seedUi()` · rejected a contenteditable composer, IDE-side file reading.
+- **2026-09-04 — 13.3 per-project persistence DEFERRED** · `update_settings` allows exactly `outputStyle`; the CLI honours `model`/`permissions.defaultMode` from `.claude/settings.local.json` at spawn, so revival is a precedence change in `ChatPanel` seeding · rejected plugin-side read-merge-write of that file (the CLI writes it too); watch-item: grep the binary for `update_settings keys not allowed` each re-audit.
+- **2026-09-04 — Re-audit at 2.1.260** folded into the checklist/slash docs; the Marketplace vsix supplies BOTH the extension and the old CLI baseline (runbook step 3) · corrections: VS Code does NOT use `update_settings`; lesson: subtype acceptance ≠ key coverage.
+- **2026-09-04 — CLI backward compat: no version floor, no shims; a muted "may be out of date" hint on early death** (`early:true` from `sawFrame`; fixture 73) · `manual` cutoff MEASURED at 2.1.200 both sides · rejected version probing, stderr matching, vocab translation; "Update Claude Code" button designed and deferred (backlog).
+- **2026-09-05 — MCP notice split by severity** (needs-auth muted, failed red; fixture 72) · a fresh install read the combined red line as "the plugin is broken" · rejected one combined line, dropping the notice.
+- **2026-09-05 → superseded 2026-09-04 — old-CLI rejection**: the self-healing retry/vocab-translation design stays rejected; became the 2.1.200 hint above.
+- **2026-09-04 — `<synthetic>` frames drain by the RESULT's `is_error`** (fixtures 56 + 70) · built-ins and API echoes share the tag since ~2.1.251; only the result separates them · rejected classifying at stash time.
+- **2026-09-04 — webview CSS split into 10 manifest files** (`CSS_FILES` = cascade order; mockup `<link>` tags pinned by `RenderLimitsTest`) · rejected regrouping by component (cascade risk), a generated chat.css for the mockup.
+- **2026-09-01 (third) — files block: the `Review` span alone is the click target** · stray clicks opened the review · rejected rows opening their file.
+- **2026-09-01 (second) — files-changed block: one row per file, project-relative, through the shared `fillPath()`; `#bgMenu` FIXED at 330px** · the comma-run blob (worst on Windows) · rejected a reserved ✕ gutter, a second path-shortener.
+- **2026-09-01 — `(note: …)` caveat bounded**: `NOTE_MAX = 400` in `RenderLimits.kt`, a match at position 0 rejected; over the bound DROP, never truncate · large output with a literal `(note:` rendered as a giant amber note · rejected truncation, a single-line rule, capping the card `reason`; residual: a sub-400 trailing parenthetical still renders — the `strings` sweep each re-audit is the tripwire.
 
 ## Digest — decisions 2026-08-23 → 2026-08-30 (compressed 2026-09-13; full text via `git show 8831b12:.claude/context/decisions.md`)
 - **2026-08-30 first-paint flash, final** — keep the JCEF child visible, `loadUi()` on the browser component's first non-empty resize, `setPageBackgroundColor("#1a1a1a")`; the 0.12.2 hide-until-load made the squashed frame deterministic (an invisible child has no bounds). Rejected: an opaque wrapper behind a hidden child. (The same-day "defer load + DumbAware" entry is SUPERSEDED in its hidden-child half; deferral and DumbAware stand — cost: the CLI starts on first show.)

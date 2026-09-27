@@ -553,6 +553,14 @@ re-read those before trusting memory here.
   The platform's `EnvironmentUtil.getEnvironmentMap()` loads shell env ONLY on macOS
   (`shouldLoadShellEnv()` opens `if (!isMac) return false`, 242 AND 262) — an API existing is not the API
   working. Linux is covered by our own `ShellEnv`; Windows needs neither.
+  **The executable LOOKUP must walk that same overlaid PATH** (`ShellEnv.path()`, since 2026-09-27).
+  Until then `resolveExecutable()` read `System.getenv("PATH")` — the snap PhpStorm's, no `~/.local/bin`
+  — missed the standalone install and fell back to the VS Code extension's bundled binary, so the panel
+  silently ran 2.1.270 while the terminal ran 2.1.283 (no Opus 5.5 in the picker), and the CHILD it
+  spawned was handed a PATH that did have it. Symptom of the class: the panel's transcripts carry an
+  older `"version"` than the terminal's. Proof: `/proc/<pid>/exe` of the `permission-prompt-tool
+  stdio` process. Control: launch `runIde` with `~/.local/bin` stripped from PATH (after `./gradlew
+  --stop`) — the pre-fix build picks `.vscode/extensions/…/native-binary/claude`.
 - Sandbox startup noise, NOT ours: `GlobalMenuLinux <clinit> requests Experiments instance …` is the
   2024.2 platform's own class-init assertion, no plugin code in the stack, fires at every launch.
 - **The runIde sandbox INVENTS UI symptoms, it doesn't only hide them.** Fresh config, stock keymap, so
@@ -836,6 +844,11 @@ re-read those before trusting memory here.
   completed instantly (BUILD SUCCESSFUL, no CDP). A plain retry launched fine both times. Distinct
   from the orphan-swallow trap below: check for the orphan first, then just relaunch once before
   digging.
+- **`pgrep -x claude` misses the standalone CLI**: its `comm` is the version string (`2.1.283`, the
+  file under `~/.local/share/claude/versions/`); only the VS Code-bundled binary is literally named
+  `claude`. Find panel CLIs by command line — `pgrep -f 'permission-prompt-too[l] stdio'` — then
+  `readlink -f /proc/<pid>/exe` and the parent's cmdline (snap `phpstorm` vs the sandbox's
+  `transformed/PhpStorm-2024.2.6/…`) to tell the real IDE's from the sandbox's.
 - **`pkill`/`pgrep -f <pattern>` matches the shell that runs it** when the pattern appears in your own
   command line — including in a later `&&` branch. Symptoms: exit 144 with everything after the kill
   silently skipped, or "still running" three times running because the probe saw itself. Use a
@@ -905,6 +918,15 @@ re-read those before trusting memory here.
   reference versions are one URL away** even after both dirs have dropped them — the marketplace
   vspackage endpoint (URL in runbook.md) serves any version as a gzip-WRAPPED vsix (gunzip before unzip),
   carrying `resources/native-binary/claude`.
+  **That lane reads STRINGS, not logic**: the 2.1.28x binary is a bytecode bundle, so `strings` yields
+  the string table (row descriptions, the picker subtitle, error texts) with no code around them — a
+  window of ±1000 chars is "Cannot destructure property …" noise. "What does the TUI show?" is answered
+  by driving the TUI through a pty (python `pty.fork` + `TIOCSWINSZ`, strip every `CLAUDE*` env var —
+  the nested-session markers — type `/model`, `\x1b[B` to scroll, strip ANSI). It needs a directory
+  already trusted in `~/.claude.json` (`projects[<path>].hasTrustDialogAccepted:true`; `/home/syncroze`
+  and both claude-brains dirs are NOT — the stream-json panel never asks), and the run writes a
+  transcript AND moves that project's `lastSessionId` to itself: delete the jsonl and restore the id.
+  Measured 2026-09-27: 2.1.283's TUI lists the same 11 rows the `initialize` roster carries.
 - **Reproducing a live-path bug without the IDE**: spawn `claude` with ClaudeCli's own flags, keep stdin
   OPEN so the session outlives the turn (the interesting frames arrive after it), record stdout with
   timestamps, then replay those real lines into `window.onClaudeEvent` on the spliced chat.html. Real
