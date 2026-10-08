@@ -534,6 +534,15 @@ No `set_effort` / `set_output_style` / `list_sessions` subtypes exist. Effort is
   is the only marker. The initialize response also carries top-level `fast_mode_state`
   (`off|on|cooldown`) + `fast_mode_disabled_reason` (e.g. `sdk_opt_in_required`), and
   `result` events repeat `fast_mode_state`.
+- **The roster's `default` row does NOT reflect a settings override** (probed 2026-09-27 on
+  2.1.283 and 2026-10-08 on 2.1.293, panel flags + `--settings '{"model":"haiku"}'`): `models[0]`
+  stays `{value:'default', resolvedModel:'claude-opus-5-5', description:'Opus 5.5 · …'}` while the
+  same process's `system/init.model`, every assistant `message.model` and the `result.modelUsage`
+  keys say `claude-haiku-4-5-20251001`. Nothing else in the initialize response names the effective
+  model (all 20 top-level keys read, 2.1.293). A `model` in any settings.json, `ANTHROPIC_MODEL`, or
+  a `/model` pick the terminal TUI persisted all take this path; an explicit `set_model` overrides
+  them. So `system/init.model` (first turn only) and `message.model` are the only truth for what
+  `default` runs — the panel follows them (checklist 9.1, fixture 88).
 - `set_model` NEVER rejects — even `haiku[1m]` returns success; an invalid combination fails on
   the next turn with the API's error ("400 The long context beta is not yet available for this
   subscription"). **Exception since 2.1.251 (measured 2026-08-30):** `PreModelSwitch` hooks run for

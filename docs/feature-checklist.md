@@ -1013,7 +1013,14 @@ auto-include selection, voice.
   (headless probe: no echo before any turn, 2.1.250 echoed there too; the user's hands-on switch
   after a turn drew the line — both 2026-08-30). Rejection by a `PreModelSwitch` hook: 9.11.
   VS Code 2.1.261 changed its picker to one flat list of every model, older spellings last; ours
-  is roster-driven with search — no change.
+  is roster-driven with search — no change. **The Default selection follows the model the CLI
+  actually serves** (2026-10-08): the roster's `default` row never reflects a `model` in
+  settings.json / `ANTHROPIC_MODEL` / a terminal `/model` pick, so the chip read "Default (Opus
+  5.5)" through a whole session that ran on Fable and spent the Fable allowance (user,
+  2026-09-27). Now `system/init.model` and each assistant `message.model` relabel the chip
+  ("Default (Fable 5.1)") and the row's description ("Fable 5.1 · from your settings"); the panel
+  follows, never sends `set_model`; a named row is left alone (protocol doc § models; fixture 88).
+  Gap: nothing on the wire names the override before the first turn.
   </details>
 - **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, the last row of the model-menu
   footer; the level shows only on the footer's own "Effort" label, never on a chip.

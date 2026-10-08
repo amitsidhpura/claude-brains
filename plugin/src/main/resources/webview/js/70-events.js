@@ -151,6 +151,9 @@
         // stamped as this conversation's, or a retraction aimed at the parent could evict a child's
         // blocks (and reqSeed would take the child's uuid, mis-seeding the completion summary).
         if (ev.parent_tool_use_id) return;
+        // Every assistant frame names the model that produced it — the Default selection's chip
+        // follows it (reconcileCliModel; '<synthetic>' is skipped there).
+        reconcileCliModel((ev.message || {}).model);
         // An auth failure is a DEAD END here: the plugin has no login flow by design
         // (CLAUDE.md § Philosophy), so the message has to carry the route out. VS Code hangs its
         // own login off this exact field — `if (e.error === "authentication_failed") showLogin()`
@@ -230,8 +233,9 @@
         { const cm = allModels().find(function (m) { return m.value === currentModel; });
           const w = (cm && !cm.custom) ? windowOf(cm) : (/\[1m\]/i.test(currentModel || '') ? CTX_1M : 0);
           if (w) { ctxWindowFromCli = w; renderContext(); }
-          if (cm) { setModelChip(chipName(cm), cm.value); }
-          else if (currentModel) { setModelChip(prettyModel(currentModel), currentModel); } }
+          // defaultResolvedFromCli survives a roster push on purpose: a CLI restart re-reads the
+          // same settings, and the first turn's system/init corrects it either way.
+          if (currentModel) setModelChip(chipLabelFor(currentModel), currentModel); }
         renderModels(); syncModelFooter();
         return;
       case '__fastMode':
@@ -251,6 +255,9 @@
           // The cwd the CLI is actually resolving paths against — the same value ChatPanel pushed
           // as __project, but from the authority. Only ever arrives at the first turn.
           if (ev.cwd) setProjectRoot(ev.cwd);
+          // The model the CLI is actually serving — the only place a settings `model` override
+          // shows before the first assistant frame (reconcileCliModel, fixture 88).
+          reconcileCliModel(ev.model);
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
           }

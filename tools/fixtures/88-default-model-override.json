@@ -1,0 +1,54 @@
+{
+  "item": "9.1 — the Default selection follows the model the CLI actually serves (2026-10-08)",
+  "branch": "`system/init.model` (first turn) and every assistant frame's `message.model` are compared with the Default row's `resolvedModel`. When they differ — a `model` in settings.json, ANTHROPIC_MODEL, or a `/model` pick persisted by the terminal TUI — the chip relabels to `Default (<real>)`, the Default row's description says `<real> · from your settings`, and the gauge window is re-seeded; the panel FOLLOWS and never sends set_model. A named selection is left alone; the override is remembered for when Default is picked again.",
+  "provenance": "MEASURED over stdio with the panel's flags: CLI 2.1.283 (2026-09-27) and 2.1.293 (2026-10-08), launched with --settings '{\"model\":\"haiku\"}' in place of the user's Fable override (one Haiku turn, transcript deleted). initialize.models[0] = {value:'default', resolvedModel:'claude-opus-5-5', displayName:'Default (recommended)', description:'Opus 5.5 · Best for everyday, complex tasks'} on BOTH versions, while the same process's system/init carried model:'claude-haiku-4-5-20251001', every assistant frame message.model:'claude-haiku-4-5-20251001' and the result's modelUsage had only that key. Nothing in the initialize response names the effective model (all 20 keys listed, 2.1.293). The roster rows below are the 2.1.293 values verbatim; the system/init and assistant frames carry only the keys this fixture needs (the real ones carry ~30 more). USER SYMPTOM 2026-09-27: chip 'Default (Opus 5.5)' while a whole session ran on Fable and exhausted the Fable allowance; selecting Opus by hand fixed it because set_model overrides the setting. NEGATIVE CONTROL RUN 2026-10-08 against the sandbox still serving the pre-change webview (started before the edit): 12 passed, 5 failed — the five DISCRIMINATING asserts (step-2 chip label, row description and window; step-4 remembered override; step-5 synthetic kept) failed; step 1 and the no-bridge asserts are GUARDs that pass on both builds, and step 3's asserts pass VACUOUSLY on the control (nothing to clear) — they discriminate only together with step 2. Fixed build: 17/17. STATE RESET: defaultResolvedFromCli is page-lifetime and survives a roster push on purpose, so step 1 clears it explicitly — fixture 67's synthetic system/init carries model:'<fixture>' and would otherwise leak into this chip when the whole suite runs (found on the first full run: 886/1). LIVE END-TO-END 2026-10-08 in the sandbox (CLI 2.1.293 via the fixed panel): `{\"model\":\"haiku\"}` in the testing repo's .claude/settings.local.json (removed afterwards), New conversation (a fresh CLI with NO set_model — the first attempt ran on Opus 5.5 because fixture 55's real setModel calls had reached the previous CLI process, and an explicit set_model beats settings), one real turn: chip 'Default (Haiku 5.5)', Default row 'Haiku 5.5 · from your settings', transcript 488fb690 message.model claude-haiku-5-5 by key, the taped result's modelUsage['claude-haiku-5-5'].contextWindow 1000000 — so the 1M ring was the CLI's own number. NOTE the panel's roster that session had 13 rows with haiku→claude-haiku-5-5 and sonnet→claude-sonnet-5-5 while a terminal stdio probe of the SAME binary minutes earlier listed 11 rows with haiku→claude-haiku-4-5-20251001 — the roster is per-process, not per-binary (re-audit lead).",
+  "steps": [
+    {
+      "note": "a roster whose Default row resolves to Opus 5.5, selection `default`: chip says Default (Opus 5.5)",
+      "setup": "if (!window.__realBridge88) { window.__realBridge88 = window.__bridge; } window.__tape88 = []; window.__bridge = function(j){ window.__tape88.push(JSON.parse(j)); }; window.__m88 = { models: JSON.parse(JSON.stringify(models)), sel: currentModel, win: ctxWindowFromCli }; defaultResolvedFromCli = null; window.onClaudeEvent(JSON.stringify({type:'__models', selected:'default', items:[{value:'default', resolvedModel:'claude-opus-5-5', displayName:'Default (recommended)', description:'Opus 5.5 · Best for everyday, complex tasks', supportsFastMode:true},{value:'opus', resolvedModel:'claude-opus-5-5', displayName:'Opus 5.5', description:'Most capable for ambitious work', supportsFastMode:true},{value:'claude-fable-5-1', resolvedModel:'claude-fable-5-1', displayName:'Fable 5.1', description:'For your toughest challenges'},{value:'sonnet', resolvedModel:'claude-sonnet-5', displayName:'Sonnet 5', description:'Most efficient for everyday tasks'},{value:'haiku', resolvedModel:'claude-haiku-4-5-20251001', displayName:'Haiku 4.5', description:'Fastest for quick answers'}]}));",
+      "expect": [
+        { "js": "document.getElementById('modelChip').textContent.trim()", "equals": "Default (Opus 5.5)", "why": "GUARD: the roster's own claim, both builds" },
+        { "js": "document.getElementById('modelChip').title", "equals": "default", "why": "GUARD: the selection is the Default row" }
+      ]
+    },
+    {
+      "note": "system/init says the CLI is serving Fable 5.1: chip relabels, Default row stays selected and explains, no bridge",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'system', subtype:'init', model:'claude-fable-5-1'}));",
+      "expect": [
+        { "js": "document.getElementById('modelChip').textContent.trim()", "equals": "Default (Fable 5.1)", "why": "the chip shows the model the API is actually serving" },
+        { "js": "document.getElementById('modelChip').title", "equals": "default", "why": "the SELECTION is still Default — nothing was switched" },
+        { "js": "currentModel", "equals": "default", "why": "selection untouched" },
+        { "js": "(function(){ var r = document.querySelector('#modelItems .popup-item.on'); return r ? r.dataset.v : null; })()", "equals": "default", "why": "the Default row keeps the tick" },
+        { "js": "(function(){ var r = document.querySelector('#modelItems .popup-item[data-v=\"default\"] .pi-desc'); return r ? r.textContent : null; })()", "equals": "Fable 5.1 · from your settings", "why": "the row's description says what Default resolves to and why" },
+        { "js": "window.__tape88.length", "equals": 0, "why": "the panel FOLLOWS the CLI — no set_model, nothing persisted" },
+        { "js": "ctxWindowFromCli", "equals": 1000000, "why": "Fable is natively 1M: the gauge denominator is re-seeded (the result's contextWindow stays authoritative)" }
+      ]
+    },
+    {
+      "note": "an assistant frame reporting the roster's own default (Opus 5.5) clears the override: chip and row description return to the roster's text",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'assistant', uuid:'fx88-a1', message:{role:'assistant', model:'claude-opus-5-5', content:[]}}));",
+      "expect": [
+        { "js": "document.getElementById('modelChip').textContent.trim()", "equals": "Default (Opus 5.5)", "why": "override cleared" },
+        { "js": "(function(){ var r = document.querySelector('#modelItems .popup-item[data-v=\"default\"] .pi-desc'); return r ? r.textContent : null; })()", "equals": "Opus 5.5 · Best for everyday, complex tasks", "why": "the roster's description is back verbatim" },
+        { "js": "ctxWindowFromCli", "equals": 200000, "why": "window re-seeded for a 200k model" }
+      ]
+    },
+    {
+      "note": "a NAMED selection is left alone, but the override is remembered for when Default is picked again",
+      "setup": "showModel('opus'); window.onClaudeEvent(JSON.stringify({type:'assistant', uuid:'fx88-a2', message:{role:'assistant', model:'claude-fable-5-1', content:[]}})); window.__m88.named = document.getElementById('modelChip').textContent.trim(); showModel('default');",
+      "expect": [
+        { "js": "window.__m88.named", "equals": "Opus 5.5", "why": "a named row's chip is never relabelled by this path" },
+        { "js": "document.getElementById('modelChip').textContent.trim()", "equals": "Default (Fable 5.1)", "why": "picking Default again shows the remembered real model" },
+        { "js": "window.__tape88.length", "equals": 0, "why": "showModel is the display half — still no bridge" }
+      ]
+    },
+    {
+      "note": "a synthetic frame (local command / API-error echo) is ignored; then restore the live roster, selection, window and bridge",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'assistant', uuid:'fx88-a3', message:{role:'assistant', model:'<synthetic>', content:[]}})); window.__m88.afterSynthetic = document.getElementById('modelChip').textContent.trim(); window.onClaudeEvent(JSON.stringify({type:'system', subtype:'init', model:'claude-opus-5-5'})); window.onClaudeEvent(JSON.stringify({type:'__models', items: window.__m88.models, selected: window.__m88.sel})); ctxWindowFromCli = window.__m88.win; renderContext(); window.__bridge = window.__realBridge88;",
+      "expect": [
+        { "js": "window.__m88.afterSynthetic", "equals": "Default (Fable 5.1)", "why": "'<synthetic>' is not a model" },
+        { "js": "currentModel === window.__m88.sel && window.__bridge === window.__realBridge88", "equals": true, "why": "pre-fixture selection and bridge restored" }
+      ]
+    }
+  ]
+}

@@ -204,6 +204,16 @@
 
   /* ---------- model picker ---------- */
   let models = [], currentModel = null;
+  // The model the CLI is ACTUALLY serving for the `default` selection when it differs from the
+  // Default row's resolvedModel, else null. `initialize.models[0]` describes the CLI's built-in
+  // default ("Opus 5.5 · …", resolvedModel claude-opus-5-5) and NEVER reflects a `model` in
+  // settings.json, ANTHROPIC_MODEL, or a /model pick the terminal TUI persisted — only the first
+  // turn's `system/init.model` and each assistant frame's `message.model` do (measured 2.1.283 and
+  // 2.1.293 with --settings '{"model":"haiku"}': the roster said Opus 5.5, every frame said Haiku).
+  // Without this the chip read "Default (Opus 5.5)" through a whole session that ran on Fable and
+  // exhausted the Fable allowance (user, 2026-09-27). Page-lifetime, never persisted: the next
+  // frame re-derives it. Fixture 88.
+  let defaultResolvedFromCli = null;
   let customModels = [];   // user-defined, persisted via Kotlin PropertiesComponent (see the search field)
   // footer-switch state (model menu): fast mode is CLI truth (initialize + result frames, an
   // optimistic click in between); thinking is Kotlin-owned preference, seeded on every load.
@@ -238,8 +248,53 @@
     // the CLI leads each description with the concrete model, e.g. "Opus 4.8", "Sonnet 5", "Haiku 4.5"
     const ver = ((m.description || '').match(/^\s*([A-Za-z]+ [0-9][0-9.]*)/) || [])[1];
     // Default resolves to a real model — show which one in brackets, e.g. "Default (Opus 4.8)"
-    if (base === 'Default' || m.value === 'default') return ver ? 'Default (' + ver + ')' : base;
+    if (base === 'Default' || m.value === 'default') {
+      // what Default REALLY resolves to beats what the roster row claims (defaultResolvedFromCli)
+      const real = defaultResolvedFromCli ? rosterName(defaultResolvedFromCli) : ver;
+      return real ? 'Default (' + real + ')' : base;
+    }
     return ver || base;                                 // named model: "Sonnet 5", "Opus 4.8", …
+  }
+  // Display name for a raw model id: its roster row's name ("Fable 5.1") when a row resolves to
+  // it, else prettyModel. Roster-first so the chip and the menu spell a model the same way.
+  function rosterName(id) {
+    const s = strip1m(id);
+    const r = models.find(function (m) { return m.value !== 'default' && strip1m(m.resolvedModel || '') === s; });
+    return r ? (r.displayName || r.value).replace(/\s*\(.*\)$/, '') : prettyModel(id);
+  }
+  // The chip label for a selection: a listed model (built-in or custom) through chipName, an
+  // unlisted id through prettyModel. The one rule the chip's writers share.
+  function chipLabelFor(v) {
+    const m = allModels().find(function (x) { return x.value === v; });
+    return m ? chipName(m) : prettyModel(v);
+  }
+  // The id the API is serving for the current selection, for matching a result's modelUsage keys:
+  // the Default row answers with what the CLI reported (or its own resolvedModel); anything else
+  // is the selection itself (a roster value or a raw id, which windowFromUsage already matches).
+  function effectiveModelId() {
+    if (strip1m(currentModel || '') !== 'default') return currentModel;
+    const row = models.find(function (m) { return m.value === 'default'; });
+    return defaultResolvedFromCli || (row && row.resolvedModel) || currentModel;
+  }
+  // Called with `system/init.model` and each assistant frame's `message.model`. Relabels ONLY the
+  // Default selection: a named row was chosen on purpose, and a mismatch there is model_fallback's
+  // business (9.7 watch). The panel FOLLOWS — no set_model, nothing persisted. The gauge window is
+  // re-seeded from the id (Fable is natively 1M) until a result's contextWindow has spoken.
+  function reconcileCliModel(id) {
+    if (typeof id !== 'string' || !id || id === '<synthetic>') return;
+    const row = models.find(function (m) { return m.value === 'default'; });
+    if (!row) return;
+    const real = strip1m(id) === strip1m(row.resolvedModel || '') ? null : id;
+    if (real === defaultResolvedFromCli) return;
+    defaultResolvedFromCli = real;
+    if (strip1m(currentModel || '') !== 'default') return;   // remembered for the next Default pick
+    setModelChip(chipLabelFor(currentModel), currentModel);
+    renderModels();
+    if (oneMFromCli === null) {
+      const w = (/\[1m\]/i.test(id) || /fable/i.test(id)) ? CTX_1M : CTX_STD;
+      if (w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); }
+    }
+    syncModelFooter();
   }
   // Friendly chip label for a model set by raw id/name (not in the dropdown): "claude-fable-5[1m]"
   // -> "Fable 5 (1M)", "opus[1m]" -> "Opus (1M)", "haiku" -> "Haiku". Falls back to the raw string.
@@ -261,11 +316,15 @@
              (m.description || '').toLowerCase().indexOf(q) !== -1;
     });
     modelItems.innerHTML = shown.map(function (m) {
+      // the Default row's description is the CLI's built-in default; when settings override it,
+      // say what Default really resolves to and where that came from (defaultResolvedFromCli)
+      const desc = (m.value === 'default' && defaultResolvedFromCli)
+        ? rosterName(defaultResolvedFromCli) + ' · from your settings' : m.description;
       // the ✓ ignores the [1m] tag: "sonnet[1m]" (set by the footer switch) is still the Sonnet row.
       // Safe because roster values are unique once stripped; an id matching no row marks nothing.
       return '<div class="popup-item' + (strip1m(m.value) === strip1m(currentModel) ? ' on' : '') + (m.custom ? ' custom' : '') + '" data-v="' + escA(m.value) + '">' +
         '<div class="pi-body"><div class="pi-title">' + esc(m.displayName || m.value) + '</div>' +
-        (m.description ? '<div class="pi-desc">' + esc(m.description) + '</div>' : '') +
+        (desc ? '<div class="pi-desc">' + esc(desc) + '</div>' : '') +
         '</div>' +
         // every row shows the selected checkmark; a custom row's remove (×) lives INSIDE the
         // check span, overlaying the ✓'s own box so their centers coincide by construction
@@ -329,9 +388,9 @@
     currentModel = v; oneMFromCli = null;   // new selection: tag-derived until its first result
     const m = allModels().find(function (x) { return x.value === v; });
     // custom carries the same {value, displayName, description} shape as built-in, so both draw the
-    // Model+Version through chipName; an unlisted id falls back to a prettified label. The exact id is
-    // kept on hover so nothing is lost.
-    setModelChip(m ? chipName(m) : prettyModel(v), v);
+    // Model+Version through chipName; an unlisted id falls back to a prettified label
+    // (chipLabelFor). The exact id is kept on hover so nothing is lost.
+    setModelChip(chipLabelFor(v), v);
     // switching between a 1M model and a 200k one changes the denominator; when we have no built-in
     // metadata, infer 1M from a [1m] tag on the value
     { const w = (m && !m.custom) ? windowOf(m) : (/\[1m\]/i.test(v) ? CTX_1M : 0); if (w) { ctxWindowFromCli = w; renderContext(); } }

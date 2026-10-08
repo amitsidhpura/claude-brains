@@ -165,7 +165,10 @@
    *   gates it and tracking on/cooldown/off across turns.
    */
   function reconcileFromResult(ev) {
-    const w = windowFromUsage(ev.modelUsage || ev.model_usage, currentModel);
+    // modelUsage is keyed by the REAL id — `default` matches nothing there, so the Default
+    // selection asks again by what it resolves to (effectiveModelId, 30-menus.js).
+    const usage = ev.modelUsage || ev.model_usage;
+    const w = windowFromUsage(usage, currentModel) || windowFromUsage(usage, effectiveModelId());
     if (w && w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); }
     if (w) { oneMFromCli = w >= CTX_1M; syncModelFooter(); }
     if (typeof ev.fast_mode_state === 'string') {
