@@ -6,6 +6,14 @@ re-read those before trusting memory here.
 
 ## Protocol / wire
 
+- **The roster's `default` row LIES about what `default` runs.** `initialize.models[0]` is the
+  CLI's built-in default (`resolvedModel: claude-opus-5-5`, "Opus 5.5 · …") whatever a settings
+  `model`, `ANTHROPIC_MODEL` or a terminal `/model` pick says; the truth is `system/init.model`
+  (first turn only) and each assistant `message.model`, and an explicit `set_model` overrides them
+  all. Measured 2026-09-27 (2.1.283) and 2026-10-08 (2.1.293) with `--settings
+  '{"model":"haiku"}'`. Cost the user a Fable allowance under a chip that said Opus. The same
+  shape as the mode trap below: the initialize response states the CLI's own defaults, the first
+  turn states reality. Checklist 9.1, fixture 88.
 - **`--permission-mode` BEATS `permissions.defaultMode`; `system/init` only repeats the mode with
   the FIRST TURN.** Measured 2026-09-04 on 2.1.260 (scratchpad dir, stdio): settings
   `defaultMode:"dontAsk"` alone → init `dontAsk`; the same file + `--permission-mode manual` → init
@@ -1039,6 +1047,24 @@ re-read those before trusting memory here.
 - **The webview "readable sentences" diff is useless across a big hop** — 2.1.260 → 2.1.270 produced
   5661 "added" strings from minifier renames alone (2026-09-13). Use it only for a one-or-two-version
   hop; the public CHANGELOG (`reference/claude-code-log`, runbook step 3b) covers that surface.
+- **The harness is NOT side-effect free on the sandbox CLI** — fixture 55's `setModel` calls run
+  through the REAL bridge, so the sandbox CLI receives five `set_model` requests per full run
+  (its transcript shows the "Set model to …" echoes). A live end-to-end sent afterwards inherits
+  the last one, and an explicit `set_model` beats a settings `model` — the first 2026-10-08
+  override check ran on Opus 5.5 for exactly this reason. Start a FRESH CLI first
+  (`bridge({kind:'new'})` over CDP, wait for a new pid by command line), then send the turn.
+- **Finding the sandbox's transcript by `ls -t` is wrong** — twice on 2026-10-08 an OLDER session
+  file (2.1.270, 2026-09-13) had the newest mtime. Select by `"version"` and the first
+  `timestamp` after the turn was sent, then read the keys you need.
+- **A poll on `#log .generating` never saw the turn** (2026-10-08) — the live turn finished with
+  the marker never observed true. Wait on the `#log .blk` count or tape `result` by wrapping
+  `window.onClaudeEvent` (restore it afterwards) rather than on a transient class.
+- **The model roster is per-PROCESS, not per-binary** — a terminal stdio `initialize` of 2.1.293
+  listed 11 rows (`haiku→claude-haiku-4-5-20251001`) while the sandbox panel's 2.1.293 process
+  minutes later listed 13 (`haiku→claude-haiku-5-5`, `sonnet→claude-sonnet-5-5`, a `fable`
+  alias). A fixture copying "the roster verbatim" copies ONE process's; say which.
+- **zsh hands a multi-line `$(pgrep …)` to `kill` as ONE argument** ("illegal pid: a\nb") — pipe
+  through `tr '\n' ' '` or use `pkill -f` with a bracketed pattern.
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with

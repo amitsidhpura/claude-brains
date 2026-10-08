@@ -3,6 +3,38 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-08 (sixteenth) — the Default selection follows the model the CLI actually serves; fixture 88; live-verified
+- User's 2026-09-27 report revisited: chip "Default (Opus 5.5)" while a whole session ran on
+  Fable and spent the Fable allowance; selecting Opus by hand "fixed" it. Measured over stdio on
+  2.1.283 (2026-09-27) and 2.1.293 (today) with `--settings '{"model":"haiku"}'`: the roster's
+  `default` row keeps saying Opus 5.5 while `system/init.model`, every assistant `message.model`
+  and `result.modelUsage` say Haiku; nothing in the initialize response (20 keys) names the
+  effective model. The panel read only the roster → the chip could not know.
+- Fix: `defaultResolvedFromCli` + `reconcileCliModel()` (`30-menus.js`), hooked from `system/init`
+  and the assistant case (`70-events.js`); `chipLabelFor()` is now the one label rule for the
+  chip's three writers; the Default row's description becomes "<real> · from your settings";
+  `80-gauge.js` matches `modelUsage` by `effectiveModelId()` — with `default` selected the ring
+  had never received the authoritative window. Named rows untouched; no `set_model` ever sent.
+- Fixture 88 (17 asserts): control on the pre-fix sandbox 12/5 (the five discriminating asserts;
+  step 3 passes vacuously there), fixed 17/17. First FULL run 886/1: fixture 67's synthetic
+  `system/init` carries `model:'<fixture>'`, which my page-lifetime override remembered across
+  the roster push → step 1 now resets it explicitly. Second full run 887/0; Kotlin 168/0.
+- Live end-to-end took two attempts: the first turn ran on Opus 5.5 because fixture 55's real
+  `setModel` calls had reached the sandbox CLI (five "Set model to …" echoes in its transcript)
+  and an explicit `set_model` beats settings. `bridge({kind:'new'})` → fresh CLI (pid by command
+  line) → one turn: chip "Default (Haiku 5.5)", row "Haiku 5.5 · from your settings", transcript
+  `488fb690` `message.model: claude-haiku-5-5`, taped `modelUsage` contextWindow 1,000,000 (the
+  CLI's own number for Haiku 5.5 — the ring was right). Override file removed afterwards.
+- Found on the way: the roster is per-PROCESS — the same 2.1.293 binary listed 11 rows over a
+  terminal stdio probe and 13 in the sandbox panel (`haiku→claude-haiku-5-5`, a `fable` alias).
+- Two probe traps (gotchas § Testing): a poll on `#log .generating` never fired; `ls -t` over the
+  transcripts picked an older file twice (mtime bumped) — find the session by `"version"` + first
+  `timestamp`.
+- Mid-session the user updated the VS Code extension to 2.1.293 and restarted the real PhpStorm:
+  its panel now runs the extension's 2.1.293 binary through the UNFIXED fallback — right version
+  by coincidence. Neither fix is installed there; local zip or 0.14.1 is the user's call.
+- Committed and pushed on the user's ask (fix + this context save).
+
 ## 2026-09-27 (fifteenth) — the panel had been running the VS Code 2.1.270 binary; executable lookup moved to the shell PATH
 - User: "why is it not showing Opus 5.5?" (TUI had it, panel had "Opus 5 (1M)"). Measured by key:
   every panel transcript (this session included) `"version":"2.1.270"`, terminal ones 2.1.283;
@@ -215,38 +247,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   cards taken over CDP and checked.
 - Uncommitted at save time; sandbox left running for the user's MT-4.8 hand test.
 
-## 2026-09-04 (sixth) — 4.7 built as VS Code's rule; the row's premise was WRONG and the user's screenshot caught it
-- Explaining 4.7 in plain language is what broke it open: the user sent a VS Code screenshot
-  showing FOUR modes — exactly ours — against the row's claim that "VS Code's picker lists six
-  incl. bypass". Read the extension's own builder (`webview/index.js` `c4()`): the picker is
-  assembled per session — base default/acceptEdits/plan, `auto` when available,
-  `bypassPermissions` only under `allowDangerouslySkipPermissions`, and `dontAsk` ONLY while it is
-  already current. `dontAsk` is never offered, only displayed.
-- Five stdio probes on 2.1.260 (throwaway scratchpad dir, never the user's config): no flag → init
-  `auto` (the CLI's own default now); `--permission-mode dontAsk` → `dontAsk` VERBATIM, no alias;
-  settings `defaultMode:"dontAsk"` alone → `dontAsk`; same file + `--permission-mode manual` →
-  `default` (the FLAG BEATS THE FILE); settings `bypassPermissions` with no dangerous flag →
-  `default` (so no guard was needed).
-- That inverted my own earlier claim that our chip could lie: it could not, because we ALWAYS
-  passed the flag. The real defect was broader — `permissions.defaultMode` was ignored entirely,
-  so a user who set `plan`/`auto` in settings got a hardcoded Manual on first run.
-- Built both halves (decisions.md): `PermissionModes.resolveStored` (null = never picked → no
-  flag), `ChatPanel.pushInitMeta` seeds `__mode` from the initialize response's
-  `current_permission_mode`, and a `Don't ask` row `[hidden]` unless current in `syncModeUI`.
-- **A live check found the seed I had missed**: `system/init` only repeats the mode with the FIRST
-  TURN, so without the initialize seed a never-picked chip sat on Manual while the CLI was on
-  `auto`. Found by reading the running panel, not by any fixture.
-- Fixture 76 (11 asserts): negative control on the still-running pre-fix sandbox — every
-  DISCRIMINATING assert failed, and one guard THREW on a null node and aborted the run, so it was
-  made null-safe (gotchas § Testing). Kotlin 143, harness 653.
-- User hand-tested all six steps in the sandbox: first run Auto → settings dontAsk shows the row →
-  Write+Bash denied with no cards → picking Auto removes the row → the pick persists and beats the
-  file → 6.5's three right-clicks (file, folder+files `@docs/`, editor popup) all first and correct.
-  6.5 closed at the same time.
-- Trap: writing ANY `.claude/settings*.json` is blocked by the permission classifier (Bash and
-  Write alike), so the settings-file cells ran in a scratchpad dir and the user made the real edit.
-
 ## Digest
+- **2026-09-04 (sixth)** — 4.7 built as VS Code's rule after the user's screenshot (four modes, not six) overturned the row's premise: the extension's `webview/index.js` `c4()` assembles the picker per session (`bypassPermissions` only under the dangerous flag, `dontAsk` displayed only while current, never offered). Five stdio probes on 2.1.260: no flag → `auto`; `--permission-mode` BEATS settings `defaultMode`; `bypassPermissions` in settings without the flag → `default`. Real defect: `permissions.defaultMode` was ignored entirely → `PermissionModes.resolveStored` (null = never picked → no flag), `pushInitMeta` seeds `__mode` from `initialize.current_permission_mode` (a live check found that `system/init` repeats the mode only with the FIRST turn), `Don't ask` row hidden unless current. Fixture 76 (control: one guard threw on a null node → null-safe asserts, gotchas § Testing); Kotlin 143, harness 653; user hand-tested six steps, 6.5 closed too. Trap: writing any `.claude/settings*.json` is blocked by the permission classifier — settings cells run in a scratchpad dir, the user makes the real edit.
 - **2026-09-04 (fifth)** — full-surface audit at 2.1.260 (288 host `case` labels → 97 RPC types, ~100 webview features, 98 control + 46 `system` subtypes, the binary's 128-name command map, changelog 200→260): no missing feature AREA, ten small gaps → rows 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9; terminal's-half verdicts recorded in the checklist's "Full-surface audit" block. Built 6.9 (`mentionHtml` sent-bubble capsules, fixture 74) and 6.5 (`MentionAction` first in both popup menus, `MentionPaths.tokens`, list parked until `seedUi()`, fixture 75); harness 642, Kotlin 141. Measured: an @-mention attaches before the model runs (1 turn) vs a plain path Read (2 turns); 200 KB cut at 2,000 lines silently, 2 MB not attached at all (threshold unpinned). Trap → gotchas § Testing: the running sandbox's jar is under the dir `-Didea.plugins.path` names, not `ls -t`'s pick.
 - **2026-09-04 (fourth)** — re-audit 2.1.251 → 2.1.260, all measured (VS Code session sidebar grew archive/unread/groups; CLI +`cloud_session_delta` +`update_settings`; roster +`/advisor` +`/reload-plugins` −`/artifact-design`; Fable 5.1 row). Both vsixes fetched from the Marketplace, the 2.1.251 one for its native binary as the CLI baseline (runbook step 3). 13.3 died on measurement: `update_settings` allows only `outputStyle`; the CLI honours `model`/`permissions.defaultMode` from `.claude/settings.local.json` at spawn — user chose "wait for Anthropic" (➖, backlog watch-item). Lesson (gotchas § Protocol): subtype acceptance ≠ key coverage.
 - **2026-09-04 (third)** — 0.12.5 released (`a77a565`, tag `v0.12.5`) and Marketplace-Approved within the hour: steps 1–5 proactive on "lets release updates", stopped at the approval gate; test/buildPlugin 137/0, verifyPlugin 8/8 Compatible (ladder grew to PS-263), asset `cmp`-identical, `marketplace-upload` green in 12s; the "CLI 2.1.200+" line landed in README, plugin.xml and the feed. Notes framed as "first impressions"; screenshots 01/03/04/05 remain the user's upload errand.

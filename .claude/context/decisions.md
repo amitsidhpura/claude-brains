@@ -4,6 +4,25 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-08 — The Default selection follows the model the CLI actually serves; only Default is relabelled
+**Decision:** `system/init.model` (first turn) and each assistant frame's `message.model` are
+compared with the roster's `default` row `resolvedModel`. A mismatch relabels the chip
+("Default (Fable 5.1)") and the Default row's description ("Fable 5.1 · from your settings");
+the selection stays `default`, the Default row keeps its tick, no `set_model` is sent, nothing is
+persisted. The remembered override survives a roster push (a CLI restart re-reads the same
+settings; the first turn corrects it either way). A NAMED selection is never relabelled. The gauge
+matches `result.modelUsage` by the effective id, so Default + a 1M model gets the real denominator.
+**Why:** the roster row is the CLI's built-in default and never reflects a settings `model`,
+`ANTHROPIC_MODEL` or a terminal `/model` pick (measured 2.1.283 + 2.1.293); the user burned a
+Fable allowance under a chip that said Opus. The panel's rule is to FOLLOW the CLI, never to push.
+**Rejected:** switching the tick to the real model's row (the user did not choose it — it would
+misreport their selection and a `set_model` to "re-sync" would silently override settings);
+relabelling named rows on a `message.model` mismatch (that is `model_fallback`'s business, 9.7
+watch, and `opus` vs `claude-opus-5-5[1m]` spellings make the compare unsafe); clearing the
+override on every roster push (the chip would flip back to the roster's lie at each restart until
+the first turn). Known gap, documented: nothing on the wire names the override before the first
+turn. Checklist 9.1, protocol doc § models, fixture 88.
+
 ## 2026-09-27 — The `claude` executable is resolved on the SHELL PATH, the same layer the CLI is spawned under
 **Why**: the panel had been running the VS Code extension's bundled 2.1.270 for weeks while the
 terminal ran 2.1.283 — the user noticed only because Opus 5.5 was missing from the picker.
