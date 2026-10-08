@@ -1,27 +1,27 @@
 # State
 
 ## Current focus
-**2026-10-08 (sixteenth session, Linux): the Default selection now follows the model the CLI
-actually serves — built, controlled, live-verified, committed.** The user's 2026-09-27 report:
-chip "Default (Opus 5.5)" through a whole session that ran on Fable and spent the Fable allowance.
-Cause (measured on 2.1.283 and 2.1.293 over stdio with `--settings '{"model":"haiku"}'`): the
-roster's `default` row (`initialize.models[0]`, resolvedModel `claude-opus-5-5`, description
-"Opus 5.5 · …") NEVER reflects a `model` in settings.json / `ANTHROPIC_MODEL` / a terminal
-`/model` pick; only `system/init.model` (first turn) and each assistant `message.model` do, and
-the panel ignored both. Fix: `defaultResolvedFromCli` + `reconcileCliModel()` in
-`plugin/src/main/resources/webview/js/30-menus.js`, hooked from `system/init` and the assistant
-case in `70-events.js`; chip → "Default (Fable 5.1)", Default row description → "Fable 5.1 · from
-your settings"; named rows untouched; the panel FOLLOWS, never sends `set_model`. `80-gauge.js`
-now matches `result.modelUsage` by `effectiveModelId()` (with `default` selected the ring never
-got the authoritative window before). Fixture 88 (control 12/5 → 17/17), harness **887/0**,
-`./gradlew test` **168/0**, live turn in the sandbox: chip "Default (Haiku 5.5)", transcript
-`claude-haiku-5-5` by key. Docs: protocol doc § models, checklist 9.1.
-**Still NOT installed in the real PhpStorm** — neither this nor the 2026-09-27 PATH fix. Its panel
-runs the VS Code extension's 2.1.293 binary (the unfixed fallback landing on the newly updated
-extension — same version as the terminal by coincidence; pid 71887, started 09:45). A build from
-`main` (`cd plugin && ./gradlew buildPlugin`, zip in `plugin/build/distributions/`, restart) or a
-0.14.1 release installs both; the user's call. The `claude` CLI on this box is **2.1.293**
-(`~/.local/share/claude/versions/`); last re-audit was at 2.1.270 (2026-09-13).
+**2026-10-08 (seventeenth session, Linux): the opened thought's trailing gap fixed — built, controlled,
+harness-verified, committed.** User screenshot: an opened "Thought for 1s" followed by a visibly
+larger gap before the next Edit line. Cause (measured): the CLI's thinking text ends with `\n\n`
+(13 of 13 persisted blocks, 2.1.270–2.1.293) and `.think .body` is the panel's one `pre-wrap` block,
+so the newlines painted one empty 20px line (body 40px vs 20px for the trimmed text). Fix: one
+`trim()` in `thinkBlock()` (`plugin/src/main/resources/webview/js/50-blocks.js`) — live and replay
+share that builder. Fixture 89 (control 3/3 on the pre-change sandbox → 6/6), harness **893/0**.
+Checklist row 1.12 notes it. `./gradlew test` NOT run (JS-only change).
+**Earlier the same day (sixteenth):** the Default selection follows the model the CLI actually
+serves — `defaultResolvedFromCli` + `reconcileCliModel()` in `30-menus.js`, hooked from
+`system/init` and the assistant case in `70-events.js`; chip "Default (<real>)", Default row
+"<real> · from your settings"; the panel FOLLOWS, never sends `set_model`; `80-gauge.js` matches
+`result.modelUsage` by `effectiveModelId()`. Fixture 88, `./gradlew test` 168/0, live-verified
+(chip "Default (Haiku 5.5)" with `{"model":"haiku"}` in settings). Docs: protocol doc § models,
+checklist 9.1.
+**THREE fixes are now NOT installed in the real PhpStorm**: PATH lookup (2026-09-27), Default chip
+and thinking trim (2026-10-08). Its panel runs the VS Code extension's 2.1.293 binary via the
+unfixed fallback. A build from `main` (`cd plugin && ./gradlew buildPlugin`, zip in
+`plugin/build/distributions/`, restart) or a 0.14.1 release installs all three; the user's call.
+The `claude` CLI on this box is **2.1.293** (`~/.local/share/claude/versions/`); last re-audit was
+at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed build (CDP 9222).
 
 ## Open investigations
 - **Where the user's Fable default comes from** — not on this Linux box (no `model` key in
@@ -51,14 +51,15 @@ extension — same version as the terminal by coincidence; pid 71887, started 09
 - `reference/claude-code-log` clone: `git pull` before the re-audit (was 2.1.261 on 2026-09-13).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **887** (fixtures to **88**); `./gradlew test` **168**.
+- `python3 tools/live_harness.py` baseline **893** (fixtures to **89**); `./gradlew test` **168**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` blocks until the IDE exits** (a kill reads
   as exit 1). Find the sandbox's CLI by command line (`pgrep -f 'permission-prompt-too[l] stdio'`,
   parent cmdline contains `transformed/PhpStorm-2024.2.6`) — `pgrep -x claude` misses the
-  versioned binary. Kill by pid list through `tr '\n' ' '` (zsh passes a multi-line `$(…)` as ONE
-  argument), wait for CDP to vanish (`until ! ss -ltn | grep -q ':9222'`). Never run the harness
+  versioned binary. Kill through `pgrep -f '<pattern>' | xargs -r kill` — `kill $pids` fails in zsh
+  even after `tr '\n' ' '` (no word-splitting of variables); wait for CDP to vanish
+  (`until ! ss -ltn | grep -q ':9222'`, bound the loop). Never run the harness
   and a CDP injection concurrently. **`pkill -f`/`pgrep -f` patterns bracket one char.** A running
   sandbox does NOT block `test`/`buildPlugin`.
 - **The harness is NOT side-effect free on the sandbox CLI**: fixture 55's `setModel` calls go
@@ -85,8 +86,10 @@ extension — same version as the terminal by coincidence; pid 71887, started 09
 
 ## Next steps
 - [x] Default selection follows the served model — fixture 88, docs, committed 2026-10-08.
-- [ ] Get BOTH fixes (PATH lookup 2026-09-27, Default chip 2026-10-08) into the real PhpStorm:
-      local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on every release).
+- [x] Opened-thought trailing gap — `thinkBlock()` trim, fixture 89, committed 2026-10-08.
+- [ ] Get all THREE fixes (PATH lookup 2026-09-27, Default chip + thinking trim 2026-10-08) into the
+      real PhpStorm: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
+      every release).
 - [ ] Re-audit 2.1.270 → 2.1.293 (runbook), starting from the leads above; the 1M switch first;
       the per-process roster question second.
 - [ ] Check the listing's Overview still reads plugin.xml's description text (user errand).

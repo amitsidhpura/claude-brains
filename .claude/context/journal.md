@@ -3,6 +3,28 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-08 (seventeenth) — opened-thought trailing gap: thinkBlock() trims; fixture 89; harness 893
+- User screenshot: an opened "Thought for 1s" with a larger gap before the next Edit line than any
+  other block pair. Measured first: 13 of 13 persisted `thinking` blocks in the 40 newest transcripts
+  (2.1.270–2.1.293) end with `\n\n`; none starts with whitespace. `.think .body` is the panel's one
+  `white-space: pre-wrap` block, so the newlines painted an empty line (opened body 40px vs 20px for
+  the trimmed text, line-height 20.15px at 13px). The official webview never shows it because it
+  renders thinking through its markdown renderer.
+- Fix: `text = (text || '').trim()` at the top of `thinkBlock()` (`50-blocks.js`); the `empty`
+  check reuses it. Live (`finishThinking` on `content_block_stop` / `message_stop`), replay, gallery
+  and the redacted path all go through that builder — no CSS, no Kotlin change.
+- Free negative control: the sandbox was down, so it was started on the UNCHANGED build first,
+  fixture 89 written and run (3 guards pass, 3 discriminating fail), then the edit, restart, 6/6;
+  full harness 893/0. Height readings taken over CDP on the old build BEFORE the kill and recorded in
+  the fixture's provenance.
+- Trap: `pids=$(pgrep … | tr '\n' ' '); kill $pids` STILL fails in zsh ("illegal pid: a b c") —
+  variables are not word-split; `pgrep -f '…' | xargs -r kill` is the recipe (gotchas § Testing,
+  corrected). The un-bounded `until ! ss …` wait then spun past the 120s tool timeout.
+- Trap: a CDP eval right after a harness run sees an EMPTY panel — the harness `__clear`s between
+  fixtures; replay the frames inside the probe script before measuring.
+- `./gradlew test` skipped on purpose (JS-only). Not installed in the real PhpStorm — now three fixes
+  pending there. Committed and pushed on the user's ask (fix + this context save).
+
 ## 2026-10-08 (sixteenth) — the Default selection follows the model the CLI actually serves; fixture 88; live-verified
 - User's 2026-09-27 report revisited: chip "Default (Opus 5.5)" while a whole session ran on
   Fable and spent the Fable allowance; selecting Opus by hand "fixed" it. Measured over stdio on
@@ -225,29 +247,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   a Bash line always has an IN row (count OUT rows by `.io-k`). All in gotchas § Testing.
 - Harness **714** (fixtures to 81), Kotlin **160**. Checklist 90 ✅ · 3 ⬜ · 47 ➖; §2 §3 §4 done.
 
-## 2026-09-04 (seventh) — 4.8 built as a split button; five destination cells measured, one probe confound found
-- The user asked what 4.8 is in plain words, heard my recommendation to decline it (the default is
-  right nearly always; the rest is terminal config), and chose a split instead: main half = the
-  CLI's default destination, caret = the other targets. Built the same session.
-- Probe first (stdio, 2.1.260): the ECHOED `destination` decides the file — projectSettings /
-  localSettings / userSettings each wrote their file, session wrote nothing and stopped the re-ask,
-  cliArg behaved as session, a bogus value dropped the grant silently. Kotlin therefore forwards
-  only the four offered (`PermissionDestinations`).
-- Confound: the first cell wrote `.claude/settings.json` and STILL re-asked — the scratch workspace
-  was untrusted, so project settings never loaded; stderr said so, stdout did not. Fixed with a
-  scratch `CLAUDE_CONFIG_DIR` (copied credentials + a trust-patched `.claude.json`), deleted after.
-- Second confound: a zsh `for … set -- $c` loop ran all five cells with `--cfg` as the destination.
-  Both in gotchas § Testing.
-- UI: the compound card's existing split gained an `All of these` header + destination rows under
-  its per-rule rows; a single-rule grant is now a split too (three rows, no header). Rows are
-  "This session only / This project, shared / All projects" (+ "This project, just you" when the
-  CLI's own is session). No memory of the last pick — main half is always the default (user's spec).
-- Fixture 77 (17 asserts): negative control on the pre-fix sandbox 11 fail / 0 abort. Harness
-  **670** (was 653), Kotlin **147** (was 143). Mockup and gallery mirrored; screenshots of both
-  cards taken over CDP and checked.
-- Uncommitted at save time; sandbox left running for the user's MT-4.8 hand test.
-
 ## Digest
+- **2026-09-04 (seventh)** — 4.8 built as a SPLIT button (main half = the CLI's default destination, caret = the other targets; no memory of the last pick, user's spec) after the user heard the decline recommendation and chose the split. Stdio probe 2.1.260: the ECHOED `destination` decides the file — projectSettings / localSettings / userSettings each wrote theirs, session wrote nothing and stopped the re-ask, cliArg behaved as session, a bogus value dropped the grant silently → Kotlin forwards only the four offered (`PermissionDestinations`). Two probe confounds (both gotchas § Testing): an untrusted scratch workspace never loads project settings (stderr says so, stdout does not) → scratch `CLAUDE_CONFIG_DIR` with a trust-patched `.claude.json`; a zsh `for … set -- $c` loop ran every cell with `--cfg`. Compound card gained an `All of these` header + destination rows; fixture 77 (control 11 fail), harness 670, Kotlin 147.
 - **2026-09-04 (sixth)** — 4.7 built as VS Code's rule after the user's screenshot (four modes, not six) overturned the row's premise: the extension's `webview/index.js` `c4()` assembles the picker per session (`bypassPermissions` only under the dangerous flag, `dontAsk` displayed only while current, never offered). Five stdio probes on 2.1.260: no flag → `auto`; `--permission-mode` BEATS settings `defaultMode`; `bypassPermissions` in settings without the flag → `default`. Real defect: `permissions.defaultMode` was ignored entirely → `PermissionModes.resolveStored` (null = never picked → no flag), `pushInitMeta` seeds `__mode` from `initialize.current_permission_mode` (a live check found that `system/init` repeats the mode only with the FIRST turn), `Don't ask` row hidden unless current. Fixture 76 (control: one guard threw on a null node → null-safe asserts, gotchas § Testing); Kotlin 143, harness 653; user hand-tested six steps, 6.5 closed too. Trap: writing any `.claude/settings*.json` is blocked by the permission classifier — settings cells run in a scratchpad dir, the user makes the real edit.
 - **2026-09-04 (fifth)** — full-surface audit at 2.1.260 (288 host `case` labels → 97 RPC types, ~100 webview features, 98 control + 46 `system` subtypes, the binary's 128-name command map, changelog 200→260): no missing feature AREA, ten small gaps → rows 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9; terminal's-half verdicts recorded in the checklist's "Full-surface audit" block. Built 6.9 (`mentionHtml` sent-bubble capsules, fixture 74) and 6.5 (`MentionAction` first in both popup menus, `MentionPaths.tokens`, list parked until `seedUi()`, fixture 75); harness 642, Kotlin 141. Measured: an @-mention attaches before the model runs (1 turn) vs a plain path Read (2 turns); 200 KB cut at 2,000 lines silently, 2 MB not attached at all (threshold unpinned). Trap → gotchas § Testing: the running sandbox's jar is under the dir `-Didea.plugins.path` names, not `ls -t`'s pick.
 - **2026-09-04 (fourth)** — re-audit 2.1.251 → 2.1.260, all measured (VS Code session sidebar grew archive/unread/groups; CLI +`cloud_session_delta` +`update_settings`; roster +`/advisor` +`/reload-plugins` −`/artifact-design`; Fable 5.1 row). Both vsixes fetched from the Marketplace, the 2.1.251 one for its native binary as the CLI baseline (runbook step 3). 13.3 died on measurement: `update_settings` allows only `outputStyle`; the CLI honours `model`/`permissions.defaultMode` from `.claude/settings.local.json` at spawn — user chose "wait for Anthropic" (➖, backlog watch-item). Lesson (gotchas § Protocol): subtype acceptance ≠ key coverage.

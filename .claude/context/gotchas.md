@@ -1063,8 +1063,14 @@ re-read those before trusting memory here.
   listed 11 rows (`haiku→claude-haiku-4-5-20251001`) while the sandbox panel's 2.1.293 process
   minutes later listed 13 (`haiku→claude-haiku-5-5`, `sonnet→claude-sonnet-5-5`, a `fable`
   alias). A fixture copying "the roster verbatim" copies ONE process's; say which.
-- **zsh hands a multi-line `$(pgrep …)` to `kill` as ONE argument** ("illegal pid: a\nb") — pipe
-  through `tr '\n' ' '` or use `pkill -f` with a bracketed pattern.
+- **zsh hands a multi-line `$(pgrep …)` to `kill` as ONE argument** ("illegal pid: a\nb"), and
+  `pids=$(pgrep … | tr '\n' ' '); kill $pids` STILL fails ("illegal pid: a b c") — zsh does not
+  word-split variables. Recipe: `pgrep -f '<patter[n]>' | xargs -r kill` (or `kill ${=pids}`). Bound
+  the CDP-gone wait (`until ! ss -ltn | grep -q ':9222' || [ $i -ge 120 ]`) — un-bounded it spun past
+  the 120s tool timeout on 2026-10-08 when the kill had silently failed.
+- **A CDP eval right after a harness run sees an EMPTY panel** — the harness sends `__clear` between
+  fixtures, so "measure what the fixture left" returns nulls. Replay the frames inside the probe
+  script (`tools/cdp.py -f probe.js`) and measure in the same eval (2026-10-08, fixture 89 heights).
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with

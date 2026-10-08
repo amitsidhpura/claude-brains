@@ -4,6 +4,18 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-08 — The thinking body is trimmed in `thinkBlock()`, not rendered as markdown or padded away in CSS
+The CLI's thinking text ends with `\n\n` (13/13 persisted blocks, 2.1.270–2.1.293) and `.think .body` is
+the panel's one `pre-wrap` block, so an opened thought carried one empty line below it. One `trim()` at
+the top of the shared builder fixes live, replay, gallery and redacted paths together (fixture 89).
+**Why trim, not markdown:** the official webview avoids the gap by rendering thinking as markdown, but
+thinking is prose with the model's own line breaks; pre-wrap plain text is the faithful dress and has
+been since 2026-08-07, and a markdown pass would add a second renderer path to keep in parity.
+**Why not CSS:** a negative margin on `.body` would hide a symptom of the data and break the day the
+CLI stops emitting the newlines. **Rejected:** `trimEnd()` only (leading whitespace never measured,
+but a leading blank line would be the same defect mirrored); trimming in Kotlin for replay (the
+builder is where live and replay meet — a second copy drifts).
+
 ## 2026-10-08 — The Default selection follows the model the CLI actually serves; only Default is relabelled
 **Decision:** `system/init.model` (first turn) and each assistant frame's `message.model` are
 compared with the roster's `default` row `resolvedModel`. A mismatch relabels the chip
@@ -45,50 +57,11 @@ the two clients agree on the same CLI; the user's 6-row terminal screenshot was 
 **Not taken** (offered, no ask): folding the pinned `claude-*-N-N` rows under a "Previous versions"
 divider keyed off the value shape — backlog § Someday.
 
-## 2026-09-13 — The ordinary card's reject note sits ABOVE the buttons, placeholder "… · applies to Reject"
-Supersedes the 2026-09-05 inline placement (3.7, VS Code's `rejectMessageInput` beside Reject).
-**Why:** the field is 34px and the buttons 26px; as a flex item in `.card-b` (default stretch) it
-grew every button on Bash/Write cards while the plan card, whose field is on its own line, kept
-26px — two heights for one control family (user's screenshot). Moving the field up makes the
-three cards one structure and gives the note the full width. Shrinking only the inline field was
-rejected by the user (inconsistent with the plan and ask fields); growing every button (34px
-footers on all cards) and `align-items: center` (fixes the stretch, leaves an uneven row) were
-the other options. **Wording:** the user's "Tell Claude what to do instead · applies to Reject",
-lower-case after the middle dot per the footer-suffix house style — needed because the field no
-longer sits beside Reject and a note before Accept is dropped (no wire for it).
-
-## 2026-09-13 — A plan-comment draft is settled by the next selection, never blocks it
-While a comment composer is open, a new selection in the plan body commits a typed draft (or
-cancels an empty one) and then shows the pill as usual; a bare click leaves the draft alone; a
-decision button still commits it (since 2026-08-23). Placeholder states the rule. **Why:** the
-old `if (composing) return` made a second selection silently do nothing — the user hit it
-repeatedly and a newcomer has no way to learn "press Enter first". Committing is recoverable
-(every row has ✕); ignoring is not discoverable. **Rejected:** several open composers at once
-(one pending mark per row — the bookkeeping where the 2026-08-23 delete-while-composing bug
-lived); a hint/flash explaining the block (leaves the dead end in place); commit-on-blur (fires
-on stray clicks, and the decision-button case it would add is already covered); a labelled Add
-button (the icon dress was the user's round-4 pick).
-
-## 2026-09-13 — 1.29 Bash edit diff draws as resolved edit cards, no panel toggle for the CLI's gate
-One card per changed file through `fillAppliedCard` ("Bash on <path>", the CLI's own hunks via
-`patchRows`, "✓ Applied"), under the IN/OUT box, drawn on error results too (the edit happened), live
-and replay through one `appendBashDiff`; `MAX_BASH_DIFF_FILES` = 10 with the CLI's `moreFiles` folded
-into one ↳ note. **Why:** the 4.4 auto-approved-edit surface already says exactly this ("the record is
-that the edit ran"), so no new CSS, no new wording, and the mockup/gallery parity cost is one example.
-**The gate stays the CLI's** (auto/bypass by default, `bashEditDiffEnabled: true` elsewhere): a panel
-switch would be a second implementation of a settings key — configure in the terminal; the release
-notes say where to turn it on. **Rejected:** one combined card for all files (loses the per-file
-path header that opens the file); a custom compact block (new CSS + mockup states for one feature);
-hiding the diff on `is_error` (it is a record, not a verdict).
-
-## 2026-09-13 — The public changelog is a re-audit LEAD source, never evidence
-`reference/claude-code-log/` (clone of `anthropics/claude-code`, cloned 2026-09-05, unused until now) is read at
-runbook step 3b before the binary/extension diffs. **Why:** the `case`-label and subtype diffs only catch new
-identifiers; behaviour changes that reuse existing labels (chip X replacing Hide, prompt fold button, flat model
-list) surface nowhere else, and By-design items (Hooks / Permission-rules / MCP dialogs) need only existence to
-earn ➖ — no probe. **Boundary kept:** a note creates a candidate row or probe target; steps 4-7 still measure,
-and the row cites the measurement. **Rejected:** keeping the blanket "nothing read from release notes" rule — it
-had no recorded war story behind it (the gotchas section it cited never existed) and cost coverage.
+## Digest — decisions 2026-09-13 (compressed 2026-10-08; full text via `git show efa89aa:.claude/context/decisions.md`)
+- **2026-09-13 — The ordinary card's reject note sits ABOVE the buttons, placeholder "Tell Claude what to do instead · applies to Reject"** (supersedes the 2026-09-05 inline placement) · the 34px field as a flex item stretched every 26px button on Bash/Write cards while the plan card kept 26px — two heights for one control family (user's screenshot); above the buttons, three cards are one structure · rejected shrinking only the inline field (inconsistent with plan/ask fields), 34px footers everywhere, `align-items: center` (uneven row).
+- **2026-09-13 — A plan-comment draft is settled by the next selection, never blocks it** · `if (composing) return` made a second selection silently do nothing; committing is recoverable (every row has ✕), ignoring is not discoverable · rejected several open composers, a hint/flash, commit-on-blur, a labelled Add button.
+- **2026-09-13 — 1.29 Bash edit diff draws as resolved edit cards, no panel toggle for the CLI's gate** (`fillAppliedCard` per file, `MAX_BASH_DIFF_FILES` 10, drawn on error results too, one `appendBashDiff` for live and replay) · the 4.4 auto-approved-edit surface already says "the edit ran"; the gate (`bashEditDiffEnabled`) is a settings key — configure in the terminal · rejected one combined card, a custom compact block, hiding on `is_error`.
+- **2026-09-13 — The public changelog is a re-audit LEAD source, never evidence** (`reference/claude-code-log/`, runbook step 3b) · label/subtype diffs miss behaviour changes that reuse identifiers; By-design items need only existence · boundary: a note creates a candidate row or probe target, steps 4-7 still measure · rejected the blanket "nothing from release notes" rule (no war story behind it).
 
 ## Digest — decisions 2026-09-01 → 2026-09-09 (compressed 2026-09-27; full text via `git show 34bc25c:.claude/context/decisions.md`)
 - **2026-09-09 — 0.13.1 ships the two renderer fixes alone, as a patch** · fixes to behaviour the user hit daily; plain semver · rejected bundling the four known renderer gaps (each needs its own fixture; named as known in the notes).
