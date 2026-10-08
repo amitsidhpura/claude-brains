@@ -1,0 +1,87 @@
+{
+  "item": "1.12 — a finished thinking body does not paint the CLI's trailing newlines (2026-10-08)",
+  "branch": "thinkBlock() trims the thinking text before it becomes the <details> body. The body is `white-space: pre-wrap` (the only block that keeps the model's own line breaks), so a trailing newline paints as an empty line and the gap below an OPENED thought reads as --block-gap plus one or two blank lines.",
+  "provenance": "MEASURED 2026-10-08 across the 40 most recent transcripts under ~/.claude/projects (CLI 2.1.270 – 2.1.293): every persisted `thinking` block with text — 13 of 13 — ends with exactly two newlines; none starts with whitespace. The live `thinking_delta` frames concatenate to the same string (the transcript IS that concatenation). The official VS Code webview renders `$.thinking` through its markdown renderer, where trailing newlines vanish for free; the panel's .body is plain pre-wrap text, so they paint (user screenshot 2026-10-08: an opened 'Thought for 1s' followed by a visibly larger gap before the next Edit line). Frame shapes copied from fixture 19 (message_start / content_block_start thinking / thinking_delta / content_block_stop). NEGATIVE CONTROL RUN 2026-10-08 against the sandbox still serving the pre-change webview (started before the edit): 3 passed, 3 failed — the three GUARD asserts passed, the three DISCRIMINATING asserts failed; the body kept its two trailing newlines and measured 40px opened against 20px for the trimmed reference (line-height 20.15px at 13px) — one empty line, the <details> 68px vs 48px. Fixed build: 6/6.",
+  "steps": [
+    {
+      "note": "a thinking block whose text ends with two newlines, as the CLI emits, finishes on content_block_stop",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "message_start",
+            "message": {
+              "usage": {}
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "thinking"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {
+              "type": "thinking_delta",
+              "thinking": "Info-level logs won't show up in the dev request log, so I'll store the outcome on the row.\n\n"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('details.think').length",
+          "equals": 1,
+          "why": "GUARD: one finished, expandable thought (both builds)"
+        },
+        {
+          "js": "document.querySelector('details.think summary').textContent.trim()",
+          "contains": "Thought for",
+          "why": "GUARD: the label survives (both builds)"
+        },
+        {
+          "js": "/\\n$/.test(document.querySelector('details.think .body').textContent)",
+          "equals": false,
+          "why": "DISCRIMINATING: no trailing newline reaches the pre-wrap body"
+        },
+        {
+          "js": "document.querySelector('details.think .body').textContent",
+          "equals": "Info-level logs won't show up in the dev request log, so I'll store the outcome on the row.",
+          "why": "DISCRIMINATING: the words are untouched — only the ends are trimmed"
+        }
+      ]
+    },
+    {
+      "note": "opened, the body is exactly as tall as the same text without the newlines — the gap below it is --block-gap and nothing more",
+      "setup": "(function(){ var a = document.querySelector('details.think'); a.open = true; var b = thinkBlock('Info-level logs won\\'t show up in the dev request log, so I\\'ll store the outcome on the row.', 1); b.open = true; b.id = 'fx89-ref'; a.parentNode.insertBefore(b, a.nextSibling); })();",
+      "expect": [
+        {
+          "js": "document.querySelector('details.think .body').offsetHeight > 0",
+          "equals": true,
+          "why": "GUARD: the opened body has a height to compare (both builds)"
+        },
+        {
+          "js": "document.querySelector('details.think .body').offsetHeight === document.querySelector('#fx89-ref .body').offsetHeight",
+          "equals": true,
+          "why": "DISCRIMINATING: equal heights — the trailing newlines added no empty line"
+        }
+      ]
+    }
+  ]
+}

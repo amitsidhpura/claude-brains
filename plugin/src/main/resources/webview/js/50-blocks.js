@@ -758,8 +758,12 @@
   // redacted (checklist 1.21): an API `redacted_thinking` block — encrypted `data`, no text, ever.
   // Same no-body line, labelled so it is not mistaken for "the CLI persisted only a signature".
   // Never seen locally (2026-08-29); the shape is the API's documented one.
+  // The body is the one pre-wrap block, and the CLI's thinking text ends with "\n\n" (13 of 13
+  // persisted blocks, 2.1.270–2.1.293, 2026-10-08) — untrimmed, the newlines paint as an empty
+  // line under an opened thought. Trim the ENDS only; the model's own line breaks stay (fixture 89).
   function thinkBlock(text, secs, redacted) {
-    const empty = redacted || !(text || '').trim();
+    text = (text || '').trim();
+    const empty = redacted || !text;
     const det = document.createElement(empty ? 'div' : 'details');
     det.className = empty ? 'think no-body' + (redacted ? ' redacted' : '') : 'think';
     det.innerHTML = '<summary>' + (redacted ? 'Thought (redacted)' : 'Thought') +

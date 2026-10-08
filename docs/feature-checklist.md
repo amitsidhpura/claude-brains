@@ -343,7 +343,9 @@ auto-include selection, voice.
   same line as prose are not handled (backlog).
   </details>
 - **1.12** ✅ **Thinking blocks** — collapsible; real thinking-token count when the event carries it
-      (chars/4 fallback)
+      (chars/4 fallback). The body is trimmed at both ends before it is drawn: the CLI's thinking
+      text ends with two newlines and the body is pre-wrap, so untrimmed they painted an empty line
+      under an opened thought (fixture 89, 2026-10-08)
 - **1.13** ✅ **Generating line** — streaming verb + in-flight gutter dot (pulsing → green/red);
       `prefers-reduced-motion` honoured (OS propagation into JCEF unverified, backlog)
 - **1.14** ✅ **Auto-scroll** — pinning keyed off scroll DIRECTION; top/bottom fades;
