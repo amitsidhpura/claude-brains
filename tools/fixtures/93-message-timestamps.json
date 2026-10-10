@@ -1,0 +1,202 @@
+{
+ "item": "1.30 — message timestamps: a time above the prompt and above the first reply text, and a date line where the day changes (2026-10-10)",
+ "branch": "addUserMessage(text, imgs, ts) prepends a .ts line to the .turn (before the sticky .msg-user) and stamps data-day; sendTurn passes Date.now(), renderBlocks passes the record's ts. The first text .blk of a turn gets a .ts inside .turn-body (onStream text_delta, `turnStamped`; replay: the first assistant item after a user item). placeDaySeps() (50-blocks.js) re-lays .day-sep lines between #log's turns from data-day — called after a __transcript chunk and after renderEarlier's prepend; the live path checks the previous sibling turn. Labels: fmtClock / fmtDayLabel, factored out of fmtWhen (75-retraction.js).",
+ "provenance": "Live `assistant` and `user` frames carry an ISO `timestamp` (taped 2026-08-12 wire captures in _local/); the typed prompt has NO wire frame, so its stamp is the page clock at sendTurn — this fixture therefore drives addUserMessage directly with a fixed instant (never sendTurn, which sends a real prompt over the bridge). Replay items are OUR shapes (SessionStore.Item.toJson, now with `ts` epoch ms — pinned Kotlin-side by SessionStoreTest). Stream frame shapes copied from fixture 89 / 19. Dates are built in-page with the local Date constructor so the expected labels hold in any timezone; the days are fixed past days (Oct 2026), so the label branch is always 'D Mon YYYY'. NEGATIVE CONTROL: RUN 2026-10-10 against the sandbox still serving the pre-change build (fixture written first): 5 passed / 11 failed / 0 aborts — every DISCRIMINATING assert failed ('absent' stamps, 0 .ts, '' day lines, 'turn' as the first log child); the passes are the GUARDs (turn / block counts) and the live no-day-line assert, which holds on both builds by construction. After the edit (JS + SessionStore `ts` + `./gradlew test` 169) and a sandbox restart: 16/16; with fixture 92, 38/38.",
+ "steps": [
+  {
+   "note": "live: a prompt stamped with a fixed instant, then a reply with two text blocks around a tool — one stamp above the bubble, one above the FIRST text block only",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__T = new Date(2026,9,1,10,5).getTime(); addUserMessage('hello', [], window.__T);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "Hi there."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 1,
+      "content_block": {
+       "type": "tool_use",
+       "id": "t93",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\":\"true\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 1
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 2,
+      "content_block": {
+       "type": "text"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 2,
+      "delta": {
+       "type": "text_delta",
+       "text": "Done."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 2
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .turn').length",
+     "equals": 1,
+     "why": "GUARD: one turn (both builds)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .turn-body .blk').length",
+     "equals": 2,
+     "why": "GUARD: two text blocks drew (both builds)"
+    },
+    {
+     "js": "(function(){var t=document.querySelector('#log .turn > .ts'); if(!t) return 'absent'; var d=new Date(window.__T); var h=d.getHours()%12||12; var exp=h+':'+String(d.getMinutes()).padStart(2,'0')+' '+(d.getHours()>=12?'PM':'AM'); return t.textContent===exp ? true : t.textContent})()",
+     "equals": true,
+     "why": "DISCRIMINATING: the prompt stamp reads the fixed instant as h:mm AM/PM"
+    },
+    {
+     "js": "(function(){var t=document.querySelector('#log .turn > .ts'); return t && t.nextElementSibling ? t.nextElementSibling.className.split(' ')[0] : 'absent'})()",
+     "equals": "msg-user",
+     "why": "DISCRIMINATING: the stamp sits directly above the user bubble"
+    },
+    {
+     "js": "(document.querySelector('#log .turn')||{dataset:{}}).dataset.day||'absent'",
+     "equals": "2026-10-01",
+     "why": "DISCRIMINATING: the turn carries its local calendar day"
+    },
+    {
+     "js": "document.querySelectorAll('#log .turn-body .ts').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: exactly one reply stamp per turn"
+    },
+    {
+     "js": "(function(){var b=document.querySelector('#log .turn-body .blk'); return b && b.previousElementSibling ? b.previousElementSibling.className : 'absent'})()",
+     "equals": "ts",
+     "why": "DISCRIMINATING: the reply stamp precedes the FIRST text block"
+    },
+    {
+     "js": "document.querySelectorAll('#log .day-sep').length",
+     "equals": 0,
+     "why": "a single live turn draws no day line (the first turn gets one only when its day is not today — and 1 Oct 2026 is not today, so this pins that the LIVE path leaves day lines to the replay pass)"
+    }
+   ]
+  },
+  {
+   "note": "replay: two turns on consecutive past days — both stamped, a date line before each (the first because its day is not today)",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__A=new Date(2026,9,1,9,0).getTime(); window.__B=new Date(2026,9,2,9,30).getTime(); window.onClaudeEvent(JSON.stringify({type:'__transcript', more:0, items:[{role:'user', text:'first', ts:window.__A}, {role:'assistant', text:'one', ts:window.__A+4000}, {role:'user', text:'second', ts:window.__B}, {role:'assistant', text:'two', ts:window.__B+4000}, {role:'assistant', text:'two-b', ts:window.__B+9000}]}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .turn').length",
+     "equals": 2,
+     "why": "GUARD: two replayed turns (both builds)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .turn > .ts').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: both prompt bubbles are stamped from the record ts"
+    },
+    {
+     "js": "document.querySelectorAll('#log .turn-body .ts').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: one reply stamp per turn — the second turn's two assistant items share one"
+    },
+    {
+     "js": "[...document.querySelectorAll('#log .day-sep')].map(function(e){return e.textContent}).join('|')",
+     "equals": "1 Oct 2026|2 Oct 2026",
+     "why": "DISCRIMINATING: a date line before each turn, in order, D Mon YYYY"
+    },
+    {
+     "js": "(function(){var s=document.querySelectorAll('#log .day-sep')[1]; return s && s.nextElementSibling ? s.nextElementSibling.className : 'absent'})()",
+     "equals": "turn",
+     "why": "the date line sits directly above the turn it introduces, outside .turn (not under the sticky bubble)"
+    }
+   ]
+  },
+  {
+   "note": "replay: an earlier chunk prepended above (the __transcript_more seam) gets its own date line and the lines stay in order",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__transcript_more', more:0, items:[{role:'user', text:'earlier', ts:new Date(2026,8,30,8,0).getTime()}, {role:'assistant', text:'zero', ts:new Date(2026,8,30,8,0,5).getTime()}]}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .turn').length",
+     "equals": 3,
+     "why": "GUARD: the earlier turn landed (both builds)"
+    },
+    {
+     "js": "[...document.querySelectorAll('#log .day-sep')].map(function(e){return e.textContent}).join('|')",
+     "equals": "30 Sep 2026|1 Oct 2026|2 Oct 2026",
+     "why": "DISCRIMINATING: the seam is re-laid — one line per day, oldest first"
+    },
+    {
+     "js": "(function(){var c=document.getElementById('log').children; for (var i=0;i<c.length;i++){ if (c[i].id==='welcome') continue; return c[i].className; } return 'none'})()",
+     "equals": "day-sep",
+     "why": "DISCRIMINATING: the first thing in the log is the oldest day's line"
+    }
+   ]
+  }
+ ]
+}

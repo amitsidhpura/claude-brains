@@ -5,9 +5,12 @@
      because a live one is owned/torn-down by the busy watchdog. */
   function gallery() {
     clearLogUI();
-    addUserMessage('Dev gallery — show every UI state, starting from @src/components/App.tsx.', []);
+    // stamped prompt (1.30) under a date line — the line is what a day change between turns draws
+    addUserMessage('Dev gallery — show every UI state, starting from @src/components/App.tsx.', [], Date.now());
+    log.insertBefore(daySep(dayKey(Date.now())), log.querySelector('.turn'));
 
-    // assistant text block (markdown + code)
+    // assistant text block (markdown + code), stamped as the turn's first reply text (1.30)
+    el('ts', fmtClock(new Date()));
     const b = el('blk', '');
     b.innerHTML = renderMd('An assistant **text block** with `inline code`, a [link](#), a list:\n\n' +
       '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```\n\n' +
@@ -279,13 +282,19 @@
       plan: '1. Add a `sqrt()` method to `Calculator`.\n2. Throw on negative input.\n3. Add unit tests.' }),
       suggestions: JSON.stringify([{ type: 'setMode', mode: 'acceptEdits', behavior: 'allow', destination: 'session' }]) });
 
-    // AskUserQuestion — single-select + multiSelect
-    renderPermission({ tool: 'AskUserQuestion', id: 'gallery-ask', input: JSON.stringify({ questions: [
+    // AskUserQuestion — single-select (with an option preview, 1.31) + multiSelect
+    const askInput = { questions: [
       { header: 'Framework', question: 'Which framework should we use?', options: [
-        { label: 'React', description: 'Component model, huge ecosystem.' },
+        { label: 'React', description: 'Component model, huge ecosystem.',
+          preview: 'src/App.tsx\n  export function App() {\n    return <Counter />;\n  }' },
         { label: 'Svelte', description: 'Compiler, minimal runtime.' } ] },
       { header: 'Styling', question: 'Pick the styling approaches.', multiSelect: true, options: [
-        { label: 'Tailwind' }, { label: 'CSS Modules' }, { label: 'Vanilla CSS' } ] } ] }) });
+        { label: 'Tailwind' }, { label: 'CSS Modules' }, { label: 'Vanilla CSS' } ] } ] };
+    renderPermission({ tool: 'AskUserQuestion', id: 'gallery-ask', input: JSON.stringify(askInput) });
+    // …and the same card ANSWERED (1.31): the card stays, the summary rides under the panels.
+    // Drawn through the replay builder so the record state is the one a resume shows.
+    replayAsk({ questions: askInput.questions,
+      answers: { 'Which framework should we use?': 'React', 'Pick the styling approaches.': 'Tailwind, CSS Modules' } });
 
     // working line (static — a live one is owned by the watchdog)
     const gen = el('generating', '');

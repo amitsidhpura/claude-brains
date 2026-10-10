@@ -38,6 +38,16 @@
    surface keyboard focus on the visible option row instead */
 .ask-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+/* 1.30 message timestamps: a small muted h:mm line above the prompt bubble (a .turn child before
+   .msg-user — outside the containment, and it scrolls away as the bubble pins) and above the
+   first text block of the turn (a .turn-body child). A stamp sits --attach-gap from what it
+   labels: in .turn the `* + *` rule above would give block-gap, so the bubble overrides it; in
+   .turn-body the flex gap is cancelled the way .io/.diff cancel it in css/35-attached.css
+   (calc(attach - block) — flex margins never collapse, so margin + gap is the distance). */
+.ts { font-size: var(--fs-xs); color: var(--muted); line-height: 1.4; }
+.turn > .ts + .msg-user { margin-top: var(--attach-gap); }
+.turn-body > .ts + .blk { margin-top: calc(var(--attach-gap) - var(--block-gap)); }
+
 /* user message: full-width bordered box, sticks to the top of its turn while you scroll */
 .msg-user { position: sticky; top: 0; z-index: 6;
   background: var(--user-bg); border: 1px solid var(--user-border);

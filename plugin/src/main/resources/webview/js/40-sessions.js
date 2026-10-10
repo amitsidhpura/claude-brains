@@ -142,6 +142,7 @@
     curBubble = null; curRaw = ''; mdPending = false; curThink = null; curThinkRaw = ''; thinkTok = null;
     thinkTokReal = null;   // a stale real count must not leak into the next block's fallback
     curTurn = null; workingEl = null; activeAsk = null;
+    turnStamped = false;   // 1.30: the next turn's first text block must stamp again
     // per-session stream state: a stale openTool would keep appending into a detached element,
     // toolsById pins removed DOM for the page lifetime, and a leftover lastUser would let a
     // first-turn Retry resend the PREVIOUS session's message (images included)

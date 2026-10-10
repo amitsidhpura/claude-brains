@@ -6,6 +6,11 @@
    #welcome's own margins (both were real regressions; see docs/limits.md). */
 #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px;
   display: flex; flex-direction: column; gap: var(--block-gap); }
+/* 1.30 date line between turns on a day change ("Today" / "Yesterday" / "8 Oct 2026"): a #log
+   child, never inside .turn — there it would scroll under the sticky bubble and sit inside the
+   containment. #log's flex gap spaces it like any other block; the hairlines take the slack. */
+.day-sep { display: flex; align-items: center; gap: var(--attach-gap); color: var(--muted); font-size: var(--fs-xs); }
+.day-sep::before, .day-sep::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
 #fade { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 14; pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, var(--bg) 64%); }
 /* top fade: content vanishes as it scrolls under the header. The first ~18px is solid --bg so

@@ -136,6 +136,7 @@
         // its seed. bgTasks/pendingBgTasks stay: the roster is a level signal with its own frames.
         if (!busy) {
           turnTokens = 0; reqTokens = 0; reqSeed = null; retrySeen = null;
+          turnStamped = false;   // a turn the CLI started gets its own reply stamp (1.30)
           setBusy(true);
         }
         flushMd();
@@ -189,7 +190,17 @@
       case 'content_block_delta': {
         const d = e.delta || {};
         if (d.type === 'text_delta') {
-          if (!curBubble) { curBubble = track(el('blk', '')); }
+          if (!curBubble) {
+            curBubble = track(el('blk', ''));
+            // 1.30: the turn's FIRST text block carries the reply time (page clock — the assistant
+            // frame's `timestamp` arrives only after the text has streamed). Tool loops later in
+            // the turn add no stamp (user's choice 2026-10-10). Tracked with the message so a
+            // retraction takes it along with the block it labels.
+            if (!turnStamped) {
+              turnStamped = true;
+              curBubble.parentNode.insertBefore(track(tsLine(Date.now())), curBubble);
+            }
+          }
           curRaw += d.text;
           if (!mdPending) { mdPending = true; requestAnimationFrame(flushMd); }
           msgChars += d.text.length; estimateMsgTokens();   // live token estimate
@@ -561,18 +572,33 @@
   // "28 Jul 2026, 11:36 PM". Formatted by hand rather than toLocaleString so the webview's locale
   // can't turn it into 7/28/2026, 11:36:02 PM.
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // The two halves of fmtWhen, reusable on their own (1.30 message timestamps draw fmtClock above
+  // a bubble and fmtDayLabel on the date line between turns). fmtWhen's output is unchanged.
+  function fmtClock(d) {
+    let h = d.getHours();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ampm;
+  }
+  function dayDiff(d) {   // whole calendar days between d and today (0 = today, 1 = yesterday)
+    const startOf = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    return Math.round((startOf(new Date()) - startOf(d)) / 86400000);
+  }
+  function fmtDate(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  function fmtDayLabel(d) {
+    const days = dayDiff(d);
+    if (days <= 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return fmtDate(d);
+  }
   function fmtWhen(t) {
     if (!t) return '';
     const d = new Date(t);
     if (isNaN(d.getTime())) return '';
-    let h = d.getHours();
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    const clock = h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ampm;
-    const startOf = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
-    const days = Math.round((startOf(new Date()) - startOf(d)) / 86400000);
+    const clock = fmtClock(d);
+    const days = dayDiff(d);
     if (days <= 0) return 'Today, ' + clock;
     if (days === 1) return 'Yesterday, ' + clock;
     if (days < 7) return days + ' days ago';
-    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ', ' + clock;
+    return fmtDate(d) + ', ' + clock;
   }

@@ -83,7 +83,9 @@
         : raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
       const indOn = q.multiSelect ? IND.cOn : IND.rOn;
       const indOff = q.multiSelect ? IND.cOff : IND.rOff;
-      html += '<div class="ask-panel" data-q="' + i + '"' + (i === 0 ? '' : ' hidden') + '>';
+      // 1.31: the same preview box as the live card, static on the picked option
+      const hasPrev = !q.multiSelect && (q.options || []).some(function (o) { return o.preview; });
+      html += '<div class="ask-panel" data-q="' + i + '"' + (hasPrev ? ' data-prev="1"' : '') + (i === 0 ? '' : ' hidden') + '>';
       html += '<div class="ask-q">' + esc(q.question) + '</div><div class="ask-list">';
       (q.options || []).forEach(function (o) {
         const on = picked.indexOf(o.label) >= 0;
@@ -104,30 +106,45 @@
         '<span class="q-body"><span class="q-t">Other</span></span></div>';
       html += '<div class="ask-other"' + (free.length ? '' : ' hidden') +
         '><input type="text" disabled></div>';
-      html += '</div></div>';
+      html += '</div>' + (hasPrev ? '<div class="ask-prev"><pre></pre></div>' : '') + '</div>';
     });
-    card.innerHTML = html + '<div class="ask-b">' + (it.denied
+    // the answered record (1.31) sits between the panels and the result line, as resolveAsk puts it
+    card.innerHTML = html + (it.denied ? '' : askSummaryHtml(qs, answers)) + '<div class="ask-b">' + (it.denied
       ? '<span class="no-t">✗ Cancelled</span>'   // interrupted before an answer was sent
       : '<span class="ok-t">✓ Answered</span>') + '</div>';
 
     card.querySelectorAll('.ask-panel').forEach(function (p, i) {
       if (freeText[i]) p.querySelector('.ask-other input').value = freeText[i];
+      if (p.dataset.prev) {   // the picked option's preview — the Other row shows none; no pick at
+        // all (a cancelled card) rests on option 0, exactly as the live card did before any pick
+        const q = qs[i], picked = p.querySelector('.ask-opt.checked:not(.ask-opt-other)');
+        const oi = picked ? Array.prototype.indexOf.call(p.querySelectorAll('.ask-opt'), picked)
+          : (freeText[i] ? -1 : 0);
+        paintPreview(p, q, oi);
+      }
     });
+    wirePreviewFold(card);
     // tabs stay navigable, exactly as they do on a live card after it has been answered
     wireAskTabs(card);
   }
 
   function renderBlocks(items) {
+    // 1.30: the first assistant item after a user item carries the reply stamp, as live stamps the
+    // first text block of a turn. Starts false so a chunk that opens mid-turn (an earlier chunk
+    // whose first items answer a prompt in the chunk above) stamps its first reply text too.
+    let replyStamped = false;
     items.forEach(function (it) {
       switch (it.role) {
         case 'user':
-          addUserMessage(it.text || '', it.images || []);
+          addUserMessage(it.text || '', it.images || [], it.ts);   // ts: SessionStore's record timestamp
+          replyStamped = false;
           // seed Retry: without this a resumed failed turn had no way back. Replayed attachments
           // past IMAGE_BUDGET carry no data and are dropped by ChatPanel on resend, so a retry
           // after a budget trim sends the text and whatever bytes survived.
           lastUser = { text: it.text || '', images: it.images || [] };
           break;
         case 'assistant': {
+          if (!replyStamped && it.ts != null) { replyStamped = true; el('ts', fmtClock(new Date(it.ts))); }
           const b = el('blk', ''); b.innerHTML = renderMd(it.text); foldCode(b);
           break;
         }
@@ -245,6 +262,7 @@
 
   function renderTranscript(items, more) {
     renderBlocks(items);
+    placeDaySeps();   // 1.30: date lines between the turns that changed day
     // A session that ended on an API error is retryable now that lastUser is seeded. Only the
     // LAST block qualifies: an error mid-transcript was already recovered from, and its Retry
     // would resend a later message.
@@ -289,7 +307,9 @@
     // anchor on the topmost VISIBLE content element — #welcome is present but hidden, and a
     // hidden element's rect is all zeros, which would compute a zero shift and jump the viewport
     let ref = log.firstElementChild;
-    while (ref && ref.id === 'welcome') ref = ref.nextElementSibling;
+    // (…and never a date line: placeDaySeps below removes and re-inserts them all, and the shift
+    // must be measured on an element that survives)
+    while (ref && (ref.id === 'welcome' || ref.classList.contains('day-sep'))) ref = ref.nextElementSibling;
     const savedTurn = curTurn, savedPinned = pinned, savedVerb = lastDoneVerb;
     pinned = false;                              // renderers must not auto-scroll to the bottom
     curTurn = null;                              // a mid-turn fallback chunk must not append to the tail turn
@@ -301,6 +321,7 @@
     const added = Array.prototype.slice.call(log.childNodes, prevCount);
     const beforeTop = ref ? ref.getBoundingClientRect().top : 0;
     added.forEach(function (n) { log.insertBefore(n, ref); });
+    placeDaySeps();   // 1.30: the chunk's own date lines and the seam's, before the shift is measured
     if (ref) log.scrollTop += ref.getBoundingClientRect().top - beforeTop;
     curTurn = savedTurn; pinned = savedPinned;   // live streaming keeps appending to the real tail
     lastDoneVerb = savedVerb;                    // ...and still must not repeat the verb at the bottom

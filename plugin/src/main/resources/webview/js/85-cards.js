@@ -180,7 +180,11 @@
     card.className = 'ask';
     let html = askTabsHtml(questions);
     questions.forEach(function (q, i) {
-      html += '<div class="ask-panel" data-q="' + i + '"' + (i === 0 ? '' : ' hidden') + '>';
+      // 1.31: a single-select question whose options carry `preview` gets a preview box under its
+      // list (the tool's own rule: previews are single-select only). data-prev also switches the
+      // auto-advance below off, so a pick leaves its preview readable.
+      const hasPrev = !q.multiSelect && (q.options || []).some(function (o) { return o.preview; });
+      html += '<div class="ask-panel" data-q="' + i + '"' + (hasPrev ? ' data-prev="1"' : '') + (i === 0 ? '' : ' hidden') + '>';
       html += '<div class="ask-q">' + esc(q.question) + '</div><div class="ask-list">';
       const type = q.multiSelect ? 'checkbox' : 'radio';
       (q.options || []).forEach(function (o, oi) {
@@ -191,7 +195,7 @@
       html += '<label class="ask-opt ask-opt-other"><input type="' + type + '" name="aq' + i + '" data-oi="-1">' +
         '<span class="ask-ind"></span><span class="q-body"><span class="q-t">Other</span></span></label>';
       html += '<div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>';
-      html += '</div></div>';
+      html += '</div>' + (hasPrev ? '<div class="ask-prev"><pre></pre></div>' : '') + '</div>';
     });
     html += '<div class="ask-b"><button class="ask-go ok">' + SVG_CHECK + 'Submit answers</button>' +
       '<button class="no">' + SVG_X + 'Cancel</button></div>';
@@ -202,7 +206,27 @@
     const wired = wireAskTabs(card);
     const panels = wired.panels, selectTab = wired.selectTab;
     const go = card.querySelector('.ask-go');
+    // 1.31: which option the preview box follows — hover > checked > option 0 (the list's "cursor"
+    // starts at the top, as the TUI's does); the Other row (-1) has no preview by construction.
+    function checkedOi(panel) {
+      const c = panel.querySelector('.ask-opt input:checked');
+      return c ? +c.dataset.oi : null;
+    }
+    function paintPrev(panel) {
+      if (!panel.dataset.prev) return;
+      const h = panel.__hoverOi, c = checkedOi(panel);
+      paintPreview(panel, questions[+panel.dataset.q] || {}, h != null ? h : (c != null ? c : 0));
+    }
+    panels.forEach(function (p) {
+      if (!p.dataset.prev) return;
+      p.querySelectorAll('.ask-opt').forEach(function (opt) {
+        opt.addEventListener('mouseenter', function () { p.__hoverOi = +opt.querySelector('input').dataset.oi; paintPrev(p); });
+      });
+      p.querySelector('.ask-list').addEventListener('mouseleave', function () { p.__hoverOi = null; paintPrev(p); });
+    });
+    wirePreviewFold(card);
     function refresh() {
+      panels.forEach(paintPrev);
       card.querySelectorAll('.ask-opt').forEach(function (opt) {
         const inpEl = opt.querySelector('input');
         opt.classList.toggle('checked', inpEl.checked);
@@ -223,7 +247,9 @@
       i.addEventListener('change', function () {
         refresh();
         const opt = i.closest('.ask-opt');
-        if (i.type === 'radio' && !opt.classList.contains('ask-opt-other')) {
+        // a single-select pick moves on to the next tab — unless this panel shows previews (1.31):
+        // jumping away would hide the preview the pick just chose
+        if (i.type === 'radio' && !opt.classList.contains('ask-opt-other') && !i.closest('.ask-panel').dataset.prev) {
           const idx = Array.prototype.indexOf.call(panels, i.closest('.ask-panel'));
           if (idx > -1 && idx < panels.length - 1) selectTab(idx + 1);
         }
@@ -244,7 +270,8 @@
         });
         answers[q.question] = labels.filter(Boolean).join(', ');
       });
-      resolveAsk(card, '<span class="ok-t">✓ Answered</span>');
+      // the card stays (tabs, picks, preview) and the answered record rides under it (1.31)
+      resolveAsk(card, '<span class="ok-t">✓ Answered</span>', askSummaryHtml(questions, answers));
       bridge({ kind: 'answer', id: ev.id, answers: JSON.stringify(answers) });
       if (busy) showWorking(); // Claude resumes processing
     };

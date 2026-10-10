@@ -24,6 +24,7 @@ text selection never toggles, and clicks on links/chips pass through (`foldBlock
 | diffs `.diff` (live + replay cards) | `--code-bg` | 9px | `renderPermission` / `replayCard` |
 | Bash IN/OUT `.io-v` | `--code-bg` | 0 (padding lives on `.io-row`) | `ioRow` (covers live IN, patched OUT, replay) |
 | code blocks `.codeblock pre` | `--code-bg` | 8px (border lives on `.codeblock`) | `foldCode` |
+| question option preview `.ask-prev pre` (1.31) | `--code-bg` | 9px | NOT `foldBlock` — `refoldPreview` (js/50-blocks.js) re-measures after every repaint (the box follows hover and the pick); the click toggle is `wirePreviewFold`. No content cap: the preview is shown whole, folded. |
 
 The 3-line cap is exact per block (`3lh` + the block's own padding/border via `--fold-pad`), so it
 holds across differing fonts and line-heights. An attachment-chip row inside a user message is

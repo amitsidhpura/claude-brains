@@ -1,5 +1,6 @@
   /* ---------- turn structure: user box + everything that answers it ---------- */
   let curTurn = null;                // .turn container for the current exchange
+  let turnStamped = false;           // 1.30: this turn's first text block already carries its time
 
   function el(cls, text) {
     if (welcome) welcome.style.display = 'none';

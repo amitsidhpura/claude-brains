@@ -1,0 +1,181 @@
+{
+ "item": "1.31 — AskUserQuestion option previews + answered-question summary (2026-10-10)",
+ "branch": "renderAsk (85-cards.js): a single-select question whose options carry `preview` gets an .ask-prev monospace box under its option list, following hover > checked > option 0 (an option without one shows 'No preview for this option'), and its pick no longer auto-advances to the next tab so the preview stays readable; Submit appends askSummaryHtml() (50-blocks.js) — one .ask-sum-row per question — through resolveAsk's new third argument; replayAsk (55-replay.js) draws the same box for the picked option and the same summary when not denied; multiSelect questions never get a box (the tool's own rule).",
+ "provenance": "The `preview` field is REAL: plugin/src/test/resources/fixtures/replay-sample.jsonl line 5 is a CLI 2.1.220 AskUserQuestion tool_use whose option 0 carries exactly this preview string (copied verbatim, description shortened); the second question and the multiSelect question are synthetic additions shaped like it (needed so auto-advance has a next tab to jump to). `permission_request` and `__transcript` are OUR frames (ChatPanel's shapes, fixtures 11/83/08) — self-consistency for the page half. The 2.1.296 tool schema says previews render 'as markdown in a monospace box' and are 'only supported for single-select questions' (checklist 1.31). NEGATIVE CONTROL: RUN 2026-10-10 against the sandbox still serving the pre-change build (fixture written first, sandbox launched before any edit): 7 passed / 15 failed / 0 aborts — every DISCRIMINATING assert failed on 'absent' / 0 / '' (no .ask-prev box, auto-advance hid panel 0, no .ask-sum rows, live and replay alike); the passes are the GUARDs (both questions drew, the card resolved, the result line, the tabs kept, the multiSelect card — that guard was first written as 2 inputs and read 3 on the pre-change build too (two options + the Other row), corrected to 3 before the fixed-build run). After the edit + sandbox restart: 22/22; with fixture 93, 38/38.",
+ "steps": [
+  {
+   "note": "a live card with a preview on option 0: the box shows option 0's preview before any pick",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('ask me', []);",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "p1",
+     "tool": "AskUserQuestion",
+     "input": "{\"questions\": [{\"question\": \"What should the dummy plan actually do when approved?\", \"header\": \"Dummy scope\", \"multiSelect\": false, \"options\": [{\"label\": \"Create a tiny PHP hello file (Recommended)\", \"description\": \"Plan proposes creating index.php with a hello-world script plus a short README.md.\", \"preview\": \"index.php\\n  <?php\\n  echo \\\"Hello from claude-code-phpstorm-testing\\\\n\\\";\\n\\nREADME.md\\n  # claude-code-phpstorm-testing\\n  Scratch project for testing Claude Code in PhpStorm.\"}, {\"label\": \"Pure no-op plan\", \"description\": \"Plan describes steps but touches no files on approval.\"}, {\"label\": \"Multi-step PHP scaffold\", \"description\": \"A longer plan: composer.json, src/ with a small class, and a test file.\"}]}, {\"question\": \"What should the hello file be called?\", \"header\": \"Name\", \"multiSelect\": false, \"options\": [{\"label\": \"index.php\"}, {\"label\": \"hello.php\"}]}]}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-panel').length",
+     "equals": 2,
+     "why": "GUARD: the card drew both questions on both builds"
+    },
+    {
+     "js": "(document.querySelector('#log .ask .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "index.php\n  <?php\n  echo \"Hello from claude-code-phpstorm-testing\\n\";\n\nREADME.md\n  # claude-code-phpstorm-testing\n  Scratch project for testing Claude Code in PhpStorm.",
+     "why": "DISCRIMINATING: the preview box exists and shows option 0's preview before any pick"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-panel[data-q=\"1\"] .ask-prev').length",
+     "equals": 0,
+     "why": "a question with no previews gets no box"
+    }
+   ]
+  },
+  {
+   "note": "picking an option WITHOUT a preview shows the no-preview sentence and does NOT auto-advance to the next tab",
+   "setup": "(function(){var i=document.querySelectorAll('#log .ask .ask-panel[data-q=\"0\"] .ask-opt input')[2]; i.checked=true; i.dispatchEvent(new Event('change',{bubbles:true}));})();",
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .ask .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "No preview for this option",
+     "why": "DISCRIMINATING: the box follows the checked option; option 2 has no preview"
+    },
+    {
+     "js": "(function(){var p=document.querySelector('#log .ask .ask-panel[data-q=\"0\"]'); return p? p.hidden : 'absent'})()",
+     "equals": false,
+     "why": "DISCRIMINATING: no auto-advance on a panel with previews (the pre-change card jumps to tab 1 on a single-select pick)"
+    }
+   ]
+  },
+  {
+   "note": "picking option 0 again brings its preview back",
+   "setup": "(function(){var i=document.querySelectorAll('#log .ask .ask-panel[data-q=\"0\"] .ask-opt input')[0]; i.checked=true; i.dispatchEvent(new Event('change',{bubbles:true}));})();",
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .ask .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "index.php\n  <?php\n  echo \"Hello from claude-code-phpstorm-testing\\n\";\n\nREADME.md\n  # claude-code-phpstorm-testing\n  Scratch project for testing Claude Code in PhpStorm.",
+     "why": "the checked option's preview"
+    }
+   ]
+  },
+  {
+   "note": "hover beats the pick while the pointer is on a row",
+   "setup": "(function(){var o=document.querySelectorAll('#log .ask .ask-panel[data-q=\"0\"] .ask-opt')[1]; o.dispatchEvent(new Event('mouseenter'));})();",
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .ask .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "No preview for this option",
+     "why": "DISCRIMINATING: hovered option 1 has no preview"
+    }
+   ]
+  },
+  {
+   "note": "leaving the list falls back to the checked option",
+   "setup": "(function(){var l=document.querySelector('#log .ask .ask-panel[data-q=\"0\"] .ask-list'); l.dispatchEvent(new Event('mouseleave'));})();",
+   "expect": [
+    {
+     "js": "(document.querySelector('#log .ask .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "index.php\n  <?php\n  echo \"Hello from claude-code-phpstorm-testing\\n\";\n\nREADME.md\n  # claude-code-phpstorm-testing\n  Scratch project for testing Claude Code in PhpStorm.",
+     "why": "checked option 0 again"
+    }
+   ]
+  },
+  {
+   "note": "answering the second question and submitting leaves the full card plus one summary row per question",
+   "setup": "(function(){var i=document.querySelectorAll('#log .ask .ask-panel[data-q=\"1\"] .ask-opt input')[1]; i.checked=true; i.dispatchEvent(new Event('change',{bubbles:true})); var go=document.querySelector('#log .ask .ask-go'); if (go) go.click();})();",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .ask.ask-done').length",
+     "equals": 1,
+     "why": "GUARD: the card resolved (both builds)"
+    },
+    {
+     "js": "(document.querySelector('#log .ask .ask-b .ok-t')||{}).textContent||'absent'",
+     "contains": "Answered",
+     "why": "GUARD: the result line"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-sum-row').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: one summary row per question"
+    },
+    {
+     "js": "[...document.querySelectorAll('#log .ask .ask-sum-a')].map(function(e){return e.textContent}).join('|')",
+     "equals": "Create a tiny PHP hello file (Recommended)|hello.php",
+     "why": "DISCRIMINATING: the picks, in question order"
+    },
+    {
+     "js": "[...document.querySelectorAll('#log .ask .ask-sum-q')].map(function(e){return e.textContent}).join('|')",
+     "equals": "What should the dummy plan actually do when approved?|What should the hello file be called?",
+     "why": "the question text labels each row"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-tab').length",
+     "equals": 2,
+     "why": "the tabbed card is kept (user's pick 2026-10-10: full card + summary)"
+    },
+    {
+     "js": "(document.querySelector('#log .ask .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "index.php\n  <?php\n  echo \"Hello from claude-code-phpstorm-testing\\n\";\n\nREADME.md\n  # claude-code-phpstorm-testing\n  Scratch project for testing Claude Code in PhpStorm.",
+     "why": "the answered card keeps showing the picked option's preview"
+    }
+   ]
+  },
+  {
+   "note": "a multiSelect question never gets a preview box, even when its options carry previews",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('ask me', []);",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "p2",
+     "tool": "AskUserQuestion",
+     "input": "{\"questions\": [{\"question\": \"Which files should it touch?\", \"header\": \"Files\", \"multiSelect\": true, \"options\": [{\"label\": \"index.php\", \"preview\": \"<?php echo 1;\"}, {\"label\": \"README.md\", \"preview\": \"# readme\"}]}]}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-opt input[type=checkbox]').length",
+     "equals": 3,
+     "why": "GUARD: a multiSelect card (two options + the Other row, all checkboxes; both builds)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-prev').length",
+     "equals": 0,
+     "why": "no box on a multiSelect question"
+    }
+   ]
+  },
+  {
+   "note": "replay: an answered ask shows the picked option's preview and the summary; a cancelled one shows neither summary",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__transcript', more:0, items:[{role:'user', text:'ask me'}, {role:'ask', text:'', questions:[{\"question\": \"What should the dummy plan actually do when approved?\", \"header\": \"Dummy scope\", \"multiSelect\": false, \"options\": [{\"label\": \"Create a tiny PHP hello file (Recommended)\", \"description\": \"Plan proposes creating index.php with a hello-world script plus a short README.md.\", \"preview\": \"index.php\\n  <?php\\n  echo \\\"Hello from claude-code-phpstorm-testing\\\\n\\\";\\n\\nREADME.md\\n  # claude-code-phpstorm-testing\\n  Scratch project for testing Claude Code in PhpStorm.\"}, {\"label\": \"Pure no-op plan\", \"description\": \"Plan describes steps but touches no files on approval.\"}, {\"label\": \"Multi-step PHP scaffold\", \"description\": \"A longer plan: composer.json, src/ with a small class, and a test file.\"}]}, {\"question\": \"What should the hello file be called?\", \"header\": \"Name\", \"multiSelect\": false, \"options\": [{\"label\": \"index.php\"}, {\"label\": \"hello.php\"}]}], answers:{\"What should the dummy plan actually do when approved?\": \"Create a tiny PHP hello file (Recommended)\", \"What should the hello file be called?\": \"index.php\"}}, {role:'user', text:'again'}, {role:'ask', text:'', denied:true, questions:[{\"question\": \"What should the dummy plan actually do when approved?\", \"header\": \"Dummy scope\", \"multiSelect\": false, \"options\": [{\"label\": \"Create a tiny PHP hello file (Recommended)\", \"description\": \"Plan proposes creating index.php with a hello-world script plus a short README.md.\", \"preview\": \"index.php\\n  <?php\\n  echo \\\"Hello from claude-code-phpstorm-testing\\\\n\\\";\\n\\nREADME.md\\n  # claude-code-phpstorm-testing\\n  Scratch project for testing Claude Code in PhpStorm.\"}, {\"label\": \"Pure no-op plan\", \"description\": \"Plan describes steps but touches no files on approval.\"}, {\"label\": \"Multi-step PHP scaffold\", \"description\": \"A longer plan: composer.json, src/ with a small class, and a test file.\"}]}]}]}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .ask.ask-done').length",
+     "equals": 2,
+     "why": "GUARD: both replayed cards drew"
+    },
+    {
+     "js": "(document.querySelector('#log .ask.ask-done .ask-prev pre')||{}).textContent||'absent'",
+     "equals": "index.php\n  <?php\n  echo \"Hello from claude-code-phpstorm-testing\\n\";\n\nREADME.md\n  # claude-code-phpstorm-testing\n  Scratch project for testing Claude Code in PhpStorm.",
+     "why": "DISCRIMINATING: replay draws the picked option's preview"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-sum-row').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: the answered card's two rows; the cancelled card adds none"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask .ask-sum').length",
+     "equals": 1,
+     "why": "no summary on a denied card"
+    },
+    {
+     "js": "[...document.querySelectorAll('#log .ask .ask-sum-a')].map(function(e){return e.textContent}).join('|')",
+     "equals": "Create a tiny PHP hello file (Recommended)|index.php",
+     "why": "answers in question order"
+    }
+   ]
+  }
+ ]
+}

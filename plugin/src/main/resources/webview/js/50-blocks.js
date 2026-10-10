@@ -908,12 +908,111 @@
     tabs.forEach(function (tab, idx) { tab.addEventListener('click', function () { selectTab(idx); }); });
     return { panels: panels, selectTab: selectTab };
   }
+  // 1.31 option preview: the text shown in the monospace box. The tool's own description says
+  // "rendered as markdown in a monospace box", but the one real recording (replay-sample.jsonl,
+  // CLI 2.1.220) is an indented file tree that markdown paragraphing would flatten — so the box
+  // shows the text as written, newlines kept, with one whole wrapping ``` fence removed.
+  function previewText(p) {
+    const s = String(p).replace(/\r\n/g, '\n').trim();
+    const m = /^```[^\n]*\n([\s\S]*?)\n?```$/.exec(s);
+    return m ? m[1] : s;
+  }
+  const NO_PREVIEW = 'No preview for this option';   // the official webview's copy
+  // Paint one panel's preview box for option `oi` (-1 = the Other row, null = none). An option
+  // without a preview shows the no-preview sentence in the card's warm muted tone.
+  function paintPreview(panel, q, oi) {
+    const pre = panel.querySelector('.ask-prev pre'); if (!pre) return;
+    const p = oi != null && oi >= 0 ? ((q.options || [])[oi] || {}).preview : null;
+    pre.classList.toggle('ask-noprev', !p);
+    pre.textContent = p ? previewText(p) : NO_PREVIEW;
+    refoldPreview(pre);
+  }
+  // The preview box folds under the shared .fold contract (css/25-turns.css) but NOT through
+  // foldBlock: that measures once and marks the element folded for good, while this box repaints
+  // on every hover and pick. Re-measure after each paint; the click toggle is attached once by
+  // wirePreviewFold. A repaint always lands folded — the content it would have kept open is gone.
+  function refoldPreview(pre) {
+    pre.classList.remove('open');
+    pre.classList.add('fold');
+    requestAnimationFrame(function () {
+      if (pre.scrollHeight <= pre.clientHeight + 4) pre.classList.remove('fold');
+    });
+  }
+  function wirePreviewFold(card) {
+    card.querySelectorAll('.ask-prev pre').forEach(function (pre) {
+      pre.addEventListener('click', function () {
+        if (window.getSelection && String(window.getSelection())) return;   // a selection is not a toggle
+        if (pre.classList.contains('fold')) pre.classList.toggle('open');
+      });
+    });
+  }
+  // 1.31 answered record under the tabbed card — one row per question, the question text over the
+  // answer (a label, comma-joined labels, or the typed Other text). Live (resolveAsk's third
+  // argument) and replay (replayAsk) draw through this one builder; a cancelled or withdrawn card
+  // gets none.
+  function askSummaryHtml(qs, answers) {
+    let h = '<div class="ask-sum">';
+    (qs || []).forEach(function (q) {
+      const a = answers && answers[q.question] != null ? String(answers[q.question]) : '';
+      h += '<div class="ask-sum-row"><span class="ask-sum-q">' + esc(q.question) + '</span>' +
+        '<span class="ask-sum-a">' + esc(a) + '</span></div>';
+    });
+    return h + '</div>';
+  }
   // resolve a live ask card into its non-interactive record state (matches the replayed twin)
-  function resolveAsk(card, resultHtml) {
+  function resolveAsk(card, resultHtml, summaryHtml) {
     card.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
     card.classList.add('ask-done');   // hover/cursor off
-    card.querySelector('.ask-b').innerHTML = resultHtml;
+    const b = card.querySelector('.ask-b');
+    if (summaryHtml) b.insertAdjacentHTML('beforebegin', summaryHtml);
+    b.innerHTML = resultHtml;
     const foot = card.querySelector('.ask-foot'); if (foot) foot.remove();
     activeAsk = null; awaitingUser = false;
+  }
+
+  /* ---------- 1.30 message timestamps ---------- */
+  // A small muted h:mm line. Above the prompt bubble it is a .turn child before .msg-user (outside
+  // the containment; it scrolls away as the bubble pins); above the first text block of a turn it
+  // is a .turn-body child. Returned unmounted — the caller places it.
+  function tsLine(ts) {
+    const d = document.createElement('div');
+    d.className = 'ts';
+    d.textContent = fmtClock(new Date(ts));
+    return d;
+  }
+  // local calendar day of an instant, the turn's data-day — what the date lines compare
+  function dayKey(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function daySep(key) {
+    const d = document.createElement('div');
+    d.className = 'day-sep';
+    const p = key.split('-');
+    d.textContent = fmtDayLabel(new Date(+p[0], +p[1] - 1, +p[2]));
+    return d;
+  }
+  // Re-lay the date lines from the turns' data-day: remove them all, then put one before every
+  // turn whose day differs from the previous stamped turn's — the first stamped turn gets one only
+  // when its day is not today. A pure function of the DOM, so a resumed transcript and a chunk
+  // prepended above it (renderEarlier) agree, seam included. Lines live directly in #log, never
+  // inside a .turn: there they would scroll under the sticky bubble and sit inside the containment.
+  function placeDaySeps() {
+    log.querySelectorAll(':scope > .day-sep').forEach(function (s) { s.remove(); });
+    let prev = null;
+    const today = dayKey(Date.now());
+    log.querySelectorAll(':scope > .turn[data-day]').forEach(function (t) {
+      const k = t.dataset.day;
+      if (prev === null ? k !== today : k !== prev) log.insertBefore(daySep(k), t);
+      prev = k;
+    });
+  }
+  // The live counterpart: a new turn compares with the previous stamped turn only.
+  function daySepBefore(turnEl) {
+    if (!turnEl || !turnEl.dataset.day) return;
+    let p = turnEl.previousElementSibling;
+    while (p && !(p.classList.contains('turn') && p.dataset.day)) p = p.previousElementSibling;
+    if (p && p.dataset.day !== turnEl.dataset.day) log.insertBefore(daySep(turnEl.dataset.day), turnEl);
   }
 

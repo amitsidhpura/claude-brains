@@ -166,6 +166,10 @@
         Type <kbd>/</kbd> for commands, <kbd>@</kbd> to reference files, or paste an image.</div>
     </div>
     <div class="turn">
+      <!-- 1.30 message timestamps: a muted h:mm line above the prompt bubble (a .turn child BEFORE
+           .msg-user — outside the containment; it scrolls away as the bubble pins) and, below,
+           one above the turn's FIRST text block. Live = page clock; replay = the record's ts. -->
+      <div class="ts">10:42 AM</div>
       <div class="msg-user">Print some text with inline code</div>
       <!-- 6.9: @-mentions render as inline chips (mentionHtml in js/50-blocks.js); the text is the typed prompt -->
       <div class="msg-user">Refactor <span class="mention" data-path="src/components/App.tsx" title="src/components/App.tsx">@src/components/App.tsx</span> to use the hook from <span class="mention" data-path="src/hooks/useAuth.ts" title="src/hooks/useAuth.ts">@src/hooks/useAuth.ts</span>, see <span class="mention" data-path="docs/Design Notes (draft).md" title="docs/Design Notes (draft).md">@"docs/Design Notes (draft).md"</span>.</div>
@@ -181,6 +185,9 @@
            the click-toggle (chat.html foldBlock). This state regressed sticky-pinning once — the
            collapsed state sets position:relative and beat `.msg-user`'s sticky on equal
            specificity, hence `.msg-user.fold:not(.open) { position: sticky }`. -->
+      <!-- 1.30: the reply stamp — before the first .blk, inside .turn-body (the flex gap is cancelled
+           down to --attach-gap by `.turn-body > .ts + .blk`) -->
+      <div class="ts">10:42 AM</div>
       <div class="msg-user fold" title="Show more" onclick="this.classList.toggle('open')">Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline.</div>
 
       <div class="blk">
@@ -465,6 +472,16 @@ total 196K
             <label class="ask-opt ask-opt-other"><input type="radio" name="q0"><span class="q-body"><span class="q-t">Other</span></span></label>
             <div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>
           </div>
+          <!-- 1.31 option preview: a single-select question whose options carry `preview` shows the
+               hovered / picked option's text (newlines kept, one wrapping fence stripped) in a
+               monospace box under the list — the .card .cmd surface; folds like it. An option
+               without one shows "No preview for this option" in the card's warm muted tone
+               (<pre class="ask-noprev">). Never drawn on a multiSelect question. -->
+          <div class="ask-prev"><pre>Mon   fly out · check in by 15:00
+Tue   beach → lunch at the pier
+Wed   boat trip (book the 09:30)
+Thu   free
+Fri   fly home</pre></div>
         </div>
 
         <div class="ask-panel" data-q="1" hidden>
@@ -494,6 +511,55 @@ total 196K
           <button class="no"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" x2="15" y1="15" y2="9"/></svg>Cancel</button>
         </div>
         <div class="ask-foot">Esc to cancel</div>
+      </div>
+      </div>
+    </div>
+
+    <!-- 1.31 ANSWERED ask (live after Submit, and the replayed twin — replayAsk): the tabbed card
+         stays (tabs navigable, picks checked, the picked option's preview), inputs disabled under
+         .ask-done, and the answered record .ask-sum rides between the panels and the result line —
+         one row per question, the question text over the answer. Cancelled / withdrawn cards get
+         no summary. (User's pick 2026-10-10: full card + summary, not a compact replacement.) -->
+    <div class="turn">
+      <div class="msg-user">Which hello file should the dummy plan create?</div>
+      <div class="turn-body">
+      <div class="ask ask-done">
+        <div class="ask-h">
+          <div class="ask-tabs">
+            <button class="ask-tab active" data-q="0">Dummy scope</button>
+            <button class="ask-tab" data-q="1">Name</button>
+          </div>
+        </div>
+        <div class="ask-panel" data-q="0" data-prev="1">
+          <div class="ask-q">What should the dummy plan actually do when approved?</div>
+          <div class="ask-list">
+            <div class="ask-opt checked"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="q-body"><span class="q-t">Create a tiny PHP hello file (Recommended)</span><span class="q-d">Plan proposes creating index.php with a hello-world script plus a short README.md.</span></span></div>
+            <div class="ask-opt"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">Pure no-op plan</span><span class="q-d">Plan describes steps but touches no files on approval.</span></span></div>
+            <div class="ask-opt ask-opt-other"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">Other</span></span></div>
+            <div class="ask-other" hidden><input type="text" disabled></div>
+          </div>
+          <div class="ask-prev"><pre>index.php
+  &lt;?php
+  echo "Hello from claude-code-phpstorm-testing\n";
+
+README.md
+  # claude-code-phpstorm-testing
+  Scratch project for testing Claude Code in PhpStorm.</pre></div>
+        </div>
+        <div class="ask-panel" data-q="1" hidden>
+          <div class="ask-q">What should the hello file be called?</div>
+          <div class="ask-list">
+            <div class="ask-opt checked"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="q-body"><span class="q-t">index.php</span></span></div>
+            <div class="ask-opt"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">hello.php</span></span></div>
+            <div class="ask-opt ask-opt-other"><span class="ask-ind"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span><span class="q-body"><span class="q-t">Other</span></span></div>
+            <div class="ask-other" hidden><input type="text" disabled></div>
+          </div>
+        </div>
+        <div class="ask-sum">
+          <div class="ask-sum-row"><span class="ask-sum-q">What should the dummy plan actually do when approved?</span><span class="ask-sum-a">Create a tiny PHP hello file (Recommended)</span></div>
+          <div class="ask-sum-row"><span class="ask-sum-q">What should the hello file be called?</span><span class="ask-sum-a">index.php</span></div>
+        </div>
+        <div class="ask-b"><span class="ok-t">✓ Answered</span></div>
       </div>
       </div>
     </div>
@@ -745,7 +811,12 @@ total 196K
 
     <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>Resumed</div>
 
-    <div class="turn">
+    <!-- 1.30 date line: a #log child (never inside .turn) before a turn whose day differs from the
+         previous stamped turn's — placeDaySeps() re-lays them from the turns' data-day after every
+         replay chunk; the live path checks the previous sibling turn. Today / Yesterday / D Mon YYYY. -->
+    <div class="day-sep">Yesterday</div>
+    <div class="turn" data-day="2026-10-09">
+      <div class="ts">4:18 PM</div>
       <div class="msg-user">Add a Greeter class and wire it up</div>
 
       <div class="turn-body">

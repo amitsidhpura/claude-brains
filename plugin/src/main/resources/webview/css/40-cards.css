@@ -219,11 +219,29 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .ask-done .ask-opt { cursor: default; }
 .ask-done .ask-opt:hover { background: transparent; }
 .ask-done .ask-opt.checked:hover { background: rgba(var(--accent-rgb), .14); }
+/* 1.31 option preview: the hovered / picked option's `preview` in a monospace box under the
+   option list — the .card .cmd surface (css/50-side.css) on the list's own 8px side padding,
+   folding under the same contract (3 lines + fade, click to expand; wide content scrolls when
+   open, crops while folded). The no-preview sentence drops the monospace and wraps. */
+.ask-prev { padding: 0 8px 8px; }
+.ask-prev pre { margin: 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 10px; font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm);
+  white-space: pre; overflow-x: auto; }
+.ask-prev pre.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
+.ask-prev pre.fold:not(.open) { overflow: hidden; }
+.ask-prev pre.ask-noprev { font-family: inherit; white-space: normal; }
+/* 1.31 answered record: one row per question under the panels — the card and its tabs stay
+   (user's pick 2026-10-10); a hairline in the card's warm border separates it from the options */
+.ask-sum { margin: 4px 12px 0; padding-top: 8px; border-top: 1px solid var(--warn-border);
+  display: flex; flex-direction: column; gap: 6px; }
+.ask-sum-row { display: flex; flex-direction: column; }
+.ask-sum-q { font-size: var(--fs-xs); }   /* colour from the warm-tone rule below */
+.ask-sum-a { font-size: var(--fs-base); color: var(--fg); }
 .ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
 .ask-go:disabled { opacity: .45; cursor: not-allowed; }
 .ask-foot { padding: 0 12px 12px; font-size: var(--fs-sm); }
 /* warm muted tone for secondary text inside the question card */
-.ask .q-d, .ask-foot, .ask-tab { color: #e4bda6; }
+.ask .q-d, .ask-foot, .ask-tab, .ask-sum-q, .ask-prev .ask-noprev { color: #e4bda6; }
 
 /* error block */
 .error { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #6b3a3a; background: #241a1a; color: var(--red);

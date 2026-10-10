@@ -525,10 +525,15 @@ object SessionStore {
         var dropped: Long? = null
         var seed: String? = null           // first assistant uuid — picks the summary's whimsical verb
         var prevSeed: String? = null       // previous summary's seed, so two in a row can't share a verb
+        // The record's timestamp, epoch ms — on user and assistant items only (1.30): the webview
+        // stamps the prompt bubble and the turn's first reply text with it, and lays date lines
+        // between turns from it. Live uses the page clock for the same two stamps.
+        var ts: Long? = null
 
         fun toJson(): JsonObject = buildJsonObject {
             put("role", role)
             put("text", text)
+            ts?.let { put("ts", it) }
             plan?.let { put("plan", it) }
             planFeedback?.let { put("planFeedback", it) }
             planComments?.let { cs ->
@@ -924,6 +929,7 @@ object SessionStore {
                             if (text == null && atts.isEmpty()) continue
                             val item = Item("user")
                             item.text = text ?: ""
+                            item.ts = ts?.toEpochMilli()
                             // Attach everything here; the budget is applied afterwards walking
                             // from the NEWEST turn back (see trimAttachments) so the visible tail
                             // wins. Spending it in file order let early turns — which windowed
@@ -985,6 +991,7 @@ object SessionStore {
                                     }
                             }
                             val recUuid = obj["uuid"]?.jsonPrimitive?.contentOrNull
+                            val recTs = ts?.toEpochMilli()   // 1.30: the reply stamp's instant
                             // The SECOND retraction lane: an assistant record can supersede earlier
                             // ones directly, with no refusal event involved. Never seen locally
                             // either; guarded the same way (user blocks are untouchable).
@@ -994,13 +1001,13 @@ object SessionStore {
                                 ?.let { dead -> out.removeAll { it.uuid in dead && it.role != "user" } }
                             val content = obj["message"]?.jsonObject?.get("content")
                             if (content is JsonPrimitive) {
-                                out.add(Item(role).apply { text = content.content; uuid = recUuid })
+                                out.add(Item(role).apply { text = content.content; uuid = recUuid; this.ts = recTs })
                             } else if (content is JsonArray) {
                                 for (block in content) {
                                     val b = block.jsonObject
                                     when (b["type"]?.jsonPrimitive?.content) {
                                         "text" -> b["text"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-                                            ?.let { out.add(Item(role).apply { text = it; uuid = recUuid }) }
+                                            ?.let { out.add(Item(role).apply { text = it; uuid = recUuid; this.ts = recTs }) }
                                         // emit even when the body is blank — the CLI frequently
                                         // persists only a signature; the block replays as a
                                         // `think no-body` "Thought for Ns" line, matching live

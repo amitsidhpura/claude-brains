@@ -196,7 +196,9 @@
     if (root) root.querySelectorAll('.codeblock pre').forEach(foldBlock);
   }
 
-  function addUserMessage(text, imgs) {
+  // ts (1.30): the prompt's instant, epoch ms — the page clock live (the typed prompt has no wire
+  // frame), the record's timestamp on replay. Omitted → no stamp, no data-day.
+  function addUserMessage(text, imgs, ts) {
     const turnEl = newTurn();
     const d = document.createElement('div');
     d.className = 'msg-user';
@@ -221,6 +223,11 @@
     }
     turnEl.prepend(d); maybeScroll();   // before .turn-body, and outside its containment
     foldBlock(d);   // long prompts fold to 2 lines + fade; the box itself toggles
+    if (ts != null && !isNaN(+ts)) {
+      const k = dayKey(ts);
+      if (k) turnEl.dataset.day = k;
+      turnEl.prepend(tsLine(ts));     // above the bubble: [.ts, .msg-user, .turn-body]
+    }
     return d;
   }
 
@@ -249,7 +256,9 @@
 
   function sendTurn(t, imgs) {
     pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
-    addUserMessage(t, imgs);
+    const bubble = addUserMessage(t, imgs, Date.now());
+    daySepBefore(bubble.parentNode);   // 1.30: a date line when the day changed since the last turn
+    turnStamped = false;               // the reply's first text block gets its own stamp
     lastUser = { text: t, images: imgs };
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';

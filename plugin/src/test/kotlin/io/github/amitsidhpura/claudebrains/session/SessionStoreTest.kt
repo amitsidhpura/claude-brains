@@ -1176,6 +1176,39 @@ class SessionStoreTest {
         assertTrue(patch!!.jsonArray.isNotEmpty())
     }
 
+    /**
+     * 1.30: user and assistant blocks carry the record's timestamp as epoch ms (`ts`), which the
+     * webview draws above the prompt bubble and the turn's first reply text and lays date lines
+     * from. Tool lines carry none. The shared fixture's assistant records are all thinking and
+     * tool_use (no prose), so the assistant half runs on a two-record synthetic transcript.
+     */
+    @Test
+    fun `user and assistant blocks carry the record timestamp`() {
+        val u = role("user").first()["ts"]?.jsonPrimitive?.content?.toLongOrNull()
+        assertNotNull(u, "user block has no ts")
+        assertTrue(u!! > 1_700_000_000_000L, "ts is not epoch milliseconds: $u")
+        assertTrue(role("tool").none { it["ts"] != null }, "ts leaked onto a tool line")
+
+        val tmpHome = File.createTempFile("claude-home-ts", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            SessionStore.claudeHome = tmpHome
+            File(dir, "ts-a.jsonl").writeText(listOf(
+                """{"type":"user","uuid":"u1","timestamp":"2026-10-01T04:35:00.000Z","message":{"role":"user","content":"hello"}}""",
+                """{"type":"assistant","uuid":"a1","timestamp":"2026-10-01T04:35:04.000Z","message":{"id":"m1","role":"assistant","content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":1,"output_tokens":1}}}"""
+            ).joinToString("\n"))
+            val blocks = SessionStore.readTranscript(CWD, "ts-a")
+            val user = blocks.first { it["role"]?.jsonPrimitive?.content == "user" }
+            val reply = blocks.first { it["role"]?.jsonPrimitive?.content == "assistant" }
+            assertEquals(1790_829_300_000L, user["ts"]!!.jsonPrimitive.content.toLong(), "user ts = 2026-10-01T04:35:00Z")
+            assertEquals(1790_829_304_000L, reply["ts"]!!.jsonPrimitive.content.toLong(), "assistant ts = +4 s")
+        } finally {
+            SessionStore.claudeHome = home   // the other tests read the shared fixture from here
+            tmpHome.deleteRecursively()
+        }
+    }
+
     @Test
     fun `answered question keeps its questions and chosen answers`() {
         val asks = role("ask")
