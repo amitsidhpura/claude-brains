@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.14.0"
+version = "0.15.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,33 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.15.0</b>
+            <ul>
+              <li>Message timestamps: a small time above each prompt and above the first reply
+                  text, date lines between turns when the day changes, relabelled at midnight</li>
+              <li>Question cards show an option's preview in a monospace box, and an answered
+                  question stays on its card with a summary of the picks</li>
+              <li>Background tasks: every row of the Background tasks popup opens a live output
+                  pane for that command, and a running command's line offers "Run in background" —
+                  the terminal's Ctrl+B</li>
+              <li>Export conversation (header button): copy the whole conversation as plain text
+                  or save it to a file, the same text the CLI's /export writes</li>
+              <li>Copy response: a hover control on each reply block copies its markdown</li>
+              <li>In Auto mode, the CLI's "built-in classifier" notice is shown as a Continue /
+                  Stop card instead of being left unanswered</li>
+              <li>The <code>claude</code> executable is resolved on the shell PATH, the same place
+                  the CLI runs from — the panel could silently run the older CLI bundled with the
+                  VS Code extension</li>
+              <li>The model chip's Default label follows the model the CLI actually serves</li>
+              <li>Copy buttons write through the IDE clipboard — they used to fail silently when the
+                  panel did not hold focus</li>
+              <li>The 1M-context switch is gone: the CLI serves the 1M window with or without it,
+                  and the switch only miscounted the context gauge; the gauge now follows the
+                  window the CLI reports for any model</li>
+              <li>The model menu fits the panel — the list scrolls instead of running under the
+                  header; bold wrapping an italic renders; @-mentions of paths with spaces attach;
+                  thinking text no longer ends with blank lines</li>
+            </ul>
             <b>0.14.0</b>
             <ul>
               <li>A Bash command that edits files shows a diff card per changed file under its
@@ -131,41 +158,6 @@ val changeNotesHtml = """
               <li>A code fence of four or more backticks — the shape Claude uses for a markdown
                   block that contains a fence of its own — renders as one code block; it used to
                   print a stray placeholder line and drop the whole block</li>
-            </ul>
-            <b>0.13.0</b>
-            <ul>
-              <li>Permission cards carry a "Tell Claude what to do instead" field after Reject —
-                  the note reaches Claude verbatim, Enter in the field rejects with it, and the
-                  decided line quotes it</li>
-              <li>The command on a Bash permission card is editable in place: Accept runs the
-                  edited text and the card says so; Always allow remembers the edited command,
-                  one exact rule per part of a compound command</li>
-              <li>Always allow is a split button — the main half keeps the CLI's own destination,
-                  the caret offers "This session only", "This project, shared" or "All
-                  projects"; the decided line records the scope</li>
-              <li>When Claude stops waiting on a permission card (you pressed Stop, the ask timed
-                  out) the card settles as "Withdrawn" instead of still looking answerable, and
-                  its diff tab closes</li>
-              <li>A never-picked mode chip starts on the CLI's own default (your
-                  <code>permissions.defaultMode</code>, else Auto on current CLIs) instead of a
-                  hardcoded Manual; a "Don't ask" mode set in settings is displayed without ever
-                  being offered</li>
-              <li>Content roots outside the project directory are passed to the CLI as working
-                  directories — reads there no longer raise "outside allowed working
-                  directories" cards</li>
-              <li>"Mention in Claude Brains" — first entry of the Project-view and editor context
-                  menus — adds the selected files or folders as @-mentions at the composer
-                  caret</li>
-              <li>@path mentions in a sent prompt render as chips that open the file on click,
-                  live and on resume</li>
-              <li>The CLI's one-line notices — a commit or push it saw, a failing hook, a published
-                  PR link — draw as muted status lines instead of being dropped</li>
-              <li>"open in editor" under a truncated tool input or output opens the whole text
-                  read-only in an editor tab, live and on resume</li>
-              <li>Fix: a rejection sent from a card no longer draws its own message again as a
-                  red error box above the card</li>
-              <li>Fix: on resume, a rejected edit no longer counts toward "N files changed", and
-                  the replayed card quotes the rejection note</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
