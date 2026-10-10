@@ -34,22 +34,24 @@
    * BOTH `claude-opus-5[1m]` (contextWindow 1000000) and `claude-haiku-4-5-20251001` (200000),
    * because the CLI runs small side models for its own errands. Picking the wrong entry would set
    * the denominator to a fifth of the truth and drive the gauge past 100%, so the match must be to
-   * OUR model specifically: the raw key first (it carries the `[1m]` tag, exactly as `currentModel`
-   * does), then `canonicalModel` for the case where the CLI reports a resolved id we do not hold.
-   * No match means NO update — the seed heuristic is a decent guess and a wrong number is not.
+   * OUR model specifically, with the `[1m]` tag ignored on BOTH sides (measured 2026-10-10 on
+   * 2.1.296: `set_model "sonnet[1m]"` keys the map `claude-sonnet-5-5[1m]`, plain `sonnet` keys it
+   * `claude-sonnet-5-5`, canonicalModel `claude-sonnet-5-5` either way, contextWindow 1M either
+   * way); the key, its `canonicalModel`. No match means NO update — the seed heuristic is a decent
+   * guess and a wrong number is not. The caller supplies the candidates: the selection, what
+   * Default resolves to, and the selection's roster `resolvedModel` — the last is what an ALIAS
+   * pick ("sonnet") needs, and its absence left the gauge on the 200K seed after a real turn
+   * (user's hand test 2026-10-10: 20% shown for 4% used).
    */
   function windowFromUsage(usage, model) {
     if (!usage || typeof usage !== 'object' || !model) return 0;
-    const exact = Object.prototype.hasOwnProperty.call(usage, model) ? usage[model] : null;
-    let hit = exact;
-    if (!hit) {
-      const k = Object.keys(usage).find(function (key) {
-        const e = usage[key];
-        return e && (e.canonicalModel === model || key.replace(/\[1m\]$/i, '') === model);
-      });
-      hit = k ? usage[k] : null;
-    }
-    const w = hit && hit.contextWindow;
+    const want = strip1m(model);
+    const k = Object.keys(usage).find(function (key) {
+      const e = usage[key];
+      return key === model || strip1m(key) === want ||
+        (e && typeof e.canonicalModel === 'string' && strip1m(e.canonicalModel) === want);
+    });
+    const w = k && usage[k] && usage[k].contextWindow;
     return typeof w === 'number' && w > 0 ? w : 0;
   }
   function setContext(used) {
@@ -158,9 +160,8 @@
   /**
    * Everything a `result` frame teaches the footer and the gauge, in one callable piece so the
    * harness can drive it without rendering a whole result's chrome:
-   * - item 17a: the AUTHORITATIVE window → gauge denominator;
-   * - the same window → the 1M switch (oneMFromCli), so the switch shows the REAL context size
-   *   from the first message after a model change (fable reports 1M whatever the tag says);
+   * - item 17a: the AUTHORITATIVE window → gauge denominator (and windowConfirmed, so the
+   *   roster/tag seed stops re-seeding the current selection);
    * - fast-mode truth (state + reason), snapping an optimistic toggle back when the account
    *   gates it and tracking on/cooldown/off across turns.
    */
@@ -168,9 +169,11 @@
     // modelUsage is keyed by the REAL id — `default` matches nothing there, so the Default
     // selection asks again by what it resolves to (effectiveModelId, 30-menus.js).
     const usage = ev.modelUsage || ev.model_usage;
-    const w = windowFromUsage(usage, currentModel) || windowFromUsage(usage, effectiveModelId());
+    const row = rosterFor(currentModel);
+    const w = windowFromUsage(usage, currentModel) || windowFromUsage(usage, effectiveModelId()) ||
+      windowFromUsage(usage, row && row.resolvedModel);
     if (w && w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); }
-    if (w) { oneMFromCli = w >= CTX_1M; syncModelFooter(); }
+    if (w) windowConfirmed = true;
     if (typeof ev.fast_mode_state === 'string') {
       fastModeState = ev.fast_mode_state;
       fastModeReason = ev.fast_mode_disabled_reason || '';

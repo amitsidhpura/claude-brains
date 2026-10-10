@@ -404,7 +404,7 @@
       case '__models':
         models = ev.items || [];
         currentModel = ev.selected || (models[0] && models[0].value) || null;
-        oneMFromCli = null;   // fresh roster/selection: the 1M switch is tag-derived until a result speaks
+        windowConfirmed = false;   // fresh roster/selection: seeded until a result speaks for it
         { const cm = allModels().find(function (m) { return m.value === currentModel; });
           const w = (cm && !cm.custom) ? windowOf(cm) : (/\[1m\]/i.test(currentModel || '') ? CTX_1M : 0);
           if (w) { ctxWindowFromCli = w; renderContext(); }

@@ -221,10 +221,12 @@
   let customModels = [];   // user-defined, persisted via Kotlin PropertiesComponent (see the search field)
   // footer-switch state (model menu): fast mode is CLI truth (initialize + result frames, an
   // optimistic click in between); thinking is Kotlin-owned preference, seeded on every load.
-  // oneMFromCli: the REAL window from the first result's modelUsage[].contextWindow — overrides
-  // the tag-derived 1M switch state (fable runs 1M whatever the tag says); null = no result yet
-  // for the current selection, cleared on every model change so stale truth can't leak.
-  let fastModeState = 'off', fastModeReason = '', thinkingOn = true, oneMFromCli = null;
+  // windowConfirmed: a result's modelUsage[].contextWindow has spoken for the CURRENT selection
+  // (reconcileFromResult); until then the gauge denominator is the roster/tag seed. Cleared on
+  // every model change and roster push so stale truth can't leak. (The 1M switch that used to
+  // ride this was retired 2026-10-10: the CLI serves 1M with or without the [1m] tag, so the
+  // switch could only mis-set the gauge — checklist 9.9.)
+  let fastModeState = 'off', fastModeReason = '', thinkingOn = true, windowConfirmed = false;
   const modelSearch = document.getElementById('modelSearch');
   function allModels() { return models.concat(customModels); }
   // parse the search field, mirroring the CLI model shape: "value : Display Name : desc" (2 colons) /
@@ -294,7 +296,7 @@
     if (strip1m(currentModel || '') !== 'default') return;   // remembered for the next Default pick
     setModelChip(chipLabelFor(currentModel), currentModel);
     renderModels();
-    if (oneMFromCli === null) {
+    if (!windowConfirmed) {
       const w = (/\[1m\]/i.test(id) || /fable/i.test(id)) ? CTX_1M : CTX_STD;
       if (w !== ctxWindowFromCli) { ctxWindowFromCli = w; renderContext(); }
     }
@@ -389,7 +391,7 @@
   // bridge. setModel adds the bridge; __model_rejected (9.11) uses this half alone to FOLLOW the
   // CLI back to the model it kept, the same rule the retraction fallback obeys.
   function showModel(v) {
-    currentModel = v; oneMFromCli = null;   // new selection: tag-derived until its first result
+    currentModel = v; windowConfirmed = false;   // new selection: seeded until its first result
     const m = allModels().find(function (x) { return x.value === v; });
     // custom carries the same {value, displayName, description} shape as built-in, so both draw the
     // Model+Version through chipName; an unlisted id falls back to a prettified label
@@ -403,38 +405,25 @@
   function setModel(v, keepOpen) {
     showModel(v);
     bridge({ kind: 'model', model: v });
-    if (!keepOpen) closeMenus();   // the footer's 1M switch re-selects in place; row clicks still close
+    if (!keepOpen) closeMenus();   // row clicks close; a restore (fixtures) re-selects in place
   }
   modelChip.onclick = function (e) { tg('modelMenu', e); };
 
-  /* ---------- model-menu footer: 1M / fast / thinking switches ---------- */
-  const tgl1m = document.getElementById('tgl1m'), tglFast = document.getElementById('tglFast'),
-        tglThink = document.getElementById('tglThink');
+  /* ---------- model-menu footer: fast / thinking switches ---------- */
+  const tglFast = document.getElementById('tglFast'), tglThink = document.getElementById('tglThink');
+  // A `[1m]` tag on a value is still ACCEPTED (a persisted "sonnet[1m]", a typed id — the CLI
+  // echoes it, 9.9) but no longer offered: the footer's 1M switch was retired 2026-10-10.
   function strip1m(v) { return String(v || '').replace(/\[1m\]/ig, ''); }
-  // The roster item for a value, ignoring the [1m] tag on either side — maps plain "opus" (the
-  // 1M switch turned off) back to the "opus[1m]" roster entry, and raw ids to their family row.
+  // The roster item for a value, ignoring the [1m] tag on either side — maps a tagged value back
+  // to its roster entry, and raw ids to their family row.
   function rosterFor(v) {
     const s = strip1m(v);
     return models.find(function (m) { return strip1m(m.value) === s || strip1m(m.resolvedModel || '') === s; });
   }
-  // The switch's ON state: the [1m] tag on the selection itself, or — only for the exact roster
-  // selection (i.e. "default") — on what the CLI says it resolves to. The value===currentModel
-  // guard keeps a stripped variant ("opus") from inheriting its roster row's tag.
-  function is1mOn() {
-    if (/\[1m\]/i.test(currentModel || '')) return true;
-    const m = rosterFor(currentModel);
-    return !!(m && m.value === currentModel && /\[1m\]/i.test(m.resolvedModel || ''));
-  }
   function setTgl(btn, on) { btn.classList.toggle('on', !!on); btn.setAttribute('aria-checked', String(!!on)); }
-  // What the 1M switch DISPLAYS: the API-confirmed window once a result has spoken for this
-  // selection, the [1m] tag sniff until then.
-  function shown1m() { return oneMFromCli !== null ? oneMFromCli : is1mOn(); }
-  // The one writer for all three switches. No validity logic on the 1M switch (user decision
-  // 2026-08-24): any model can be flipped; an unsupported combination fails on the next turn with
-  // the API's own error (measured: haiku[1m] → "400 The long context beta is not yet available").
+  // The one writer for both switches.
   function syncModelFooter() {
-    if (!tgl1m) return;
-    setTgl(tgl1m, shown1m());
+    if (!tglFast) return;
     const m = rosterFor(currentModel);
     const fastOk = !!(m && m.supportsFastMode);
     tglFast.disabled = !fastOk;
@@ -445,24 +434,7 @@
       : fastModeState === 'cooldown' ? 'Fast mode: cooling down' : 'Faster responses (Opus only)';
     setTgl(tglThink, thinkingOn);
   }
-  if (tgl1m) {
-    tgl1m.onclick = function (e) {
-      e.stopPropagation();
-      const on = !shown1m();   // direction from the DISPLAYED state, so a CLI-snapped switch toggles honestly
-      // operate on the value; for "default" (tagless value, tagged resolvedModel) toggling OFF
-      // pins the resolved model without the tag — stripping "default" itself would be a noop
-      let base = currentModel || '';
-      if (on === false && !/\[1m\]/i.test(base)) {
-        const m = rosterFor(base);
-        if (m && m.value === base && /\[1m\]/i.test(m.resolvedModel || '')) base = m.resolvedModel;
-      }
-      const nv = on ? strip1m(base) + '[1m]' : strip1m(base);
-      setModel(nv, true);
-      // setModel's own sniff leaves the denominator alone when toggling OFF to an unlisted value
-      // (its w=0 path) — state the window explicitly. Fable is natively 1M even untagged.
-      ctxWindowFromCli = (on || /fable/i.test(nv)) ? CTX_1M : CTX_STD;
-      renderContext();
-    };
+  if (tglFast) {
     tglFast.onclick = function (e) {
       e.stopPropagation();
       if (tglFast.disabled) return;

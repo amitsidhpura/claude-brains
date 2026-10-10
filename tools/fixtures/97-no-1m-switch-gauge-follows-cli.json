@@ -1,0 +1,143 @@
+{
+ "item": "9.9 retired + the gauge follows the CLI's window for ANY pick (2026-10-10)",
+ "branch": "#modelFooter has no #tgl1m (fast + thinking + effort remain); reconcileFromResult matches result.modelUsage by the selection, by what Default resolves to, AND by the selection's roster resolvedModel, ignoring [1m] on both sides (windowFromUsage); windowConfirmed is set by a match and cleared by showModel / __models; a result keyed only by a side model changes nothing; a persisted tagged value ('sonnet[1m]') still selects and still matches.",
+ "provenance": "MEASURED 2026-10-10 on 2.1.296 over stdio (scratch CLAUDE_CONFIG_DIR, one turn each): set_model 'sonnet' → init.model claude-sonnet-5-5, result.modelUsage {'claude-sonnet-5-5': {contextWindow: 1000000, canonicalModel: 'claude-sonnet-5-5'}}; set_model 'sonnet[1m]' → init.model claude-sonnet-5-5[1m], modelUsage keyed 'claude-sonnet-5-5[1m]' with the same window and canonicalModel; the audit measured opus / opus[1m] / sonnet[1m] the same way. The roster items are the real 2.1.296 shape (tagless values, Default resolving to claude-sonnet-5-5 on this account). USER HAND TEST in the real PhpStorm 2026-10-10: with the switch OFF on 'sonnet' the gauge read 20% for ~40K tokens (4% of the real 1M), and the reconcile never corrected it because the lookup compared the alias to the full-id key.",
+ "steps": [
+  {
+   "note": "0 — the footer has NO 1M switch: two switch rows (fast, thinking) + the effort row; the roster is the real 2.1.296 shape (tagless), 'sonnet' selected",
+   "setup": "window.__g97 = JSON.stringify({ items: models, selected: currentModel, used: ctxUsed, win: ctxWindowFromCli }); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'sonnet', items: [{\"value\": \"default\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Default (recommended)\", \"description\": \"Sonnet 5.5 \\u00b7 Efficient for routine tasks\", \"supportsEffort\": true, \"supportsFastMode\": false}, {\"value\": \"opus\", \"resolvedModel\": \"claude-opus-5-5\", \"displayName\": \"Opus 5.5\", \"description\": \"For complex work and everyday tasks\", \"supportsEffort\": true, \"supportsFastMode\": true}, {\"value\": \"fable\", \"resolvedModel\": \"claude-fable-5-1\", \"displayName\": \"Fable 5.1\", \"description\": \"For your toughest challenges\", \"supportsEffort\": true}, {\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Sonnet 5.5\", \"description\": \"Most efficient for simpler tasks\", \"supportsEffort\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-5-5\", \"displayName\": \"Haiku 5.5\", \"description\": \"Fastest for quick answers\"}] })); document.getElementById('modelChip').click();",
+   "expect": [
+    {
+     "js": "document.getElementById('modelMenu').classList.contains('show')",
+     "equals": true,
+     "why": "GUARD: the menu is open"
+    },
+    {
+     "js": "document.getElementById('tgl1m')",
+     "equals": null,
+     "why": "the 1M switch is gone (retired 2026-10-10: the CLI serves 1M with or without the tag; the switch only mis-set the gauge)"
+    },
+    {
+     "js": "document.querySelectorAll('#modelFooter .tgl-row').length",
+     "equals": 2,
+     "why": "fast + thinking remain"
+    },
+    {
+     "js": "document.querySelectorAll('#modelFooter .ef-row').length",
+     "equals": 1,
+     "why": "the effort row remains"
+    },
+    {
+     "js": "document.querySelector('#modelItems .popup-item.on').dataset.v",
+     "equals": "sonnet",
+     "why": "GUARD: the Sonnet row is checked"
+    }
+   ]
+  },
+  {
+   "note": "1 — an ALIAS pick ('sonnet') follows the CLI's reported window: the result's modelUsage is keyed by the full id (claude-sonnet-5-5) and the gauge adopts its 1M — 40K tokens read 4%, not the seed's 20%",
+   "setup": "closeMenus(); setContext(40000); window.__w97a = ctxWindow(); reconcileFromResult({ modelUsage: { 'claude-sonnet-5-5': { contextWindow: 1000000, canonicalModel: 'claude-sonnet-5-5', inputTokens: 2 }, 'claude-haiku-5-5': { contextWindow: 1000000, canonicalModel: 'claude-haiku-5-5', inputTokens: 1 } } });",
+   "expect": [
+    {
+     "js": "window.__w97a",
+     "equals": 200000,
+     "why": "GUARD: before the result the untagged alias seeds 200K (both builds)"
+    },
+    {
+     "js": "ctxWindow()",
+     "equals": 1000000,
+     "why": "the result's window matched through the roster's resolvedModel (the old lookup compared the alias 'sonnet' to the key and missed — the live panel read 20% after a real turn, 2026-10-10)"
+    },
+    {
+     "js": "document.getElementById('ctxChip').textContent.trim()",
+     "equals": "4%",
+     "why": "the gauge shows the real share"
+    },
+    {
+     "js": "windowConfirmed",
+     "equals": true,
+     "why": "the selection is now CLI-confirmed"
+    }
+   ]
+  },
+  {
+   "note": "2 — the side-model trap: a result keyed ONLY by a side model does not touch the gauge",
+   "setup": "showModel('opus'); window.__w97b = ctxWindow(); reconcileFromResult({ modelUsage: { 'claude-haiku-5-5': { contextWindow: 1000000, canonicalModel: 'claude-haiku-5-5' } } });",
+   "expect": [
+    {
+     "js": "window.__w97b",
+     "equals": 200000,
+     "why": "GUARD: a new pick re-seeds from the (tagless) roster"
+    },
+    {
+     "js": "ctxWindow()",
+     "equals": 200000,
+     "why": "no match → no update (the seed is a decent guess, a wrong number is not)"
+    },
+    {
+     "js": "windowConfirmed",
+     "equals": false,
+     "why": "nothing confirmed"
+    }
+   ]
+  },
+  {
+   "note": "3 — Default: the result keyed by what Default resolves to matches (effectiveModelId); a tagged key still matches a tagged or untagged selection",
+   "setup": "window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'default', items: [{\"value\": \"default\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Default (recommended)\", \"description\": \"Sonnet 5.5 \\u00b7 Efficient for routine tasks\", \"supportsEffort\": true, \"supportsFastMode\": false}, {\"value\": \"opus\", \"resolvedModel\": \"claude-opus-5-5\", \"displayName\": \"Opus 5.5\", \"description\": \"For complex work and everyday tasks\", \"supportsEffort\": true, \"supportsFastMode\": true}, {\"value\": \"fable\", \"resolvedModel\": \"claude-fable-5-1\", \"displayName\": \"Fable 5.1\", \"description\": \"For your toughest challenges\", \"supportsEffort\": true}, {\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Sonnet 5.5\", \"description\": \"Most efficient for simpler tasks\", \"supportsEffort\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-5-5\", \"displayName\": \"Haiku 5.5\", \"description\": \"Fastest for quick answers\"}] })); reconcileFromResult({ modelUsage: { 'claude-sonnet-5-5[1m]': { contextWindow: 1000000, canonicalModel: 'claude-sonnet-5-5' } } }); window.__w97c = ctxWindow(); showModel('sonnet[1m]'); window.__chip97 = document.getElementById('modelChip').title; window.__row97 = (document.querySelector('#modelItems .popup-item.on') || {}).dataset; reconcileFromResult({ modelUsage: { 'claude-sonnet-5-5': { contextWindow: 1000000, canonicalModel: 'claude-sonnet-5-5' } } });",
+   "expect": [
+    {
+     "js": "window.__w97c",
+     "equals": 1000000,
+     "why": "Default → resolvedModel claude-sonnet-5-5 matches the [1m]-tagged key (tags ignored both sides)"
+    },
+    {
+     "js": "window.__chip97",
+     "equals": "sonnet[1m]",
+     "why": "a persisted tagged value is still a valid selection (its exact id on the chip's title)"
+    },
+    {
+     "js": "window.__row97 ? window.__row97.v : null",
+     "equals": "sonnet",
+     "why": "…and the Sonnet row keeps its ✓ (the ✓ ignores the tag)"
+    },
+    {
+     "js": "ctxWindow()",
+     "equals": 1000000,
+     "why": "a tagged selection matches an untagged key"
+    }
+   ]
+  },
+  {
+   "note": "4 — a roster push resets the confirmation: the new selection re-seeds until its own result speaks",
+   "setup": "window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'haiku', items: [{\"value\": \"default\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Default (recommended)\", \"description\": \"Sonnet 5.5 \\u00b7 Efficient for routine tasks\", \"supportsEffort\": true, \"supportsFastMode\": false}, {\"value\": \"opus\", \"resolvedModel\": \"claude-opus-5-5\", \"displayName\": \"Opus 5.5\", \"description\": \"For complex work and everyday tasks\", \"supportsEffort\": true, \"supportsFastMode\": true}, {\"value\": \"fable\", \"resolvedModel\": \"claude-fable-5-1\", \"displayName\": \"Fable 5.1\", \"description\": \"For your toughest challenges\", \"supportsEffort\": true}, {\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Sonnet 5.5\", \"description\": \"Most efficient for simpler tasks\", \"supportsEffort\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-5-5\", \"displayName\": \"Haiku 5.5\", \"description\": \"Fastest for quick answers\"}] })); window.__w97d = ctxWindow(); window.__c97d = windowConfirmed; reconcileFromResult({ modelUsage: { 'claude-haiku-5-5': { contextWindow: 1000000, canonicalModel: 'claude-haiku-5-5' } } });",
+   "expect": [
+    {
+     "js": "window.__w97d",
+     "equals": 200000,
+     "why": "re-seeded (haiku untagged)"
+    },
+    {
+     "js": "window.__c97d",
+     "equals": false,
+     "why": "the previous selection's confirmation did not leak"
+    },
+    {
+     "js": "ctxWindow()",
+     "equals": 1000000,
+     "why": "then confirmed by its own result"
+    }
+   ]
+  },
+  {
+   "note": "5 — restore the roster, selection and gauge",
+   "setup": "var g=JSON.parse(window.__g97); if (g.selected) setModel(g.selected, true); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: g.selected || null, items: g.items || [] })); ctxUsed = g.used; ctxWindowFromCli = g.win; renderContext(); closeMenus();",
+   "expect": [
+    {
+     "js": "document.getElementById('modelMenu').classList.contains('show')",
+     "equals": false,
+     "why": "closed"
+    }
+   ]
+  }
+ ]
+}

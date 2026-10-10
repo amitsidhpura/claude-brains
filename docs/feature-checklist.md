@@ -17,13 +17,13 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 99 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (145 rows) — no open rows; one [DECIDE] tag (9.9) still parked
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 99 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (145 rows) — no open rows, no [DECIDE] tags
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** one — 9.9, the 1M switch (re-opened by the 2.1.296 audit
-  2026-10-10; measured inert on 2.1.296). The audit's other rows were taken and built the same
-  day: 1.30 (message timestamps), 1.31 (question option previews), 4.10 (auto-mode
-  server-fallback dialog), 11.7 (background task output) and 15.4 (export / copy response).
-  Earlier: 1.29 (2.1.270
+- **Awaiting a decision ([DECIDE]):** none — 9.9 (the 1M switch) was decided 2026-10-10 after a
+  hand test: retired, and the gauge lookup it was masking fixed. The 2.1.296 audit's other rows
+  were taken and built the same day: 1.30 (message timestamps), 1.31 (question option previews),
+  4.10 (auto-mode server-fallback dialog), 11.7 (background task output) and 15.4 (export / copy
+  response). Earlier: 1.29 (2.1.270
   audit) built 2026-09-13; the ten 2026-09-04 full-surface rows are settled (1.26–1.28, 2.12, 3.7,
   3.8, 4.7, 4.8, 6.5, 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3 deferred 2026-09-04)
 
@@ -1387,13 +1387,25 @@ auto-include selection, voice.
   </details>
 - **9.8** ➖ **Subagent model / cloud providers** — `CLAUDE_CODE_SUBAGENT_MODEL`, Bedrock / Vertex /
       Foundry setup; env and terminal configuration
-- **9.9** ✅ **1M-context toggle** [DECIDE] — a switch in the model-menu footer that appends or
-  strips `[1m]` on the selected model. **No client-side validity logic** (user decision
-  2026-08-24): an unsupported combo fails on the next turn with the API's own 400. **Re-opened
-  2026-10-10:** on CLI 2.1.296 no roster value carries `[1m]` and the context window is 1M with or
-  without the tag, so the switch always reads OFF and changes nothing but the model-id string.
-  Retire it, hide it while no roster value carries `[1m]`, or keep it as-is — the user's call.
+- **9.9** ✅ **1M-context toggle — RETIRED 2026-10-10; the gauge follows the CLI's window for
+  any pick** — the footer switch is gone (user decision after a hand test in the real PhpStorm);
+  a `[1m]` tag on a value is still accepted (persisted or typed) but no longer offered. The
+  context gauge now matches a result's `modelUsage` by the selection, by what Default resolves
+  to, AND by the selection's roster `resolvedModel`, tags ignored on both sides.
   <!-- --><details><summary>Read more…</summary>
+  WHY (hand test 2026-10-10, real PhpStorm, 2.1.296): with `sonnet` picked and the switch turned
+  OFF the gauge read 20% for ~40K tokens — 4% of the real window — and stayed there after the
+  next turn: the switch pinned a 200K denominator, and the reconcile that should have corrected
+  it never matched, because it compared the alias `sonnet` to the usage map's full-id key
+  `claude-sonnet-5-5`. MEASURED the same day over stdio: `set_model "sonnet"` → `contextWindow`
+  1,000,000 (the audit had measured opus / opus[1m] / sonnet[1m], never untagged sonnet), so the
+  tag is inert at the API and the switch could only mis-set the gauge. Retired rather than hidden:
+  a switch that cannot change the model has nothing to come back for. Fixture 97 (6 steps, 20
+  asserts; negative control on the pre-change sandbox: switch present, gauge 20%); fixture 55
+  trimmed to the fast / thinking switches.
+  HISTORY: built 2026-08-24 as a switch that appends or strips `[1m]` on the selected model, no
+  client-side validity logic (an unsupported combo failed on the next turn with the API's own
+  400); re-opened by the 2.1.296 audit when no roster value carried `[1m]` any more.
   Re-selects through `setModel` (persistence rides `claudeCode.selectedModel`; `default` resolved
   to `claude-opus-5[1m]` when built). `set_model` never rejects (until 2.1.251's `PreModelSwitch`
   hooks — 9.11). The switch reconciles to the REAL window from `result.modelUsage[].contextWindow`
