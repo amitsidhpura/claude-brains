@@ -74,8 +74,10 @@
 .bg::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
   flex: none; animation: bg-pulse var(--pulse-period) ease-in-out infinite; }
 @keyframes bg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-/* Rows are not clickable as a whole — only their hover-✕ (below, 11.3) acts — so they must not
-   offer the hover affordance the other popup items use to say "clickable".
+/* Rows keep a flat background: a click toggles the row's output pane (11.7) and the hover-✕
+   (below, 11.3) stops its own task, but neither is a "pick this item" action, so the rows must
+   not take the hover highlight the other popup items use to say "choose me". The chevron and the
+   pointer cursor are the affordance instead.
    Qualified with .popup-item deliberately: a bare .bg-row ties on specificity and LOSES, because
    .popup-item is declared further down this file. Measured headless, not assumed.
    `.sel` is listed for the same reason and it is the half that was MISSED: .popup-item.bg-row only
@@ -83,7 +85,20 @@
    rows even though :hover was correctly suppressed — a stuck highlight the user saw as "dark on
    hover, lighter after". `nosel` on #bgMenu stops the class being applied at all; this is the belt
    to that braces. */
-.popup-item.bg-row, .popup-item.bg-row:hover, .popup-item.bg-row.sel { background: transparent; cursor: default; }
+.popup-item.bg-row, .popup-item.bg-row:hover, .popup-item.bg-row.sel { background: transparent; cursor: pointer; }
+.popup-item.bg-row .chev { width: 12px; height: 12px; flex: none; margin: 3px -4px 0 0; color: var(--user-muted);
+  transition: transform .15s ease; }
+.popup-item.bg-row[aria-expanded="true"] .chev { transform: rotate(90deg); }   /* chevron-right → points down */
+/* Output pane under a roster row (11.7): the task's captured stream, re-asked once a second while
+   the pane is open and the popup shown (renderBgTasks / bgOutTick). The code surface the IN/OUT
+   boxes wear (--code-bg on --border, --radius), inset to the popup's 14px gutter; capped at nine
+   lines and scrolled, pinned to the tail until the user scrolls up. Meta lines ("No output yet.",
+   "Showing the end of 1.2 MB of output.", "Output is not available.") in the popup's caption size. */
+.bg-out { padding: 0 14px 8px; }
+.bg-out pre { margin: 0; max-height: calc(9 * 1.5em); overflow: auto; padding: 6px 8px; background: var(--code-bg);
+  border: 1px solid var(--border); border-radius: var(--radius); font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--fs-xs); line-height: 1.5; color: var(--fg); white-space: pre; }
+.bg-out-meta { color: var(--user-muted); font-size: var(--fs-xs); padding-top: 3px; }
 /* kill a task (11.3): the conversations-list gutter idiom (.hist-del below) — the gutter is reserved
    only while the row is hovered, the button is hidden until then, red on its own hover. The popup's
    width is fixed, so nothing jiggles. A row whose ✕ was clicked dims until the CLI's next roster

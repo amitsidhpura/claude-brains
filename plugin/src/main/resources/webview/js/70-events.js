@@ -33,16 +33,101 @@
   // next frame is the only truth — but the row must stop offering a second click and say it heard.
   // Reset at the CLI boundary with the roster itself (40-sessions.js).
   let stoppingBgTasks = {};
+  /**
+   * Output pane per roster row (11.7). bgOut[task_id] = {open, got, text, total, truncated, err,
+   * pinned, askedAt}: `open` is the user's toggle (click the row), the rest is the last answer.
+   * The CLI keeps a captured stream for shells and Monitors only and hands it out on request
+   * (`get_task_output{task_id}` → `{output, total_bytes, truncated}`, measured 2026-10-10 on
+   * 2.1.296 — ClaudeCli.getTaskOutput), so the pane POLLS: one timer serves every open pane,
+   * each tick asks Kotlin for each open task's output once a second (the reference client's
+   * cadence) and the __taskOutput answers repaint the panes in place. Nothing is asked while the
+   * roster popup is closed, one ask is in flight per task at a time (a bounded re-ask covers a
+   * lost answer), and an error answer ends polling for that task — the honest reading of "no
+   * shell or Monitor task with that task_id": a sub-agent's row, or a task the roster has
+   * since dropped. The pane lives with its row: when the roster frame drops the task the pane
+   * goes too (the timeline's task line already says how it ended).
+   */
+  let bgOut = {};
+  let bgOutTimer = null;
+  function bgOutTick() {
+    const menu = document.getElementById('bgMenu');
+    const shown = !!(menu && menu.classList.contains('show'));
+    let any = false;
+    const now = Date.now();
+    bgTasks.forEach(function (t) {
+      const id = t && t.task_id ? String(t.task_id) : null;
+      const s = id && bgOut[id];
+      if (!s || !s.open || s.err) return;
+      any = true;
+      if (!shown) return;
+      if (s.askedAt && now - s.askedAt < 5000) return;   // one in flight; re-ask only after 5 s of silence
+      s.askedAt = now;
+      bridge({ kind: 'taskOutput', id: id });
+    });
+    if (!any && bgOutTimer) { clearInterval(bgOutTimer); bgOutTimer = null; }
+  }
+  function bgOutStart() {
+    if (bgOutTimer) return;
+    bgOutTick();
+    if (!bgOutTimer) bgOutTimer = setInterval(bgOutTick, 1000);
+  }
+  // The reference client's display rules for a captured stream, read out of its webview
+  // (2.1.296): when the CLI cut the head (`truncated`) the first line is partial, so it goes;
+  // the U+FFFD a cut multi-byte character leaves goes with it; a carriage return shows what a
+  // terminal would — the text after the last \r on the line (progress bars overwrite). Two of
+  // ours: ANSI colour sequences are stripped (a shell prints them, a <pre> does not render them)
+  // and one trailing newline is dropped so the box does not end on an empty line.
+  function taskOutText(raw, truncated) {
+    let s = String(raw || '');
+    if (truncated) {
+      const nl = s.indexOf('\n');
+      if (nl !== -1 && nl < s.length - 1) s = s.slice(nl + 1);
+      s = s.replace(/^�+/, '');
+    }
+    s = s.replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, '');
+    s = s.split('\n').map(function (l) {
+      if (l.endsWith('\r')) l = l.slice(0, -1);
+      return l.slice(l.lastIndexOf('\r') + 1);
+    }).join('\n');
+    return s.replace(/\n$/, '');
+  }
+  // Paints one pane from its state, keeping an existing <pre> (and so the user's scroll) when
+  // there is one. Pinned to the tail until the user scrolls up — 4px of slack, like the reference.
+  function paintBgOut(pane, s) {
+    const meta = function (text) {
+      pane.textContent = '';
+      const m = document.createElement('div'); m.className = 'bg-out-meta'; m.textContent = text;
+      pane.appendChild(m);
+    };
+    if (s.err) return meta('Output is not available.');
+    if (!s.got) { pane.textContent = ''; return; }        // first answer still on its way
+    if (!s.text) return meta('No output yet.');
+    let pre = pane.querySelector('pre');
+    if (!pre) {
+      pane.textContent = '';
+      pre = document.createElement('pre'); pre.tabIndex = 0;
+      pre.onscroll = function () { s.pinned = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 4; };
+      pane.appendChild(pre);
+    }
+    if (pre.textContent !== s.text) pre.textContent = s.text;
+    let note = pane.querySelector('.bg-out-meta');
+    if (s.truncated) {
+      if (!note) { note = document.createElement('div'); note.className = 'bg-out-meta'; pane.appendChild(note); }
+      note.textContent = 'Showing the end of ' + fmtSize(s.total) + ' of output.';
+    } else if (note) note.remove();
+    if (s.pinned !== false) pre.scrollTop = pre.scrollHeight;
+  }
   function renderBgTasks() {
     const chip = document.getElementById('bgChip'), list = document.getElementById('bgList');
     if (!chip || !list) return;
-    if (!bgTasks.length) stoppingBgTasks = {};
+    if (!bgTasks.length) { stoppingBgTasks = {}; bgOut = {}; }
     if (!bgTasks.length) {
       chip.hidden = true;
       chip.textContent = '';               // stale "1 task" must not flash if the chip re-shows
       const m = document.getElementById('bgMenu');
       if (m) m.classList.remove('show');   // an open roster must not outlive its last task
       list.textContent = '';
+      if (bgOutTimer) { clearInterval(bgOutTimer); bgOutTimer = null; }
       return;
     }
     chip.hidden = false;
@@ -51,6 +136,27 @@
     bgTasks.forEach(function (t) {
       const row = document.createElement('div');
       row.className = 'popup-item bg-row';
+      const tid = t && t.task_id ? String(t.task_id) : null;
+      const out = tid ? (bgOut[tid] || (bgOut[tid] = { open: false, got: false, text: '', total: 0, truncated: false, err: null, pinned: true, askedAt: 0 })) : null;
+      // Output toggle (11.7): a chevron, the row's own click. Every row offers it — which kinds
+      // keep a stream is the CLI's to say, and it says so on the first ask (paintBgOut's
+      // "Output is not available."). The ✕ stops its own click from reaching this.
+      if (out) {
+        row.setAttribute('aria-expanded', out.open ? 'true' : 'false');
+        row.insertAdjacentHTML('afterbegin', SVG_CHEVRON);
+        // stopPropagation like the ✕, and for a sharper reason: renderBgTasks() below REBUILDS the
+        // list, so by the time this click bubbles to the document handler (30-menus.js) the row is
+        // detached, `e.target.closest('.popup')` is null, and the handler closes the popup as an
+        // outside click — which silently ended the poll (fixture 95's first run, 2026-10-10: one
+        // ask, then a hidden popup forever; stack captured over CDP).
+        row.onclick = function (e) {
+          if (e) e.stopPropagation();
+          out.open = !out.open;
+          if (out.open) { out.askedAt = 0; }
+          renderBgTasks();
+          if (out.open) bgOutStart();
+        };
+      }
       const body = document.createElement('div'); body.className = 'pi-body';
       const title = document.createElement('div'); title.className = 'pi-title';
       // `description` is the human-readable one; task_id is opaque and only useful as a fallback.
@@ -83,7 +189,68 @@
         row.appendChild(x);
       }
       list.appendChild(row);
+      if (out && out.open) {
+        const pane = document.createElement('div'); pane.className = 'bg-out'; pane.dataset.task = tid;
+        paintBgOut(pane, out);
+        list.appendChild(pane);
+      }
     });
+  }
+  /**
+   * "Run in background" on a foreground tool line (11.7) — the terminal's Ctrl+B. Offered only
+   * once the CLI has registered the running call as a task: `task_started{is_backgrounded:false,
+   * tool_use_id}` (measured 2026-10-10 on 2.1.296 — a foreground Bash gets one about 3 s in), so
+   * the button sits on lines where `background_tasks{tool_use_id}` will find something to move,
+   * and never on a launch that was background from the start. The answer rides __backgrounded;
+   * `true` removes the button (the roster frame and task_updated{is_backgrounded:true} that follow
+   * are the real state, and the turn ends with the model's own "moved to the background" reply),
+   * `false` and errors turn it into a note. The disabled error ("Background tasks are disabled
+   * in this session.", `strings`, unmeasured) ends the offer for the whole CLI process.
+   */
+  let bgOffers = {};      // task_id -> {id: tool_use_id, el}
+  let bgRefused = false;  // set by the disabled error; reset with the roster at the CLI boundary
+  function offerBackground(ev) {
+    if (bgRefused || ev.is_backgrounded !== false || !ev.tool_use_id || !ev.task_id) return;
+    const tool = toolsById[ev.tool_use_id];
+    if (!tool || !tool.el || !tool.el.isConnected || !tool.el.classList.contains('run')) return;
+    if (bgOffers[String(ev.task_id)] || tool.el.querySelector('.t-bg')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 't-bg'; b.textContent = 'Run in background';
+    b.title = 'Move this command to the background so Claude can continue';
+    b.onclick = function (e) {
+      e.stopPropagation();
+      if (b.disabled) return;
+      b.disabled = true;
+      bridge({ kind: 'backgroundTask', id: String(ev.tool_use_id) });
+    };
+    tool.el.appendChild(b);
+    bgOffers[String(ev.task_id)] = { id: String(ev.tool_use_id), el: b };
+  }
+  // A task that ended or moved takes its live button with it; a note (the answer) stays — a
+  // settled line reading "Not moved: it may have just finished" is accurate.
+  function clearBackgroundOffer(taskId) {
+    const o = taskId && bgOffers[String(taskId)];
+    if (!o) return;
+    if (o.el && !o.el.classList.contains('note')) o.el.remove();
+    delete bgOffers[String(taskId)];
+  }
+  function dropBgOffer(toolEl) {
+    const b = toolEl && toolEl.querySelector('.t-bg');
+    if (b && !b.classList.contains('note')) b.remove();
+  }
+  function onBackgrounded(ev) {
+    let key = null;
+    for (const k in bgOffers) if (bgOffers[k].id === String(ev.id)) key = k;
+    const o = key && bgOffers[key];
+    if (!o || !o.el) return;
+    const note = function (text) { o.el.classList.add('note'); o.el.disabled = true; o.el.textContent = text; };
+    if (ev.error) {
+      if (/disabled/i.test(String(ev.error))) { bgRefused = true; note('Backgrounding is off for this session.'); }
+      else { o.el.disabled = false; o.el.textContent = 'Could not move it — try again'; o.el.title = String(ev.error); }
+      return;
+    }
+    if (ev.backgrounded === false) { note('Not moved: it may have just finished or already be in the background.'); return; }
+    o.el.remove(); delete bgOffers[key];
   }
   let reqTokens = 0;          // output tokens summed across every result turn in one user request
   // uuid of this request's FIRST assistant record. The CLI writes the very same uuid into the
@@ -314,13 +481,19 @@
           onRefusalFallback(ev);
         } else if (ev.subtype === 'task_started' || ev.subtype === 'task_progress') {
           taskLine(ev, false);
+          if (ev.subtype === 'task_started') offerBackground(ev);   // 11.7: foreground call → offer
         } else if (ev.subtype === 'task_notification') {
           taskLine(ev, true);
+          clearBackgroundOffer(ev.task_id);
         } else if (ev.subtype === 'task_updated') {
           // Carries only {task_id, patch:{status,…}} — no tool_use_id and no usage — so it can
           // finalize a line that already exists but can never create one.
           const p = ev.patch || {};
           const st = taskProg[ev.task_id];
+          // "A later move to the background arrives as task_updated patch.is_backgrounded" (the
+          // 2.1.296 schema's own words; measured with the roster frame beside it) — the offer
+          // has been taken, by the panel or by the terminal's Ctrl+B.
+          if (p.is_backgrounded === true || (p.status && p.status !== 'in_progress')) clearBackgroundOffer(ev.task_id);
           if (p.status && p.status !== 'in_progress' && st) {
             if (st.el) st.el.classList.remove('run');
             // and the Agent tool line above it — this frame has no tool_use_id, which is why
@@ -505,6 +678,17 @@
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
       case '__clear':            sideReset(); return clearLogUI();
       case '__side':             return sideAnswer(ev);   // side-question answer (8.11)
+      case '__taskOutput': {     // a roster pane's poll answered (11.7); keyed by task_id
+        const s = ev.id && bgOut[String(ev.id)];
+        if (!s) return;          // the roster dropped the task meanwhile — nothing to paint on
+        s.askedAt = 0;
+        if (ev.error) { s.err = String(ev.error); }
+        else { s.got = true; s.text = taskOutText(ev.output, ev.truncated === true); s.total = Number(ev.total_bytes) || 0; s.truncated = ev.truncated === true; }
+        const pane = document.querySelector('#bgList .bg-out[data-task="' + String(ev.id).replace(/["\\]/g, '\\$&') + '"]');
+        if (pane) paintBgOut(pane, s);
+        return;
+      }
+      case '__backgrounded':     return onBackgrounded(ev);   // "Run in background" answered (11.7)
       case '__title':            return setTitle(ev.text);
       case '__mode':             return applyCliMode(ev.mode);   // persisted mode, at startup
       case '__project':          return setProjectRoot(ev.root); // shortens tool-line paths

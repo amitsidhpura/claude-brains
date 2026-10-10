@@ -527,7 +527,7 @@ an ask), `oauth_token_refresh`, `host_auth_token_refresh`.
 `channel_enable`, `rewind_files`, `rewind_conversation`, `cancel_async_message`, `read_file`,
 `stage_file`, `register_repo_root`, `add_directory`, `file_suggestions`, `seed_read_state`,
 `reload_plugins`, `reload_skills`, `apply_flag_settings` ("merges the provided settings into the
-flag settings layer"), `stop_task` (`{task_id}` from the `background_tasks_changed` roster — sent by the panel's roster ✕, 11.3; unknown ids answer success), `background_tasks` (Ctrl+B semantics), `generate_session_title`,
+flag settings layer"), `stop_task` (`{task_id}` from the `background_tasks_changed` roster — sent by the panel's roster ✕, 11.3; unknown ids answer success), `background_tasks` (`{tool_use_id}`, Ctrl+B semantics — sent by the panel's "Run in background" button, 11.7; MEASURED 2026-10-10 on 2.1.296: a running foreground Bash answers `{backgrounded:true}` with `background_tasks_changed` + `task_updated{patch:{is_backgrounded:true}}` in the same instant, then the tool_result "Command was manually backgrounded by user with ID: …" and the turn's `result`; the schema's "empty object when all foreground tasks were backgrounded" = absent → true), `get_task_output` (`{task_id}` → `{output, total_bytes, truncated}` — the panel's roster output pane, 11.7; MEASURED 2026-10-10: a running shell answers the bytes so far, an ended one its whole output + `\n\n[exited with code N]\n`, an unknown or sub-agent id the error "get_task_output: no shell or Monitor task with that task_id in this session"), `generate_session_title`,
 `rename_session`, `submit_feedback`, `side_question`, `ultrareview_launch`, `message_rated`,
 `remote_control`, `claude_authenticate`, `claude_oauth_callback`,
 `claude_oauth_wait_for_completion`, `log_otel_event`, plus loopback arms for `hook_callback`,
@@ -790,7 +790,7 @@ most of them.
   flags: `get_status` (`{sections:[{title, rows:[{label, value}]}]}`), `export_conversation`
   (`{text, default_filename}` — checklist 15.4), `get_skills_dialog`, `get_sandbox_dialog`,
   `get_chrome_dialog`, `get_chrome_browsers` / `select_chrome_browser` (unprobed), `get_memory_dialog`
-  (+`memories[]`); `get_task_output {task_id}` (accepted; unknown id → error — 11.7);
+  (+`memories[]`); (`get_task_output` and `background_tasks` were TAKEN 2026-10-10 — 11.7, § 9c);
   `mcp_read_resource {serverName, uri}` (`ui://` only); `list_directory` → "Unsupported control
   request subtype" over stdio (remote sidebar only); `claim_session` (sets the session cwd — NOT
   probed). The Claude Mods UI family, 28 subtypes `ui_attach, ui_client_fault, ui_client_module,
@@ -883,9 +883,24 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
   persisted `toolUseResult` gained `isAsync, description, resolvedModel, prompt, canReadOutputFile`.
 - Zero `isSidechain:true` across 23,123 main-transcript records; an async `Agent`'s persisted
   `toolUseResult` is launch metadata only — `{agentId, outputFile, status}` (1).
-- `background_tasks_changed.tasks[]` items are `{task_id, task_type, description}`;
+- `background_tasks_changed.tasks[]` items are `{task_id, task_type, description}` (+ `run_id`
+  from 2.1.296 — "equal on every task_* event, background_tasks_changed entry and saved
+  notification of that run; a resumed task keeps its task_id and gets a new one");
   `task_type:"local_bash"` does NOT suspend the turn (the CLI's busy set excludes it — the request's
   `result` is the true end); any other `task_type` suspends (4).
+- **Shell task order and the foreground task (measured 2026-10-10, 2.1.296, stdio probe for 11.7):**
+  a `run_in_background:true` Bash emits `background_tasks_changed` BEFORE its `task_started{…,
+  is_backgrounded:true, task_type:"local_bash"}` (same instant, roster first); its tool_result is
+  "Command running in background with ID: <task_id>. Output is being written to: <output_file>…"
+  (`toolUseResult{backgroundTaskId, interrupted, isImage, noOutputExpected, stderr, stdout}`). A
+  FOREGROUND Bash the turn blocks on gets `task_started{is_backgrounded:false, task_type:
+  "local_bash"}` ~3 s after launch with NO roster frame (it is not a background task yet) — the
+  schema: "A later move to the background arrives as task_updated patch.is_backgrounded". A
+  completed background shell ends `task_updated{patch:{status:"completed", end_time}}` +
+  `task_notification{status:"completed", output_file, summary:"Background command \"…\" completed
+  (exit code 0)"}` + `background_tasks_changed{tasks:[]}`, and then WAKES the model: an extra
+  turn (`system/init` + `result`, the result carrying an `origin` key the ordinary one lacks)
+  answers the completion before the next prompt's turn.
 - Only `Agent` and `WebFetch` inputs carry `prompt`; `TaskUpdate` input is `{taskId, status}`
   (`activeForm` is on `TaskCreate` beside `description`) (3, 5).
 

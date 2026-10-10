@@ -716,7 +716,9 @@ README.md
            (no verdict yet) and breathes on --pulse-name, the same rule .think-live::before above
            wears — so the two "still going" signals in a turn move on one heartbeat. The dot goes
            green when the result lands, red if it failed. Every other tool line here is FINISHED. -->
-      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still in flight</span></div>
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still in flight</span><button type="button" class="t-bg" title="Move this command to the background so Claude can continue">Run in background</button></div>
+      <!-- 11.7: the same element after the CLI answered backgrounded:false — a muted note on the line -->
+      <div class="tool-line run"><b>Bash</b><span class="t-desc">npm run build</span><button type="button" class="t-bg note" disabled>Not moved: it may have just finished or already be in the background.</button></div>
       <!-- MCP tool: one shared rule for every tool name — drop the `mcp_` prefix, Pascal-case the
            rest on underscores. `mcp__playwright__browser_click` -> `PlaywrightBrowserClick`, so the
            server stays visible and it sits beside Read/Bash/ExitPlanMode. -->
@@ -1091,10 +1093,22 @@ README.md
             <div id="bgMenu" class="popup nosel">
               <div class="popup-h"><span>Background tasks</span></div>
               <div id="bgList">
-                <div class="popup-item bg-row"><div class="pi-body"><div class="pi-title" title="Download and unpack the Android command-line tools and accept licenses">Download and unpack the Android command-line tools and accept licenses</div><div class="pi-desc">Explore</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <div class="popup-item bg-row" aria-expanded="false"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><div class="pi-body"><div class="pi-title" title="Download and unpack the Android command-line tools and accept licenses">Download and unpack the Android command-line tools and accept licenses</div><div class="pi-desc">Explore</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
                 <!-- .stopping: the ✕ was clicked and the CLI has not answered with a new roster yet -->
-                <div class="popup-item bg-row stopping"><div class="pi-body"><div class="pi-title">Warm the build cache</div><div class="pi-desc">local_bash</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
-                <div class="popup-item bg-row"><div class="pi-body"><div class="pi-title">Run the full test suite</div><div class="pi-desc">general-purpose</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <div class="popup-item bg-row stopping" aria-expanded="false"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><div class="pi-body"><div class="pi-title">Warm the build cache</div><div class="pi-desc">local_bash</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <div class="popup-item bg-row" aria-expanded="false"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><div class="pi-body"><div class="pi-title">Run the full test suite</div><div class="pi-desc">general-purpose</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <!-- 11.7: a row opened on its output pane (chevron down, aria-expanded) — a truncated stream with the size note -->
+                <div class="popup-item bg-row" aria-expanded="true"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><div class="pi-body"><div class="pi-title">npm run build</div><div class="pi-desc">local_bash</div></div><button class="bg-x" title="Stop this task"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                <div class="bg-out" data-task="bg_03"><pre tabindex="0">&gt; build
+&gt; vite build
+
+vite v5.4.2 building for production...
+transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing the end of 2 MB of output.</div></div>
+                <!-- …and the two meta-only states -->
+                <div class="popup-item bg-row" aria-expanded="true"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><div class="pi-body"><div class="pi-title">Watch the test runner</div><div class="pi-desc">local_bash</div></div></div>
+                <div class="bg-out"><div class="bg-out-meta">No output yet.</div></div>
+                <div class="popup-item bg-row" aria-expanded="true"><svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><div class="pi-body"><div class="pi-title">Audit the API surface</div><div class="pi-desc">Explore</div></div></div>
+                <div class="bg-out"><div class="bg-out-meta">Output is not available.</div></div>
               </div>
             </div>
           </span>

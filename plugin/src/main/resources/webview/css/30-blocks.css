@@ -133,6 +133,16 @@
    beside it is the flexible part — fillPath's middle-ellipsis absorbs ALL the shrink (fixture 71). */
 .tool-line .t-sfx { color: var(--dot); margin-left: 5px; font-size: var(--fs-sm);
   white-space: nowrap; flex: 0 0 auto; }
+/* "Run in background" (11.7): a link-styled text button at the END of a running tool line, drawn
+   only after the CLI has registered the foreground call as a task (task_started{is_backgrounded:
+   false}, a few seconds in), so it sits on lines where the CLI will find something to move. The
+   same element carries the answer as a muted note (.note) — a settled line may keep the note. */
+.tool-line .t-bg { flex: 0 0 auto; margin-left: 10px; padding: 0; border: 0; background: transparent;
+  color: var(--blue); font: inherit; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; }
+.tool-line .t-bg:hover { text-decoration: underline; }
+.tool-line .t-bg:disabled { cursor: default; color: var(--muted); text-decoration: none; }
+.tool-line .t-bg.note { flex: 0 1 auto; min-width: 0; color: var(--muted); cursor: default;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tool-line .t-desc.path, .card-h code { cursor: pointer; }
 .tool-line .t-desc.path:hover, .card-h code:hover { color: var(--blue); text-decoration: underline; }
 /* A path is clamped to ONE line: it is already project-relative by the time it gets here, and what

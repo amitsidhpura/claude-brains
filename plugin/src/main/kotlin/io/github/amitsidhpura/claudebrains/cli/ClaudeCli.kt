@@ -459,6 +459,38 @@ class ClaudeCli(
         put("task_id", taskId)
     })
 
+    /** Host-initiated: the captured output of ONE shell (or Monitor) task, running or ended
+     * (11.7). Schema `get_task_output{task_id}`; the `task_id` is the one `task_started` /
+     * `background_tasks_changed` carry. Success is `{output, total_bytes, truncated}` — MEASURED
+     * 2026-10-10 on 2.1.296 over stdio: a running shell answers the bytes so far (`""`, 0, false
+     * before the first line), an ended one its whole output with the CLI's own
+     * `\n\n[exited with code N]\n` tail, an unknown id the error "get_task_output: no shell or
+     * Monitor task with that task_id in this session" (a sub-agent's id answers that too — only
+     * shells and Monitors keep a captured stream). The reference client polls this once a second
+     * while its output section is open; so does the panel. */
+    fun getTaskOutput(taskId: String, onAnswer: (response: JsonObject?, error: String?) -> Unit) =
+        sendControlRequest(buildJsonObject {
+            put("subtype", "get_task_output")
+            put("task_id", taskId)
+        }, onAnswer)
+
+    /** Host-initiated: move a FOREGROUND tool call (a Bash the turn is blocking on) to the
+     * background, the terminal's Ctrl+B and the reference client's "Run in background" (11.7).
+     * Schema `background_tasks{tool_use_id}`; the answer is `{backgrounded}` ("whether a matching
+     * foreground task was found and backgrounded" — the binary's own schema text). MEASURED
+     * 2026-10-10 on 2.1.296: a running foreground Bash answered `{backgrounded:true}` and, in the
+     * same instant, `background_tasks_changed` listing it, `task_updated{patch:{is_backgrounded:
+     * true}}`, then the tool_result "Command was manually backgrounded by user with ID: …" and
+     * the turn's `result` — the model answers with the command still running. The CLI only
+     * registers a foreground shell as a task a few seconds in (`task_started{is_backgrounded:
+     * false}` at +3 s), which is the frame the panel's offer waits for. The "disabled" answer
+     * is the error "Background tasks are disabled in this session." (`strings`, unmeasured). */
+    fun backgroundTask(toolUseId: String, onAnswer: (response: JsonObject?, error: String?) -> Unit) =
+        sendControlRequest(buildJsonObject {
+            put("subtype", "background_tasks")
+            put("tool_use_id", toolUseId)
+        }, onAnswer)
+
     /**
      * Host-initiated: switch the model for this session (e.g. "sonnet", "opus[1m]", "default").
      * Answered — not fire-and-forget since 2.1.251: a user's `PreModelSwitch` hook runs for this

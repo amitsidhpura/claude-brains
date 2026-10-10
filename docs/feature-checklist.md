@@ -17,7 +17,7 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 97 ✅ · 0 🟥 · 0 🟧 · 2 ⬜ · 46 ➖ (145 rows) — 2 open rows, all awaiting a decision
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 98 ✅ · 0 🟥 · 0 🟧 · 1 ⬜ · 46 ➖ (145 rows) — 1 open row, awaiting a decision
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
 - **Awaiting a decision ([DECIDE]):** three, all from the 2.1.296 audit 2026-10-10 — one new row
   (11.7 background task output) and two re-opened (9.9 the 1M switch — measured inert on 2.1.296;
@@ -1447,7 +1447,7 @@ auto-include selection, voice.
   2.1.269: VS Code's Switch-account screen got a Cancel button — still the terminal's half.
   </details>
 
-## 11. ⬜ Extensibility (MCP / plugins / skills / hooks / subagents)
+## 11. ✅ Extensibility (MCP / plugins / skills / hooks / subagents)
 - **11.1** ➖ **Plugin / MCP / hooks / agents management UI** — the terminal's half (`/plugin`,
       `/mcp`, `/hooks`, `/agents`, `~/.claude`)
   <!-- --><details><summary>Read more…</summary>
@@ -1487,7 +1487,8 @@ auto-include selection, voice.
   tasks (2.1.250 schema: "hosts should exclude them from activity indicators") are dropped from
   the roster and the suspend count — UNMEASURED (no live frame yet): the first one seen is kept
   verbatim as `window.__ambientSeen` + a console warning, read it over CDP the day it appears.
-  Fixture 61. Sibling `background_tasks {tool_use_id?}` (Ctrl+B semantics) not taken.
+  Fixture 61. Sibling `background_tasks {tool_use_id}` (Ctrl+B semantics) taken 2026-10-10 as the
+  "Run in background" button (11.7).
   </details>
 - **11.4** ➖ **Sub-agent work outcome** — declined: task status is the task's LIFECYCLE, never the
   work's verdict, so there is nothing measurable to build on; the summary prose already rides the
@@ -1520,22 +1521,48 @@ auto-include selection, voice.
   (11.2). `/mcp`, `/plugins`, `/agents` can also FIX things; VS Code has no such view. Revivable
   as [SM]: a popup listing `server · status` (+ agents/skills/plugins) from the init frame.
   </details>
-- **11.7** ⬜ [MD] **Background task output + Run in background** [NEW] [DECIDE] — VS Code 2.1.287
-  shows the output of background shells and Monitors on their agent-map cards and offers "Run in
-  background" on a running command or sub-agent. The CLI side is the new `get_task_output
-  {task_id}` control request (PROBED 2026-10-10: an unknown id answers the error "no shell or
-  Monitor task with that task_id in this session"; the success shape needs a live task). Our 11.3
-  roster rows show a name and a ✕ only.
+- **11.7** ✅ [MD] **Background task output + Run in background** [NEW] — built 2026-10-10: every
+  roster row (11.3) toggles an output pane under it — the task's captured stream, asked of the
+  CLI once a second (`get_task_output{task_id}`) while the pane is open and the popup shown,
+  pinned to the tail, "Showing the end of N of output." when the CLI cut the head, "Output is not
+  available." (and no more asks) for a row that keeps no stream (a sub-agent); a running
+  FOREGROUND tool line grows a "Run in background" button once the CLI has registered the call as
+  a task, which sends `background_tasks{tool_use_id}` — the terminal's Ctrl+B.
   <!-- --><details><summary>Read more…</summary>
-  2.1.296 audit (2026-10-10). `task_id` is "the task_id from task_started or
-  background_tasks_changed" (the roster already holds it). "Run in background" is a webview→host
-  RPC (`case"run_in_background"`) in the extension; the CLI request it maps to was not identified
-  — no `run_in_background` control subtype exists, and `system/init.capabilities` now lists
-  `interrupt_send_now_v1` (the TUI's send-now "moves running tools to the background instead of
-  cancelling the turn", 2.1.281) — probe before building. Related new frames: `turn_preempted
-  {reason:"rapid_followup", uuid}` and `result.queued_turn_count` (1.9), and 2.1.286's "Stop and
-  Escape end only the current turn; background agents keep running" (1.7 — whether our `interrupt`
-  does the same is unmeasured).
+  MEASURED 2026-10-10 on 2.1.296 over stdio (scratch `CLAUDE_CONFIG_DIR`, haiku, `--permission-mode
+  default`; `tools/probe_stdio.py`'s shape, tape in the session scratchpad): a `run_in_background:true`
+  Bash → `background_tasks_changed` (items now carry `run_id`) and THEN `task_started{…,
+  is_backgrounded:true, task_type:"local_bash"}`; `get_task_output{task_id}` → `{output,
+  total_bytes, truncated}` (`""`/0/false before the first line, growing while it runs, the ended
+  task's whole output + `\n\n[exited with code 0]\n`); an unknown id → error "get_task_output: no
+  shell or Monitor task with that task_id in this session". A FOREGROUND Bash gets
+  `task_started{is_backgrounded:false}` ~3 s after launch (that frame gates the offer — the CLI
+  will find something to move); `background_tasks{tool_use_id}` → `{backgrounded:true}` with
+  `background_tasks_changed` listing it + `task_updated{patch:{is_backgrounded:true}}` in the same
+  instant, then the tool_result "Command was manually backgrounded by user with ID: … If it is
+  still running after 30m in the background, it will be stopped and you will be notified." and the
+  turn's `result` (the model replies with the command still running); `get_task_output` keeps
+  answering for it. The reference client's mapping (`run_in_background` webview RPC →
+  `query.backgroundTasks(toolUseId)` → `background_tasks{tool_use_id}`, response `.backgrounded ?? true`)
+  and its render rules (poll every 1000 ms while running and visible, drop the partial first line
+  when truncated, honour `\r`, "No output yet." / "No output." / "Output is not available.") were
+  read out of the 2.1.296 extension + webview. UNMEASURED: the disabled answer ("Background tasks
+  are disabled in this session.", `strings`; `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`) and a Monitor
+  task. Design: the pane lives with its roster row — when the task ends the roster drops it and
+  the pane goes (the timeline's task line says how it ended; the model usually reads the
+  `output_file` itself); a sub-agent's row answers "Output is not available." on the first ask.
+  Our wording is shorter than the reference's ("Not moved: it may have just finished or already be
+  in the background.", "Backgrounding is off for this session.", "Could not move it — try again").
+  Wire: bridge `taskOutput{id}` / `backgroundTask{id}` → `ClaudeCli.getTaskOutput` /
+  `backgroundTask` → `__taskOutput{id, output, total_bytes, truncated | error}` /
+  `__backgrounded{id, backgrounded | error}`. Fixture 95, 45 asserts (negative control on the
+  pre-change sandbox: first assert failed, step aborted on the missing button; its first run on
+  the changed build caught the row click closing the popup — the list is rebuilt before the click
+  reaches the document handler, so stopPropagation like the ✕). Related, still unmeasured:
+  `turn_preempted{reason:"rapid_followup"}` / `result.queued_turn_count` (1.9) and whether our
+  `interrupt` leaves background agents running (1.7). A completed background shell also WAKES the
+  model: the probe saw an extra `result` (with an `origin` key) answering the completion
+  notification before the next prompt's turn.
   </details>
 
 ## 12. ✅ UI placement, windows, keys

@@ -174,8 +174,25 @@
     bgTasks = [
       { task_id: 'bg_01', task_type: 'Explore', description: 'Audit chat.css for optimization' },
       { task_id: 'bg_02', task_type: 'general-purpose', description: 'Run the full test suite' },
+      { task_id: 'bg_03', task_type: 'local_bash', description: 'npm run build' },
     ];
+    // …with the shell's output pane open (11.7) — painted from a state the way a __taskOutput
+    // answer would leave it; askedAt now, so the gallery never asks the bridge for more.
+    bgOut = { bg_03: { open: true, got: true, truncated: true, total: 2097152, err: null, pinned: true, askedAt: Date.now(),
+      text: '> build\n> vite build\n\nvite v5.4.2 building for production...\ntransforming (412) src/components/App.tsx' } };
     renderBgTasks();
+
+    // "Run in background" on a running foreground Bash (11.7), through the real path: a
+    // task_started{is_backgrounded:false} for a tool line that is still .run grows the offer; the
+    // second line shows the CLI's "not found" answer as the note the same element becomes.
+    { const tb = track(toolLine('Bash')); tb.classList.add('run');
+      toolsById['tu-fgbash'] = { el: tb, name: 'Bash', io: null };
+      tb.after(ioBox([['IN', 'npm run build']]));
+      offerBackground({ task_id: 'tk-fg1', tool_use_id: 'tu-fgbash', is_backgrounded: false });
+      const tb2 = track(toolLine('Bash')); tb2.classList.add('run');
+      toolsById['tu-fgbash2'] = { el: tb2, name: 'Bash', io: null };
+      offerBackground({ task_id: 'tk-fg2', tool_use_id: 'tu-fgbash2', is_backgrounded: false });
+      onBackgrounded({ id: 'tu-fgbash2', backgrounded: false }); }
 
     // sub-agent brief (item 3) — the description names the errand, the IN box is the errand itself.
     // Same box and same cut marker as a Bash command, because it is the same idea: what it was ASKED.

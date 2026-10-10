@@ -495,6 +495,19 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     fun stopTask(taskId: String) = cli?.stopTask(taskId)
 
+    /** Output of a shell/Monitor task (11.7); see [ClaudeCli.getTaskOutput]. No CLI → the panel
+     * hears an error and stops polling. */
+    fun getTaskOutput(taskId: String, onAnswer: (response: kotlinx.serialization.json.JsonObject?, error: String?) -> Unit) {
+        val c = cli ?: return onAnswer(null, "claude is not running")
+        c.getTaskOutput(taskId, onAnswer)
+    }
+
+    /** Move a foreground tool call to the background (11.7); see [ClaudeCli.backgroundTask]. */
+    fun backgroundTask(toolUseId: String, onAnswer: (response: kotlinx.serialization.json.JsonObject?, error: String?) -> Unit) {
+        val c = cli ?: return onAnswer(null, "claude is not running")
+        c.backgroundTask(toolUseId, onAnswer)
+    }
+
     /**
      * Answer a host dialog (4.10) with the kind's own result token (`continue` / `interrupt` for
      * the auto-mode server-fallback notice). FIRST ANSWER WINS, and a dialog the CLI already

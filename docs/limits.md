@@ -75,6 +75,7 @@ Fade colour stays per-surface — a user message must blend to its own bubble, n
 | history list `.hist-list` | 5 rows, MEASURED at render (`capToRows`); 271px CSS fallback |
 | slash-command menu `#slashList` | 5 rows, MEASURED at render (`capToRows`); 274px CSS fallback |
 | composer textarea `#input` | 200px (~10 lines) |
+| roster output pane `.bg-out pre` (11.7) | 9 lines (`calc(9 * 1.5em)`, webview/css/60-composer.css), scrolled, pinned to the tail until the user scrolls up (4px slack); the text is whatever `get_task_output` returns — the CLI caps the stream itself and says so with `truncated` + `total_bytes` ("Showing the end of N of output."); asked once a second while open and the popup shown |
 | side-question list `.side-list` | 40vh (webview/css/50-side.css); the Q/A pairs scroll, the panel's header and input stay put |
 | side-question textarea `#sideInput` | 120px (~6 lines), one line (20px) at rest like `#input` |
 | tool-line file path `.t-desc.path` | one line, always. Shown project-relative (root from ChatPanel's `__project`, refreshed by `system/init`'s `cwd`), then split into `.p-head` (shrinks, ellipsises) + `.p-tail` (never shrinks: the filename, plus its parent folder when the two fit `PATH_TAIL_MAX` = 40 chars) so the ellipsis lands in the middle. The DISPLAY is shortened; the CLICK TARGET is not — the whole absolute path rides on `dataset.path` (`fullPath` from SessionStore on replay), which is also why a path past `DESC_MAX` is no longer *opened* in its truncated form. Pinned by `SessionStorePathTest` and fixture 40. |

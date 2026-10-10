@@ -260,6 +260,38 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "stop" -> session.interrupt()
             // ✕ on a background-task roster row (11.3): kill that one task, not the turn.
             "stopTask" -> msg["id"]?.jsonPrimitive?.content?.let { session.stopTask(it) }
+            // A roster row's output pane asked for the task's captured output (11.7). The answer
+            // rides a __taskOutput frame keyed by task_id; the page re-asks once a second while
+            // the pane is open and stops on the first error (an ended-and-dropped task, a
+            // sub-agent id, no CLI).
+            "taskOutput" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
+                session.getTaskOutput(id) { response, error ->
+                    pushFrame(buildJsonObject {
+                        put("type", "__taskOutput")
+                        put("id", id)
+                        if (error != null) put("error", error)
+                        else {
+                            put("output", response?.get("output") ?: JsonPrimitive(""))
+                            put("total_bytes", response?.get("total_bytes") ?: JsonPrimitive(0))
+                            put("truncated", response?.get("truncated") ?: JsonPrimitive(false))
+                        }
+                    })
+                }
+            }
+            // "Run in background" on a foreground tool line (11.7): the CLI says whether it found
+            // and moved the call; the roster / task_updated frames that follow are the real state.
+            "backgroundTask" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
+                session.backgroundTask(id) { response, error ->
+                    pushFrame(buildJsonObject {
+                        put("type", "__backgrounded")
+                        put("id", id)
+                        if (error != null) put("error", error)
+                        // Absent = true, the reference client's own reading of the schema
+                        // ("Empty object when all foreground tasks were backgrounded").
+                        else put("backgrounded", response?.get("backgrounded") ?: JsonPrimitive(true))
+                    })
+                }
+            }
             // Side question (8.11): the page's own row id rides the request and comes back on the
             // `__side` frame, so the answer lands on the row that asked — order is not assumed.
             "side" -> {

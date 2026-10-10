@@ -1,0 +1,581 @@
+{
+  "item": "background task output + Run in background (11.7): a roster row opens a polled output pane; a running foreground tool line offers to move the call to the background",
+  "branch": "offerBackground(): task_started{is_backgrounded:false, tool_use_id} on a .run tool line appends .t-bg → click → bridge{kind:'backgroundTask', id: tool_use_id} once; __backgrounded{backgrounded:true} removes it, {backgrounded:false} / errors make it a .note, the disabled error ends offers (bgRefused). renderBgTasks(): every row toggles a .bg-out pane; bgOutTick asks bridge{kind:'taskOutput', id: task_id} once a second while the popup is shown and the pane open, one ask in flight; __taskOutput paints the pre through taskOutText (trailing newline, \\r, truncated head), an error answer ends polling; the roster dropping the task drops the pane and the timer.",
+  "provenance": "PROBED 2026-10-10 on 2.1.296 over stdio (scratch CLAUDE_CONFIG_DIR, haiku, --permission-mode default): a foreground Bash gets task_started{task_id, run_id, tool_use_id, description, is_backgrounded:false, task_type:'local_bash'} ~3 s in; background_tasks{tool_use_id} answered {backgrounded:true} with background_tasks_changed (items now carry run_id) + task_updated{patch:{is_backgrounded:true}} in the same instant, then the tool_result 'Command was manually backgrounded by user with ID: …' and the turn's result. get_task_output{task_id} answered {output, total_bytes, truncated} ('' / 0 / false before the first line; the ended task's whole output + '\\n\\n[exited with code 0]\\n'); an unknown id the error 'get_task_output: no shell or Monitor task with that task_id in this session'. The __backgrounded / __taskOutput frames are OUR Kotlin relay (ChatPanel), shaped 1:1 from those answers; the disabled error text is from `strings` (unmeasured); the \\r / truncated-head display rules are the reference client's (2.1.296 webview, read). NEGATIVE CONTROLS: step 10 (a background-from-the-start launch draws no button), step 6b (no ask while the popup is hidden), step 8 (no ask after an error answer), step 12b (a settled line drops a live button, keeps a note). RUNS 2026-10-10: on the PRE-CHANGE sandbox (launched before any edit) the first discriminating assert failed (0 offers) and step 1 aborted on the missing button; on the first changed build 40/44 — steps 6a/6b/8 showed ONE ask ever (the row click bubbled to the document handler with its row already rebuilt and detached, so the popup closed as an 'outside click' — stack captured over CDP), fixed with stopPropagation on the row, plus the step-4 popup-stays-shown assert that only the fix passes; then 45/45.",
+  "steps": [
+    {
+      "note": "1 — a running foreground Bash + task_started{is_backgrounded:false}: the tool line grows a 'Run in background' button",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge95) { window.__realBridge95 = window.__bridge; } window.__tape95 = []; window.__bridge = function(j){ window.__tape95.push(JSON.parse(j)); }; addUserMessage('run the loop', [], Date.now());",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "tu-fg",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "t_fg",
+          "run_id": "0mv27zvsc-ed98a6f8",
+          "tool_use_id": "tu-fg",
+          "description": "Run 20-second loop in foreground",
+          "is_backgrounded": false,
+          "task_type": "local_bash"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg').length",
+          "equals": 1,
+          "why": "exactly one offer on the line"
+        },
+        {
+          "js": "document.querySelector('.tool-line .t-bg').textContent",
+          "equals": "Run in background",
+          "why": "the reference client's wording"
+        },
+        {
+          "js": "document.querySelector('.tool-line').classList.contains('run')",
+          "equals": true,
+          "why": "the line is still in flight"
+        },
+        {
+          "js": "document.querySelector('.tool-line .t-bg').disabled",
+          "equals": false,
+          "why": "clickable until clicked"
+        }
+      ]
+    },
+    {
+      "note": "2 — click: ONE backgroundTask bridge call carrying the tool_use_id; a second click is swallowed; the button disables",
+      "setup": "var b95=document.querySelector('.tool-line .t-bg'); b95.click(); b95.click();",
+      "expect": [
+        {
+          "js": "JSON.stringify(window.__tape95.filter(function(o){return o.kind==='backgroundTask'}).map(function(o){return o.id}))",
+          "equals": "[\"tu-fg\"]",
+          "why": "one call, the tool_use_id (background_tasks{tool_use_id} is what Kotlin sends)"
+        },
+        {
+          "js": "document.querySelector('.tool-line .t-bg').disabled",
+          "equals": true,
+          "why": "no second click while the CLI decides"
+        }
+      ]
+    },
+    {
+      "note": "3 — the CLI's answer true: the button goes; the roster frame + task_updated{is_backgrounded:true} that follow (measured together) list the task; the measured tool_result settles the line",
+      "frames": [
+        {
+          "type": "__backgrounded",
+          "id": "tu-fg",
+          "backgrounded": true
+        },
+        {
+          "type": "system",
+          "subtype": "background_tasks_changed",
+          "tasks": [
+            {
+              "task_id": "t_fg",
+              "run_id": "0mv27zvsc-ed98a6f8",
+              "task_type": "local_bash",
+              "description": "Run 20-second loop in foreground"
+            }
+          ]
+        },
+        {
+          "type": "system",
+          "subtype": "task_updated",
+          "task_id": "t_fg",
+          "run_id": "0mv27zvsc-ed98a6f8",
+          "patch": {
+            "is_backgrounded": true
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "tu-fg",
+                "content": "Command was manually backgrounded by user with ID: t_fg. Output is being written to: /tmp/x/tasks/t_fg.output. If it is still running after 30m in the background, it will be stopped and you will be notified."
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg').length",
+          "equals": 0,
+          "why": "a moved call offers nothing more"
+        },
+        {
+          "js": "JSON.stringify(Object.keys(bgOffers))",
+          "equals": "[]",
+          "why": "the offer record is gone too"
+        },
+        {
+          "js": "document.querySelectorAll('#bgList .bg-row').length",
+          "equals": 1,
+          "why": "the roster lists the moved shell"
+        },
+        {
+          "js": "document.getElementById('bgChip').textContent",
+          "equals": "1 task",
+          "why": "chip reflects the roster"
+        },
+        {
+          "js": "document.querySelector('.tool-line').classList.contains('run')",
+          "equals": false,
+          "why": "the 'manually backgrounded' tool_result settles the line (not internal metadata)"
+        }
+      ]
+    },
+    {
+      "note": "4 — open the row's output pane (popup shown): one taskOutput ask with the task_id, the pane present and empty until the answer, the poll timer running",
+      "setup": "document.getElementById('bgMenu').classList.add('show'); document.querySelector('#bgList .bg-row').click();",
+      "expect": [
+        {
+          "js": "JSON.stringify(window.__tape95.filter(function(o){return o.kind==='taskOutput'}).map(function(o){return o.id}))",
+          "equals": "[\"t_fg\"]",
+          "why": "one ask, keyed by task_id (get_task_output{task_id})"
+        },
+        {
+          "js": "document.querySelectorAll('#bgList .bg-out').length",
+          "equals": 1,
+          "why": "the pane sits under its row"
+        },
+        {
+          "js": "document.querySelector('#bgList .bg-row').getAttribute('aria-expanded')",
+          "equals": "true",
+          "why": "the row says it is open (chevron rotates on this)"
+        },
+        {
+          "js": "document.querySelector('#bgList .bg-out').textContent",
+          "equals": "",
+          "why": "nothing painted before the first answer"
+        },
+        {
+          "js": "bgOutTimer !== null",
+          "equals": true,
+          "why": "the once-a-second timer is running"
+        },
+        {
+          "js": "document.getElementById('bgMenu').classList.contains('show')",
+          "equals": true,
+          "why": "the row click must not bubble to the document handler that closes popups (it did, 2026-10-10: the poll then saw a hidden popup and never re-asked)"
+        }
+      ]
+    },
+    {
+      "note": "5 — the answer paints the pre: one trailing newline dropped, \\r honoured like a terminal (the text after the last \\r on a line), no size note when not truncated",
+      "frames": [
+        {
+          "type": "__taskOutput",
+          "id": "t_fg",
+          "output": "fg 1\nfg 2\r\n50%\r100%\nfg 4\n",
+          "total_bytes": 30,
+          "truncated": false
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelector('#bgList .bg-out pre').textContent",
+          "equals": "fg 1\nfg 2\n100%\nfg 4",
+          "why": "taskOutText: CRLF line kept, overwritten progress shows its last state, trailing newline gone"
+        },
+        {
+          "js": "document.querySelectorAll('#bgList .bg-out .bg-out-meta').length",
+          "equals": 0,
+          "why": "no 'Showing the end of…' note on an untruncated stream"
+        },
+        {
+          "js": "window.__tape95.filter(function(o){return o.kind==='taskOutput'}).length",
+          "atLeast": 1,
+          "why": "sanity: the ask count is readable"
+        }
+      ]
+    },
+    {
+      "note": "6a — the poll continues once a second after an answer: 1.3 s later exactly one more ask (one in flight at a time, so not two)",
+      "expect": [
+        {
+          "js": "new Promise(function(r){ setTimeout(function(){ r(window.__tape95.filter(function(o){return o.kind==='taskOutput'}).length); }, 1300); })",
+          "equals": 2,
+          "why": "the second ask came within a second of the answer and nothing re-asked while it is unanswered"
+        }
+      ]
+    },
+    {
+      "note": "6b — negative control: with the popup hidden nothing is asked, even after an answer frees the slot",
+      "setup": "document.getElementById('bgMenu').classList.remove('show');",
+      "frames": [
+        {
+          "type": "__taskOutput",
+          "id": "t_fg",
+          "output": "fg 1\nfg 2\nfg 3\n",
+          "total_bytes": 15,
+          "truncated": false
+        }
+      ],
+      "expect": [
+        {
+          "js": "new Promise(function(r){ setTimeout(function(){ r(window.__tape95.filter(function(o){return o.kind==='taskOutput'}).length); }, 1300); })",
+          "equals": 2,
+          "why": "a hidden popup polls nothing"
+        },
+        {
+          "js": "document.querySelector('#bgList .bg-out pre').textContent",
+          "equals": "fg 1\nfg 2\nfg 3",
+          "why": "the answer still repainted the pane in place"
+        }
+      ]
+    },
+    {
+      "note": "7 — truncated: the partial first line goes and the note names the size (fmtSize of total_bytes)",
+      "setup": "document.getElementById('bgMenu').classList.add('show');",
+      "frames": [
+        {
+          "type": "__taskOutput",
+          "id": "t_fg",
+          "output": "rtial line\nline A\nline B\n",
+          "total_bytes": 2097152,
+          "truncated": true
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelector('#bgList .bg-out pre').textContent",
+          "equals": "line A\nline B",
+          "why": "the cut head's partial first line is dropped (reference client rule)"
+        },
+        {
+          "js": "document.querySelector('#bgList .bg-out .bg-out-meta').textContent",
+          "equals": "Showing the end of 2 MB of output.",
+          "why": "the size note"
+        }
+      ]
+    },
+    {
+      "note": "8 — an error answer ('no shell or Monitor task…', the measured text) ends polling for that task: the pane says so and no ask follows in 1.3 s",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__taskOutput', id:'t_fg', error:'get_task_output: no shell or Monitor task with that task_id in this session'})); window.__n95 = window.__tape95.filter(function(o){return o.kind==='taskOutput'}).length;",
+      "expect": [
+        {
+          "js": "document.querySelector('#bgList .bg-out .bg-out-meta').textContent",
+          "equals": "Output is not available.",
+          "why": "the honest reading of the error"
+        },
+        {
+          "js": "document.querySelectorAll('#bgList .bg-out pre').length",
+          "equals": 0,
+          "why": "the stale stream is gone"
+        },
+        {
+          "js": "new Promise(function(r){ setTimeout(function(){ r(window.__tape95.filter(function(o){return o.kind==='taskOutput'}).length - window.__n95); }, 1300); })",
+          "equals": 0,
+          "why": "no further ask for an errored task"
+        }
+      ]
+    },
+    {
+      "note": "9 — the roster drops the task: pane, state and timer go with the row",
+      "frames": [
+        {
+          "type": "system",
+          "subtype": "background_tasks_changed",
+          "tasks": []
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('#bgList .bg-out').length",
+          "equals": 0,
+          "why": "no pane without a row"
+        },
+        {
+          "js": "bgOutTimer === null",
+          "equals": true,
+          "why": "nothing left to poll"
+        },
+        {
+          "js": "JSON.stringify(Object.keys(bgOut))",
+          "equals": "[]",
+          "why": "state cleared with the roster"
+        }
+      ]
+    },
+    {
+      "note": "10 — negative control: a launch that was background from the start (is_backgrounded:true, the measured frame for run_in_background:true) draws no button",
+      "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run it in the background', [], Date.now());",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {
+              "type": "tool_use",
+              "id": "tu-bg",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 0
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "background_tasks_changed",
+          "tasks": [
+            {
+              "task_id": "t_bg",
+              "run_id": "0mv27zi41-96ef4175",
+              "task_type": "local_bash",
+              "description": "Run timed loop in background"
+            }
+          ]
+        },
+        {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "t_bg",
+          "run_id": "0mv27zi41-96ef4175",
+          "tool_use_id": "tu-bg",
+          "description": "Run timed loop in background",
+          "is_backgrounded": true,
+          "task_type": "local_bash"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg').length",
+          "equals": 0,
+          "why": "nothing to move — it is already in the background"
+        },
+        {
+          "js": "document.querySelectorAll('#bgList .bg-row').length",
+          "equals": 1,
+          "why": "the roster still lists it (11.3 unchanged)"
+        }
+      ]
+    },
+    {
+      "note": "11 — the disabled error turns the offer into the session note and ends offers for this CLI: a later foreground task_started draws no button",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 1,
+            "content_block": {
+              "type": "tool_use",
+              "id": "tu-fg2",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 1
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "t_fg2",
+          "run_id": "r2",
+          "tool_use_id": "tu-fg2",
+          "description": "second loop",
+          "is_backgrounded": false,
+          "task_type": "local_bash"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg').length",
+          "equals": 1,
+          "why": "the foreground call is offered"
+        },
+        {
+          "js": "(function(){ document.querySelector('.tool-line .t-bg').click(); window.onClaudeEvent(JSON.stringify({type:'__backgrounded', id:'tu-fg2', error:'Background tasks are disabled in this session.'})); return document.querySelector('.tool-line .t-bg.note').textContent; })()",
+          "equals": "Backgrounding is off for this session.",
+          "why": "the disabled answer becomes the note on the same element"
+        },
+        {
+          "js": "bgRefused",
+          "equals": true,
+          "why": "remembered for the CLI process"
+        },
+        {
+          "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'stream_event', event:{type:'content_block_start', index:2, content_block:{type:'tool_use', id:'tu-fg3', name:'Bash'}}})); window.onClaudeEvent(JSON.stringify({type:'stream_event', event:{type:'content_block_stop', index:2}})); window.onClaudeEvent(JSON.stringify({type:'system', subtype:'task_started', task_id:'t_fg3', run_id:'r3', tool_use_id:'tu-fg3', description:'third loop', is_backgrounded:false, task_type:'local_bash'})); return document.querySelectorAll('.tool-line .t-bg').length; })()",
+          "equals": 1,
+          "why": "no new offer once refused — only the note remains"
+        }
+      ]
+    },
+    {
+      "note": "12a — backgrounded:false (the call had just finished or was already moved) becomes the not-moved note; a non-disabled error re-enables the button with the error as its tooltip",
+      "setup": "bgRefused = false;",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 3,
+            "content_block": {
+              "type": "tool_use",
+              "id": "tu-fg4",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 3
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "t_fg4",
+          "run_id": "r4",
+          "tool_use_id": "tu-fg4",
+          "description": "fourth loop",
+          "is_backgrounded": false,
+          "task_type": "local_bash"
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg:not(.note)').length",
+          "equals": 1,
+          "why": "a live offer again"
+        },
+        {
+          "js": "(function(){ var b=document.querySelector('.tool-line .t-bg:not(.note)'); b.click(); window.onClaudeEvent(JSON.stringify({type:'__backgrounded', id:'tu-fg4', error:'claude is not running'})); return [b.disabled, b.textContent, b.title]; })().join('|')",
+          "equals": "false|Could not move it — try again|claude is not running",
+          "why": "a plain failure is retryable, the reason in the tooltip"
+        },
+        {
+          "js": "(function(){ var b=document.querySelector('.tool-line .t-bg:not(.note)'); b.click(); window.onClaudeEvent(JSON.stringify({type:'__backgrounded', id:'tu-fg4', backgrounded:false})); return b.classList.contains('note') + '|' + b.textContent; })()",
+          "equals": "true|Not moved: it may have just finished or already be in the background.",
+          "why": "the CLI found no foreground task to move"
+        }
+      ]
+    },
+    {
+      "note": "12b — a settled line drops a LIVE button and keeps a note: tool_results for the noted call and for a fresh offered call",
+      "frames": [
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_start",
+            "index": 4,
+            "content_block": {
+              "type": "tool_use",
+              "id": "tu-fg5",
+              "name": "Bash"
+            }
+          }
+        },
+        {
+          "type": "stream_event",
+          "event": {
+            "type": "content_block_stop",
+            "index": 4
+          }
+        },
+        {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "t_fg5",
+          "run_id": "r5",
+          "tool_use_id": "tu-fg5",
+          "description": "fifth loop",
+          "is_backgrounded": false,
+          "task_type": "local_bash"
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "tu-fg4",
+                "content": "fg 20\nFGDONE"
+              }
+            ]
+          }
+        },
+        {
+          "type": "user",
+          "message": {
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "tu-fg5",
+                "content": "fg 20\nFGDONE"
+              }
+            ]
+          }
+        }
+      ],
+      "expect": [
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg:not(.note)').length",
+          "equals": 0,
+          "why": "tu-fg5's live button went with its settle"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line .t-bg.note').length",
+          "equals": 2,
+          "why": "both notes (disabled, not-moved) stay on their settled lines"
+        },
+        {
+          "js": "document.querySelectorAll('.tool-line.run').length",
+          "equals": 3,
+          "why": "three lines never got a tool_result and stay in flight: tu-bg (step 10), tu-fg2 (noted) and tu-fg3 (never answered); the two settled ones (tu-fg4, tu-fg5) are not .run"
+        }
+      ]
+    },
+    {
+      "note": "13 — restore the real bridge and clear",
+      "setup": "window.__bridge = window.__realBridge95; delete window.__realBridge95; delete window.__tape95; delete window.__n95; bgRefused = false; window.onClaudeEvent(JSON.stringify({type:'system', subtype:'background_tasks_changed', tasks:[]})); window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+      "expect": [
+        {
+          "js": "typeof window.__realBridge95",
+          "equals": "undefined",
+          "why": "bridge restored"
+        },
+        {
+          "js": "document.getElementById('bgMenu').classList.contains('show')",
+          "equals": false,
+          "why": "popup closed with the empty roster"
+        }
+      ]
+    }
+  ]
+}

@@ -346,7 +346,7 @@
       // MUST stay above the early returns further down: LIM.resultSkip covers Edit/Write/TodoWrite/
       // Task*, the most common tools there are, so a removal placed below would leave exactly those
       // lines pulsing until the turn ended. Same reason the tasks bridge call below sits where it does.
-      if (b.is_error || !isInternalResult(resultRaw)) t.el.classList.remove('run');
+      if (b.is_error || !isInternalResult(resultRaw)) { t.el.classList.remove('run'); dropBgOffer(t.el); }   // a settled call cannot be backgrounded (11.7)
       if (b.is_error) t.el.classList.add('fail');
       // A denial THIS panel sent (a card's Reject, 3.7): the deny message comes back as the
       // tool's error result, so the box would repeat, one line above the card, the note the
