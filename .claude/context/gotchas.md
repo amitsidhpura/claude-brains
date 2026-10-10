@@ -774,6 +774,14 @@ re-read those before trusting memory here.
   invisible on the warm card. Only the real-panel render showed it; pin it with a computed-colour
   assert against a throwaway `.blk a` (fixture 94).
 
+- **A click handler that REBUILDS its own list closes the popup it lives in** (fixture 95's first
+  run, 2026-10-10): `renderBgTasks()` runs synchronously inside the row's onclick, so when the
+  click bubbles to the document handler (30-menus.js) the row is detached, `e.target.closest
+  ('.popup')` is null, and the handler treats it as an outside click → `closeMenus()`. The ✕ had
+  always stopped propagation "for no stated reason"; this IS the reason. Any in-popup handler
+  that re-renders must `e.stopPropagation()`. Diagnosed by wrapping `menu.classList.remove` to
+  capture a stack over CDP — the fastest way to find "who closed this".
+
 ## Testing, probes and sandboxes
 - **A background chain that waits on the CDP port with `until ! ss…; until ss…` can sit in its
   loop forever** — on 2026-09-09 one such chain never printed PORT_UP through a whole sandbox
@@ -1130,6 +1138,29 @@ re-read those before trusting memory here.
 - **A `grep -o` with a wide context window over a minified bundle (`extension.js`, the CLI
   binary) can run for minutes** and gets backgrounded at 120 s — bound the window (≤ ~900 chars),
   pipe through `head -c`, and run several patterns in one backgrounded command.
+
+- **A stdio probe under a scratch `CLAUDE_CONFIG_DIR` leaves the real `~/.claude` untouched —
+  transcript included** (11.7 probe, 2026-10-10): `projects/<enc-cwd>/<session>.jsonl` is written
+  under the config dir, so with the scratch recipe (gotchas § Testing: credentials copy, a
+  `.claude.json` whose `projects` holds ONLY the scratch cwd with `hasTrustDialogAccepted:true`,
+  settings.json) the only cleanup is `rm -rf` of the scratch dir — no classifier refusal, no
+  `lastSessionId` to restore. Prefer it to a plain run for any probe that sends a turn. Also strip
+  every other `CLAUDE*` env var (nested-session markers) and pass `--model haiku`.
+- **`exec 3<>/dev/tcp/127.0.0.1/9222` is NOT a port check under this zsh** — it always reports
+  closed (2026-10-10: the sandbox had been up for minutes, "DevTools listening" in its log). Use
+  `ss -ltn | grep -q ':9222'`.
+- **A fresh sandbox needs ~a minute before the FULL harness** (2026-10-10): the IDE's own
+  `__project` frame (root = the sandbox project) landed mid-run and failed fixture 40's path
+  negative control (`-testing/notes.md` shortened because the root WAS `-testing`); alone and on
+  the warm rerun it passed. A single unrelated fail right after a restart → rerun that fixture
+  alone before suspecting the change.
+- **Harness assert traps from fixture 95**: `JSON.stringify(n)` is the STRING `"1"` and fails
+  `atLeast: 1`; "only N lines still `.run`" must count every line the fixture never settled
+  (three, not one — a background launch and two noted offers had no tool_result). Count what the
+  fixture fed, not what the step is about.
+- **Reading a minified bundle: a python `str.find` loop, not `grep -o '.\{0,300\}needle…'`** —
+  the 2.1.296 extension (3.4 MB) + webview (5.5 MB) answered six needles with ±400-char windows in
+  under a second (2026-10-10); the equivalent grep took minutes last session.
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with

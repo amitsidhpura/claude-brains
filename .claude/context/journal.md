@@ -3,6 +3,35 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-third) — 11.7 background task output + Run in background: probed live, built, fixture 95; harness 1025
+- "What is 11.7?" → "Lets do it." The row's own note said probe first, so the session opened
+  with a stdio probe under a scratch `CLAUDE_CONFIG_DIR` (credentials copy, `.claude.json` with
+  only the scratch cwd trusted, haiku, mode default): a `run_in_background` shell polled with
+  `get_task_output` six times running + once ended + a bogus id, then a FOREGROUND `sleep` loop
+  hit with `background_tasks{tool_use_id}` 4 s in. Everything landed in one 40 s run; the real
+  `~/.claude` got no transcript (the scratch dir was deleted after).
+- Measured: `{output, total_bytes, truncated}`; the ended tail `\n\n[exited with code 0]\n`;
+  roster frame BEFORE `task_started` for a background launch; a foreground Bash gets
+  `task_started{is_backgrounded:false}` ~3 s in (the gate for the offer); `background_tasks` →
+  `{backgrounded:true}` + roster + `task_updated{is_backgrounded:true}` + the "manually
+  backgrounded" tool_result + the turn's result; a completed shell WAKES the model (extra result
+  with `origin`). The extension's mapping read with a python `str.find` loop (instant, vs the
+  minutes a wide `grep -o` took last session); the binary's `strings` gave the disabled text.
+- Design: output on the ROSTER ROW (the agent-map analogy; the timeline's task line already
+  says how a task ended), every row toggles, errors end polling; the offer on the tool line
+  gated by the measured foreground `task_started`; VS Code's wording shortened.
+- Sandbox launched on the pre-change tree first → negative control free: first assert failed,
+  step aborted on the missing button. First run on the changed build 40/44: the row click
+  closed the popup (the list is rebuilt before the click bubbles, so the document handler's
+  `closest('.popup')` test fails on a detached row) — diagnosed over CDP with a stack captured
+  on `classList.remove`, fixed with stopPropagation like the ✕, assert added. Then 45/45.
+- Full harness 1024/1 the first time: fixture 40's path negative control failed because the
+  fresh IDE's own `__project` frame landed mid-run; alone 19/19, warm rerun 1025/0. Test 169.
+- Real-panel render (gallery + roster open, CDP screenshot): offer in `--blue`, note muted, pane
+  with chevrons and the size note. Not hand-tested against a live shell in the sandbox panel.
+- Two assertion mistakes of mine the control run exposed: `JSON.stringify(count)` is a string
+  (fails `atLeast`), and "only one line still in flight" forgot two never-settled lines.
+
 ## 2026-10-10 (twenty-second) — 4.10 auto-mode server-fallback dialog built from the schema; fixture 94; harness 980; committed `d26f670`
 - "Can we implement 4.10?" → yes, with the CLI side fully measured and the frame itself not:
   the 2.1.296 binary's dialog definition gives the payload `{gatewayHost?, title, paragraphs[],
@@ -235,22 +264,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   regenerated with the field above the buttons and a 1.29 Bash edit-diff card on the right, scene
   trimmed to fit (gotchas § Webview: overflow cuts the TOP). The user uploaded all five.
 
-## 2026-09-09 (thirteenth) — 0.13.1 released as a patch; Approved within the hour
-- Load, then "list unreleased updates" → one commit since v0.13.0 (32c676c: fences + list parser,
-  renderer-only, no Kotlin), so the version question answered itself: patch, 0.13.1.
-- Release ran `docs/release.md` in order: bump + change notes (0.12.4 entry dropped to keep three)
-  + feed, all preconditions asserted before the first write; `test buildPlugin verifyPlugin` as ONE
-  background run (43 s warm); 163/0; **8** verdict files (PS-263.3889.75 has joined the
-  `recommended()` ladder), all `Compatible`, none with warnings; jar bytes checked for `mdList`,
-  the `{3,}` fence regex and the 0.13.1 notes; zip = our jar + six OSS deps.
-- Step-6 gate honoured: full notes shown, user said "Go ahead" → commit `8e19916`, tag, push,
-  `gh release create` from a notes file, asset `cmp` identical, feed already advertised 0.13.1.
-- `marketplace-upload` was already green by the time the checks ran; run log JSON: update id
-  1164877, `approve:false`. The user's screenshot then showed **Approved**, 9 Sep 2026, four
-  verifier rows incl. the IDE-run row, before the API listed it (as gotchas § Build predicts).
-- Context save committed and pushed on the user's own ask ("/context save · commit and push").
-
 ## Digest
+- **2026-09-09 (thirteenth)** — 0.13.1 released as a patch (one renderer-only commit since v0.13.0 decided the version): `docs/release.md` in order with every precondition asserted before the first write, `test buildPlugin verifyPlugin` as one background run (163/0, 8 verdict files all Compatible — PS-263 joined the `recommended()` ladder), jar bytes checked for the new code, step-6 gate with the full notes → commit `8e19916`, tag, `gh release create`, feed. `marketplace-upload` green before the checks ran; Approved the same day with four verifier rows, visible in the UI before the API listed it (gotchas § Build). Context save committed and pushed on the user's own ask.
 - **2026-09-08/09 (twelfth)** — two renderer fixes, both hand-tested by the user with an eight-prompt script (live, replay, plan card; transcripts verified by key): a ````markdown fence split at three backticks (regex `(`{3,})…\1`*`, fixture 85 written first → 8/15 failed pre-fix, then 15/15) and "numbered lists are always `1.`" → a CommonMark list parser (`mdList`: content indent, loose/tight, `<ol start>`, recursive bodies, fence indent strip; fixture 86, 17 failed pre-fix; prototyped in node before the restart). Harness 829/0, test 163/0. A three-backtick hand test proved nothing — the retest asked for four explicitly. Three pre-existing renderer gaps found on the way → backlog § Housekeeping (indent-only code blocks, `*` inside inline code, mid-line fence leak). Traps → gotchas § Testing: the sandbox exits cleanly on its own; a `grep -c` tail read a pass as a failure; a transcript-by-key script unbounded to the turn.
 - **2026-09-05 (eleventh)** — 0.13.0 released and Approved the same day: steps 1–5 from one Python script asserting every exact token before the first write; `test buildPlugin` 163/0; `verifyPlugin` 8/8 Compatible (PS-242 → PS-263); notes shown WHOLE at the gate ("Go ahead please") → commit `a988d95`, tag, `gh release create`, feed + Marketplace upload green (receipt 1162736), Approved ~35 min later with a new "IDE run" verifier row. Notes shape that worked: ✨ New · 🐛 Fixes · Install · ⚠️ Notes (live-only caveats, deferrals); internal work left out.
 - **2026-09-05 (tenth)** — mockup parity pass: the 13 JS-rendered states with no static example added from the renderers' own markup; the class-coverage grep (every `.class` in `webview/css/*.css` vs the mockup) reports 0 absent. Browser check via Playwright MCP needs `python3 -m http.server 8731 --bind 127.0.0.1` (it blocks `file:`), screenshots land in the repo root + `.playwright-mcp/` → delete (gotchas § Webview). Model chip "Fable (1M)" with no checked row: roster measured by a bare `initialize` on 2.1.261 and 2.1.236 (`fable[1m]` on both), every writer of the selected id read, menu code diffed against 0.12.5 (identical) — no path produces the label from the persisted `fable[1m]`; not reproduced → parked at the user's ask (backlog § Next up). A bare `initialize` probe writes NO transcript.

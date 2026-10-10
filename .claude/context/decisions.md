@@ -4,6 +4,26 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 11.7: task output lives on the ROSTER ROW and polls; "Run in background" is gated by the foreground `task_started`; a pane dies with its row
+"Lets do it" on 11.7, after the probe. **Where the output goes:** the roster row (the `bg` chip's
+popup), not the timeline. The reference client shows it on agent-map cards, which our roster IS;
+the timeline's Bash line already carries the launch ack and the task line says how it ended, so a
+second output surface there would be a copy that drifts. Every row toggles — which task kinds keep
+a stream is the CLI's to say, and it says so on the first ask ("no shell or Monitor task" → "Output
+is not available.", polling ends) — rather than gating rows on `task_type`, whose Monitor value is
+unmeasured. **Polling, not pushing:** `get_task_output` is request/response; the reference client
+polls at 1000 ms while visible, so do we, with one ask in flight per task and nothing while the
+popup is hidden. **The offer's gate:** `task_started{is_backgrounded:false, tool_use_id}` — measured
+to arrive ~3 s into a foreground Bash — is the CLI saying it registered a foreground task, i.e. the
+one moment `background_tasks{tool_use_id}` is known to find something; offering on every running
+tool line would mostly answer "not found". **The pane goes when the roster drops the task:** the
+alternative (keep ended panes) means a second task store with its own lifecycle in the webview for
+a question the timeline already answers. *Rejected:* output under the Bash tool line (drift, and a
+background shell's line is the launch ack — the result is elsewhere); a `task_type` allowlist for
+the toggle (Monitor's type string unmeasured); the reference client's long "Could not move this to
+the background…" sentences on a one-line flex row (ours are shorter, same meaning); keeping panes
+after the task ends.
+
 ## 2026-10-10 — 4.10 built from the schema without a real frame; the panel declares exactly `auto_mode_server_fallback`; undeclared kinds are left unanswered; answer tokens allowlisted in Kotlin
 "Can we implement 4.10?" — yes. **Why building without a frame is not "fixing what you cannot
 reproduce":** the row is a feature, and everything the card depends on IS measured — the payload,
