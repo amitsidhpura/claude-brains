@@ -66,17 +66,24 @@
                                      // fallback in force and the measurement comes back clamped
     const rows = list.querySelectorAll(sel);
     const box = list.getBoundingClientRect();
-    // Never run past either edge of the webview: the history panel grows DOWN, the composer popups
-    // grow UP. With no hardcoded cap left, a tall list in a short tool window would otherwise put
-    // its last rows out of reach — a cap that scrolls beats rows that can't be seen at all.
-    let h = box.height - Math.max(0, -box.top, box.bottom - window.innerHeight);
+    // Never run past either edge of the PANEL: the history panel grows DOWN, the composer popups
+    // grow UP. Measured on the popup that holds the list, not the list alone — a popup's header,
+    // search field and footer sit outside the list, and the model menu's filter box ran under the
+    // tool-window title while its list box was still fully on screen (user's screenshot, real
+    // PhpStorm, 2026-10-10: 13 roster rows). The top edge is the header's bottom plus the gap
+    // the history panel keeps, so nothing ever overlaps the title bar.
+    const pop = list.closest('.popup') || list.parentElement || list;
+    const pb = pop === list ? box : pop.getBoundingClientRect();
+    const head = document.getElementById('head');
+    const top = head ? head.getBoundingClientRect().bottom + 4 : 0;
+    let h = box.height - Math.max(0, top - pb.top, pb.bottom - window.innerHeight);
     // n rows or fewer must never scroll on their own account, so nothing else bounds them — the CSS
     // value is only a pre-measure fallback and is exactly what fails once rows grow with the font.
     if (rows.length > n) {
       const pad = parseFloat(getComputedStyle(list).paddingBottom) || 0;
       h = Math.min(h, rows[n - 1].getBoundingClientRect().bottom - box.top + pad);
     }
-    if (h > 0) list.style.maxHeight = Math.ceil(h) + 'px';
+    if (h > 0) list.style.maxHeight = Math.floor(h) + 'px';
   }
   // Set only by the button, so a `sessions` frame that ARRIVES unasked (Kotlin re-pushes the list
   // after a rename or a delete, to keep it true) re-renders the rows without opening the panel.

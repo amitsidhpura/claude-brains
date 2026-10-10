@@ -37,8 +37,12 @@
     } else if (id === 'modelMenu') {
       if (modelSearch) modelSearch.value = '';   // fresh, unfiltered each open
       renderModels(); syncModelFooter();
+      // The roster is shown whole (pinned previous versions included — decision 2026-09-27), so
+      // the LIST absorbs the height: capped to the space between the header and the composer,
+      // scrolling, with the ✓ row brought into view. No row count — fit is the only limit.
+      capToRows(document.getElementById('modelItems'), Infinity, '.popup-item');
       const cur = p.querySelector('.popup-item.on') || p.querySelector('.popup-item');
-      if (cur) cur.classList.add('sel');
+      if (cur) { cur.classList.add('sel'); cur.scrollIntoView({ block: 'nearest' }); }
       if (modelSearch) modelSearch.focus();       // type to filter or enter a model straight away
     } else {
       const items = Array.prototype.slice.call(p.querySelectorAll('.popup-item'));

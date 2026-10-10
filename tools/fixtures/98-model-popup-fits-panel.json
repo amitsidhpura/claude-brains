@@ -1,0 +1,75 @@
+{
+ "item": "the model popup fits the panel: a tall roster scrolls its list instead of running under the header (2026-10-10)",
+ "branch": "tg('modelMenu') caps #modelItems through capToRows with no row count — capToRows now clamps by the POPUP's overflow past the header's bottom (and the viewport's bottom), not the list's own box, so the header/search part of a popup counts; #modelItems scrolls (css/70-popups.css); the ✓ row is scrolled into view on open; the cap is released ('none') before every measure so a short roster never inherits a tall one's cap.",
+ "provenance": "USER REPORT 2026-10-10 (screenshot, real PhpStorm 2024.2, 2.1.296's 13-row roster): the popup was taller than the panel, the filter box at its top sat under the tool-window title and could not be reached. Roster rows here are shaped like the CLI's initialize models (value / resolvedModel / displayName / description) with eight synthetic rows appended to overflow any panel height; nothing is claimed about the CLI.",
+ "steps": [
+  {
+   "note": "0 — a 21-row roster (the real 13 of 2.1.296 plus eight) opened in the sandbox panel: the popup never runs under the header — its top sits below #head, the list scrolls instead, the ✓ row is scrolled into view",
+   "setup": "window.__g98 = JSON.stringify({ items: models, selected: currentModel }); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'claude-opus-4-6', items: [{\"value\": \"default\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Default (recommended)\", \"description\": \"Sonnet 5.5 \\u00b7 Efficient for routine tasks\", \"supportsEffort\": true}, {\"value\": \"opus\", \"resolvedModel\": \"claude-opus-5-5\", \"displayName\": \"Opus 5.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"fable\", \"resolvedModel\": \"claude-fable-5-5\", \"displayName\": \"Fable 5.1\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Sonnet 5.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-5-5\", \"displayName\": \"Haiku 5.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-haiku-4-5\", \"resolvedModel\": \"claude-haiku-4-5\", \"displayName\": \"Haiku 4.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-sonnet-5\", \"resolvedModel\": \"claude-sonnet-5\", \"displayName\": \"Sonnet 5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-opus-5\", \"resolvedModel\": \"claude-opus-5\", \"displayName\": \"Opus 5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-fable-5\", \"resolvedModel\": \"claude-fable-5\", \"displayName\": \"Fable 5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-opus-4-8\", \"resolvedModel\": \"claude-opus-4-8\", \"displayName\": \"Opus 4.8\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-opus-4-7\", \"resolvedModel\": \"claude-opus-4-7\", \"displayName\": \"Opus 4.7\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-opus-4-6\", \"resolvedModel\": \"claude-opus-4-6\", \"displayName\": \"Opus 4.6\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-sonnet-4-6\", \"resolvedModel\": \"claude-sonnet-4-6\", \"displayName\": \"Sonnet 4.6\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-1\", \"resolvedModel\": \"claude-test-1\", \"displayName\": \"Test 1\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-2\", \"resolvedModel\": \"claude-test-2\", \"displayName\": \"Test 2\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-3\", \"resolvedModel\": \"claude-test-3\", \"displayName\": \"Test 3\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-4\", \"resolvedModel\": \"claude-test-4\", \"displayName\": \"Test 4\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-5\", \"resolvedModel\": \"claude-test-5\", \"displayName\": \"Test 5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-6\", \"resolvedModel\": \"claude-test-6\", \"displayName\": \"Test 6\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-7\", \"resolvedModel\": \"claude-test-7\", \"displayName\": \"Test 7\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"claude-test-8\", \"resolvedModel\": \"claude-test-8\", \"displayName\": \"Test 8\", \"description\": \"Row for the height test\", \"supportsEffort\": true}] })); document.getElementById('modelChip').click(); window.__m98 = (function(){ var p=document.getElementById('modelMenu').getBoundingClientRect(), h=document.getElementById('head').getBoundingClientRect(), l=document.getElementById('modelItems'), lr=l.getBoundingClientRect(), on=document.querySelector('#modelItems .popup-item.on'), onr=on?on.getBoundingClientRect():null, s=document.getElementById('modelSearch').getBoundingClientRect(); return { popTop: p.top, headBottom: h.bottom, popBottom: p.bottom, win: window.innerHeight, scrolls: l.scrollHeight > l.clientHeight + 1, listH: lr.height, onVisible: !!(onr && onr.top >= lr.top - 1 && onr.bottom <= lr.bottom + 1), searchVisible: s.top >= h.bottom && s.height > 0, rows: document.querySelectorAll('#modelItems .popup-item').length }; })();",
+   "expect": [
+    {
+     "js": "window.__m98.rows",
+     "equals": 21,
+     "why": "GUARD: the tall roster rendered (both builds)"
+    },
+    {
+     "js": "window.__m98.popTop >= window.__m98.headBottom",
+     "equals": true,
+     "why": "the popup's top stays below the header (it ran under it before 2026-10-10 — user's screenshot in the real PhpStorm: the filter box out of reach)"
+    },
+    {
+     "js": "window.__m98.searchVisible",
+     "equals": true,
+     "why": "the filter box, the popup's first element, is on screen"
+    },
+    {
+     "js": "window.__m98.scrolls",
+     "equals": true,
+     "why": "the list scrolls to absorb the height (21 rows cannot fit any panel)"
+    },
+    {
+     "js": "window.__m98.onVisible",
+     "equals": true,
+     "why": "the ✓ row (deep in the list) is scrolled into view on open"
+    },
+    {
+     "js": "window.__m98.popBottom <= window.__m98.win",
+     "equals": true,
+     "why": "GUARD: the bottom edge is still anchored above the composer"
+    }
+   ]
+  },
+  {
+   "note": "1 — a short roster is not capped: five rows, no scrollbar, the list's inline cap released",
+   "setup": "closeMenus(); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'sonnet', items: [{\"value\": \"default\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Default (recommended)\", \"description\": \"Sonnet 5.5 \\u00b7 Efficient for routine tasks\", \"supportsEffort\": true}, {\"value\": \"opus\", \"resolvedModel\": \"claude-opus-5-5\", \"displayName\": \"Opus 5.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"fable\", \"resolvedModel\": \"claude-fable-5-5\", \"displayName\": \"Fable 5.1\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Sonnet 5.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-5-5\", \"displayName\": \"Haiku 5.5\", \"description\": \"Row for the height test\", \"supportsEffort\": true}] })); document.getElementById('modelChip').click(); window.__m98b = (function(){ var l=document.getElementById('modelItems'); var p=document.getElementById('modelMenu').getBoundingClientRect(), h=document.getElementById('head').getBoundingClientRect(); return { scrolls: l.scrollHeight > l.clientHeight + 1, rows: document.querySelectorAll('#modelItems .popup-item').length, below: p.top >= h.bottom }; })();",
+   "expect": [
+    {
+     "js": "window.__m98b.rows",
+     "equals": 5,
+     "why": "GUARD"
+    },
+    {
+     "js": "window.__m98b.scrolls",
+     "equals": false,
+     "why": "five rows fit — a cap left over from the tall roster must not scroll them"
+    },
+    {
+     "js": "window.__m98b.below",
+     "equals": true,
+     "why": "and it sits below the header"
+    }
+   ]
+  },
+  {
+   "note": "2 — restore",
+   "setup": "closeMenus(); var g=JSON.parse(window.__g98); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: g.selected || null, items: g.items || [] }));",
+   "expect": [
+    {
+     "js": "document.getElementById('modelMenu').classList.contains('show')",
+     "equals": false,
+     "why": "closed"
+    }
+   ]
+  }
+ ]
+}
