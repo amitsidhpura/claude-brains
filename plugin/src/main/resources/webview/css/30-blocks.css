@@ -17,17 +17,29 @@
 .blk li > p { margin: .25em 0; }
 .blk a { color: var(--blue); text-decoration: none; }
 .blk a:hover { text-decoration: underline; }
-/* Copy response (15.4): a hover-revealed control at the block's top-right corner — the code block's
-   header copy, lifted to the whole reply — appended once the block is FINAL (a streaming re-render
-   replaces innerHTML and would wipe it; js/20-markdown.js). Copies the block's markdown SOURCE.
-   A --raised plate because it sits over prose, unlike the header icons; the :has rule keeps the
-   control (absolute, so its own margin is moot) from taking the last child's zero bottom margin. */
-.blk .blk-copy { display: none; position: absolute; top: 0; right: 0; padding: 2px; border: 0;
-  background: var(--raised); color: var(--muted); border-radius: var(--radius); cursor: pointer; }
-.blk:hover .blk-copy { display: inline-flex; }
-.blk .blk-copy:hover { color: var(--fg); }
+/* Copy response (15.4): the code block's header copy, lifted to the whole reply — inserted FIRST
+   once the block is FINAL (a streaming re-render replaces innerHTML and would wipe it;
+   js/20-markdown.js) and FLOATED right, so the first line wraps around it and nothing is ever
+   covered. It used to be a hover-only plate pinned absolute at the corner, over the text column:
+   a long first line ran underneath and the plate clipped its last word (user's screenshot,
+   2026-10-11; rendered side by side in the real panel). Shown on HOVER only (user: "so many copy
+   buttons", 2026-10-11) but it keeps its place in the line while hidden — opacity, never
+   display — because a float that comes and goes reflows the first line on every hover. That
+   reserves one icon's width at the end of one line: the one deliberate exception to the
+   no-reserved-space rule (conventions), taken over the alternatives of covering the text or
+   jumping it. Transparent like the header icons. Copies the markdown SOURCE. Block children that
+   carry their own right-side control clear it, so a reply that opens with a code block never
+   puts two copy buttons on one line. */
+.blk .blk-copy { display: inline-flex; float: right; margin: 0 0 4px 10px; padding: 2px; border: 0;
+  background: transparent; color: var(--muted); border-radius: var(--radius); cursor: pointer;
+  opacity: 0; transition: opacity .12s; }
+.blk:hover .blk-copy, .blk .blk-copy:focus-visible { opacity: 1; }
+.blk .blk-copy:hover { color: var(--fg); }   /* the icon brightens, no plate (user, 2026-10-11) */
 .blk .blk-copy svg { width: 14px; height: 14px; display: block; }
-.blk > :has(+ .blk-copy) { margin-bottom: 0; }
+.blk .codeblock, .blk .diff { clear: right; }
+/* the control is the block's first child now, so the real first element must give up its top
+   margin the way :first-child used to — or the first line sits below the dot (user, 2026-10-11) */
+.blk > .blk-copy + * { margin-top: 0; }
 .blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;
   font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 

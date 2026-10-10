@@ -1,10 +1,10 @@
 {
  "item": "copy response + export conversation (15.4): a hover copy control on every finished assistant text block copies its markdown source; the header's Export popup asks the CLI for the terminal's /export text and copies or saves it",
- "branch": "mdBlock()/copyable() (js/20-markdown.js) append .blk-copy once a block is final — finishBubble() at content_block_stop / message_stop / result / tool start / message_start on the live path, mdBlock on the whole-message, local-command, synthetic-echo and replay paths; the click copies el.__md through bridge{kind:'copy'} (Kotlin's CopyPasteManager — navigator.clipboard needs focus + a user activation the webview does not always hold). exportBtn → tg('exportMenu') + bridge{kind:'export'} once per open; __export{text, default_filename} → rows on + footer count, {text:''} → 'Nothing to export yet.', {error} → 'Could not prepare the conversation: …'; Copy writes the text and reports in the footer; Save sends bridge{kind:'exportSave', name, text} and closes; an answer to a closed popup is dropped; __clear closes and forgets. __exit while loading → the exit text in the footer.",
- "provenance": "export_conversation PROBED 2026-10-10 on 2.1.296 over stdio (scratch CLAUDE_CONFIG_DIR, haiku, --permission-mode default): turnless → {text:'', default_filename:'conversation-2026-10-10-160049.txt'}; after one turn → text '\\n❯ <prompt>\\n\\n● <reply>' and '2026-10-10-160050-<prompt slug>.txt'; a --resume'd process answers the whole history before any turn. The __export frame is ChatPanel's own relay of that answer (its shape is ours). Stream frames are the panel's measured shapes (fixture 93's text/tool/text message). Copies are read off the bridge tape; the real system clipboard was read back with xclip in the live check.",
+ "branch": "mdBlock()/copyable() (js/20-markdown.js) append .blk-copy once a block is final \u2014 finishBubble() at content_block_stop / message_stop / result / tool start / message_start on the live path, mdBlock on the whole-message, local-command, synthetic-echo and replay paths; the click copies el.__md through bridge{kind:'copy'} (Kotlin's CopyPasteManager \u2014 navigator.clipboard needs focus + a user activation the webview does not always hold). exportBtn \u2192 tg('exportMenu') + bridge{kind:'export'} once per open; __export{text, default_filename} \u2192 rows on + footer count, {text:''} \u2192 'Nothing to export yet.', {error} \u2192 'Could not prepare the conversation: \u2026'; Copy writes the text and reports in the footer; Save sends bridge{kind:'exportSave', name, text} and closes; an answer to a closed popup is dropped; __clear closes and forgets. __exit while loading \u2192 the exit text in the footer. Placement (2026-10-11): .blk-copy is the block's first child, floated right, opacity-hidden until hover; `.blk > .blk-copy + *` loses its top margin; .codeblock/.diff clear right.",
+ "provenance": "export_conversation PROBED 2026-10-10 on 2.1.296 over stdio (scratch CLAUDE_CONFIG_DIR, haiku, --permission-mode default): turnless \u2192 {text:'', default_filename:'conversation-2026-10-10-160049.txt'}; after one turn \u2192 text '\\n\u276f <prompt>\\n\\n\u25cf <reply>' and '2026-10-10-160050-<prompt slug>.txt'; a --resume'd process answers the whole history before any turn. The __export frame is ChatPanel's own relay of that answer (its shape is ours). Stream frames are the panel's measured shapes (fixture 93's text/tool/text message). Copies are read off the bridge tape; the real system clipboard was read back with xclip in the live check.",
  "steps": [
   {
-   "note": "1 — live: a streamed text block ends (content_block_stop) → ONE copy control, the markdown source kept on the element, the rendered text untouched",
+   "note": "1 \u2014 live: a streamed text block ends (content_block_stop) \u2192 ONE copy control, the markdown source kept on the element, the rendered text untouched",
    "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge96) { window.__realBridge96 = window.__bridge; } window.__tape96 = []; window.__bridge = function(j){ window.__tape96.push(JSON.parse(j)); }; addUserMessage('hello', [], Date.now());",
    "frames": [
     {
@@ -69,12 +69,12 @@
     {
      "js": "document.querySelector('#log .blk b') !== null",
      "equals": true,
-     "why": "markdown rendered synchronously at content_block_stop (finishBubble flushes; the old build left it to the next animation frame — the negative control saw an empty block here)"
+     "why": "markdown rendered synchronously at content_block_stop (finishBubble flushes; the old build left it to the next animation frame \u2014 the negative control saw an empty block here)"
     }
    ]
   },
   {
-   "note": "2 — click the control: the SOURCE goes to the clipboard through Kotlin (bridge{kind:'copy', text}, not navigator.clipboard) and the glyph flashes to the check; the click does not reach the document handlers",
+   "note": "2 \u2014 click the control: the SOURCE goes to the clipboard through Kotlin (bridge{kind:'copy', text}, not navigator.clipboard) and the glyph flashes to the check; the click does not reach the document handlers",
    "setup": "window.__tape96 = []; document.getElementById('bgMenu').classList.add('show'); document.querySelector('#log .blk-copy').click();",
    "expect": [
     {
@@ -95,7 +95,7 @@
    ]
   },
   {
-   "note": "3 — a tool in the same message, then more text: TWO blocks, TWO controls; message_stop and the result add no duplicates (finishBubble is idempotent)",
+   "note": "3 \u2014 a tool in the same message, then more text: TWO blocks, TWO controls; message_stop and the result add no duplicates (finishBubble is idempotent)",
    "setup": "document.getElementById('bgMenu').classList.remove('show');",
    "frames": [
     {
@@ -186,7 +186,7 @@
     {
      "js": "document.querySelectorAll('#log .blk')[1].__md",
      "equals": "Done.",
-     "why": "the second block keeps its OWN source — not 'Hello **world**Done.': before 2026-10-10 curRaw was reset only at message_start, so the first text was re-rendered inside the second block (measured on this step)"
+     "why": "the second block keeps its OWN source \u2014 not 'Hello **world**Done.': before 2026-10-10 curRaw was reset only at message_start, so the first text was re-rendered inside the second block (measured on this step)"
     },
     {
      "js": "document.querySelectorAll('#log .blk')[0].__md",
@@ -196,7 +196,7 @@
    ]
   },
   {
-   "note": "4 — the whole-message path (a local built-in answers with no deltas): the block gets the control and its source too",
+   "note": "4 \u2014 the whole-message path (a local built-in answers with no deltas): the block gets the control and its source too",
    "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('/context', [], Date.now());",
    "frames": [
     {
@@ -232,7 +232,7 @@
    ]
   },
   {
-   "note": "5 — the replay path (renderTranscript): a resumed reply is copyable the same way",
+   "note": "5 \u2014 the replay path (renderTranscript): a resumed reply is copyable the same way",
    "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); renderTranscript([{role:'user', text:'q'}, {role:'assistant', text:'*a* reply'}], 0);",
    "expect": [
     {
@@ -248,7 +248,7 @@
    ]
   },
   {
-   "note": "6 — export: the header button opens the popup, asks ONCE (bridge{kind:'export'}), rows .off, footer 'Preparing…'; the history panel is closed by it",
+   "note": "6 \u2014 export: the header button opens the popup, asks ONCE (bridge{kind:'export'}), rows .off, footer 'Preparing\u2026'; the history panel is closed by it",
    "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape96 = []; document.getElementById('histPanel').classList.add('show'); document.getElementById('exportBtn').click();",
    "expect": [
     {
@@ -263,7 +263,7 @@
     },
     {
      "js": "document.getElementById('exportStatus').textContent",
-     "equals": "Preparing the conversation…",
+     "equals": "Preparing the conversation\u2026",
      "why": "loading footer"
     },
     {
@@ -279,16 +279,16 @@
     {
      "js": "(function(){var m=document.getElementById('exportMenu').getBoundingClientRect(), h=document.getElementById('head').getBoundingClientRect(); return m.top >= h.bottom && m.left >= 0 && m.right <= window.innerWidth && m.width > 0;})()",
      "equals": true,
-     "why": "opens DOWN from the header (below #head, inside the viewport) — the composer popups' bottom anchor is overridden"
+     "why": "opens DOWN from the header (below #head, inside the viewport) \u2014 the composer popups' bottom anchor is overridden"
     }
    ]
   },
   {
-   "note": "7 — the CLI's answer (measured 2.1.296 shape): rows live, the CLI's file name on the Save row, the footer counts characters",
+   "note": "7 \u2014 the CLI's answer (measured 2.1.296 shape): rows live, the CLI's file name on the Save row, the footer counts characters",
    "frames": [
     {
      "type": "__export",
-     "text": "\n❯ Reply with exactly the single word: pong\n\n● pong",
+     "text": "\n\u276f Reply with exactly the single word: pong\n\n\u25cf pong",
      "default_filename": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt"
     }
    ],
@@ -316,12 +316,12 @@
    ]
   },
   {
-   "note": "8 — Copy to clipboard: the CLI's text verbatim through Kotlin, the footer says so, the popup stays open",
+   "note": "8 \u2014 Copy to clipboard: the CLI's text verbatim through Kotlin, the footer says so, the popup stays open",
    "setup": "window.__tape96 = []; document.querySelector('#exportMenu .popup-item[data-act=\"copy\"]').click();",
    "expect": [
     {
      "js": "JSON.stringify(window.__tape96.map(function(o){return [o.kind, o.text]}))",
-     "equals": "[[\"copy\",\"\\n❯ Reply with exactly the single word: pong\\n\\n● pong\"]]",
+     "equals": "[[\"copy\",\"\\n\u276f Reply with exactly the single word: pong\\n\\n\u25cf pong\"]]",
      "why": "the /export text, untouched, to the IDE clipboard"
     },
     {
@@ -337,12 +337,12 @@
    ]
   },
   {
-   "note": "9 — Save to file…: ONE exportSave bridge call carrying the name and the text; the popup closes",
+   "note": "9 \u2014 Save to file\u2026: ONE exportSave bridge call carrying the name and the text; the popup closes",
    "setup": "window.__tape96 = []; document.querySelector('#exportMenu .popup-item[data-act=\"save\"]').click();",
    "expect": [
     {
      "js": "JSON.stringify(window.__tape96.map(function(o){return [o.kind, o.name, o.text]}))",
-     "equals": "[[\"exportSave\",\"2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt\",\"\\n❯ Reply with exactly the single word: pong\\n\\n● pong\"]]",
+     "equals": "[[\"exportSave\",\"2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt\",\"\\n\u276f Reply with exactly the single word: pong\\n\\n\u25cf pong\"]]",
      "why": "name + text to Kotlin (the IDE save dialog)"
     },
     {
@@ -353,7 +353,43 @@
    ]
   },
   {
-   "note": "10 — reopen: asked AGAIN (the conversation may have grown); an empty answer = 'Nothing to export yet.', rows off, a click on Copy does nothing",
+   "note": "9b \u2014 placement (2026-10-11): the control is the block's FIRST child, floated right, hidden by OPACITY (not display) until hover so the first line never reflows or gets covered; the element after it has no top margin (first line level with the dot); a code block clears it",
+   "setup": "window.__p96 = (function(){ var b = document.createElement('div'); b.className = 'blk'; mdBlock(b, 'A first line long enough to reach the right edge of the panel so the control and the text meet, and then some more words after it.\\n\\n```js\\nvar x = 1;\\n```'); log.appendChild(b); var c = b.querySelector('.blk-copy'); var cs = getComputedStyle(c); var p = b.querySelector('.blk-copy + *'); var cb = b.querySelector('.codeblock'); var out = { first: b.firstChild === c, float: cs.float || cs.cssFloat, opacity: cs.opacity, display: cs.display, pTop: Math.round(p.getBoundingClientRect().top - b.getBoundingClientRect().top), pMargin: getComputedStyle(p).marginTop, clear: getComputedStyle(cb).clear, overlap: (function(){ var pr = p.getBoundingClientRect(), cr = c.getBoundingClientRect(); var r = document.createRange(); r.selectNodeContents(p); var rects = Array.from(r.getClientRects()); return rects.some(function(x){ return x.right > cr.left + 1 && x.top < cr.bottom && x.bottom > cr.top; }); })() }; b.remove(); return out; })();",
+   "expect": [
+    {
+     "js": "window.__p96.first",
+     "equals": true,
+     "why": "inserted first"
+    },
+    {
+     "js": "window.__p96.float",
+     "equals": "right",
+     "why": "floated at the first line"
+    },
+    {
+     "js": "window.__p96.opacity + '|' + window.__p96.display",
+     "equals": "0|flex",
+     "why": "DISCRIMINATING: hidden by opacity, still laid out as a float (pre-change: display none, absolute)"
+    },
+    {
+     "js": "window.__p96.pTop + '|' + window.__p96.pMargin",
+     "equals": "0|0px",
+     "why": "DISCRIMINATING: the first paragraph starts at the block's top \u2014 level with the dot"
+    },
+    {
+     "js": "window.__p96.clear",
+     "equals": "right",
+     "why": "a code block clears the control"
+    },
+    {
+     "js": "window.__p96.overlap",
+     "equals": false,
+     "why": "no line box of the first paragraph runs under the control"
+    }
+   ]
+  },
+  {
+   "note": "10 \u2014 reopen: asked AGAIN (the conversation may have grown); an empty answer = 'Nothing to export yet.', rows off, a click on Copy does nothing",
    "setup": "window.__tape96 = []; document.getElementById('exportBtn').click();",
    "frames": [
     {
@@ -391,7 +427,7 @@
    ]
   },
   {
-   "note": "11 — an error answer (no CLI): the footer carries the CLI's text, rows off",
+   "note": "11 \u2014 an error answer (no CLI): the footer carries the CLI's text, rows off",
    "frames": [
     {
      "type": "__export",
@@ -412,12 +448,12 @@
    ]
   },
   {
-   "note": "12 — Escape closes it (MENUS membership); an answer landing on a CLOSED popup is dropped — the next open starts from 'Preparing…'",
+   "note": "12 \u2014 Escape closes it (MENUS membership); an answer landing on a CLOSED popup is dropped \u2014 the next open starts from 'Preparing\u2026'",
    "setup": "document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));",
    "frames": [
     {
      "type": "__export",
-     "text": "\n❯ Reply with exactly the single word: pong\n\n● pong",
+     "text": "\n\u276f Reply with exactly the single word: pong\n\n\u25cf pong",
      "default_filename": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt"
     }
    ],
@@ -434,17 +470,17 @@
     },
     {
      "js": "(function(){ document.getElementById('exportBtn').click(); return document.getElementById('exportStatus').textContent; })()",
-     "equals": "Preparing the conversation…",
+     "equals": "Preparing the conversation\u2026",
      "why": "reopen starts fresh (the late text is not shown)"
     }
    ]
   },
   {
-   "note": "13 — the CLI boundary (__clear) with the popup open: closed, state forgotten",
+   "note": "13 \u2014 the CLI boundary (__clear) with the popup open: closed, state forgotten",
    "frames": [
     {
      "type": "__export",
-     "text": "\n❯ Reply with exactly the single word: pong\n\n● pong",
+     "text": "\n\u276f Reply with exactly the single word: pong\n\n\u25cf pong",
      "default_filename": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt"
     },
     {
@@ -465,7 +501,7 @@
    ]
   },
   {
-   "note": "15 — the CLI exits while the popup is preparing: the footer turns to the exit, rows off (a crash drains no pending callback — seen live 2026-10-10 on a resume of a session with no file)",
+   "note": "15 \u2014 the CLI exits while the popup is preparing: the footer turns to the exit, rows off (a crash drains no pending callback \u2014 seen live 2026-10-10 on a resume of a session with no file)",
    "setup": "window.__tape96 = []; document.getElementById('exportBtn').click();",
    "frames": [
     {
@@ -492,7 +528,7 @@
    ]
   },
   {
-   "note": "14 — restore the bridge and the clipboard",
+   "note": "14 \u2014 restore the bridge and the clipboard",
    "setup": "closeMenus(); window.__bridge = window.__realBridge96; delete window.__realBridge96; window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
    "expect": [
     {

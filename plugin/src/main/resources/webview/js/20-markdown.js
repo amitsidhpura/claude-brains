@@ -224,7 +224,8 @@
   /* Copy response (15.4). mdBlock paints a FINAL assistant text block in one step: render, keep
      the markdown SOURCE on the element, fold long code, add the copy control. The live path paints
      the same element many times while streaming (flushMd) and calls copyable() only once the block
-     is final — the control is appended LAST because an innerHTML assignment wipes it. Copying the
+     is final — the control is inserted after that because an innerHTML assignment wipes it; it goes
+     FIRST so the CSS float sits at the first line (css/30-blocks.css). Copying the
      source rather than textContent is the reference client's behaviour too (its button copies the
      message's text content, markdown and all). The side panel's answers are .blk as well but are
      not responses, so they never go through here. */
@@ -234,7 +235,7 @@
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'blk-copy'; b.title = 'Copy response';
     b.innerHTML = SVG_COPY;
-    k.appendChild(b);
+    k.insertBefore(b, k.firstChild);
   }
   log.addEventListener('click', function (e) {
     const btn = e.target.closest('.blk-copy');
