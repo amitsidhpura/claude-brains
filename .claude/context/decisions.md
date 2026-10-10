@@ -4,6 +4,14 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-11 — 0.16.0, a MINOR bump; a halted release restarts from step 1, with the bump and feed kept OUT of git until the asset exists
+One feature (6.6 + Include open file) plus two fixes since v0.15.0 → minor. When the user halted
+at the gate for a styling fix, the prep stayed in the working tree uncommitted and the fix was
+committed on its own — a pushed `updatePlugins.xml` without its asset 404s every custom-repo
+update check. "Do the release steps from start" meant re-asserting steps 1-5 and a fresh
+`test buildPlugin verifyPlugin`, not trusting the earlier green run (the zip had changed).
+*Rejected*: 0.15.1 (a feature is in it); committing the bump early "to keep the tree clean".
+
 ## 2026-10-11 — Copy response control: a FLOAT at the first line, opacity-hidden until hover, no plate — the one reserved-space exception
 The hover-only plate pinned absolute at the block's corner sat over the text column and clipped a
 long first line (user's screenshot; rendered side by side in the real panel). Now inserted as the

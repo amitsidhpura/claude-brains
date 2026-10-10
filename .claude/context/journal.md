@@ -3,7 +3,7 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
-## 2026-10-11 (twenty-ninth) — 0.16.0 prepped and HALTED at the gate; the Copy response control re-placed (float, hover by opacity, no plate); fixture 96 54 asserts
+## 2026-10-11 (twenty-ninth) — the Copy response control re-placed (float, hover by opacity, no plate; fixture 96 54 asserts), then 0.16.0 RELEASED after a halt at the gate
 - "Lets release it" → steps 1-5 from one script (0.16.0, notes entry added / 0.13.1 dropped, feed),
   `test buildPlugin verifyPlugin` green (176, 8/8 Compatible, 7 jars, baked notes re-read from an
   extracted copy), notes presented at the gate. Then the user: the Copy response control's
@@ -18,6 +18,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   that must now say "on hover", `updatePlugins.xml` → v0.16.0) sits UNCOMMITTED on purpose: a
   pushed feed without its asset 404s every custom-repo user. Committed `f754eac` + pushed on the user's ask: the control fix +
   fixture + context (journal digest to 2026-10-10 nineteenth). Pending: the user's OK on the look, then rebuild with verifyPlugin and the gate.
+- "Please do release steps from start" → steps 1-5 re-asserted (the bullet reworded to "on
+  hover"), one `test buildPlugin verifyPlugin` run (1m 8s warm; 176, 8/8 Compatible), zip re-read
+  from an extracted copy, gate with the complete notes → "Go ahead please" → `1e4011d`, `v0.16.0`,
+  `gh release create` clean (view: published, asset attached), asset cmp identical, feed 0.16.0,
+  `marketplace-upload` success at +2 s. **0.16.0 released 2026-10-11 01:35 local**; the user's
+  Marketplace screenshot minutes later: Approved, JetBrains' ladder green incl. the IDE run.
 - Sandbox tool window was closed mid-session ("No chat-panel target among 0") — a relaunch
   brought it back with the page; the user asked to "reopen" and that was the route.
 

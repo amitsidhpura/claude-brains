@@ -1,21 +1,23 @@
 # State
 
 ## Current focus
-**2026-10-11 (twenty-ninth session, Linux): 0.16.0 is PREPPED and HALTED at the approval gate
-(user: "Stop release until I say so") while the Copy response control was re-placed. The release
-prep — `version = "0.16.0"` + the 0.16.0 notes entry in `plugin/build.gradle.kts`, `updatePlugins.xml`
-→ v0.16.0 — is UNCOMMITTED by design: never push a feed without its asset. The control fix is
-committed (`f754eac`, pushed). 0.15.0 remains the released version.**
+**2026-10-11 (twenty-ninth session, Linux): 0.16.0 RELEASED — `docs/release.md` end to end
+(prep re-asserted from step 1 after the halt; `test buildPlugin verifyPlugin` 176 / 8-of-8
+Compatible / 7 jars, baked notes re-read; gate held with the COMPLETE notes → "Go ahead please";
+commit `1e4011d`, tag `v0.16.0`, pushed; `gh release create` clean, published with the asset;
+asset `cmp` identical; feed serving 0.16.0; `marketplace-upload` completed success two seconds
+after publish). Context save NOT committed (needs its own ask, conventions).**
+- **Next release**: 0.16.1 for fixes only, 0.17.0 with a feature — the user's call.
+- **Pending in the real PhpStorm: nothing** — both channels serve 0.16.0; the IDE replaces the
+  disk-installed build (00:20 zip) on its next plugin check. Marketplace: **Approved** the same
+  night (user's screenshot: IDE run on 2026.3 EAP + Compatible on 2026.3 EAP / 2026.2.3 / 2026.1.5;
+  the API still said 0.15.0 at the time, the known lag). Description check on the Overview tab is
+  the standing user errand.
 - **Copy response control (MT-15.4b, 2026-10-11, committed `f754eac`)**: first child of `.blk`, floated right, hidden by
   opacity until the reply is hovered, icon-only brighten on hover, `.codeblock`/`.diff` clear it,
   `.blk > .blk-copy + *` margin 0 (`css/30-blocks.css`, `copyable()` in `20-markdown.js`, mockup
   mirrored). Decided with the user in three injected-CSS rounds in the sandbox (decisions.md).
   Fixture 96 step 9b (54 asserts), test 176, harness 1166→1172.
-- **To finish the release**: (1) the user's OK on the look in the sandbox; (2) change the notes
-  bullet in `changeNotesHtml` ("always visible" → "shows when the reply is hovered") and the same
-  bullet in the GitHub notes; (3) `./gradlew test buildPlugin verifyPlugin` again (zip changed),
-  verdict files 8/8, zip re-read; (4) the gate with the COMPLETE notes; (5) steps 7-10 of
-  `docs/release.md` only on "go".
 - **Shipped since v0.15.0, committed and pushed** (detail: checklist 6.6 / MT-11.8, journal
   twenty-seventh + twenty-eighth): 6.6 auto-include selection + Include open file (`cf8ee58`:
   `SelectionTracker.kt` → `__selection` → the pill; `#tglSel`/`#tglFile` switch rows; the panel
@@ -23,7 +25,7 @@ committed (`f754eac`, pushed). 0.15.0 remains the released version.**
   `selection_changed` route being dead in stream-json mode; fixture 99, 69 asserts) and MT-11.8
   (`abcf060`: no summary for the CLI's zero-turn wake on `--resume`; fixture 100). Both hand-tested
   by the user in the real PhpStorm.
-- **Pending the user**: a release is NOT started — 0.16.0 would be the version if asked (feature →
+- **Pending the user**: nothing release-wise (0.16.0 is out) — 0.16.0 would be the version if asked (feature →
   minor; one feature since v0.15.0, commit `cf8ee58`). The real PhpStorm runs the 21:17 zip of this
   code, so nothing is pending there. The `· file` pill click is caret-only now (`select:false` on the open route,
   user's ask 2026-10-10; fixture 99 step 21b) — zip rebuilt after it.
