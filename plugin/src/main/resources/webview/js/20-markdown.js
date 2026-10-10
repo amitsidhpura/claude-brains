@@ -26,7 +26,11 @@
   function inlineMd(s) {
     return s
       .replace(/`([^`]+)`/g, (m, c) => '<code class="ic">' + c + '</code>')
-      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      // Bold admits single `*` inside the pair (`**Garlic (*Allium sativum*)**`), stopping at the
+      // first `**`; the italic pass below then pairs the inner asterisks with the <b> already in
+      // place. With `[^*]+` here the bold never matched and the user saw the `**` printed
+      // around an italic species name (2026-10-10, fixture 90).
+      .replace(/\*\*((?:[^*]|\*(?!\*))+)\*\*/g, '<b>$1</b>')
       .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>')
       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
       // bare URLs autolink too. Not one preceded by `"` or `>` — that is the href, or the text, of

@@ -329,7 +329,11 @@ auto-include selection, voice.
   indent 3 and a fence indented 3 under item 2 (no leading spaces in the body), `1. 1. 1.`
   (drew 1-3), bullets + fence + table unchanged, and a five-step plan card. Not covered: a
   bullet-character change does not split a list (forgiving on purpose); `~~~` fences and
-  indent-only code blocks (backlog).
+  indent-only code blocks (backlog). Inline emphasis: bold may wrap an italic since 2026-10-10
+  (`**Garlic (*Allium sativum*)**` → bold with the species italic inside; before, the bold regex
+  refused any `*` inside the pair, so the user saw the `**` printed, and a `)** and **C**` run
+  mis-paired as a bold " and "). Fixture 90 (12 asserts; negative control on the pre-fix build:
+  6 failed, every guard passed). Italic wrapping bold already worked (the bold pass runs first).
   </details>
 - **1.11** ✅ **Code blocks** — language label, copy button, offline syntax highlighter (keywords /
       strings / comments / numbers / php-vars; deliberately not a full grammar bundle)

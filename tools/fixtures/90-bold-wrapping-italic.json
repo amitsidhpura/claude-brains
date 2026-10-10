@@ -1,0 +1,275 @@
+{
+ "item": "1.10 Markdown inline emphasis (2026-10-10): bold that wraps an italic (`**Garlic (*Allium sativum*)**`) renders as <b> with an <i> inside, not as literal `**`",
+ "branch": "onClaudeEvent text_delta → renderMd → mdBlocks paragraph branch → inlineMd (20-markdown.js): the bold pass runs before the italic pass, so the bold regex must admit single `*` characters inside the pair; the italic pass then finds the inner pair with the <b> already in place. The same inlineMd serves headings, table cells, replay (55-replay.js), plan cards and the side question.",
+ "provenance": "Step 1's text is REAL: the assistant paragraphs of the user's 2026-10-08 conversation (_local/2026-10-08/949f51ad-ee45-4ef3-a5c1-e7250632e747.jsonl, CLI 2.1.276) read BY KEY from the `assistant` text block, verbatim — the user screenshotted them rendering as `**Lashuna / Rasona — Garlic (Allium sativum)**` with the species italic and the asterisks printed. Frame shapes are fixture 86's; nothing new is claimed about the CLI. Steps 2-4 are guards and the reverse nesting (italic wrapping bold), written from CommonMark, not from a transcript. PRE-FIX MECHANISM (read from the code, confirmed by the control run): inlineMd's bold regex was /\\*\\*([^*]+)\\*\\*/ — a single `*` anywhere inside the pair made the whole bold fail to match, and the italic pass then paired only the inner single asterisks. NEGATIVE CONTROL RUN 2026-10-10 against the sandbox still serving the pre-change webview (started before the edit, fixture written first): 6 passed, 6 failed — every guard passed (heading, two italics, three plain bolds, reverse nesting), every DISCRIMINATING assert failed: step 1 read 0 <b>, 0 b>i, a null first bold and a literal `**` at index 18; step 4 read ONE bold whose text was ' and ' — the old regex paired the `)**` closing the first phrase with the `**` opening C, so the greedy mis-pairing is real, not just a missing bold.",
+ "steps": [
+  {
+   "note": "USER'S TEXT — two bold headings, each wrapping an italic Latin name",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "## Strongest evidence\n\n**Lashuna / Rasona — Garlic (*Allium sativum*)**\nThe best-supported item on this list. Meta-analyses of RCTs show aged garlic extract lowers systolic BP by ~8 mmHg in people who are already hypertensive — comparable to a first-line drug at low dose. Works via nitric oxide and hydrogen sulfide pathways. Raw garlic works too, though dosing is less consistent. Caution: it has genuine antiplatelet effects, so it matters if you're on aspirin, clopidogrel, or warfarin.\n\n**Japa — Hibiscus (*Hibiscus sabdariffa*)**\nMultiple RCTs, ~7 mmHg systolic reduction over 4–6 weeks as a tea (2–3 cups/day). Mild diuretic effect. Cheap, safe, easy. One of the few where the trial evidence is reasonably clean."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk h2').length",
+     "equals": 1,
+     "why": "GUARD: the heading is unaffected (both builds)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk i').length",
+     "equals": 2,
+     "why": "GUARD: the two species names are italic on both builds"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk b').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: two bold runs (pre-fix 0)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk b i').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: each italic sits INSIDE its bold"
+    },
+    {
+     "js": "document.querySelector('#log .blk b')?.textContent ?? null",
+     "equals": "Lashuna / Rasona — Garlic (Allium sativum)",
+     "why": "DISCRIMINATING: the whole heading phrase is the bold, brackets included"
+    },
+    {
+     "js": "document.querySelector('#log .blk').textContent.indexOf('**')",
+     "equals": -1,
+     "why": "DISCRIMINATING: no literal asterisk pair survives (pre-fix 4 of them)"
+    }
+   ]
+  },
+  {
+   "note": "GUARDS — plain bold, plain italic, two bolds on one line, bold next to italic",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "**alpha** and *beta*, then **gamma** plus **delta**."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "[...document.querySelectorAll('#log .blk b')].map(b=>b.textContent).join('|')",
+     "equals": "alpha|gamma|delta",
+     "why": "GUARD: three separate bolds — the bold pass is not greedy across a line"
+    },
+    {
+     "js": "[...document.querySelectorAll('#log .blk i')].map(i=>i.textContent).join('|')",
+     "equals": "beta",
+     "why": "GUARD: one italic, untouched by the bold change"
+    }
+   ]
+  },
+  {
+   "note": "REVERSE NESTING — italic wrapping a bold",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "*note: **this** matters*"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk i b').length",
+     "equals": 1,
+     "why": "bold inside italic (the bold pass runs first, so the italic pass sees no `*` left inside)"
+    },
+    {
+     "js": "document.querySelector('#log .blk i')?.textContent ?? null",
+     "equals": "note: this matters",
+     "why": "the italic spans the whole phrase"
+    }
+   ]
+  },
+  {
+   "note": "ADJACENT — bold wrapping italic, immediately followed by another bold on the same line",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "**see (*A b*)** and **C** done"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "[...document.querySelectorAll('#log .blk b')].map(b=>b.textContent).join('|')",
+     "equals": "see (A b)|C",
+     "why": "DISCRIMINATING: the first bold closes at ITS `**`, not at C's (pre-fix: 0 bolds or a greedy one)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk b i').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the inner italic is inside the first bold"
+    }
+   ]
+  }
+ ]
+}

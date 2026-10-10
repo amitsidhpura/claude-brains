@@ -190,6 +190,7 @@
           <li><code>array_column()</code> works on arrays of arrays <i>and</i> arrays of objects.</li>
           <li>The null-safe operator <code>?-&gt;</code> short-circuits the whole chain.</li>
           <li>Prefer <code>str_contains($haystack, $needle)</code> over <code>strpos(...) !== false</code>.</li>
+          <li><b>Strict mode is per file (<i>declare</i> is not global)</b> — it governs calls made <i>from</i> that file only.</li>
         </ul>
         <!-- CommonMark lists (2026-09-09): a LOOSE ordered list keeps <p> per item and may start past 1; an
              item owns its nested list and an indented fence; a tight nested list stays bare -->
