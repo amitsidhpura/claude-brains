@@ -1,10 +1,12 @@
 # State
 
 ## Current focus
-**2026-10-10 (twenty-fifth session, Linux): 9.9 decided and built (switch retired, gauge lookup
-fixed), the model popup fitted to the panel — commits `96e32d1`, `8324cd8` + this save, PUSHED on
-the user's "save / commit and push". Earlier today (twenty-fourth): 15.4, the Kotlin clipboard
-route, 1.30's midnight relay, 11.7 measured + hand-tested (`759c904`, `96315e0`, `a556a3a`).**
+**2026-10-10 (twenty-sixth session, Linux): 0.15.0 RELEASED and Approved — `docs/release.md`
+end to end (commit `1da78a8`, tag `v0.15.0`, GitHub release with the asset, feed serving 0.15.0,
+`marketplace-upload` green, Marketplace "Approved" with JetBrains' ladder green). Earlier today:
+9.9 retired + gauge lookup fixed and the popup fit (`8324cd8`, `96e32d1`); 15.4, the Kotlin
+clipboard route, 1.30's midnight relay, 11.7 measured + hand-tested (`759c904`, `96315e0`,
+`a556a3a`). Twelve features/fixes shipped since v0.14.0 (2026-09-13).**
 0. **9.9 + popup fit** (`8324cd8`, `96e32d1`). The footer's 1M switch is gone; `windowConfirmed`
    replaces `oneMFromCli`; `reconcileFromResult` (`80-gauge.js`) also matches the roster's
    `resolvedModel`, tags stripped both sides; `capToRows` (`40-sessions.js`) measures the popup
@@ -39,10 +41,10 @@ route, 1.30's midnight relay, 11.7 measured + hand-tested (`759c904`, `96315e0`,
 
 **[DECIDE] rows:** none (At a glance: 99 ✅ · 0 ⬜ · 46 ➖ — "no open tasks", answered 2026-10-10).
 
-**Pending in the real PhpStorm: ONE fix** — the popup fit (`96e32d1`; zip rebuilt 17:45). The user
-installed the 17:37 zip 2026-10-10, which carried the other eleven fixes since the 0.14.0 release.
-**0.14.0 is the RELEASED version (2026-09-13)**; the rebuilt zip carries that number with newer
-content — fine for a disk install, a release is **0.14.1** and the user's call (`verifyPlugin`). The sandbox PhpStorm was left RUNNING on the final build
+**Pending in the real PhpStorm: nothing** — 0.15.0 is on both channels and the IDE replaces the
+disk-installed 0.14.0 build (17:37 zip) on its next plugin check. **0.15.0 is the RELEASED version
+(2026-10-10)**; the next release is 0.15.1 for fixes only, 0.16.0 with a feature (user's call,
+`verifyPlugin` every release, budget 15 min for the build — gotchas § Build). The sandbox PhpStorm was left RUNNING on the final build
 (CDP 9222; dies with the Claude Code process that launched it — `:9222` closed at `load` is normal).
 
 ## Open investigations
@@ -98,12 +100,12 @@ content — fine for a disk install, a release is **0.14.1** and the user's call
 - [x] 15.4 export / copy response — built, measured, live-checked (2026-10-10).
 - [x] 11.7 hand-tested live; disabled / Monitor / interrupt measured.
 - [x] 1.30 midnight relay; probe-transcript cleanup; extraction → 2.1.296; zip rebuilt.
-- [x] 9.9 decided (retired) and built; popup fit — 2026-10-10.
-- [ ] Install the 17:45 zip (popup fit) in the real PhpStorm, or cut 0.14.1.
+- [x] 9.9 decided (retired) and built; popup fit; **0.15.0 released** — 2026-10-10.
+- [ ] Confirm in the real PhpStorm that it offered / took 0.15.0 (Plugins list shows 0.15.0) and
+      that the Marketplace Overview still reads plugin.xml's description (user errand, standing).
 - [ ] When a real `auto_mode_server_fallback` frame lands (`window.__dialogSeen`, console warning),
       compare with fixture 94's payloads and the 4.10 fold; fix the card if they differ.
 - [ ] 15.4 Save row: drive the native dialog by hand once (the user, or an input tool).
-- [ ] Check the listing's Overview still reads plugin.xml's description text (user errand).
 - [ ] Leads from the audit, probe-first (backlog § Next up): on-demand diagnostics (2.3), the
       autosave 10-minute stall (2.10), `session_title_changed` (8.3), Ultracode toggle and
       `effortLevel` persistence (9.2), `claude_code_version` for the out-of-date hint,

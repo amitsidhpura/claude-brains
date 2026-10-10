@@ -4,6 +4,17 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 0.15.0, a MINOR bump: six features since v0.14.0 make it a feature release; the notes name behaviour only
+"What will the version be?" → 0.15.0, by release.md's progression (patch = fixes with no new
+capability, the 0.13.1 precedent) — timestamps, option previews, task output + Run in background,
+export / copy response and the auto-mode card are capabilities. The GitHub notes keep the update
+structure (theme, two punchy lines, one paragraph, New / Fixes / Install / Notes) and the
+Marketplace notes (`changeNotesHtml`) keep exactly three versions. Internal work (the re-audit,
+fixtures, probes, the clipboard route's mechanics) stays out; the 1M switch's removal is listed
+as a fix because users could see the switch. *Rejected:* 0.14.1 (the state file had floated it
+while only fixes were pending — the day's features changed that); listing the retired switch
+under New (nothing new to use).
+
 ## 2026-10-10 — 9.9: the 1M switch is RETIRED (not hidden); the gauge follows the CLI's reported window for any pick
 Decided by the user after a step-by-step hand test in the real PhpStorm. **Why retire:** the CLI
 serves a 1,000,000 window with or without the `[1m]` tag (measured over stdio for untagged

@@ -3,6 +3,27 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-sixth) — 0.15.0 released and Approved the same day: release.md end to end, verifier 8/8, notes gate held
+- "Lets release the updates" after "what version?" → 0.15.0 (six features since v0.14.0 → minor,
+  by release.md's progression and the 0.13.1 precedent). Steps 1-5 from one script asserting every
+  exact token before the first write: `version = "0.14.0"` → 0.15.0, the 0.15.0 notes entry added
+  and the 0.13.0 one dropped (three kept), `updatePlugins.xml` version + URL; README Install and
+  plugin.xml's "Not there yet" list re-read and left (still true).
+- `./gradlew test buildPlugin verifyPlugin` as ONE background run: 12m 42s, of which ~10 min sat
+  at "Calculating task graph" (the configuration-time IDE-ladder resolution) with every JetBrains
+  host answering `curl` in under 2 s — not an outage, just slow; a 2-minute timeout would have
+  killed it. Verdict FILES read for 0.15.0: 8 of 8 `Compatible`, no warnings; test 169; zip = our
+  jar + six OSS deps; the baked plugin.xml re-read from the zip (extract to a dir — `unzip -p … |
+  unzip -p /dev/stdin` does not work) shows 0.15.0 and the three notes entries.
+- Gate: version + the COMPLETE notes shown, "Go ahead please" → commit `1da78a8`, tag `v0.15.0`,
+  push, `gh release create` (clean this time; `gh release view` checked anyway: published, asset
+  attached), asset `cmp` equal, feed already serving 0.15.0, `marketplace-upload` green two
+  seconds after publish. The Marketplace API still said 0.14.0 (known lag); the user's screenshot
+  of the Versions page minutes later: **Approved**, JetBrains' own ladder green incl. an IDE run
+  on 2026.3 EAP.
+- Nothing pending in the real PhpStorm any more: both channels serve 0.15.0 and the IDE replaces
+  the disk-installed build on its next check.
+
 ## 2026-10-10 (twenty-fifth) — 9.9 decided by a hand test in the real PhpStorm: the 1M switch retired, the gauge lookup it masked fixed; the model popup fits the panel; harness 1089
 - The user installed the rebuilt zip and we walked 9.9 one step at a time in the real IDE: `sonnet`
   + switch ON → 4% after a turn; switch OFF → the gauge JUMPED to 20% for the same ~40K tokens and
@@ -264,35 +285,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   by coincidence. Neither fix is installed there; local zip or 0.14.1 is the user's call.
 - Committed and pushed on the user's ask (fix + this context save).
 
-## 2026-09-27 (fifteenth) — the panel had been running the VS Code 2.1.270 binary; executable lookup moved to the shell PATH
-- User: "why is it not showing Opus 5.5?" (TUI had it, panel had "Opus 5 (1M)"). Measured by key:
-  every panel transcript (this session included) `"version":"2.1.270"`, terminal ones 2.1.283;
-  `/proc/<pid>/exe` of both real-IDE CLIs = `.vscode/extensions/anthropic.claude-code-2.1.270-linux-x64/
-  resources/native-binary/claude`; the snap PhpStorm's PATH has no `~/.local/bin`; the TUI's own
-  row 6 said "Update to 2.1.280+ to use Opus 5.5". Cause: `resolveExecutable()` walked the IDE's
-  bare PATH while `ClaudeCli` spawned under the shell overlay (gotchas § JCEF, the ShellEnv bullet).
-- Fix on the user's "Fix it properly": `ShellEnv.overlay()` (one copy of the layering) feeds both
-  the spawn and the lookup; `ShellEnv.path()` / `which()`; `ShellEnvTest` (4). `./gradlew test`
-  168/0. Negative control with `runIde` launched under a PATH stripped of `~/.local/bin` (after
-  `./gradlew --stop`): pre-fix build → VS Code 2.1.270 binary (pid 862539), fixed → `versions/2.1.283`
-  (pid 865376); the user's sandbox screenshots showed Opus 5 (1M) then Opus 5.5.
-- User: "why so many models in the panel and not the terminal?" — 2.1.283's `initialize` roster
-  has 11 rows with no distinguishing flag; 2.1.283's TUI `/model`, driven through a pty in a trusted
-  dir, lists the same 11 ("… +1 model"); the user's 6-row terminal screenshot was an older binary,
-  confirmed by their own 2.1.283 screenshot. Folding offered, not asked for (backlog § Someday).
-- Traps (gotchas § Testing): `pgrep -x claude` misses the versioned binary (comm = `2.1.283`);
-  `strings` on the 2.1.28x binary yields only the string table, never picker logic; a pty-driven
-  TUI needs a trusted dir, writes a transcript and moves `lastSessionId` (both undone). The
-  interactive TUI shows the trust dialog for `/home/syncroze` and both claude-brains dirs.
-- 2.1.283 leads for the next re-audit (NOT audited): roster values carry no `[1m]` tag (Fable is
-  `claude-fable-5-1`), so the panel's 1M switch read OFF; `chipName()` parses the version out of the
-  description, which no longer leads with it for named rows; new-looking `initialize` keys
-  (`fast_mode_disabled_reason`, `ide_rc_auto_enable_gate`, `remote_control_*`, `session_state`,
-  `available_output_styles`, `user_output_styles_dir`, `analytics_disabled`).
-- The real PhpStorm keeps its 2.1.270 CLI until a build with the fix is installed. Committed and
-  pushed on the user's ask (fix + this context save).
-
 ## Digest
+- **2026-09-27 (fifteenth)** — "why is it not showing Opus 5.5?": every panel transcript said `version 2.1.270` while the terminal ran 2.1.283 — `/proc/<pid>/exe` was the VS Code extension's bundled binary, because `resolveExecutable()` walked the IDE's bare PATH while the CLI spawned under the shell overlay; fixed by one `ShellEnv.overlay()` feeding both (`ShellEnvTest`), negative control with `runIde` under a stripped PATH; the 11-row roster is the CLI's own (pty-driven TUI showed the same); traps: `pgrep -x claude` misses the versioned binary, `strings` on 2.1.28x is string-table only, a pty TUI needs a trusted dir and moves `lastSessionId`.
 - **2026-09-13 (fourteenth)** — re-audit → 2.1.270 through the new runbook step 3b (the public CHANGELOG is LEADS only; it surfaced five UI changes with no new `case` label); ONE real find, 1.29 (`bashEditDiff` sidecar — attached only in auto/bypass by default, the discovery probe had come up in auto), built the same day with 6.5-tab, 5.6 and 3.7 (user picked layouts from rendered options), all hand-tested; harness 870, test 164; **0.14.0 released** (`gh release create` hit a 500 and left a draft without the asset while the feed already said 0.14.0 — recovered in ~2 min; Approved within the hour); Marketplace screenshot 03 regenerated.
 - **2026-09-09 (thirteenth)** — 0.13.1 released as a patch (one renderer-only commit since v0.13.0 decided the version): `docs/release.md` in order with every precondition asserted before the first write, `test buildPlugin verifyPlugin` as one background run (163/0, 8 verdict files all Compatible — PS-263 joined the `recommended()` ladder), jar bytes checked for the new code, step-6 gate with the full notes → commit `8e19916`, tag, `gh release create`, feed. `marketplace-upload` green before the checks ran; Approved the same day with four verifier rows, visible in the UI before the API listed it (gotchas § Build). Context save committed and pushed on the user's own ask.
 - **2026-09-08/09 (twelfth)** — two renderer fixes, both hand-tested by the user with an eight-prompt script (live, replay, plan card; transcripts verified by key): a ````markdown fence split at three backticks (regex `(`{3,})…\1`*`, fixture 85 written first → 8/15 failed pre-fix, then 15/15) and "numbered lists are always `1.`" → a CommonMark list parser (`mdList`: content indent, loose/tight, `<ol start>`, recursive bodies, fence indent strip; fixture 86, 17 failed pre-fix; prototyped in node before the restart). Harness 829/0, test 163/0. A three-backtick hand test proved nothing — the retest asked for four explicitly. Three pre-existing renderer gaps found on the way → backlog § Housekeeping (indent-only code blocks, `*` inside inline code, mid-line fence leak). Traps → gotchas § Testing: the sandbox exits cleanly on its own; a `grep -c` tail read a pass as a failure; a transcript-by-key script unbounded to the turn.

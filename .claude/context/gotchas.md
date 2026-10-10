@@ -419,6 +419,15 @@ re-read those before trusting memory here.
   a literal `--` inside an SVG comment kills the parse and the icon silently renders as nothing.
 
 ## Build / toolchain / release
+- **`verifyPlugin`'s configuration phase can sit ~10 minutes at "Calculating task graph" with every
+  JetBrains host healthy** (0.15.0, 2026-10-10: `curl` answered jb.gg / teamcity / download /
+  cache-redirector in under 2 s; the one-line log did not move; total 12m 42s). It is slow
+  resolution, not the outage trap below — check `pgrep` for the Gradle JVM and WAIT; a 2-minute
+  timeout or a restart would have thrown the run away. Budget 15 minutes for the release build.
+- **Re-reading the baked `plugin.xml` from the zip: extract to a directory** — `unzip -p zip jar |
+  unzip -p /dev/stdin META-INF/plugin.xml` exits 1 with no output and reads like missing notes
+  (0.15.0). `buildPlugin`'s own check already refuses a zip without `<b>X.Y.Z</b>`; the re-read is
+  belt-and-braces, so do it right or not at all.
 - **`gh release create` can return HTTP 500 and still leave a DRAFT release behind** (2026-09-13,
   0.14.0): the draft (`untagged-…` URL, `isDraft:true`) had the title and notes but NO asset, and the
   feed on `main` was already pushed — custom-repo users 404 until the asset exists. Recovery that
