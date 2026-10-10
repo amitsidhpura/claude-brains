@@ -698,9 +698,11 @@ auto-include selection, voice.
   (`--block-gap`) around a date line, 11px `--muted`. Fixture 93 (16 asserts; negative control on
   the pre-change build 5 passed / 11 failed, every discriminating assert failing); full harness
   952/0. Hand-tested live 2026-10-10 in the sandbox: "2:36 PM" above the prompt and above the
-  reply, and the same two stamps after Refresh (replay) with no date line (same day). Relative
-  day labels go stale across midnight in a page left open — the history list has the same
-  property; a resume relabels.
+  reply, and the same two stamps after Refresh (replay) with no date line (same day). The
+  relative day labels ("Today" / "Yesterday") used to go stale across midnight in a page left
+  open; since 2026-10-10 one timer, re-armed at each local midnight (+1 s slack), re-lays every
+  date line from the turns' `data-day` (`armMidnight`, js/50-blocks.js) — the history list still
+  relabels only on open.
   </details>
 - **1.31** ✅ **Question option previews + answered-question record** [NEW] — an
   `AskUserQuestion` option's `preview` (single-select questions only) shows in a monospace box

@@ -1008,6 +1008,19 @@
       prev = k;
     });
   }
+  // Midnight (1.30): the labels are relative ("Today" / "Yesterday"), so a page left open across
+  // the day change read stale until a clear or resume. One timer, re-armed for the next local
+  // midnight each time it fires, re-lays every date line from the turns' data-day — placeDaySeps
+  // is a pure function of the DOM and today's key, which is exactly what changed. A second of
+  // slack past midnight so a clock that fires early never relays onto the old day.
+  let midnightTimer = null;
+  function armMidnight() {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() + 1000;
+    if (midnightTimer) clearTimeout(midnightTimer);
+    midnightTimer = setTimeout(function () { midnightTimer = null; placeDaySeps(); armMidnight(); }, next - Date.now());
+  }
+  armMidnight();
   // The live counterpart: a new turn compares with the previous stamped turn only.
   function daySepBefore(turnEl) {
     if (!turnEl || !turnEl.dataset.day) return;
