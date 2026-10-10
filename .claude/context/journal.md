@@ -16,8 +16,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   background on hover" (→ icon brightens only). Fixture 96 step 9b pins it (54 asserts); test 176.
 - The release prep (version 0.16.0 in `plugin/build.gradle.kts` + notes incl. a Copy-control bullet
   that must now say "on hover", `updatePlugins.xml` → v0.16.0) sits UNCOMMITTED on purpose: a
-  pushed feed without its asset 404s every custom-repo user. Committed: the control fix + fixture
-  + context. Pending: the user's OK on the look, then rebuild with verifyPlugin and the gate.
+  pushed feed without its asset 404s every custom-repo user. Committed `f754eac` + pushed on the user's ask: the control fix +
+  fixture + context (journal digest to 2026-10-10 nineteenth). Pending: the user's OK on the look, then rebuild with verifyPlugin and the gate.
 - Sandbox tool window was closed mid-session ("No chat-panel target among 0") — a relaunch
   brought it back with the page; the user asked to "reopen" and that was the route.
 
