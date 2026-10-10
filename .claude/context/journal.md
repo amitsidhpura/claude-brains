@@ -3,6 +3,29 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (nineteenth) — spaced @-mention paths: quoted `@"…"` on insert, read back as one chip; fixture 91; harness 914
+- User screenshot: the sent bubble's chip stopped at the first space of `…Comparison_Final Sheet
+  (2).xlsx`. The conversation was not on this box, so the CLI side was MEASURED with a stdio probe
+  (2.1.295, `claude -p` stream-json, `--max-turns 1`, Read disallowed, a secret word in a file under
+  `_probe/space dir/`): raw and backslash-escaped mentions attach NOTHING (the model reaches for a
+  tool, no error); `@"path"` persists `attachment{type:'file'}` and the model answers from it.
+- The binary's `(?:^|\s)@((?:[^\s\\]|\\ )+)` string was a red herring — it exists, the escaped
+  form still attached nothing. An `@[^@\s]+` string nearby was a highlight.js grammar. The real
+  grammar is `@(?:"([^"\n]+)"|…)`; the official webview's `OL0()` quotes on `/[\s:]/` or a non-word
+  tail, and the changelog has "[VSCode] Fixed @-mentions dropping files whose paths contain spaces".
+- Fix: `mentionToken()` (50-blocks.js) + `mentionHtml` reads the quoted form; `insertMentions` and
+  the @-menu rows use it. Control on the pre-change sandbox: 4/5. First fixed run 6/3: the picker
+  splices `ins` AFTER the `@` the user typed → `mentionToken(f).slice(1)`; two were the fixture's
+  own Python `json.dumps` spacing vs `JSON.stringify` (use `separators=(',',':')`). Then 9/9, 914/0.
+- Live end-to-end over CDP (`bridge({kind:'new'})`, `sendTurn` with the quoted mention): one chip;
+  transcript c5364f7c record 3 is the CLI's `file` attachment (displayPath with the space), the
+  model's Read came later. `--max-turns 1` + a tool call = empty `result`; `-p` without `< /dev/null`
+  waits 3 s for stdin and warns.
+- Probe files and their four transcripts deleted; the testing project's `lastSessionId` had NOT
+  moved (`-p` does not touch it). The sandbox died with the Claude Code process that ran `runIde`.
+- Committed and pushed on the user's ask (fix + this context save). Not installed in the real
+  PhpStorm — five fixes pending there.
+
 ## 2026-10-10 (eighteenth) — bold wrapping italic: inlineMd's bold regex admits single `*`; fixture 90; harness 905
 - User screenshot + the conversation's jsonl: `**Lashuna / Rasona — Garlic (*Allium sativum*)**` drew
   with the species italic and the `**` printed. Read BY KEY from the `assistant` text block (CLI
@@ -214,34 +237,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - A bare `initialize` probe (no prompt) writes NO transcript; the earlier `probe_stdio.py` run with
   a prompt did, and was deleted.
 
-## 2026-09-05 (ninth) — checklist folded; 1.26, 1.28 and 1.27 built, hand-tested; the audit is complete
-- Checklist reformat as a design task: §3 shown first, the user's "looks perfect", then the file.
-  The user's viewer (a browser markdown extension) exposed two traps the GitHub API missed: blank
-  lines inside a list item make every row a spaced paragraph (fixed with a leading `<!-- -->`
-  that closes the HTML block on its own line), and a nested list inside a fold closes `</details>`
-  inside the last bullet in marked, outdenting every later row (folds hold paragraphs only).
-  Verified through three parsers (GitHub API, marked, markdown-it). gotchas § Docs.
-- 1.26 measured first with a new stdio probe (`tools/probe_stdio.py`): of twelve `system`
-  subtypes only `vcs_state_changed` (commit/push) and `notification` (a failing Stop hook) are on
-  this wire; `stop_hook_summary` has no translator arm; six are REPL-only (their only call sites are
-  TUI transcript reducers). All twelve drawn anyway through one status-line renderer; the first
-  frame of each kept in `window.__bannerSeen`. Three glyph options rendered side by side in the
-  REAL panel; the user picked per-kind glyphs and supplied lucide link-2 for the PR line. The
-  real-panel screenshot caught the anchor in default blue → `.status a` rule.
-- 1.28 probed: the CLI DOES send `control_cancel_request` to the host (interrupt over a parked ask,
-  before its auto-deny tool_result) — the protocol doc had it stdin-only. Kotlin drops the pending
-  entry first, pushes `__perm_cancelled`, dismisses the editor diff; the card settles as withdrawn.
-  The user kept the CLI's auto-deny OUT box above the card.
-- 1.27: the cut marker opens the whole text in a read-only `LightVirtualFile`; a replayed row asks
-  Kotlin by tool id (`SessionStore.toolText`, new `toolId` on replay blocks). Marker, not body: the
-  body's click is the fold toggle.
-- Traps hit: `pgrep -f`/`pkill -f` matching its own shell (exit 144); `innerHTML` re-serialises
-  SVG so glyph asserts normalise through a scratch element; a `.click()` on a missing element
-  ABORTS the harness (control reads as nothing) — every fixture click is null-guarded.
-- Harness **776** (fixtures to 84), Kotlin **163**. Checklist 93 ✅ · 0 ⬜ · 47 ➖, every section ✅.
-  Committed and pushed on the user's ask (this save included).
-
 ## Digest
+- **2026-09-05 (ninth)** — checklist fold reformat shipped as a design task (§3 first, "looks perfect", then the file); the user's browser markdown extension exposed two traps GitHub's API missed (blank lines inside a list item → spaced paragraphs, fixed by a leading `<!-- -->`; a nested list inside a fold closes `</details>` early in marked) → folds hold paragraphs only, verified through three parsers (gotchas § Docs). 1.26 measured with the new `tools/probe_stdio.py`: of twelve `system` subtypes only `vcs_state_changed` and `notification` reach this wire, six are REPL-only; all twelve drawn through one status-line renderer, first frame of each kept in `window.__bannerSeen`; per-kind glyphs chosen side by side in the REAL panel, `.status a` rule from a screenshot. 1.28: the CLI DOES send `control_cancel_request` to the host (interrupt over a parked ask) — Kotlin drops the pending entry, pushes `__perm_cancelled`, the card settles as withdrawn. 1.27: the cut marker opens the whole tool text in a read-only `LightVirtualFile` (`SessionStore.toolText` by tool id on replay). Traps → gotchas § Testing: `pgrep -f` matching its own shell (exit 144); `innerHTML` re-serialises SVG; a `.click()` on a missing element aborts the harness. Harness 776 (fixtures 84), Kotlin 163; checklist 93 ✅ · 0 ⬜ · 47 ➖, audit complete.
 - **2026-09-05 (eighth)** — 4.8 closed (all four steps), 4.9 number-key answers ➖ ("no keyboard shortcuts for now"), 2.12 built (`WorkspaceRoots.extraDirs` → one `--add-dir` per root outside basePath; probe: attached dir → 0 Read asks), 3.7 reject-with-note built (inline after Reject, deny only) whose hand test exposed and fixed three older defects (duplicate error OUT box via `cardDenies`, replay "1 file changed" for a rejected edit via `reqFiles`, replayed card without its note; Kotlin test on `denied-edit.jsonl`), 3.8 editable Bash command built (CLI runs `updatedInput.command`; the transcript never records the edit; a single-rule grant follows the edit, a compound card writes per-part rules from `splitCommand`, a whole-string rule never matches, bare-`&` compounds re-ask every time). Traps → gotchas § Testing: `addUserMessage` over CDP sends a real prompt on a live session; computed `display` in `.split` is `flex`; no mid-frame harness hook; a Bash line always has an IN row. Harness 714 (fixtures 81), Kotlin 160; checklist 90 ✅ · 3 ⬜ · 47 ➖.
 - **2026-09-04 (seventh)** — 4.8 built as a SPLIT button (main half = the CLI's default destination, caret = the other targets; no memory of the last pick, user's spec) after the user heard the decline recommendation and chose the split. Stdio probe 2.1.260: the ECHOED `destination` decides the file — projectSettings / localSettings / userSettings each wrote theirs, session wrote nothing and stopped the re-ask, cliArg behaved as session, a bogus value dropped the grant silently → Kotlin forwards only the four offered (`PermissionDestinations`). Two probe confounds (both gotchas § Testing): an untrusted scratch workspace never loads project settings (stderr says so, stdout does not) → scratch `CLAUDE_CONFIG_DIR` with a trust-patched `.claude.json`; a zsh `for … set -- $c` loop ran every cell with `--cfg`. Compound card gained an `All of these` header + destination rows; fixture 77 (control 11 fail), harness 670, Kotlin 147.
 - **2026-09-04 (sixth)** — 4.7 built as VS Code's rule after the user's screenshot (four modes, not six) overturned the row's premise: the extension's `webview/index.js` `c4()` assembles the picker per session (`bypassPermissions` only under the dangerous flag, `dontAsk` displayed only while current, never offered). Five stdio probes on 2.1.260: no flag → `auto`; `--permission-mode` BEATS settings `defaultMode`; `bypassPermissions` in settings without the flag → `default`. Real defect: `permissions.defaultMode` was ignored entirely → `PermissionModes.resolveStored` (null = never picked → no flag), `pushInitMeta` seeds `__mode` from `initialize.current_permission_mode` (a live check found that `system/init` repeats the mode only with the FIRST turn), `Don't ask` row hidden unless current. Fixture 76 (control: one guard threw on a null node → null-safe asserts, gotchas § Testing); Kotlin 143, harness 653; user hand-tested six steps, 6.5 closed too. Trap: writing any `.claude/settings*.json` is blocked by the permission classifier — settings cells run in a scratchpad dir, the user makes the real edit.

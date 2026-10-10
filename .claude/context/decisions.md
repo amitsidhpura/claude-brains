@@ -4,6 +4,21 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — Spaced mention paths are QUOTED (`@"a b/c.txt"`) at insert time, in the webview, by the official rule
+`mentionToken()` (50-blocks.js) writes `@"path"` when the path holds whitespace or a colon or ends in
+a non-word character, else bare `@path`; both insert surfaces (the @-menu, the IDE context menu) use
+it and `mentionHtml` reads the quoted form back as one chip (fixture 91). **Why quoting:** measured
+on 2.1.295 — a bare spaced mention attaches nothing and says nothing; the quoted form attaches; the
+official webview quotes by the same rule (`OL0()`), so the panel's prompts read the same as VS Code's.
+**Why in the webview, not Kotlin:** the token shape is a prompt-text concern shared by the picker
+(whose list arrives as bare paths in a `files` frame) and `MentionPaths.tokens` (bare paths in a
+`__mention` frame) — one function next to the reader that must parse it back. **Rejected:**
+backslash escaping (`@a\ b`) — the binary carries a regex for it, but the measured result is no
+attachment; sending the file as an image-style attachment instead of a mention — the CLI's
+`file` attachment is what the mention produces anyway, and the chip/copy-paste contract wants the
+prompt text to carry it; quoting EVERY mention — the user's existing prompts and fixture 74's bare
+chips would change shape for nothing.
+
 ## 2026-10-10 — Bold admits single `*` inside the pair and stops at the first `**`; no delimiter-run parser
 `inlineMd()`'s bold regex became `\*\*((?:[^*]|\*(?!\*))+)\*\*` so `**Garlic (*Allium sativum*)**`
 renders as a bold with the italic inside (fixture 90). **Why this shape:** the bold pass runs before

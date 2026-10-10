@@ -1,27 +1,32 @@
 # State
 
 ## Current focus
-**2026-10-10 (eighteenth session, Linux): bold wrapping italic fixed — built, controlled,
-harness-verified, committed.** User screenshot + transcript (`_local/2026-10-08/949f51ad-….jsonl`,
-CLI 2.1.276): `**Garlic (*Allium sativum*)**` drew as the literal `**` around an italic species
-name. Cause: `inlineMd()`'s bold regex (`plugin/src/main/resources/webview/js/20-markdown.js`) was
-`\*\*([^*]+)\*\*`, so any single `*` inside the pair killed the bold and `)** and **C**` mis-paired
-as a bold " and ". Fix: bold admits single `*` and stops at the first `**`; the italic pass then
-pairs the inner asterisks. Fixture 90 (control 6/6 fail on the pre-change sandbox → 12/12),
-harness **905/0**. Checklist 1.10 Read-more notes it; mockup gained one `<b>…<i>…</i></b>` item.
-`./gradlew test` NOT run (JS-only change).
+**2026-10-10 (nineteenth session, Linux): @-mentions whose path holds a space — built, controlled,
+harness- and live-verified, committed.** User screenshot: the sent-bubble chip cut at the first
+space (`@_local/…/Comparison_Final` + plain ` Sheet (2).xlsx`). MEASURED over stdio (2.1.295):
+the CLI reads a bare `@path` up to its first space and attaches NOTHING for a spaced path — raw
+and backslash-escaped spellings both; `@"path with spaces"` attaches (`attachment{type:'file'}`).
+The official webview quotes the same way (its `OL0()`). Fix: `mentionToken()` in
+`plugin/src/main/resources/webview/js/50-blocks.js` (quote on whitespace/colon/non-word tail;
+`@docs/` stays bare), used by `insertMentions` (`60-composer.js`) and the @-menu rows
+(`65-slash.js`, `ins` WITHOUT the `@` the user typed); `mentionHtml` reads `@"…"` back as one chip
+(text keeps the quotes, data-path bare). Fixture 91 (control 5 fail → 9/9), harness **914/0**,
+live turn in the sandbox persisted the file attachment before the model's own Read. Docs:
+checklist 6.5/6.9, protocol doc `attachment` row, gotchas § Protocol, mockup quoted chip.
+`./gradlew test` NOT run (Kotlin change is a comment).
+**Earlier on 2026-10-10 (eighteenth):** bold wrapping italic (`inlineMd()` bold regex admits single
+`*`, fixture 90) — journal 2026-10-10, decisions 2026-10-10.
 **2026-10-08 (seventeenth / sixteenth):** opened-thought trailing gap (`thinkBlock()` trims,
-fixture 89) and the Default selection following the model the CLI serves (`defaultResolvedFromCli`
-+ `reconcileCliModel()` in `30-menus.js`, chip "Default (<real>)", panel FOLLOWS and never sends
-`set_model`, fixture 88, live-verified) — journal 2026-10-08, decisions 2026-10-08.
-**FOUR fixes are now NOT installed in the real PhpStorm**: PATH lookup (2026-09-27), Default chip
-and thinking trim (2026-10-08), bold-wrapping-italic (2026-10-10). Its panel runs the VS Code
-extension's binary via the unfixed fallback. A build from `main` (`cd plugin && ./gradlew
-buildPlugin`, zip in `plugin/build/distributions/`, restart) or a 0.14.1 release installs all
-four; the user's call.
+fixture 89) and the Default selection following the model the CLI serves (fixture 88).
+**FIVE fixes are now NOT installed in the real PhpStorm**: PATH lookup (2026-09-27), Default chip
+and thinking trim (2026-10-08), bold-wrapping-italic and spaced @-mentions (2026-10-10). Its panel
+runs the VS Code extension's binary via the unfixed fallback. A build from `main` (`cd plugin &&
+./gradlew buildPlugin`, zip in `plugin/build/distributions/`, restart) or a 0.14.1 release installs
+all five; the user's call.
 The newest `claude` CLI on this box is **2.1.295** (`~/.local/share/claude/versions/`); last
-re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed build
-(CDP 9222).
+re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm is DOWN (its `runIde` died with the
+previous Claude Code process); the testing project holds three sandbox transcripts
+(2026-10-08 ×2, 2026-10-10 c5364f7c) — the user's call whether to reset.
 
 ## Open investigations
 - **Where the user's Fable default comes from** — not on this Linux box (no `model` key in
@@ -51,7 +56,7 @@ re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on t
 - `reference/claude-code-log` clone: `git pull` before the re-audit (was 2.1.261 on 2026-09-13).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **905** (fixtures to **90**); `./gradlew test` **168**.
+- `python3 tools/live_harness.py` baseline **914** (fixtures to **91**); `./gradlew test` **168**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` blocks until the IDE exits** (a kill reads
@@ -88,8 +93,9 @@ re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on t
 - [x] Default selection follows the served model — fixture 88, docs, committed 2026-10-08.
 - [x] Opened-thought trailing gap — `thinkBlock()` trim, fixture 89, committed 2026-10-08.
 - [x] Bold wrapping italic — `inlineMd()` bold regex, fixture 90, committed 2026-10-10.
-- [ ] Get all FOUR fixes (PATH lookup 2026-09-27, Default chip + thinking trim 2026-10-08, bold
-      wrapping italic 2026-10-10) into the real PhpStorm: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
+- [x] Spaced @-mention paths quoted `@"…"` — `mentionToken()`, fixture 91, committed 2026-10-10.
+- [ ] Get all FIVE fixes (PATH lookup 2026-09-27, Default chip + thinking trim 2026-10-08, bold
+      wrapping italic + spaced @-mentions 2026-10-10) into the real PhpStorm: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
       every release).
 - [ ] Re-audit 2.1.270 → 2.1.293 (runbook), starting from the leads above; the 1M switch first;
       the per-process roster question second.
@@ -101,8 +107,8 @@ re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on t
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About; the Windows CRLF
       splice check (checklist 3.2 fold); Windows look of the 1.29 card header path; Windows
       `./gradlew test` + VFS click check.
-- [ ] Testing repo carries hand-test leftovers (README.md, test-code.js, timestamp*.txt) and two
-      sandbox transcripts from 2026-10-08 — the user's call whether to reset.
+- [ ] Testing repo carries hand-test leftovers (README.md, test-code.js, timestamp*.txt) and three
+      sandbox transcripts (2026-10-08 ×2, 2026-10-10) — the user's call whether to reset.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251).
 
 ## Known gaps (deliberately left)

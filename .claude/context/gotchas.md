@@ -32,6 +32,14 @@ re-read those before trusting memory here.
   "nothing" is unmeasured (somewhere in 200 KB–2 MB); the transcript keeps only the typed text,
   never the attachment. Consequence: the panel cannot know a mention was cut — only the IDE
   action, which sees the file size, could warn (backlog).
+- **A bare `@path` mention ends at the first SPACE, and a space-bearing path attaches NOTHING** —
+  no error, the model just reaches for a tool. Measured 2026-10-10 (2.1.295, `claude -p` stream-json,
+  `--max-turns 1`, Read disallowed, a secret word in the file): raw `@a b/c d.txt` → no `file`
+  attachment; `@a\ b/c\ d.txt` → none either, although the binary carries a `(?:[^\s\\]|\\ )+`
+  regex; `@"a b/c d.txt"` → `attachment{type:'file'}` persisted and answered from. The official
+  webview quotes when `/[\s:]/` hits or the path ends in a non-word char (`OL0()`); the panel's
+  `mentionToken()` copies that rule (fixture 91). A `-p` probe needs `< /dev/null` or it waits 3 s
+  for stdin and warns.
 - **Probing that a control SUBTYPE is accepted says nothing about which KEYS it accepts.**
   `update_settings` answered an empty-merge probe with "requires at least one key" — proof the
   subtype exists, which the 2.1.260 audit wrote up as a general settings channel — but the first
