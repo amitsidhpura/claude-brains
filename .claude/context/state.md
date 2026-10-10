@@ -1,8 +1,8 @@
 # State
 
 ## Current focus
-**2026-10-10 (twenty-seventh session, Linux): 6.6 AUTO-INCLUDE EDITOR SELECTION built, measured,
-live-checked — UNCOMMITTED (the user's call). Earlier today: 0.15.0 released and Approved
+**2026-10-10 (twenty-seventh session, Linux): 6.6 AUTO-INCLUDE EDITOR SELECTION + Include open file built,
+measured, live-checked, hand-tested — COMMITTED `cf8ee58` and pushed (user's ask). Earlier today: 0.15.0 released and Approved
 (`1da78a8`, tag `v0.15.0`); 9.9 retired + popup fit; 15.4, 1.30, 11.7.**
 - **6.6 (uncommitted, working tree)**: the active editor's selection rides every prompt as a LIVE
   pill (`File.kt:12-18`, first in `#chips`; cursor line when nothing is highlighted), × drops it
@@ -17,7 +17,7 @@ live-checked — UNCOMMITTED (the user's call). Earlier today: 0.15.0 released a
   harness **1089→1129**, test **169→174**, live over CDP (open route selected index.php 4-6 → pill →
   haiku answered path / lines / text; resume drew the pill; `_local/6.6-live.png`). Docs done
   (checklist 100 ✅ · 45 ➖, limits, protocol, backlog, plugin.xml, README). Hand-tested by the user in the real PhpStorm the same day (six steps, all passed — journal). **Not built**: the "Include open file" (file CONTENT) entry — backlog, off by default.
-- **Include open file + switch rows (same evening, uncommitted)**: the paperclip's ✓ item is now
+- **Include open file + switch rows (same evening, in the same commit)**: the paperclip's ✓ item is now
   `#attachFooter` with `#tglSel` (ON) / `#tglFile` (OFF) in the model-footer idiom; `activeSel()`:
   highlight if the selection switch is on, else `{…, file:true}` if the file switch is on, else
   the cursor line; the page sends only the flag, ChatPanel reads the buffer on a pooled thread at
@@ -25,9 +25,9 @@ live-checked — UNCOMMITTED (the user's call). Earlier today: 0.15.0 released a
   `OPEN_FILE_MAX_CHARS` 50,000; `OPEN_RE` parses it back to `selection{…, file:true}`; pill
   `File.kt · file`. Evidence: fixture 99 23/67 (control recorded), test 176, harness 1158, live
   over CDP (`_local/6.6-file-live.png`). Zip 21:00 built for the user's hand test.
-- **Pending the user**: (a) say whether to commit (one commit for 6.6 + the open-file switch;
-  working tree = 25 paths); (b) a release is NOT started — 0.16.0 would be the version if asked
-  (feature → minor). The `· file` pill click is caret-only now (`select:false` on the open route,
+- **Pending the user**: a release is NOT started — 0.16.0 would be the version if asked (feature →
+  minor; one feature since v0.15.0, commit `cf8ee58`). The real PhpStorm runs the 21:17 zip of this
+  code, so nothing is pending there. The `· file` pill click is caret-only now (`select:false` on the open route,
   user's ask 2026-10-10; fixture 99 step 21b) — zip rebuilt after it.
 - Earlier today, all committed and released in 0.15.0 (journal twenty-second → twenty-sixth for the
   detail): 9.9 retired + popup fit (`8324cd8`, `96e32d1`; fixtures 97 + 98), 15.4 export / copy
@@ -98,7 +98,7 @@ disk-installed 0.14.0 build (17:37 zip) on its next plugin check. **0.15.0 is th
       → bubble pill + exact quote; resume + pill click selects the lines; a queued message carries
       its own selection. Label renamed "Include selection" (wrapped at the popup's fixed width);
       zip 20:18 rebuilt with it — the user installs it to confirm the one-line label.
-- [ ] **Commit 6.6** when the user says so (working tree holds it; `git status` lists 20 files).
+- [x] **Commit 6.6** — `cf8ee58`, pushed 2026-10-10 on the user's ask.
 - [x] "Include open file" switch + switch rows — built, fixture 99 (67 asserts), live over CDP (2026-10-10 evening).
 - [x] **Hand test of the open-file half** — the user, 2026-10-10 evening, seven steps all passed
       (tag note moved before the content after Sonnet quoted it as the last line; zip 21:10).

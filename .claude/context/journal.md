@@ -39,7 +39,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   zip 21:10 reinstalled, the rerun quoted the unsaved marker. "Include selection" came up OFF
   after install — the IDE's `other.xml` held `false` from the earlier round, persistence working.
   User: a `· file` pill click must not highlight → `select:false` on the open route from the file
-  pill, `openFile(select)`; fixture 99 → 24 steps / 69 asserts. NOT committed.
+  pill, `openFile(select)`; fixture 99 → 24 steps / 69 asserts. Committed `cf8ee58` + pushed on the
+  user's ask, with this context save (journal digest to 2026-10-08).
 
 ## 2026-10-10 (twenty-sixth) — 0.15.0 released and Approved the same day: release.md end to end, verifier 8/8, notes gate held
 - "Lets release the updates" after "what version?" → 0.15.0 (six features since v0.14.0 → minor,
