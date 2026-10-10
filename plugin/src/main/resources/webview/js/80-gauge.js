@@ -195,6 +195,16 @@
   }
   function onResult(ev) {
     msgStreamed = false;   // an interrupted stream must not mark the next message as drawn
+    // A result that ends NO request this page started. The CLI emits one on `--resume` when a
+    // background task of the PREVIOUS process is reported (system/task_notification
+    // status:"stopped" → init → result num_turns 0, duration_ms ~19, usage all 0; measured
+    // 2026-10-11 on 2.1.296 over stdio, fixture 100) — an empty wake whose summary read
+    // "✻ Pondered for 1s" right under the Resumed line (fmtDur floors at 1 s). Nothing was sent,
+    // streamed or counted, so there is nothing to summarise. A real wake turn (11.7) has
+    // num_turns ≥ 1 and keeps its line; anything the page waited for (busy / workStart) is untouched.
+    // (not reqTokens: it keeps the LAST request's count until the next sendTurn, so an idle page
+    // after a finished turn still has one — fixture 100 step 3 caught the stricter guard)
+    if (ev.num_turns === 0 && !busy && !workStart) return;
     const usage = ev.usage || {};
     if (typeof usage.output_tokens === 'number') reqTokens += usage.output_tokens;
     // Item 17a and the footer switches. Deliberately ABOVE the background-task early return

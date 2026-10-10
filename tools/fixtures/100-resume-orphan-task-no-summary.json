@@ -1,0 +1,197 @@
+{
+ "item": "Resume after an orphaned background task: the CLI's empty wake result draws NO summary line (2026-10-11)",
+ "branch": "onResult: a result with num_turns === 0 that ends no request the page started (workStart 0, not busy) returns before the summary \u2014 the CLI emits one on --resume when a background task of the PREVIOUS process is reported (system/task_notification status:stopped \u2192 init \u2192 result num_turns 0, duration_ms 19, no tokens); a real turn's result (num_turns \u2265 1, or any result the page waited for) still draws the summary.",
+ "provenance": "MEASURED 2026-10-11 on 2.1.296 over stdio: a bare `--resume` of a copy of a session whose previous process had left a background shell running emitted, at ~1.1 s and with no prompt, exactly these frames in this order (system/task_notification with summary \"Background shell command didn't finish before the previous session ended\", a replayed /model local-command user frame, system/init, result {num_turns:0, duration_ms:19, usage all 0, result:''}); stripping every queue-operation record from the copy changed nothing (the trigger is the CLI's task registry, not the transcript); a session with no orphaned task emits no result at all. The frames below are those tapes, trimmed. The user's screenshot: 'Resumed' then '\u273b Pondered for 1s' (fmtDur floors at 1 s). Negative control RUN 2026-10-11 on the pre-fix build: 5/8 \u2014 step 1 drew one .done (expected 0), step 2 then counted 2, step 3 counted 3.",
+ "steps": [
+  {
+   "note": "0 \u2014 a quiet page: no summary lines, not busy",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); setBusy(false);",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .done').length",
+     "equals": 0,
+     "why": "GUARD: clean log"
+    },
+    {
+     "js": "busy",
+     "equals": false,
+     "why": "GUARD"
+    }
+   ]
+  },
+  {
+   "note": "1 \u2014 the resume-time triple (task_notification stopped \u2192 init \u2192 result num_turns 0): nothing is summarised",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "task_notification",
+     "task_id": "bvfq8aqrr",
+     "tool_use_id": "toolu_019zawoU7HX2DP6xkuHn5n5m",
+     "status": "stopped",
+     "output_file": "",
+     "summary": "Background shell command didn't finish before the previous session ended",
+     "uuid": "4129138e-fafe-4ac6-988a-b559a1004d8b",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673"
+    },
+    {
+     "type": "system",
+     "subtype": "init",
+     "cwd": "/home/syncroze/Sites/claude-brains",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673",
+     "tools": [
+      "Task",
+      "Bash",
+      "Edit",
+      "Read"
+     ],
+     "mcp_servers": [
+      {
+       "name": "ide",
+       "status": "connected"
+      }
+     ],
+     "model": "claude-haiku-5-5",
+     "permissionMode": "default",
+     "slash_commands": [
+      "compact",
+      "context"
+     ],
+     "uuid": "a1"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 19,
+     "duration_api_ms": 0,
+     "num_turns": 0,
+     "result": "",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673",
+     "usage": {
+      "input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "output_tokens": 0,
+      "output_tokens_details": {
+       "thinking_tokens": 0
+      }
+     },
+     "modelUsage": {},
+     "uuid": "r1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .done').length",
+     "equals": 0,
+     "why": "DISCRIMINATING: no '\u273b Pondered for 1s' (pre-fix: 1)"
+    },
+    {
+     "js": "busy",
+     "equals": false,
+     "why": "still idle"
+    },
+    {
+     "js": "document.querySelectorAll('#log .error, #log .retry').length",
+     "equals": 0,
+     "why": "nothing else drawn for it"
+    }
+   ]
+  },
+  {
+   "note": "2 \u2014 a real turn still gets its summary: sendTurn-less wake shape with num_turns 1 after a streamed assistant",
+   "setup": "window.__realBridge100 = window.__bridge; window.__bridge = function(){}; sendTurn('hello', []); window.__bridge = window.__realBridge100;",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "id": "m1",
+      "role": "assistant",
+      "model": "claude-haiku-5-5",
+      "content": [
+       {
+        "type": "text",
+        "text": "hi"
+       }
+      ]
+     },
+     "uuid": "as1",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 2100,
+     "duration_api_ms": 1900,
+     "num_turns": 1,
+     "result": "done",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673",
+     "usage": {
+      "input_tokens": 10,
+      "output_tokens": 12,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0
+     },
+     "uuid": "r2"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .done').length",
+     "equals": 1,
+     "why": "a request the page started (busy, workStart set) ends with a summary as before"
+    },
+    {
+     "js": "busy",
+     "equals": false,
+     "why": "turn ended"
+    }
+   ]
+  },
+  {
+   "note": "3 \u2014 the empty resume result arriving again while idle: still nothing",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "task_notification",
+     "task_id": "bvfq8aqrr",
+     "tool_use_id": "toolu_019zawoU7HX2DP6xkuHn5n5m",
+     "status": "stopped",
+     "output_file": "",
+     "summary": "Background shell command didn't finish before the previous session ended",
+     "uuid": "4129138e-fafe-4ac6-988a-b559a1004d8b",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 19,
+     "duration_api_ms": 0,
+     "num_turns": 0,
+     "result": "",
+     "session_id": "e8d6eaf2-63e6-481b-8cbb-1ae213323673",
+     "usage": {
+      "input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "output_tokens": 0,
+      "output_tokens_details": {
+       "thinking_tokens": 0
+      }
+     },
+     "modelUsage": {},
+     "uuid": "r1"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .done').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: unchanged (pre-fix: 2)"
+    }
+   ]
+  }
+ ]
+}

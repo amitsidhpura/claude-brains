@@ -25,7 +25,15 @@ measured, live-checked, hand-tested — COMMITTED `cf8ee58` and pushed (user's a
   `OPEN_FILE_MAX_CHARS` 50,000; `OPEN_RE` parses it back to `selection{…, file:true}`; pill
   `File.kt · file`. Evidence: fixture 99 23/67 (control recorded), test 176, harness 1158, live
   over CDP (`_local/6.6-file-live.png`). Zip 21:00 built for the user's hand test.
-- **Pending the user**: a release is NOT started — 0.16.0 would be the version if asked (feature →
+- **MT-11.8 (2026-10-11, UNCOMMITTED)**: "✻ Pondered for 1s" under "Resumed" — the CLI's own empty
+  wake on `--resume` when the previous process left a background task running (gotchas § Protocol;
+  measured twice over stdio on a copy of this session). `onResult` (`80-gauge.js`) now returns on a
+  `num_turns === 0` result while `!busy && !workStart` (NOT `!reqTokens` — it keeps the last
+  request's count; fixture 100 step 3 caught that). Fixture 100 (4 steps / 8 asserts; control 5/8),
+  harness **1166**, test 176, zip 00:20 built. The user's panel shows the line until that zip is
+  installed; the trigger recurs whenever the IDE closes over a running background shell.
+- **Pending the user**: commit the MT-11.8 fix (working tree: 80-gauge.js, fixture 100, checklist,
+  gotchas, context). A release is NOT started — 0.16.0 would be the version if asked (feature →
   minor; one feature since v0.15.0, commit `cf8ee58`). The real PhpStorm runs the 21:17 zip of this
   code, so nothing is pending there. The `· file` pill click is caret-only now (`select:false` on the open route,
   user's ask 2026-10-10; fixture 99 step 21b) — zip rebuilt after it.
@@ -106,6 +114,7 @@ disk-installed 0.14.0 build (17:37 zip) on its next plugin check. **0.15.0 is th
 - [x] 11.7 hand-tested live; disabled / Monitor / interrupt measured.
 - [x] 1.30 midnight relay; probe-transcript cleanup; extraction → 2.1.296; zip rebuilt.
 - [x] 9.9 decided (retired) and built; popup fit; **0.15.0 released** — 2026-10-10.
+- [x] MT-11.8 resume summary fix — measured, fixture 100, harness 1166 (2026-10-11); uncommitted.
 - [ ] Confirm in the real PhpStorm that it offered / took 0.15.0 (Plugins list shows 0.15.0) and
       that the Marketplace Overview still reads plugin.xml's description (user errand, standing).
 - [ ] When a real `auto_mode_server_fallback` frame lands (`window.__dialogSeen`, console warning),

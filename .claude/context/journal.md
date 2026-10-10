@@ -3,6 +3,23 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-11 (twenty-eighth) — "Pondered for 1s" under Resumed: the CLI's empty wake on --resume after an orphaned background task; onResult guard; fixture 100; harness 1166
+- User's screenshot: "Resumed" then "✻ Pondered for 1s" with no turn. Replay summaries draw
+  BEFORE the Resumed line, so it was live: a `result` after the resume. Bare `--resume` of the
+  testing project's session over stdio: nothing. Of a copy of THIS session (which runs inside the
+  panel — 1075 records carry the panel's entrypoint — and had sandbox `runIde` launches running
+  when the IDE restarted): `system/task_notification` "stopped" → replayed /model user frame →
+  init → `result {num_turns:0, duration_ms:19, usage 0}` at 1.1 s. Stripping every
+  `queue-operation` record changed nothing — the CLI's task registry is the trigger. fmtDur floors
+  at 1 s → "1s". No hooks/plugins involved (settings read).
+- Fix: `onResult` returns on `num_turns === 0 && !busy && !workStart`; the first cut also required
+  `!reqTokens` and fixture 100 step 3 (a second empty result after a real turn) caught it —
+  reqTokens keeps the last request's count until the next sendTurn. Fixture 100 from the taped
+  frames (control 5/8 on the pre-fix build → 8/8); first full run 1165/1 on a fresh IDE (the known
+  timing case), warm rerun 1166/0; test 176; zip 00:20. Docs: MT-11.8, gotchas § Protocol.
+  Decided with the user: the "stopped" task notification itself stays undrawn (tasks this panel
+  session never saw). NOT committed.
+
 ## 2026-10-10 (twenty-seventh) — 6.6 auto-include selection + Include open file: CLI route measured dead, panel route built; switch rows; fixture 99; harness 1089→1158; test 176; live + replay over CDP; user hand-tested the selection half
 - Asked which deferred rows are worth reviving → recommended 6.6 first; discussed it to a ten-point
   list (live pill, × per message, paperclip entry always visible, selection on / open-file content
@@ -250,27 +267,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Committed and pushed on the user's ask (fix + this context save). Not installed in the real
   PhpStorm — five fixes pending there.
 
-## 2026-10-10 (eighteenth) — bold wrapping italic: inlineMd's bold regex admits single `*`; fixture 90; harness 905
-- User screenshot + the conversation's jsonl: `**Lashuna / Rasona — Garlic (*Allium sativum*)**` drew
-  with the species italic and the `**` printed. Read BY KEY from the `assistant` text block (CLI
-  2.1.276) before touching anything — the markdown was exactly that, bold wrapping an italic.
-- Cause in `inlineMd()` (`20-markdown.js`): bold was `\*\*([^*]+)\*\*`, so one `*` inside the pair
-  made the bold fail; the italic pass then paired only the inner asterisks. The control also showed a
-  second face of the same regex: `)** and **C**` pairs the closing `**` with the next opener and
-  draws a bold " and ".
-- Fix: `\*\*((?:[^*]|\*(?!\*))+)\*\*` — single `*` allowed, stop at the first `**`. Italic wrapping
-  bold already worked (bold pass runs first, leaves no `*` for the italic pass to trip on) and is now
-  a guard. The backlog's "inline code is not opaque to emphasis" item is the same function, untouched.
-- Free negative control: the sandbox was down, so it was started on the UNCHANGED build, fixture 90
-  written and run (6 guards pass, 6 discriminating fail, readings in the provenance), then the edit,
-  kill via `pgrep -f … | xargs -r kill` (CDP gone in 1s), restart, 12/12; full harness 905/0.
-- First control run ABORTED on a `null.textContent` in a discriminating assert (the pre-fix DOM has no
-  `<b>`); `?.textContent ?? null` made it a FAIL — the known trap (gotchas § Testing), hit again.
-- Docs: checklist 1.10 Read-more; mockup list item `<b>…<i>…</i></b>`. `./gradlew test` skipped (JS
-  only). Not installed in the real PhpStorm — four fixes pending there. Committed and pushed on the
-  user's ask (fix + this context save).
-
 ## Digest
+- **2026-10-10 (eighteenth)** — bold wrapping italic (`**_x_**` / `***x***`) rendered raw: `inlineMd`'s bold regex refused a single `*` inside the run → admitted; fixture 90 (control on the unchanged build), harness 905. Committed + pushed on the user's ask.
 - **2026-10-08 (seventeenth)** — opened-thought trailing gap: 13/13 persisted `thinking` blocks end with `\n\n` and `.think .body` is the one `pre-wrap` block → `thinkBlock()` trims (live, replay, gallery, redacted share the builder); fixture 89 written on the UNCHANGED sandbox first (3 discriminating fail → 6/6), harness 893; traps → gotchas § Testing (`pgrep | xargs -r kill`, a CDP eval right after the harness sees an empty panel). Committed + pushed on the user's ask.
 - **2026-10-08 (sixteenth)** — chip "Default (Opus 5.5)" while the session ran on Fable: the roster's `default` row never names the effective model, only `system/init.model` / `message.model` / `result.modelUsage` do → `defaultResolvedFromCli` + `reconcileCliModel()`, `chipLabelFor()` the one label rule, the gauge keyed by `effectiveModelId()`; fixture 88 (control 12/5 → 17/17), harness 887, test 168; live on a FRESH CLI (fixture 55's real `setModel` had pinned the old one); the roster is per-PROCESS (11 rows over stdio, 13 in the panel). Committed + pushed on the user's ask.
 - **2026-09-27 (fifteenth)** — "why is it not showing Opus 5.5?": every panel transcript said `version 2.1.270` while the terminal ran 2.1.283 — `/proc/<pid>/exe` was the VS Code extension's bundled binary, because `resolveExecutable()` walked the IDE's bare PATH while the CLI spawned under the shell overlay; fixed by one `ShellEnv.overlay()` feeding both (`ShellEnvTest`), negative control with `runIde` under a stripped PATH; the 11-row roster is the CLI's own (pty-driven TUI showed the same); traps: `pgrep -x claude` misses the versioned binary, `strings` on 2.1.28x is string-table only, a pty TUI needs a trusted dir and moves `lastSessionId`.

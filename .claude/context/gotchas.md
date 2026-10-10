@@ -5,6 +5,16 @@ Each bullet is a RULE plus the minimum evidence to trust it. Payload shapes live
 re-read those before trusting memory here.
 
 ## Protocol / wire
+- **`--resume` of a session whose previous process left a background task running emits an EMPTY
+  turn with no prompt** (measured 2026-10-11, 2.1.296): `system/task_notification` (status
+  "stopped", "Background shell command didn't finish before the previous session ended") → a
+  replayed local-command `user` frame → `system/init` → `result {num_turns:0, duration_ms:19,
+  usage 0}`. The trigger is the CLI's task registry, not the transcript (stripping every
+  `queue-operation` record changed nothing); a session with no orphaned task emits no result.
+  The panel's summary drew "✻ Pondered for 1s" under "Resumed" (fmtDur floors at 1 s) until
+  onResult learned to skip a num_turns-0 result it never waited for (fixture 100). Expect this
+  whenever the IDE closes over a running background shell — e.g. a sandbox `runIde` launched
+  from a panel session.
 - **An IDE→CLI `selection_changed` notification over the MCP-over-WS "ide" client does NOTHING in
   the panel's stream-json mode** (measured 2026-10-10, 2.1.296, four variants incl. after a first
   turn): the consumer is a React hook in the TUI tree (`Lee(He, C.offerIdeSelection)`) and the

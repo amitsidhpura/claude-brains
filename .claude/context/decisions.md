@@ -4,6 +4,15 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-11 — A zero-turn result the page never waited for draws no summary; the orphaned-task notification stays undrawn
+The CLI's empty wake on `--resume` (a background task of the previous process reported as
+"stopped": task_notification → init → result num_turns 0) is machinery, not a turn: `onResult`
+returns when `num_turns === 0 && !busy && !workStart`. Not `!reqTokens` — it holds the last
+request's count until the next sendTurn (fixture 100 step 3). The "stopped" notification is NOT
+drawn: it names a task this panel session never showed, so a status line would be noise of another
+kind (agreed with the user). *Rejected*: hiding the summary by `duration_ms` (a real 0-token turn
+can be fast); drawing the notification as an 11.7 roster event (nothing to open, no row to end).
+
 ## 2026-10-10 — 6.6 "Include open file": a second switch, highlight wins (VS Code's rule), content read at send time, 50 K cap
 The paperclip's ✓ item became two switch rows in the model menu's idiom (user's screenshot of
 Fast mode / Thinking / Effort): "Include selection" (ON) and "Include open file" (OFF). Matrix:
