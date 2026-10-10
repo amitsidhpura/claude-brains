@@ -186,6 +186,13 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
    ends of the pair must name the same token or whichever is larger silently wins. */
 .card .blk { padding-left: 0; margin-top: var(--attach-gap); }
 .card .blk::before { display: none; }
+/* Host dialog card (4.10): prose paragraphs under the header. The header's own margin is the
+   attached gap to the first line; following lines sit a block gap apart, like the plan body's. */
+.card.dlg .dlg-p { margin: 0; line-height: 1.5; }
+.card.dlg .dlg-p + .dlg-p { margin-top: var(--block-gap); }
+/* The help link wears the markdown link's dress (.blk a) — outside .blk it fell to the browser's
+   default blue, invisible on the warm card (real-panel render, 2026-10-10). */
+.card.dlg .dlg-p a { color: var(--blue); text-decoration: none; }
 
 /* AskUserQuestion option text */
 .q-body { display: flex; flex-direction: column; min-width: 0; }

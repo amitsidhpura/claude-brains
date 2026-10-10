@@ -17,13 +17,13 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 96 ✅ · 0 🟥 · 0 🟧 · 3 ⬜ · 46 ➖ (145 rows) — 3 open rows, all awaiting a decision
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 97 ✅ · 0 🟥 · 0 🟧 · 2 ⬜ · 46 ➖ (145 rows) — 2 open rows, all awaiting a decision
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** four, all from the 2.1.296 audit 2026-10-10 — two new rows
-  (4.10 auto-mode server-fallback dialog, 11.7 background task output) and two re-opened (9.9 the
-  1M switch — measured inert on 2.1.296; 15.4 export / copy response — `export_conversation`
-  answers over stdio). 1.30 (message timestamps) and 1.31 (question option previews) were taken
-  and built the same day. Earlier: 1.29 (2.1.270
+- **Awaiting a decision ([DECIDE]):** three, all from the 2.1.296 audit 2026-10-10 — one new row
+  (11.7 background task output) and two re-opened (9.9 the 1M switch — measured inert on 2.1.296;
+  15.4 export / copy response — `export_conversation` answers over stdio). 1.30 (message
+  timestamps), 1.31 (question option previews) and 4.10 (auto-mode server-fallback dialog) were
+  taken and built the same day. Earlier: 1.29 (2.1.270
   audit) built 2026-09-13; the ten 2026-09-04 full-surface rows are settled (1.26–1.28, 2.12, 3.7,
   3.8, 4.7, 4.8, 6.5, 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3 deferred 2026-09-04)
 
@@ -908,7 +908,7 @@ auto-include selection, voice.
   0 abort; the grant-follows-the-edit asserts 4 fail on the hide-always build and 3 on the
   hide-compound build), `EditProposalsTest` (+4), mockup mirrored (3 boxes).
   </details>
-## 4. ⬜ Permission modes
+## 4. ✅ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
       aliased in the chip), acceptEdits, plan, auto (the safety-classifier mode)
 - **4.2** ➖ **`bypassPermissions`** — removed 2026-08-03 with the relaunch machinery; the CLI
@@ -979,26 +979,51 @@ auto-include selection, voice.
   VS Code answers a focused card with 1/2/3 and Esc; ours would be a keydown handler scoped to
   the focused card, not a global chord (12.4). Revisit only if the user asks for keyboard answers.
   </details>
-- **4.10** ⬜ [MD] **Auto-mode server-fallback dialog (Continue / Stop)** [NEW] [DECIDE] — when
-  auto mode's server-side classifier is unavailable and the session falls back to billed classifier
-  requests, the CLI asks the host to render a Continue/Stop dialog (CHANGELOG 2.1.281: "in the VS
-  Code and JetBrains panels… replacing the unanswerable warning line"). It is a
-  `request_user_dialog{dialog_kind:"auto_mode_server_fallback"}`, sent ONLY to a client that
-  declared the kind in `initialize.supportedDialogKinds`; we declare none, so the CLI takes its
-  silent default — the same mechanism as 9.7's consent gate.
+- **4.10** ✅ **Auto-mode server-fallback dialog (Continue / Stop)** [NEW] — built 2026-10-10: the
+  panel declares `initialize.supportedDialogKinds:["auto_mode_server_fallback"]`, so when auto
+  mode's server-side classifier is unavailable and the session falls back to billed classifier
+  requests, the CLI's `request_user_dialog{dialog_kind:"auto_mode_server_fallback"}` reaches the
+  panel as a card — the payload's title, its paragraphs, a "Learn more" link, Continue / Stop
+  (CHANGELOG 2.1.281: "in the VS Code and JetBrains panels… replacing the unanswerable warning
+  line"). Live-only; never observed on the wire — built from the schema.
   <!-- --><details><summary>Read more…</summary>
-  2.1.296 audit (2026-10-10). MEASURED: the extension's `supportedDialogKinds` literal is
-  `["fable_overage_consent_prompt","auto_mode_server_fallback"]` (2.1.270 declared only the
-  first). The CLI schema: "declare exactly the kinds you can render… a host that receives a kind
-  it did not declare must not answer it (an error-subtype response is discarded and the dialog
-  stays pending) — never with {behavior:"cancelled"}, which is a real settlement". Payload
-  UNMEASURED — it cannot be triggered on demand (needs the server classifier to be unavailable);
-  the webview copy is "Auto mode is using Claude Code's built-in classifier in this session, and
-  those classifier requests are billed. Continue to keep going in auto mode, or Stop to end this
-  turn." If taken: declare the kind, keep the first frame in a `window.__dialogSeen` watch (the
-  9.7 idiom) and build the card from a real frame. `kind:` literals `auto_mode_flagged_allow`,
-  `auto_mode_outside_reads`, `auto_mode_setup_review`, `auto_mode_unavailable` also exist in the
-  binary — unattributed; not shown to be dialog kinds.
+  2.1.296 audit (2026-10-10) opened it; built the same day. MEASURED, CLI side (2.1.296 binary):
+  the dialog definition `{kind:"auto_mode_server_fallback", payload:{gatewayHost?:string,
+  title:string, paragraphs:string[], helpUrl:string}, result: continue|interrupt|cancelled,
+  default:"cancelled"}`; the host's answer schema `{behavior:"completed"|"cancelled", result}`;
+  the gate `sdkHost && supportedDialogKinds.includes(kind)` — undeclared, the CLI logs "no dialog
+  surface to warn on, continuing in auto mode"; `continue` with a `gatewayHost` persists
+  `autoModeClassifierBillingNoticeAcknowledgedAt`, `interrupt` ends the turn, an unanswered one
+  reads `shouldBlock:true, reason:"Cancelled at the classifier billing notice"`. MEASURED, host
+  side (VS Code 2.1.296 `extension.js` + `webview/index.js`): the extension forwards only the
+  kinds in its literal `["refusal_fallback_prompt","fable_overage_consent_prompt",
+  "auto_mode_server_fallback"]` (2.1.270 had the first two); its renderer draws the title as a
+  header, non-blank paragraphs, the help URL only when https on claude.com / anthropic.com (or a
+  subdomain) — linkified where a paragraph quotes it, else a trailing "Learn more" — the stock
+  sentence ("Auto mode is using Claude Code's built-in classifier in this session, and those
+  classifier requests are billed. Continue to keep going in auto mode, or Stop to end this turn.")
+  when title and paragraphs are both empty, and Continue (primary) / Stop, both disabled for the
+  CLI's 500 ms `armInputGrace`. MEASURED over stdio 2026-10-10: a bare `initialize` carrying
+  `supportedDialogKinds:["auto_mode_server_fallback"]` answers `success` on 2.1.296 (no transcript
+  written). UNMEASURED: a real frame — the dialog needs the server classifier down, which cannot
+  be staged; the first frame of each kind lands in `window.__dialogSeen[kind]` + a console
+  warning (the 9.7 watch idiom) so the schema-built card can be checked against it.
+  Implementation: `ClaudeCli.DIALOG_KINDS` is the declared list and the forwarding filter — an
+  undeclared kind is logged and left UNANSWERED (the schema: "a host that receives a kind it did
+  not declare must not answer it… never with {behavior:"cancelled"}"); `ClaudeSessionService`
+  holds the pending set (first answer wins; a withdrawal removes it); ChatPanel translates to a
+  `dialog_request{id, kind, payload}` frame and takes `{kind:"dialog", id, result}` back,
+  allowlisting `continue|interrupt`; `renderDialog` (85-cards.js) draws `.card.warn.dlg`, registers
+  it in `permCards` so `__perm_cancelled` lapses it (1.28 wording), and settles to "✓ Continuing in
+  auto mode" / "✗ Stopped — this turn ends". Fixture 94 (negative control run 2026-10-10 on the
+  pre-change sandbox: every discriminating assert failed on 0 / '' / 'absent', step 2 aborted on
+  the missing card; after the change 28/28 — the 28th, the link colour, was added after the first
+  real-panel render showed the help link in the browser's default blue). Gallery and mockup carry
+  the card. Replay: nothing
+  persisted that we know of — live-only, like the task frames. `kind:` literals
+  `auto_mode_flagged_allow`, `auto_mode_outside_reads` (a TUI dialog: "keep allowing reads outside
+  the working directories, or block them"), `auto_mode_setup_review`, `auto_mode_unavailable` also
+  exist in the binary — not host dialog kinds the extension declares.
   </details>
 
 ## 5. ✅ Plan mode
@@ -1347,7 +1372,8 @@ auto-include selection, voice.
   (70-events.js). Revivable as [MD] once one is captured: consent card + chip update.
   2.1.296 audit (2026-10-10): VS Code's `supportedDialogKinds` is `["fable_overage_consent_prompt",
   "auto_mode_server_fallback"]` — the second is the new auto-mode Continue/Stop dialog (4.10),
-  gated the same way. 2.1.282 changed the SDK-host behaviour when this prompt goes unanswered:
+  gated the same way and built 2026-10-10 (the panel now declares THAT kind only; reviving this row
+  means adding `fable_overage_consent_prompt` to `ClaudeCli.DIALOG_KINDS` plus a card). 2.1.282 changed the SDK-host behaviour when this prompt goes unanswered:
   "the turn now ends instead" of switching models — so the chip-lies-after-fallback risk is
   smaller than when this was deferred; still unobserved.
   </details>

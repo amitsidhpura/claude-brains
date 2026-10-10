@@ -65,6 +65,14 @@ class ClaudeCli(
      * hook_callback. The card must stop looking answerable; a late answer goes nowhere.
      */
     private val onCancel: (requestId: String) -> Unit = {},
+    /**
+     * A host dialog (checklist 4.10): `control_request{subtype:request_user_dialog, dialog_kind,
+     * payload, tool_use_id?}` for a kind this host declared in [sendInitialize] ([DIALOG_KINDS]).
+     * The CLI blocks on it: [respondDialog] MUST follow (or a `control_cancel_request` withdraws it
+     * via [onCancel]) — the schema's own words: "an unanswered dialog is cancelled by the CLI after
+     * its dialog deadline". Payload shape is per kind; passed through opaquely.
+     */
+    private val onDialog: (requestId: String, kind: String, payload: JsonObject) -> Unit = { _, _, _ -> },
     /** A declared hook fired: [respond] MUST be called (once) or the CLI stalls until its timeout. */
     private val onHook: (callbackId: String, input: JsonObject, respond: (JsonObject) -> Unit) -> Unit =
         { _, _, respond -> respond(buildJsonObject { put("continue", true) }) },
@@ -240,6 +248,14 @@ class ClaudeCli(
                         })
                     })
                 })
+                // Host dialogs this panel renders (4.10). A `request_user_dialog` is only sent for a
+                // kind some attached client declared here — undeclared, the CLI "stays silent so a
+                // capable client (or the worker's park deadline) settles it" and the auto-mode
+                // fallback notice never reaches the user. Declaring a kind is a promise to answer
+                // it (handleControlRequest → onDialog → the webview's renderDialog → respondDialog).
+                // Accepted by 2.1.296 (measured over stdio 2026-10-10: a bare initialize carrying
+                // exactly this list answered `success`).
+                put("supportedDialogKinds", buildJsonArray { DIALOG_KINDS.forEach { add(JsonPrimitive(it)) } })
             })
         })
         writeLine(line)
@@ -336,10 +352,32 @@ class ClaudeCli(
             // it, so answer with the schema's honest no-answer — the response enum is
             // `action: accept|decline|cancel` and a bare `{}` is invalid (checklist 11.5, 2026-08-29).
             "elicitation" -> writeControlResponse(reqId, buildJsonObject { put("action", "decline") })
+            // A host dialog (4.10). The CLI sends only kinds declared on initialize (DIALOG_KINDS),
+            // so a kind outside the list means this list and the webview's renderDialog drifted.
+            // The 2.1.296 schema is explicit about that case: "a host that receives a kind it did
+            // not declare must not answer it (an error-subtype response is discarded and the dialog
+            // stays pending) — never with {behavior:"cancelled"}, which is a real settlement" — so
+            // an unknown kind is logged and left alone, NOT acknowledged like the arm below.
+            "request_user_dialog" -> {
+                val kind = request["dialog_kind"]?.jsonPrimitive?.content ?: ""
+                val payload = request["payload"] as? JsonObject ?: JsonObject(emptyMap())
+                if (kind in DIALOG_KINDS) onDialog(reqId, kind, payload)
+                else log.warn("request_user_dialog of undeclared kind '$kind' ($reqId) left unanswered")
+            }
             // Anything else we don't implement (sdk mcp): acknowledge so the CLI won't hang.
             else -> writeControlResponse(reqId, buildJsonObject {})
         }
     }
+
+    /**
+     * Settle a host dialog (4.10). [result] is the dialog kind's own enum — for
+     * `auto_mode_server_fallback`: `continue` (keep going in auto mode on the billed built-in
+     * classifier) or `interrupt` (end this turn). The enum's third value, `cancelled`, is the CLI's
+     * silent default and never a host's answer for a kind it rendered. Answer shape read from the
+     * 2.1.296 binary's dialog-response schema: `{behavior:"completed"|"cancelled", result}`.
+     */
+    fun respondDialog(requestId: String, result: String) =
+        writeControlResponse(requestId, buildJsonObject { put("behavior", "completed"); put("result", result) })
 
     /**
      * Answer a can_use_tool request. allow=true applies the tool; false rejects it.
@@ -557,6 +595,14 @@ class ClaudeCli(
         const val INIT_REQ_ID = "sdk-init"
         /** callback_id of the PreToolUse autosave hook declared in [sendInitialize]. */
         const val HOOK_AUTOSAVE = "autosave"
+        /**
+         * `request_user_dialog` kinds this host renders (4.10), declared on initialize — "declare
+         * exactly the kinds you can render". One entry: the auto-mode server-fallback Continue/Stop
+         * notice (CLI 2.1.281+). The VS Code extension at 2.1.296 also declares
+         * `fable_overage_consent_prompt` (checklist 9.7, deferred — no card exists for it here).
+         * Every kind listed MUST have a branch in the webview's renderDialog.
+         */
+        val DIALOG_KINDS = listOf("auto_mode_server_fallback")
         /** stderr lines kept for the exit message — the tail is what explains a crash. */
         const val STDERR_TAIL = 8
     }

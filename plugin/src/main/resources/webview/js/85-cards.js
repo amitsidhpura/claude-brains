@@ -165,6 +165,103 @@
     return '';
   }
 
+  /* ---------- host dialogs (request_user_dialog, checklist 4.10) ---------- */
+  // The CLI sends a `request_user_dialog` only for a kind this host declared on initialize
+  // (ClaudeCli.DIALOG_KINDS — exactly `auto_mode_server_fallback`, the notice that auto mode's
+  // server-side classifier is unavailable and the session is running on the billed built-in one).
+  // Kotlin forwards declared kinds only, so a kind without a branch here means the two lists
+  // drifted: keep the frame for CDP and draw nothing (an undeclared kind must never be answered).
+  //
+  // Payload, read from the 2.1.296 binary's dialog definition: {gatewayHost?, title, paragraphs[],
+  // helpUrl}; result enum continue | interrupt | cancelled (the CLI's own silent default), answered
+  // by Kotlin as {behavior:"completed", result}. The RENDER rules are the reference webview's
+  // (2.1.296): the title as the header, one line per non-blank paragraph, the help URL accepted
+  // only when https on claude.com / anthropic.com (or a subdomain) and linkified where a paragraph
+  // quotes it — else a trailing "Learn more" — the stock sentence when title and paragraphs are
+  // both empty, Continue primary / Stop, and both disabled for the CLI's 500 ms `armInputGrace`
+  // (a click already in flight toward where the card lands must not answer it).
+  //
+  // NEVER observed on this wire — it needs the server classifier to be down, which cannot be
+  // staged — so the card is built from the schema and the first frame of every kind lands in
+  // window.__dialogSeen (the 9.7 / __bannerSeen idiom) for the day one arrives.
+  const DLG_STOCK = "Auto mode is using Claude Code's built-in classifier in this session, and those classifier requests are billed. Continue to keep going in auto mode, or Stop to end this turn.";
+  const DLG_GRACE_MS = 500;
+  function dialogHelpUrl(u) {
+    if (typeof u !== 'string') return null;
+    try {
+      const p = new URL(u);
+      const ours = ['claude.com', 'anthropic.com'].some(function (h) { return p.hostname === h || p.hostname.endsWith('.' + h); });
+      return p.protocol === 'https:' && ours ? u : null;
+    } catch (_) { return null; }
+  }
+  // One body line. A paragraph that quotes the help URL gets it linkified in place (the reference
+  // client's split-on-URL), everything else is plain text — no markdown, the payload is prose.
+  function dialogPara(text, help) {
+    const p = document.createElement('p');
+    p.className = 'dlg-p';
+    if (help && text.indexOf(help) >= 0) {
+      text.split(help).forEach(function (part, i) {
+        if (i > 0) { const a = document.createElement('a'); a.href = help; a.textContent = help; p.appendChild(a); }
+        if (part) p.appendChild(document.createTextNode(part));
+      });
+    } else p.textContent = text;
+    return p;
+  }
+  function renderDialog(ev) {
+    if (!ev.__gallery) {
+      if (!window.__dialogSeen) window.__dialogSeen = {};
+      if (!window.__dialogSeen[ev.kind]) {
+        window.__dialogSeen[ev.kind] = ev;
+        console.warn('first request_user_dialog frame (' + ev.kind + ', 4.10 watch):', JSON.stringify(ev));
+      }
+    }
+    if (ev.kind !== 'auto_mode_server_fallback') return;
+    let pl = {}; try { pl = JSON.parse(ev.payload) || {}; } catch (_) {}
+    const title = typeof pl.title === 'string' ? pl.title.trim() : '';
+    const paras = Array.isArray(pl.paragraphs)
+      ? pl.paragraphs.filter(function (s) { return typeof s === 'string' && s.trim() !== ''; }) : [];
+    const help = dialogHelpUrl(pl.helpUrl);
+    hideWorking(); awaitingUser = true;   // the CLI is parked on this answer, exactly like an ask
+    const card = document.createElement('div');
+    card.className = 'card warn dlg';
+    if (title) {
+      const h = document.createElement('div'); h.className = 'card-h';
+      const b = document.createElement('b'); b.textContent = title; h.appendChild(b);
+      card.appendChild(h);
+    }
+    if (!title && !paras.length) card.appendChild(dialogPara(DLG_STOCK, null));
+    paras.forEach(function (t) { card.appendChild(dialogPara(t, help)); });
+    if (help && !paras.some(function (t) { return t.indexOf(help) >= 0; })) {
+      const p = document.createElement('p'); p.className = 'dlg-p';
+      const a = document.createElement('a'); a.href = help; a.textContent = 'Learn more';
+      p.appendChild(a); card.appendChild(p);
+    }
+    card.insertAdjacentHTML('beforeend', cardBtns('Continue', SVG_CHECK, 'Stop', SVG_STOP));
+    const btns = Array.prototype.slice.call(card.querySelectorAll('.card-b button'));
+    btns.forEach(function (b) { b.disabled = true; });
+    setTimeout(function () { btns.forEach(function (b) { b.disabled = false; }); }, DLG_GRACE_MS);
+    (curTurn || log).appendChild(card); maybeScroll();
+    const settle = function (html) { card.querySelector('.card-b').innerHTML = html; awaitingUser = false; };
+    // The decision line says what each answer DOES, since the buttons' one word is all the user
+    // read: Continue keeps the turn going on the billed classifier, Stop ends the turn.
+    const done = function (result) {
+      if (!permCards[ev.id]) return;   // already settled or withdrawn — a late click sends nothing
+      delete permCards[ev.id];
+      settle(result === 'continue' ? '<span class="ok-t">✓ Continuing in auto mode</span>'
+                                   : '<span class="no-t">✗ Stopped — this turn ends</span>');
+      if (!ev.__gallery) bridge({ kind: 'dialog', id: ev.id, result: result });
+      if (busy && result === 'continue') showWorking();
+    };
+    // Registered like a permission card so `__perm_cancelled` (the CLI's control_cancel_request,
+    // 1.28) lapses it through the same arm; `answer` keeps the registry's shape.
+    permCards[ev.id] = {
+      lapse: function () { delete permCards[ev.id]; settle('<span class="no-t">✗ Withdrawn — Claude stopped waiting</span>'); },
+      answer: function (allow) { done(allow ? 'continue' : 'interrupt'); },
+    };
+    card.querySelector('.ok').onclick = function () { done('continue'); };
+    card.querySelector('.no').onclick = function () { done('interrupt'); };
+  }
+
   /* ---------- AskUserQuestion — tabbed card ---------- */
   let activeAsk = null; // { card, ev, cancel }
   function cancelAsk() {

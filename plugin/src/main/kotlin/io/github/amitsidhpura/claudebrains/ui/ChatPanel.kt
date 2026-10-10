@@ -239,6 +239,14 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 session.answerQuestion(id, msg["answers"]?.jsonPrimitive?.content ?: "{}")
             }
+            // A host dialog's answer (4.10): the dialog kind's own result token. Allowlisted here so
+            // nothing but the two answers the card offers can reach the wire (`cancelled`, the
+            // enum's third value, is the CLI's silent default and never a host's choice).
+            "dialog" -> {
+                val id = msg["id"]?.jsonPrimitive?.content ?: return
+                val result = msg["result"]?.jsonPrimitive?.content ?: return
+                if (result == "continue" || result == "interrupt") session.respondDialog(id, result)
+            }
             // "Files changed · Review" (3.6): open a diff chain of the turn's (baseline, now) pairs.
             "review" -> msg["turn"]?.jsonPrimitive?.content?.toIntOrNull()?.let { turn ->
                 val pairs = session.reviewTurn(turn)
@@ -739,6 +747,16 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 }
                 pushFrame(frame)
                 openEditorPermissionDiff(requestId, toolName, inputJson, suggestionsJson)
+            },
+            // A host dialog (4.10) — the CLI's request_user_dialog, translated the way asks are:
+            // the kind names the card, the payload rides as a raw JSON string the page parses.
+            onDialog = { requestId, kind, payloadJson ->
+                pushFrame(buildJsonObject {
+                    put("type", "dialog_request")
+                    put("id", requestId)
+                    put("kind", kind)
+                    put("payload", payloadJson)
+                })
             },
             onInit = { metaJson ->
                 lastInitMeta = metaJson   // kept so a reloaded page can be seeded without a CLI restart

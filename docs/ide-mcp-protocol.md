@@ -202,7 +202,7 @@ lands on `default`).
   Not used for 3.6 (per-turn Claude-only changes come from the autosave hook); the git-backed
   fallback if a resumed session ever needs a Review.
 - Other control subtypes: `initialize` (host→CLI: declares `hooks`, `sdkMcpServers`, `jsonSchema`,
-  `systemPrompt`), `set_permission_mode` (host→CLI: `{subtype,mode}`), `hook_callback`, `mcp_message`.
+  `systemPrompt`, `supportedDialogKinds` — § 9c), `set_permission_mode` (host→CLI: `{subtype,mode}`), `hook_callback`, `mcp_message`.
 - **Host hooks over stream-json (measured 2026-08-17, CLI 2.1.233):** `initialize` takes
   `hooks: {<HookEvent>: [{matcher?, hookCallbackIds: [id…], timeout?}]}` (validated strictly); the
   CLI then blocks each matching call on `control_request{subtype:"hook_callback", callback_id,
@@ -501,7 +501,14 @@ extension at 2.1.296 declares exactly `["fable_overage_consent_prompt","auto_mod
 a client that declared no `supportedDialogKinds` is never sent one — the CLI "stays silent so a
 capable client (or the worker's park deadline) settles it", and the 2.1.296 schema adds "a host
 that receives a kind it did not declare must not answer it… never with {behavior:"cancelled"}"
-— checklist 4.10), `oauth_token_refresh`, `host_auth_token_refresh`.
+— checklist 4.10. **We declare `["auto_mode_server_fallback"]` since 2026-10-10** (`ClaudeCli.
+DIALOG_KINDS`; 2.1.296 accepts it on `initialize`, measured over stdio). Its payload per the
+2.1.296 binary: `{gatewayHost?, title, paragraphs[], helpUrl}`; the host answers
+`{behavior:"completed", result:"continue"|"interrupt"}` — `continue` keeps the turn going on the
+billed built-in classifier (and, with a `gatewayHost`, persists
+`autoModeClassifierBillingNoticeAcknowledgedAt`), `interrupt` ends the turn; `cancelled` is the
+CLI's own silent default, never a host's answer. A `control_cancel_request` can withdraw it like
+an ask), `oauth_token_refresh`, `host_auth_token_refresh`.
 
 `can_use_tool` request fields beyond what we render: `display_name`, `description`, `title`,
 `requires_user_interaction`, `decision_reason`, `agent_id`,

@@ -1,0 +1,85 @@
+{
+ "item": "4.10 — auto-mode server-fallback dialog: Continue / Stop card (2026-10-10)",
+ "branch": "renderDialog (85-cards.js): a `dialog_request` frame of kind auto_mode_server_fallback draws a .card.warn.dlg — the payload's title as the header, each paragraph as a .dlg-p, the helpUrl linkified where a paragraph contains it or as a trailing 'Learn more' line (only https on claude.com / anthropic.com, the reference client's filter), the reference client's stock copy when title and paragraphs are both empty — with Continue (.ok) and Stop (.no) disabled for the first 500 ms (the CLI's armInputGrace), answering over the bridge as {kind:'dialog', result:'continue'|'interrupt'} and settling the footer; __perm_cancelled lapses it to Withdrawn. The first frame of each kind is kept in window.__dialogSeen (the 9.7 watch idiom).",
+ "provenance": "The PAYLOAD shape and the result enum are the CLI's, read verbatim from the 2.1.296 binary's dialog definition: `Zo({kind:\"auto_mode_server_fallback\", payload: {gatewayHost: string optional, title: string, paragraphs: string[], helpUrl: string}, result: enum[\"continue\",\"interrupt\",\"cancelled\"], default: \"cancelled\"})`; the host's answer schema is `{behavior: \"completed\"|\"cancelled\", result}`. The RENDER rules (title header, paragraphs, helpUrl accepted only when https on claude.com/anthropic.com or a subdomain, inline linkify vs a trailing Learn more, the stock sentence when both title and paragraphs are empty, Continue primary + Stop, both disabled 500 ms) are the VS Code webview's (2.1.296 index.js, the auto-mode-server-fallback-prompt component). The `dialog_request` frame itself and the `__perm_cancelled` frame are OURS (ChatPanel's translations of request_user_dialog / control_cancel_request) — self-consistency for the page half. The dialog has NEVER been observed on this wire (it needs the server classifier to be unavailable — not triggerable on demand); what IS measured: 2.1.296 accepts `initialize.supportedDialogKinds:[\"auto_mode_server_fallback\"]` over stdio (success, 2026-10-10, bare initialize — no transcript written). __bridge is taped (sandbox-only run). NEGATIVE CONTROL: see the checklist row's evidence for the pre-change readings.",
+ "steps": [
+  {
+   "note": "a live dialog with a title, two paragraphs and an inline help link; buttons start disabled",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('run the migration', []); if (!window.__realBridge94) { window.__realBridge94 = window.__bridge; } window.__tape94 = []; window.__bridge = function(j){ window.__tape94.push(JSON.parse(j)); }; delete window.__dialogSeen;",
+   "frames": [
+    {
+     "type": "dialog_request",
+     "id": "d1",
+     "kind": "auto_mode_server_fallback",
+     "payload": "{\"gatewayHost\": \"gw.example.internal\", \"title\": \"Auto mode is using the built-in classifier\", \"paragraphs\": [\"The server-side classifier for gw.example.internal is unavailable, so auto mode is using Claude Code's built-in classifier and those classifier requests are billed.\", \"Read about auto mode at https://docs.anthropic.com/en/docs/claude-code/auto-mode before continuing.\"], \"helpUrl\": \"https://docs.anthropic.com/en/docs/claude-code/auto-mode\"}"
+    }
+   ],
+   "expect": [
+    { "js": "document.querySelectorAll('#log .card.warn.dlg').length", "equals": 1, "why": "DISCRIMINATING pre-change: the dialog frame draws a card" },
+    { "js": "(document.querySelector('#log .card.dlg .card-h')||{textContent:''}).textContent.trim()", "equals": "Auto mode is using the built-in classifier", "why": "the payload's title is the header" },
+    { "js": "document.querySelectorAll('#log .card.dlg .dlg-p').length", "equals": 2, "why": "one paragraph element per payload paragraph" },
+    { "js": "document.querySelectorAll('#log .card.dlg a[href]').length", "equals": 1, "why": "the help URL is linkified INSIDE the paragraph that contains it, and no separate Learn more line is added" },
+    { "js": "(document.querySelector('#log .card.dlg a[href]')||{getAttribute:function(){return ''}}).getAttribute('href')", "equals": "https://docs.anthropic.com/en/docs/claude-code/auto-mode", "why": "the anchor points at the payload's helpUrl verbatim" },
+    { "js": "[...document.querySelectorAll('#log .card.dlg .card-b button')].map(function(b){return b.textContent.trim()}).join('|')", "equals": "Continue|Stop", "why": "the reference client's two answers, in its order" },
+    { "js": "(function(){ var bs=[...document.querySelectorAll('#log .card.dlg .card-b button')]; return bs.length===2 && bs.every(function(b){return b.disabled}); })()", "equals": true, "why": "DISCRIMINATING pre-change: both buttons exist and are disabled on arrival (armInputGrace: a click already in flight must not answer the dialog)" },
+    { "js": "(function(){ var b=document.querySelector('#log .card.dlg .ok'); if (!b) return 'absent'; b.click(); return window.__tape94.length; })()", "equals": 0, "why": "a click inside the grace window sends nothing" },
+    { "js": "new Promise(function(r){ setTimeout(function(){ var bs=[...document.querySelectorAll('#log .card.dlg .card-b button')]; r(bs.length===2 && bs.every(function(b){return !b.disabled})); }, 650); })", "equals": true, "why": "DISCRIMINATING pre-change: after the 500 ms grace both buttons answer" },
+    { "js": "(window.__dialogSeen && window.__dialogSeen.auto_mode_server_fallback && window.__dialogSeen.auto_mode_server_fallback.id) || 'absent'", "equals": "d1", "why": "the first frame of the kind is kept for CDP (the 9.7 watch idiom) — the card is built from the CLI's schema, so the first real frame is evidence worth keeping" }
+   ]
+  },
+  {
+   "note": "Continue answers the dialog: one bridge message, the footer settles, the buttons leave",
+   "expect": [
+    { "js": "(function(){ var b=document.querySelector('#log .card.dlg .ok'); if (!b) return 'absent'; b.click(); return JSON.stringify(window.__tape94); })()", "equals": "[{\"kind\":\"dialog\",\"id\":\"d1\",\"result\":\"continue\"}]", "why": "DISCRIMINATING pre-change: exactly one dialog answer, the CLI's own result token for Continue" },
+    { "js": "(document.querySelector('#log .card.dlg .card-b')||{textContent:''}).textContent.trim()", "equals": "✓ Continuing in auto mode", "why": "the decision line replaces the buttons" },
+    { "js": "document.querySelectorAll('#log .card.dlg .card-b button').length", "equals": 0, "why": "nothing answerable is left on the card" },
+    { "js": "(function(){ var c=document.querySelector('#log .card.dlg'); window.onClaudeEvent(JSON.stringify({type:'__perm_cancelled', id:'d1'})); return c ? c.querySelector('.card-b').textContent.trim() : 'absent'; })()", "equals": "✓ Continuing in auto mode", "why": "a late withdrawal does not overwrite an answered card (the registry entry is gone)" }
+   ]
+  },
+  {
+   "note": "empty title and paragraphs → the reference client's stock sentence; a non-Anthropic http link is dropped",
+   "frames": [
+    { "type": "dialog_request", "id": "d2", "kind": "auto_mode_server_fallback", "payload": "{\"title\": \"  \", \"paragraphs\": [\"\", \"   \"], \"helpUrl\": \"http://example.com/not-ours\"}" }
+   ],
+   "expect": [
+    { "js": "document.querySelectorAll('#log .card.warn.dlg').length", "equals": 2, "why": "a second card" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return c.querySelectorAll('.card-h').length; })()", "equals": 0, "why": "a blank title draws no header" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return [...c.querySelectorAll('.dlg-p')].map(function(p){return p.textContent}).join('|'); })()", "equals": "Auto mode is using Claude Code's built-in classifier in this session, and those classifier requests are billed. Continue to keep going in auto mode, or Stop to end this turn.", "why": "the stock copy, verbatim from the reference webview, and the blank paragraphs are filtered out" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return c.querySelectorAll('a[href]').length; })()", "equals": 0, "why": "an http:// URL off claude.com/anthropic.com is not offered as a link" }
+   ]
+  },
+  {
+   "note": "a help URL no paragraph mentions becomes a trailing Learn more line; Stop answers with the CLI's interrupt token",
+   "frames": [
+    { "type": "dialog_request", "id": "d3", "kind": "auto_mode_server_fallback", "payload": "{\"title\": \"Classifier billing notice\", \"paragraphs\": [\"Plain paragraph without a link.\"], \"helpUrl\": \"https://claude.com/help/auto-mode\"}" }
+   ],
+   "expect": [
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; var a=c.querySelector('a[href]'); return a ? a.textContent + ' → ' + a.getAttribute('href') : 'absent'; })()", "equals": "Learn more → https://claude.com/help/auto-mode", "why": "the trailing link line carries the reference client's label and the verbatim URL" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return c.querySelectorAll('.dlg-p').length; })()", "equals": 2, "why": "the paragraph plus the Learn more line" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; var a=c&&c.querySelector('a[href]'); if (!a) return 'absent'; var ref=document.createElement('div'); ref.className='blk'; ref.innerHTML='<a href=\"https://x\">x</a>'; document.body.appendChild(ref); var want=getComputedStyle(ref.querySelector('a')).color; var got=getComputedStyle(a).color; ref.remove(); return got===want ? 'same as .blk a' : got+' != '+want; })()", "equals": "same as .blk a", "why": "DISCRIMINATING pre-fix: the link wears the markdown link's colour, not the browser's default blue (invisible on the card — real-panel render 2026-10-10)" },
+    { "js": "new Promise(function(r){ setTimeout(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; var b=c&&c.querySelector('.no'); if (!b) { r('absent'); return; } b.click(); r(JSON.stringify(window.__tape94[window.__tape94.length-1])); }, 650); })", "equals": "{\"kind\":\"dialog\",\"id\":\"d3\",\"result\":\"interrupt\"}", "why": "DISCRIMINATING pre-change: Stop sends the CLI's own result token" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return c ? c.querySelector('.card-b').textContent.trim() : 'absent'; })()", "equals": "✗ Stopped — this turn ends", "why": "the decision line says what Stop does" }
+   ]
+  },
+  {
+   "note": "a withdrawn dialog (control_cancel_request → __perm_cancelled) lapses without sending anything",
+   "frames": [
+    { "type": "dialog_request", "id": "d4", "kind": "auto_mode_server_fallback", "payload": "{\"title\": \"Withdrawn soon\", \"paragraphs\": [\"Para.\"], \"helpUrl\": \"https://claude.com/x\"}" },
+    { "type": "__perm_cancelled", "id": "d4" }
+   ],
+   "expect": [
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return c ? c.querySelector('.card-b').textContent.trim() : 'absent'; })()", "equals": "✗ Withdrawn — Claude stopped waiting", "why": "the same wording as a withdrawn permission card (1.28)" },
+    { "js": "(function(){ var cs=document.querySelectorAll('#log .card.dlg'); var c=cs[cs.length-1]; return c ? c.querySelectorAll('button').length : 'absent'; })()", "equals": 0, "why": "nothing answerable is left" },
+    { "js": "window.__tape94.filter(function(m){return m.id==='d4'}).length", "equals": 0, "why": "a withdrawal sends no answer" },
+    { "js": "window.__tape94.length", "equals": 2, "why": "GUARD: the whole fixture sent exactly two dialog answers (d1 continue, d3 interrupt)" }
+   ]
+  },
+  {
+   "note": "restore the real bridge",
+   "setup": "if (window.__realBridge94) { window.__bridge = window.__realBridge94; } window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "expect": [
+    { "js": "window.__bridge === window.__realBridge94", "equals": true, "why": "GUARD: the tape is gone and the page talks to Kotlin again" }
+   ]
+  }
+ ]
+}

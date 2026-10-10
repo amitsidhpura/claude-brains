@@ -296,6 +296,16 @@
     replayAsk({ questions: askInput.questions,
       answers: { 'Which framework should we use?': 'React', 'Pick the styling approaches.': 'Tailwind, CSS Modules' } });
 
+    // host dialog (4.10) — the auto-mode server-fallback notice, payload shaped per the 2.1.296
+    // schema {gatewayHost?, title, paragraphs[], helpUrl}; the URL is off-paragraph here so the
+    // trailing "Learn more" line renders. `__gallery` keeps it out of the __dialogSeen watch and
+    // off the bridge. Buttons wake after the 500 ms input grace.
+    renderDialog({ __gallery: true, id: 'gallery-dlg', kind: 'auto_mode_server_fallback', payload: JSON.stringify({
+      gatewayHost: 'gateway.example.internal',
+      title: 'Auto mode is using the built-in classifier',
+      paragraphs: ['The server-side classifier is unavailable, so auto mode is using Claude Code\'s built-in classifier in this session, and those classifier requests are billed.'],
+      helpUrl: 'https://docs.anthropic.com/en/docs/claude-code/auto-mode' }) });
+
     // working line (static — a live one is owned by the watchdog)
     const gen = el('generating', '');
     gen.innerHTML = '<span class="spin">✳</span><span class="verb">Simmering…</span>' +

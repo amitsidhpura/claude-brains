@@ -76,6 +76,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     private var onInitCb: ((String) -> Unit)? = null
     private var onExitCb: ((Int) -> Unit)? = null
     private var onCancelCb: ((String) -> Unit)? = null   // a withdrawn ask (1.28), after its pending entry is gone
+    private var onDialogCb: ((String, String, String) -> Unit)? = null   // a host dialog (4.10): requestId, kind, payloadJson
+
+    /** Host dialogs awaiting an answer (4.10) — the arbiter, as [pendingPermissions] is for asks. */
+    private val pendingDialogs: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /** requestId -> tool input, so the UI can answer allow/deny without echoing the payload. */
     private val pendingPermissions = ConcurrentHashMap<String, JsonObject>()
@@ -140,13 +144,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         onInit: (commandsJson: String) -> Unit,
         onExit: (Int) -> Unit,
         onCancel: (requestId: String) -> Unit = {},
+        onDialog: (requestId: String, kind: String, payloadJson: String) -> Unit = { _, _, _ -> },
     ) {
         // Rebind BEFORE the guard: a ChatPanel recreated against a still-running service (the tool
         // window's content is rebuilt) would otherwise return here without ever being wired to the
         // CLI, leaving a panel that renders nothing and can never recover — while the composer and
         // the history list, which call the service directly, keep working and hide it.
         onEventCb = onEvent; onPermissionCb = onPermission; onInitCb = onInit; onExitCb = onExit
-        onCancelCb = onCancel
+        onCancelCb = onCancel; onDialogCb = onDialog
         if (server != null) return // already running
 
         port = PortFinder.findFree()
@@ -166,6 +171,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         runCatching { cli?.stop() }
         pendingPermissions.clear()
         pendingSuggestions.clear()
+        pendingDialogs.clear()
         turnChanges.reset()
         // Assigned BEFORE start(): a CLI that dies at argument parsing fires onExit within
         // milliseconds, and the exit frame reads stderrTail()/sawFrame() through this field —
@@ -197,7 +203,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             onCancel = { requestId ->
                 pendingPermissions.remove(requestId)
                 pendingSuggestions.remove(requestId)
+                pendingDialogs.remove(requestId)
                 onCancelCb?.invoke(requestId)
+            },
+            // A host dialog (4.10): remembered here so a click that lost to a withdrawal sends
+            // nothing (respondDialog returns false), the same arbiter the asks have.
+            onDialog = { requestId, kind, payload ->
+                pendingDialogs.add(requestId)
+                onDialogCb?.invoke(requestId, kind, payload.toString())
             },
             onHook = { id, input, respond ->
                 if (id == ClaudeCli.HOOK_AUTOSAVE) Autosave.handle(input, respond, turnChanges::snapshot)
@@ -481,6 +494,17 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun interrupt() = cli?.interrupt()
 
     fun stopTask(taskId: String) = cli?.stopTask(taskId)
+
+    /**
+     * Answer a host dialog (4.10) with the kind's own result token (`continue` / `interrupt` for
+     * the auto-mode server-fallback notice). FIRST ANSWER WINS, and a dialog the CLI already
+     * withdrew is no longer pending — either way `false` means nothing was sent.
+     */
+    fun respondDialog(requestId: String, result: String): Boolean {
+        if (!pendingDialogs.remove(requestId)) return false
+        cli?.respondDialog(requestId, result)
+        return true
+    }
 
     /**
      * Optimistic: the chip has already flipped and the choice is persisted before the CLI answers,

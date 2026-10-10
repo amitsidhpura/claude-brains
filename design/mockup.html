@@ -654,6 +654,27 @@ README.md
       </div>
       <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg></span>Stopped</div>
 
+      <!-- HOST DIALOG (checklist 4.10): the auto-mode server-fallback notice — the CLI's
+           request_user_dialog{dialog_kind:"auto_mode_server_fallback"}, sent only because initialize
+           declared the kind. Payload per the 2.1.296 binary: {gatewayHost?, title, paragraphs[],
+           helpUrl}. Title → .card-h, each paragraph → .dlg-p, the help URL (https on claude.com /
+           anthropic.com only) linkified where a paragraph quotes it, else a trailing "Learn more";
+           Continue (.ok) / Stop (.no), disabled for the CLI's 500 ms input grace. The stock sentence
+           (second card) stands in when title and paragraphs are both empty. Never observed live —
+           drawn from the schema and the reference webview's renderer. Live-only. -->
+      <div class="card warn dlg">
+        <div class="card-h"><b>Auto mode is using the built-in classifier</b></div>
+        <p class="dlg-p">The server-side classifier is unavailable, so auto mode is using Claude Code's built-in classifier in this session, and those classifier requests are billed.</p>
+        <p class="dlg-p"><a href="https://docs.anthropic.com/en/docs/claude-code/auto-mode">Learn more</a></p>
+        <div class="card-b"><button class="ok"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Continue</button><button class="no"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="2" y="2" width="20" height="20" rx="5"/></svg>Stop</button></div>
+      </div>
+      <!-- …answered with Continue (Stop reads "✗ Stopped — this turn ends"; a withdrawal reads the
+           1.28 line). This one carries the stock copy: the payload had no title and no paragraphs. -->
+      <div class="card warn dlg">
+        <p class="dlg-p">Auto mode is using Claude Code's built-in classifier in this session, and those classifier requests are billed. Continue to keep going in auto mode, or Stop to end this turn.</p>
+        <div class="card-b"><span class="ok-t">✓ Continuing in auto mode</span></div>
+      </div>
+
       <!-- Ask WITH a reason (checklist 1.23): can_use_tool's `decision_reason` — the CLI's own
            words for why this ask escalated — sits between the header and the preview as a .t-note,
            the same ↳ caveat idiom a tool line uses. Measured 2026-08-29: a Bash containing `$(…)`

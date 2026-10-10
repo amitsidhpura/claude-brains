@@ -219,6 +219,7 @@
         return onUserEvent(ev);
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
+      case 'dialog_request':     return renderDialog(ev);       // 4.10: a host dialog (request_user_dialog)
       case 'files':              files = ev.items || []; return;
       case '__mention':          insertMentions(ev.items || []); return;   // 6.5: IDE context menu → composer
       case '__commands':         slashCommands = markCustom(ev.items || []); return;
