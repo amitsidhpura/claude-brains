@@ -3,6 +3,26 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (eighteenth) — bold wrapping italic: inlineMd's bold regex admits single `*`; fixture 90; harness 905
+- User screenshot + the conversation's jsonl: `**Lashuna / Rasona — Garlic (*Allium sativum*)**` drew
+  with the species italic and the `**` printed. Read BY KEY from the `assistant` text block (CLI
+  2.1.276) before touching anything — the markdown was exactly that, bold wrapping an italic.
+- Cause in `inlineMd()` (`20-markdown.js`): bold was `\*\*([^*]+)\*\*`, so one `*` inside the pair
+  made the bold fail; the italic pass then paired only the inner asterisks. The control also showed a
+  second face of the same regex: `)** and **C**` pairs the closing `**` with the next opener and
+  draws a bold " and ".
+- Fix: `\*\*((?:[^*]|\*(?!\*))+)\*\*` — single `*` allowed, stop at the first `**`. Italic wrapping
+  bold already worked (bold pass runs first, leaves no `*` for the italic pass to trip on) and is now
+  a guard. The backlog's "inline code is not opaque to emphasis" item is the same function, untouched.
+- Free negative control: the sandbox was down, so it was started on the UNCHANGED build, fixture 90
+  written and run (6 guards pass, 6 discriminating fail, readings in the provenance), then the edit,
+  kill via `pgrep -f … | xargs -r kill` (CDP gone in 1s), restart, 12/12; full harness 905/0.
+- First control run ABORTED on a `null.textContent` in a discriminating assert (the pre-fix DOM has no
+  `<b>`); `?.textContent ?? null` made it a FAIL — the known trap (gotchas § Testing), hit again.
+- Docs: checklist 1.10 Read-more; mockup list item `<b>…<i>…</i></b>`. `./gradlew test` skipped (JS
+  only). Not installed in the real PhpStorm — four fixes pending there. Committed and pushed on the
+  user's ask (fix + this context save).
+
 ## 2026-10-08 (seventeenth) — opened-thought trailing gap: thinkBlock() trims; fixture 89; harness 893
 - User screenshot: an opened "Thought for 1s" with a larger gap before the next Edit line than any
   other block pair. Measured first: 13 of 13 persisted `thinking` blocks in the 40 newest transcripts
@@ -221,33 +241,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Harness **776** (fixtures to 84), Kotlin **163**. Checklist 93 ✅ · 0 ⬜ · 47 ➖, every section ✅.
   Committed and pushed on the user's ask (this save included).
 
-## 2026-09-05 (eighth) — 4.8 closed, 4.9 deferred, 2.12, 3.7 (+3 fixes) and 3.8 built; two commits
-- Method that held all day: explain the row in plain words → the user decides → probe → build with
-  the free negative control → hand test in the sandbox → MT row resolved. Committed `d1974c4`
-  mid-session on the user's ask; 3.8 rides the second commit.
-- MT-4.8 passed all four steps. Side findings: decided Bash cards vanish on replay (deliberate);
-  `title` tooltips never show in the panel on Linux JCEF (backlog § Next up, gotchas § JCEF).
-- 4.9 number-key answers: "no keyboard shortcuts for now" → ➖ (decisions.md).
-- 2.12: the user attached `~/Sites/computer` and sent the "before" (every Read asked). Probe:
-  `--add-dir` → 0 asks. `WorkspaceRoots.extraDirs` → one `--add-dir` per root outside basePath.
-  Hand test passed both ways (attached → no cards; detached → asks).
-- 3.7 reject-with-note (inline after Reject, deny only, Enter rejects). The hand test exposed three
-  pre-existing defects, fixed the same day: duplicate error OUT box for a denial the card sent
-  (`cardDenies`), replay "1 file changed" for a rejected edit (`reqFiles` never emptied), and a
-  replayed edit card without its note. Kotlin test on the real transcript (`denied-edit.jsonl`).
-- 3.8 editable Bash command: probe showed the CLI runs `updatedInput.command`; the transcript never
-  records the edit (live-only on replay) and the model sees the original beside the edited output
-  — VS Code measured identical, the user accepted it. Then two user calls, both probed first:
-  a single-rule grant follows the edit (rewritten `ruleContent` is persisted and honoured), and a
-  compound card keeps Always allow + destinations with per-part rules from our own
-  `splitCommand` — a WHOLE-string rule is persisted but never matches; a bare-`&` compound re-asks
-  every time regardless. Hand-tested incl. a `;` edit writing two rules to the project file.
-- Traps: `addUserMessage` over CDP sends a real prompt when a session is live; computed `display`
-  inside `.split` is `flex`; the harness has no mid-frame JS hook (click in the next step's setup);
-  a Bash line always has an IN row (count OUT rows by `.io-k`). All in gotchas § Testing.
-- Harness **714** (fixtures to 81), Kotlin **160**. Checklist 90 ✅ · 3 ⬜ · 47 ➖; §2 §3 §4 done.
-
 ## Digest
+- **2026-09-05 (eighth)** — 4.8 closed (all four steps), 4.9 number-key answers ➖ ("no keyboard shortcuts for now"), 2.12 built (`WorkspaceRoots.extraDirs` → one `--add-dir` per root outside basePath; probe: attached dir → 0 Read asks), 3.7 reject-with-note built (inline after Reject, deny only) whose hand test exposed and fixed three older defects (duplicate error OUT box via `cardDenies`, replay "1 file changed" for a rejected edit via `reqFiles`, replayed card without its note; Kotlin test on `denied-edit.jsonl`), 3.8 editable Bash command built (CLI runs `updatedInput.command`; the transcript never records the edit; a single-rule grant follows the edit, a compound card writes per-part rules from `splitCommand`, a whole-string rule never matches, bare-`&` compounds re-ask every time). Traps → gotchas § Testing: `addUserMessage` over CDP sends a real prompt on a live session; computed `display` in `.split` is `flex`; no mid-frame harness hook; a Bash line always has an IN row. Harness 714 (fixtures 81), Kotlin 160; checklist 90 ✅ · 3 ⬜ · 47 ➖.
 - **2026-09-04 (seventh)** — 4.8 built as a SPLIT button (main half = the CLI's default destination, caret = the other targets; no memory of the last pick, user's spec) after the user heard the decline recommendation and chose the split. Stdio probe 2.1.260: the ECHOED `destination` decides the file — projectSettings / localSettings / userSettings each wrote theirs, session wrote nothing and stopped the re-ask, cliArg behaved as session, a bogus value dropped the grant silently → Kotlin forwards only the four offered (`PermissionDestinations`). Two probe confounds (both gotchas § Testing): an untrusted scratch workspace never loads project settings (stderr says so, stdout does not) → scratch `CLAUDE_CONFIG_DIR` with a trust-patched `.claude.json`; a zsh `for … set -- $c` loop ran every cell with `--cfg`. Compound card gained an `All of these` header + destination rows; fixture 77 (control 11 fail), harness 670, Kotlin 147.
 - **2026-09-04 (sixth)** — 4.7 built as VS Code's rule after the user's screenshot (four modes, not six) overturned the row's premise: the extension's `webview/index.js` `c4()` assembles the picker per session (`bypassPermissions` only under the dangerous flag, `dontAsk` displayed only while current, never offered). Five stdio probes on 2.1.260: no flag → `auto`; `--permission-mode` BEATS settings `defaultMode`; `bypassPermissions` in settings without the flag → `default`. Real defect: `permissions.defaultMode` was ignored entirely → `PermissionModes.resolveStored` (null = never picked → no flag), `pushInitMeta` seeds `__mode` from `initialize.current_permission_mode` (a live check found that `system/init` repeats the mode only with the FIRST turn), `Don't ask` row hidden unless current. Fixture 76 (control: one guard threw on a null node → null-safe asserts, gotchas § Testing); Kotlin 143, harness 653; user hand-tested six steps, 6.5 closed too. Trap: writing any `.claude/settings*.json` is blocked by the permission classifier — settings cells run in a scratchpad dir, the user makes the real edit.
 - **2026-09-04 (fifth)** — full-surface audit at 2.1.260 (288 host `case` labels → 97 RPC types, ~100 webview features, 98 control + 46 `system` subtypes, the binary's 128-name command map, changelog 200→260): no missing feature AREA, ten small gaps → rows 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9; terminal's-half verdicts recorded in the checklist's "Full-surface audit" block. Built 6.9 (`mentionHtml` sent-bubble capsules, fixture 74) and 6.5 (`MentionAction` first in both popup menus, `MentionPaths.tokens`, list parked until `seedUi()`, fixture 75); harness 642, Kotlin 141. Measured: an @-mention attaches before the model runs (1 turn) vs a plain path Read (2 turns); 200 KB cut at 2,000 lines silently, 2 MB not attached at all (threshold unpinned). Trap → gotchas § Testing: the running sandbox's jar is under the dir `-Didea.plugins.path` names, not `ls -t`'s pick.

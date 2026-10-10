@@ -4,6 +4,18 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — Bold admits single `*` inside the pair and stops at the first `**`; no delimiter-run parser
+`inlineMd()`'s bold regex became `\*\*((?:[^*]|\*(?!\*))+)\*\*` so `**Garlic (*Allium sativum*)**`
+renders as a bold with the italic inside (fixture 90). **Why this shape:** the bold pass runs before
+the italic pass, so once the `<b>` is in place the existing italic regex pairs the inner asterisks
+unchanged; the reverse nesting (`*a **b** c*`) already worked for the same ordering reason and is now a
+guard. **Rejected:** a CommonMark delimiter-run algorithm (left/right-flanking rules) — correct, but a
+second renderer to keep in parity for a panel whose markdown is three regexes; `**` as a lazy
+`[\s\S]+?` — would let a bold run across an unclosed `**` to the next phrase's closer, the same
+mis-pairing the control measured on the old regex (`)** and **C**` → bold " and "); fixing the
+"inline code is not opaque to emphasis" backlog item in the same change — a different mechanism
+(placeholders), separate control.
+
 ## 2026-10-08 — The thinking body is trimmed in `thinkBlock()`, not rendered as markdown or padded away in CSS
 The CLI's thinking text ends with `\n\n` (13/13 persisted blocks, 2.1.270–2.1.293) and `.think .body` is
 the panel's one `pre-wrap` block, so an opened thought carried one empty line below it. One `trim()` at

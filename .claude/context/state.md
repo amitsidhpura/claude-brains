@@ -1,27 +1,27 @@
 # State
 
 ## Current focus
-**2026-10-08 (seventeenth session, Linux): the opened thought's trailing gap fixed — built, controlled,
-harness-verified, committed.** User screenshot: an opened "Thought for 1s" followed by a visibly
-larger gap before the next Edit line. Cause (measured): the CLI's thinking text ends with `\n\n`
-(13 of 13 persisted blocks, 2.1.270–2.1.293) and `.think .body` is the panel's one `pre-wrap` block,
-so the newlines painted one empty 20px line (body 40px vs 20px for the trimmed text). Fix: one
-`trim()` in `thinkBlock()` (`plugin/src/main/resources/webview/js/50-blocks.js`) — live and replay
-share that builder. Fixture 89 (control 3/3 on the pre-change sandbox → 6/6), harness **893/0**.
-Checklist row 1.12 notes it. `./gradlew test` NOT run (JS-only change).
-**Earlier the same day (sixteenth):** the Default selection follows the model the CLI actually
-serves — `defaultResolvedFromCli` + `reconcileCliModel()` in `30-menus.js`, hooked from
-`system/init` and the assistant case in `70-events.js`; chip "Default (<real>)", Default row
-"<real> · from your settings"; the panel FOLLOWS, never sends `set_model`; `80-gauge.js` matches
-`result.modelUsage` by `effectiveModelId()`. Fixture 88, `./gradlew test` 168/0, live-verified
-(chip "Default (Haiku 5.5)" with `{"model":"haiku"}` in settings). Docs: protocol doc § models,
-checklist 9.1.
-**THREE fixes are now NOT installed in the real PhpStorm**: PATH lookup (2026-09-27), Default chip
-and thinking trim (2026-10-08). Its panel runs the VS Code extension's 2.1.293 binary via the
-unfixed fallback. A build from `main` (`cd plugin && ./gradlew buildPlugin`, zip in
-`plugin/build/distributions/`, restart) or a 0.14.1 release installs all three; the user's call.
-The `claude` CLI on this box is **2.1.293** (`~/.local/share/claude/versions/`); last re-audit was
-at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed build (CDP 9222).
+**2026-10-10 (eighteenth session, Linux): bold wrapping italic fixed — built, controlled,
+harness-verified, committed.** User screenshot + transcript (`_local/2026-10-08/949f51ad-….jsonl`,
+CLI 2.1.276): `**Garlic (*Allium sativum*)**` drew as the literal `**` around an italic species
+name. Cause: `inlineMd()`'s bold regex (`plugin/src/main/resources/webview/js/20-markdown.js`) was
+`\*\*([^*]+)\*\*`, so any single `*` inside the pair killed the bold and `)** and **C**` mis-paired
+as a bold " and ". Fix: bold admits single `*` and stops at the first `**`; the italic pass then
+pairs the inner asterisks. Fixture 90 (control 6/6 fail on the pre-change sandbox → 12/12),
+harness **905/0**. Checklist 1.10 Read-more notes it; mockup gained one `<b>…<i>…</i></b>` item.
+`./gradlew test` NOT run (JS-only change).
+**2026-10-08 (seventeenth / sixteenth):** opened-thought trailing gap (`thinkBlock()` trims,
+fixture 89) and the Default selection following the model the CLI serves (`defaultResolvedFromCli`
++ `reconcileCliModel()` in `30-menus.js`, chip "Default (<real>)", panel FOLLOWS and never sends
+`set_model`, fixture 88, live-verified) — journal 2026-10-08, decisions 2026-10-08.
+**FOUR fixes are now NOT installed in the real PhpStorm**: PATH lookup (2026-09-27), Default chip
+and thinking trim (2026-10-08), bold-wrapping-italic (2026-10-10). Its panel runs the VS Code
+extension's binary via the unfixed fallback. A build from `main` (`cd plugin && ./gradlew
+buildPlugin`, zip in `plugin/build/distributions/`, restart) or a 0.14.1 release installs all
+four; the user's call.
+The newest `claude` CLI on this box is **2.1.295** (`~/.local/share/claude/versions/`); last
+re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed build
+(CDP 9222).
 
 ## Open investigations
 - **Where the user's Fable default comes from** — not on this Linux box (no `model` key in
@@ -51,7 +51,7 @@ at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed buil
 - `reference/claude-code-log` clone: `git pull` before the re-audit (was 2.1.261 on 2026-09-13).
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **893** (fixtures to **89**); `./gradlew test` **168**.
+- `python3 tools/live_harness.py` baseline **905** (fixtures to **90**); `./gradlew test` **168**.
 - Sandbox **PhpStorm 2024.2.6**; start (from `plugin/`; background tasks start in the REPO ROOT):
   `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"`. **`runIde` blocks until the IDE exits** (a kill reads
@@ -87,14 +87,15 @@ at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed buil
 ## Next steps
 - [x] Default selection follows the served model — fixture 88, docs, committed 2026-10-08.
 - [x] Opened-thought trailing gap — `thinkBlock()` trim, fixture 89, committed 2026-10-08.
-- [ ] Get all THREE fixes (PATH lookup 2026-09-27, Default chip + thinking trim 2026-10-08) into the
-      real PhpStorm: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
+- [x] Bold wrapping italic — `inlineMd()` bold regex, fixture 90, committed 2026-10-10.
+- [ ] Get all FOUR fixes (PATH lookup 2026-09-27, Default chip + thinking trim 2026-10-08, bold
+      wrapping italic 2026-10-10) into the real PhpStorm: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
       every release).
 - [ ] Re-audit 2.1.270 → 2.1.293 (runbook), starting from the leads above; the 1M switch first;
       the per-process roster question second.
 - [ ] Check the listing's Overview still reads plugin.xml's description text (user errand).
 - [ ] Renderer follow-ups, all in backlog § Housekeeping (indent-only code blocks; `*` inside
-      inline code; mid-line fence placeholder leak; `~~~` fences).
+      inline code — same `inlineMd()`, untouched by the 2026-10-10 fix; mid-line fence placeholder leak; `~~~` fences).
 - [ ] **Model chip / menu mismatch** — parked; capture the chip title AND the persisted value vs
       the running roster when it recurs (the 9.1 reconcile may change the symptom's look).
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About; the Windows CRLF
@@ -120,7 +121,7 @@ at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed buil
 - plugin.xml "Not there yet" list unchanged: dark UI only, one conversation, no auto-context.
 
 ## Which machine — check FIRST, both are real
-2026-08-26 → 2026-10-08 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
+2026-08-26 → 2026-10-10 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).
 Paths for both boxes in overview.md § External references. Windows still owes the CRLF splice
 check and the fold diagnostic. The PATH trap is Linux/macOS-shaped (desktop-launched IDE);
 Windows has no shell PATH layer (`ShellEnv` is empty there by design).
