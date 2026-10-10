@@ -145,7 +145,7 @@
           break;
         case 'assistant': {
           if (!replyStamped && it.ts != null) { replyStamped = true; el('ts', fmtClock(new Date(it.ts))); }
-          const b = el('blk', ''); b.innerHTML = renderMd(it.text); foldCode(b);
+          mdBlock(el('blk', ''), it.text);
           break;
         }
         // API errors are persisted as assistant records flagged isApiErrorMessage; live draws the

@@ -527,7 +527,7 @@ an ask), `oauth_token_refresh`, `host_auth_token_refresh`.
 `channel_enable`, `rewind_files`, `rewind_conversation`, `cancel_async_message`, `read_file`,
 `stage_file`, `register_repo_root`, `add_directory`, `file_suggestions`, `seed_read_state`,
 `reload_plugins`, `reload_skills`, `apply_flag_settings` ("merges the provided settings into the
-flag settings layer"), `stop_task` (`{task_id}` from the `background_tasks_changed` roster — sent by the panel's roster ✕, 11.3; unknown ids answer success), `background_tasks` (`{tool_use_id}`, Ctrl+B semantics — sent by the panel's "Run in background" button, 11.7; MEASURED 2026-10-10 on 2.1.296: a running foreground Bash answers `{backgrounded:true}` with `background_tasks_changed` + `task_updated{patch:{is_backgrounded:true}}` in the same instant, then the tool_result "Command was manually backgrounded by user with ID: …" and the turn's `result`; the schema's "empty object when all foreground tasks were backgrounded" = absent → true), `get_task_output` (`{task_id}` → `{output, total_bytes, truncated}` — the panel's roster output pane, 11.7; MEASURED 2026-10-10: a running shell answers the bytes so far, an ended one its whole output + `\n\n[exited with code N]\n`, an unknown or sub-agent id the error "get_task_output: no shell or Monitor task with that task_id in this session"), `generate_session_title`,
+flag settings layer"), `stop_task` (`{task_id}` from the `background_tasks_changed` roster — sent by the panel's roster ✕, 11.3; unknown ids answer success), `background_tasks` (`{tool_use_id}`, Ctrl+B semantics — sent by the panel's "Run in background" button, 11.7; MEASURED 2026-10-10 on 2.1.296: a running foreground Bash answers `{backgrounded:true}` with `background_tasks_changed` + `task_updated{patch:{is_backgrounded:true}}` in the same instant, then the tool_result "Command was manually backgrounded by user with ID: …" and the turn's `result`; the schema's "empty object when all foreground tasks were backgrounded" = absent → true), `get_task_output` (`{task_id}` → `{output, total_bytes, truncated}` — the panel's roster output pane, 11.7; MEASURED 2026-10-10: a running shell answers the bytes so far, an ended one its whole output + `\n\n[exited with code N]\n`, an unknown or sub-agent id the error "get_task_output: no shell or Monitor task with that task_id in this session"), `export_conversation` (`{}` → `{text, default_filename}` — the panel's header Export popup, 15.4; MEASURED 2026-10-10 on 2.1.296: turnless `text:""` + `conversation-<date>-<time>.txt`; after a turn the TUI's own plain text `\n❯ <prompt>\n\n● <reply>` under `<date>-<time>-<prompt slug>.txt`; a `--resume`d process serves its whole history before any turn), `generate_session_title`,
 `rename_session`, `submit_feedback`, `side_question`, `ultrareview_launch`, `message_rated`,
 `remote_control`, `claude_authenticate`, `claude_oauth_callback`,
 `claude_oauth_wait_for_completion`, `log_otel_event`, plus loopback arms for `hook_callback`,
@@ -787,10 +787,10 @@ most of them.
 
 - **2.1.296 additions (re-audit 2026-10-10; 103 → 155 typed control subtypes, none removed)** —
   host-facing read-only dialog feeders, every one PROBED `success` over stdio with the panel's
-  flags: `get_status` (`{sections:[{title, rows:[{label, value}]}]}`), `export_conversation`
-  (`{text, default_filename}` — checklist 15.4), `get_skills_dialog`, `get_sandbox_dialog`,
+  flags: `get_status` (`{sections:[{title, rows:[{label, value}]}]}`), `get_skills_dialog`, `get_sandbox_dialog`,
   `get_chrome_dialog`, `get_chrome_browsers` / `select_chrome_browser` (unprobed), `get_memory_dialog`
-  (+`memories[]`); (`get_task_output` and `background_tasks` were TAKEN 2026-10-10 — 11.7, § 9c);
+  (+`memories[]`); (`get_task_output` and `background_tasks` were TAKEN 2026-10-10 — 11.7, § 9c;
+  `export_conversation` TAKEN 2026-10-10 — 15.4, § 9c);
   `mcp_read_resource {serverName, uri}` (`ui://` only); `list_directory` → "Unsupported control
   request subtype" over stdio (remote sidebar only); `claim_session` (sets the session cwd — NOT
   probed). The Claude Mods UI family, 28 subtypes `ui_attach, ui_client_fault, ui_client_module,

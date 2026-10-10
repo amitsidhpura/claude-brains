@@ -42,6 +42,11 @@
    beats the UA stylesheet's [hidden] rule, so the attribute needs its own. */
 .popup-item[hidden] { display: none; }
 .popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
+/* A row that is not (yet) actionable — the export popup's Copy / Save while the CLI prepares the
+   text, or when there is nothing to export (15.4). Dimmed, no hover plate, cursor plain; the click
+   handler ignores it. aria-disabled rides along for the same rows. */
+.popup-item.off { opacity: .5; cursor: default; }
+.popup-item.off:hover, .popup-item.off.sel { background: transparent; }
 /* remove (×) on a custom model row — hover-revealed, like the history/attachment delete controls.
    The button sits INSIDE .pi-check, overlaying the ✓'s box (inset top = the span's 1px padding-top),
    so ✓ and × share one center by construction — no offset math, which the #inputbar 18px svg ID

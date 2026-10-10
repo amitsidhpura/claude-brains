@@ -491,6 +491,18 @@ class ClaudeCli(
             put("tool_use_id", toolUseId)
         }, onAnswer)
 
+    /** Host-initiated: the conversation as the plain text the terminal's `/export` writes, with
+     * the file name that command would offer (checklist 15.4). Schema `export_conversation{}` →
+     * `{text, default_filename}` ("for a host that copies or saves it with its own widgets" — the
+     * binary's own schema text). MEASURED 2026-10-10 on 2.1.296 over stdio: a turnless session
+     * answers `text:""` with `conversation-2026-10-10-160049.txt`; after one turn the text is
+     * "\n❯ <prompt>\n\n● <reply>" (the TUI's own glyphs, no header) under
+     * `2026-10-10-160050-<slug of the first prompt>.txt`; a `--resume`d process serves its whole
+     * history before any turn. The CLI builds the text — the panel never re-derives it from the
+     * DOM, so what the user copies is what `/export` in the terminal would have written. */
+    fun exportConversation(onAnswer: (response: JsonObject?, error: String?) -> Unit) =
+        sendControlRequest(buildJsonObject { put("subtype", "export_conversation") }, onAnswer)
+
     /**
      * Host-initiated: switch the model for this session (e.g. "sonnet", "opus[1m]", "default").
      * Answered — not fire-and-forget since 2.1.251: a user's `PreModelSwitch` hook runs for this

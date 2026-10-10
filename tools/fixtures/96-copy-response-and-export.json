@@ -1,0 +1,506 @@
+{
+ "item": "copy response + export conversation (15.4): a hover copy control on every finished assistant text block copies its markdown source; the header's Export popup asks the CLI for the terminal's /export text and copies or saves it",
+ "branch": "mdBlock()/copyable() (js/20-markdown.js) append .blk-copy once a block is final — finishBubble() at content_block_stop / message_stop / result / tool start / message_start on the live path, mdBlock on the whole-message, local-command, synthetic-echo and replay paths; the click copies el.__md through bridge{kind:'copy'} (Kotlin's CopyPasteManager — navigator.clipboard needs focus + a user activation the webview does not always hold). exportBtn → tg('exportMenu') + bridge{kind:'export'} once per open; __export{text, default_filename} → rows on + footer count, {text:''} → 'Nothing to export yet.', {error} → 'Could not prepare the conversation: …'; Copy writes the text and reports in the footer; Save sends bridge{kind:'exportSave', name, text} and closes; an answer to a closed popup is dropped; __clear closes and forgets. __exit while loading → the exit text in the footer.",
+ "provenance": "export_conversation PROBED 2026-10-10 on 2.1.296 over stdio (scratch CLAUDE_CONFIG_DIR, haiku, --permission-mode default): turnless → {text:'', default_filename:'conversation-2026-10-10-160049.txt'}; after one turn → text '\\n❯ <prompt>\\n\\n● <reply>' and '2026-10-10-160050-<prompt slug>.txt'; a --resume'd process answers the whole history before any turn. The __export frame is ChatPanel's own relay of that answer (its shape is ours). Stream frames are the panel's measured shapes (fixture 93's text/tool/text message). Copies are read off the bridge tape; the real system clipboard was read back with xclip in the live check.",
+ "steps": [
+  {
+   "note": "1 — live: a streamed text block ends (content_block_stop) → ONE copy control, the markdown source kept on the element, the rendered text untouched",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (!window.__realBridge96) { window.__realBridge96 = window.__bridge; } window.__tape96 = []; window.__bridge = function(j){ window.__tape96.push(JSON.parse(j)); }; addUserMessage('hello', [], Date.now());",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "usage": {}
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "Hello **world**"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk').length",
+     "equals": 1,
+     "why": "GUARD: one text block (both builds)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk > .blk-copy').length",
+     "equals": 1,
+     "why": "the copy control sits on the finished block"
+    },
+    {
+     "js": "document.querySelector('#log .blk').__md",
+     "equals": "Hello **world**",
+     "why": "the SOURCE rides the element"
+    },
+    {
+     "js": "document.querySelector('#log .blk').textContent",
+     "equals": "Hello world",
+     "why": "the control adds no text to the block"
+    },
+    {
+     "js": "document.querySelector('#log .blk b') !== null",
+     "equals": true,
+     "why": "markdown rendered synchronously at content_block_stop (finishBubble flushes; the old build left it to the next animation frame — the negative control saw an empty block here)"
+    }
+   ]
+  },
+  {
+   "note": "2 — click the control: the SOURCE goes to the clipboard through Kotlin (bridge{kind:'copy', text}, not navigator.clipboard) and the glyph flashes to the check; the click does not reach the document handlers",
+   "setup": "window.__tape96 = []; document.getElementById('bgMenu').classList.add('show'); document.querySelector('#log .blk-copy').click();",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape96.map(function(o){return [o.kind, o.text]}))",
+     "equals": "[[\"copy\",\"Hello **world**\"]]",
+     "why": "one copy ask, the markdown source"
+    },
+    {
+     "js": "document.querySelector('#log .blk-copy').innerHTML.indexOf('M20 6 9 17l-5-5') >= 0",
+     "equals": true,
+     "why": "check glyph while the flash lasts"
+    },
+    {
+     "js": "document.getElementById('bgMenu').classList.contains('show')",
+     "equals": true,
+     "why": "stopPropagation: a copy click is not an outside click (then closed by the step below)"
+    }
+   ]
+  },
+  {
+   "note": "3 — a tool in the same message, then more text: TWO blocks, TWO controls; message_stop and the result add no duplicates (finishBubble is idempotent)",
+   "setup": "document.getElementById('bgMenu').classList.remove('show');",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 1,
+      "content_block": {
+       "type": "tool_use",
+       "id": "t96",
+       "name": "Bash"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"command\":\"true\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 1
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 2,
+      "content_block": {
+       "type": "text"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 2,
+      "delta": {
+       "type": "text_delta",
+       "text": "Done."
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 2
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "result": "Done.",
+     "usage": {
+      "output_tokens": 3
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk').length",
+     "equals": 2,
+     "why": "GUARD: two text blocks"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk-copy').length",
+     "equals": 2,
+     "why": "one control per block, no duplicates after message_stop + result"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk')[1].__md",
+     "equals": "Done.",
+     "why": "the second block keeps its OWN source — not 'Hello **world**Done.': before 2026-10-10 curRaw was reset only at message_start, so the first text was re-rendered inside the second block (measured on this step)"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk')[0].__md",
+     "equals": "Hello **world**",
+     "why": "the first block's source is not overwritten by the second"
+    }
+   ]
+  },
+  {
+   "note": "4 — the whole-message path (a local built-in answers with no deltas): the block gets the control and its source too",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('/context', [], Date.now());",
+   "frames": [
+    {
+     "type": "assistant",
+     "uuid": "u96",
+     "message": {
+      "model": "claude-x",
+      "content": [
+       {
+        "type": "text",
+        "text": "# Context Usage\n\nplenty"
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk').length",
+     "equals": 1,
+     "why": "GUARD: drawn from the whole message"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk > .blk-copy').length",
+     "equals": 1,
+     "why": "copy control on the whole-message block"
+    },
+    {
+     "js": "document.querySelector('#log .blk').__md",
+     "equals": "# Context Usage\n\nplenty",
+     "why": "source kept"
+    }
+   ]
+  },
+  {
+   "note": "5 — the replay path (renderTranscript): a resumed reply is copyable the same way",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); renderTranscript([{role:'user', text:'q'}, {role:'assistant', text:'*a* reply'}], 0);",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk > .blk-copy').length",
+     "equals": 1,
+     "why": "control on the replayed block"
+    },
+    {
+     "js": "document.querySelector('#log .blk').__md",
+     "equals": "*a* reply",
+     "why": "source kept on replay"
+    }
+   ]
+  },
+  {
+   "note": "6 — export: the header button opens the popup, asks ONCE (bridge{kind:'export'}), rows .off, footer 'Preparing…'; the history panel is closed by it",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__tape96 = []; document.getElementById('histPanel').classList.add('show'); document.getElementById('exportBtn').click();",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape96.map(function(o){return o.kind}))",
+     "equals": "[\"export\"]",
+     "why": "one export ask on open"
+    },
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": true,
+     "why": "popup shown"
+    },
+    {
+     "js": "document.getElementById('exportStatus').textContent",
+     "equals": "Preparing the conversation…",
+     "why": "loading footer"
+    },
+    {
+     "js": "document.querySelectorAll('#exportMenu .popup-item.off').length",
+     "equals": 2,
+     "why": "both rows off until the text lands"
+    },
+    {
+     "js": "document.getElementById('histPanel').classList.contains('show')",
+     "equals": false,
+     "why": "one header popup at a time"
+    },
+    {
+     "js": "(function(){var m=document.getElementById('exportMenu').getBoundingClientRect(), h=document.getElementById('head').getBoundingClientRect(); return m.top >= h.bottom && m.left >= 0 && m.right <= window.innerWidth && m.width > 0;})()",
+     "equals": true,
+     "why": "opens DOWN from the header (below #head, inside the viewport) — the composer popups' bottom anchor is overridden"
+    }
+   ]
+  },
+  {
+   "note": "7 — the CLI's answer (measured 2.1.296 shape): rows live, the CLI's file name on the Save row, the footer counts characters",
+   "frames": [
+    {
+     "type": "__export",
+     "text": "\n❯ Reply with exactly the single word: pong\n\n● pong",
+     "default_filename": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#exportMenu .popup-item.off').length",
+     "equals": 0,
+     "why": "rows actionable"
+    },
+    {
+     "js": "document.querySelectorAll('#exportMenu .popup-item[aria-disabled=\"false\"]').length",
+     "equals": 2,
+     "why": "aria follows"
+    },
+    {
+     "js": "document.getElementById('exportName').textContent",
+     "equals": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt",
+     "why": "the CLI's own file name"
+    },
+    {
+     "js": "document.getElementById('exportStatus').textContent",
+     "equals": "The whole conversation as plain text, 51 characters.",
+     "why": "the reference client's footer wording"
+    }
+   ]
+  },
+  {
+   "note": "8 — Copy to clipboard: the CLI's text verbatim through Kotlin, the footer says so, the popup stays open",
+   "setup": "window.__tape96 = []; document.querySelector('#exportMenu .popup-item[data-act=\"copy\"]').click();",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape96.map(function(o){return [o.kind, o.text]}))",
+     "equals": "[[\"copy\",\"\\n❯ Reply with exactly the single word: pong\\n\\n● pong\"]]",
+     "why": "the /export text, untouched, to the IDE clipboard"
+    },
+    {
+     "js": "document.getElementById('exportStatus').textContent",
+     "equals": "Copied to clipboard.",
+     "why": "outcome in the footer"
+    },
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": true,
+     "why": "stays open to read the outcome"
+    }
+   ]
+  },
+  {
+   "note": "9 — Save to file…: ONE exportSave bridge call carrying the name and the text; the popup closes",
+   "setup": "window.__tape96 = []; document.querySelector('#exportMenu .popup-item[data-act=\"save\"]').click();",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape96.map(function(o){return [o.kind, o.name, o.text]}))",
+     "equals": "[[\"exportSave\",\"2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt\",\"\\n❯ Reply with exactly the single word: pong\\n\\n● pong\"]]",
+     "why": "name + text to Kotlin (the IDE save dialog)"
+    },
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": false,
+     "why": "closed on save"
+    }
+   ]
+  },
+  {
+   "note": "10 — reopen: asked AGAIN (the conversation may have grown); an empty answer = 'Nothing to export yet.', rows off, a click on Copy does nothing",
+   "setup": "window.__tape96 = []; document.getElementById('exportBtn').click();",
+   "frames": [
+    {
+     "type": "__export",
+     "text": "",
+     "default_filename": "conversation-2026-10-10-160049.txt"
+    }
+   ],
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape96.map(function(o){return o.kind}))",
+     "equals": "[\"export\"]",
+     "why": "a fresh ask per open"
+    },
+    {
+     "js": "document.getElementById('exportStatus').textContent",
+     "equals": "Nothing to export yet.",
+     "why": "turnless session (measured: text '')"
+    },
+    {
+     "js": "document.querySelectorAll('#exportMenu .popup-item.off').length",
+     "equals": 2,
+     "why": "rows off"
+    },
+    {
+     "js": "(function(){ document.querySelector('#exportMenu .popup-item[data-act=\"copy\"]').click(); return JSON.stringify(window.__tape96.filter(function(o){return o.kind==='copy'})); })()",
+     "equals": "[]",
+     "why": "nothing copied"
+    },
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": true,
+     "why": "an inert row click does not close the popup"
+    }
+   ]
+  },
+  {
+   "note": "11 — an error answer (no CLI): the footer carries the CLI's text, rows off",
+   "frames": [
+    {
+     "type": "__export",
+     "error": "claude is not running"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('exportStatus').textContent",
+     "equals": "Could not prepare the conversation: claude is not running",
+     "why": "error wording"
+    },
+    {
+     "js": "document.querySelectorAll('#exportMenu .popup-item.off').length",
+     "equals": 2,
+     "why": "rows off"
+    }
+   ]
+  },
+  {
+   "note": "12 — Escape closes it (MENUS membership); an answer landing on a CLOSED popup is dropped — the next open starts from 'Preparing…'",
+   "setup": "document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));",
+   "frames": [
+    {
+     "type": "__export",
+     "text": "\n❯ Reply with exactly the single word: pong\n\n● pong",
+     "default_filename": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": false,
+     "why": "Escape closed it"
+    },
+    {
+     "js": "exportState",
+     "equals": null,
+     "why": "late answer dropped"
+    },
+    {
+     "js": "(function(){ document.getElementById('exportBtn').click(); return document.getElementById('exportStatus').textContent; })()",
+     "equals": "Preparing the conversation…",
+     "why": "reopen starts fresh (the late text is not shown)"
+    }
+   ]
+  },
+  {
+   "note": "13 — the CLI boundary (__clear) with the popup open: closed, state forgotten",
+   "frames": [
+    {
+     "type": "__export",
+     "text": "\n❯ Reply with exactly the single word: pong\n\n● pong",
+     "default_filename": "2026-10-10-160050-reply-with-exactly-the-single-word-pong.txt"
+    },
+    {
+     "type": "__clear"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": false,
+     "why": "closed at the boundary"
+    },
+    {
+     "js": "exportState",
+     "equals": null,
+     "why": "the text belonged to the process that is gone"
+    }
+   ]
+  },
+  {
+   "note": "15 — the CLI exits while the popup is preparing: the footer turns to the exit, rows off (a crash drains no pending callback — seen live 2026-10-10 on a resume of a session with no file)",
+   "setup": "window.__tape96 = []; document.getElementById('exportBtn').click();",
+   "frames": [
+    {
+     "type": "__exit",
+     "code": 1
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('exportStatus').textContent",
+     "equals": "Could not prepare the conversation: claude process exited (1)",
+     "why": "the exit answers the ask"
+    },
+    {
+     "js": "document.querySelectorAll('#exportMenu .popup-item.off').length",
+     "equals": 2,
+     "why": "rows off"
+    },
+    {
+     "js": "document.getElementById('exportMenu').classList.contains('show')",
+     "equals": true,
+     "why": "the popup stays, so the outcome is read"
+    }
+   ]
+  },
+  {
+   "note": "14 — restore the bridge and the clipboard",
+   "setup": "closeMenus(); window.__bridge = window.__realBridge96; delete window.__realBridge96; window.onClaudeEvent(JSON.stringify({type:'__clear'}));",
+   "expect": [
+    {
+     "js": "typeof window.__bridge",
+     "equals": "function",
+     "why": "bridge restored"
+    }
+   ]
+  }
+ ]
+}

@@ -15,6 +15,13 @@
     mdPending = false;
     if (curBubble) { curBubble.innerHTML = renderMd(curRaw); maybeScroll(); }
   }
+  // The streaming text block is FINAL: paint the last deltas, keep the source, fold long code, add
+  // the copy control (15.4). Idempotent — content_block_stop, message_stop and the result can all
+  // land on one block — and every site that drops curBubble after a flush goes through here.
+  function finishBubble() {
+    flushMd();
+    if (curBubble) { curBubble.__md = curRaw; foldCode(curBubble); copyable(curBubble); }
+  }
   let openTool = null;        // tool block currently streaming its input
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
   let bgTasks = [];           // and WHICH ones: [{task_id, task_type, description}] — item 4's roster
@@ -301,7 +308,7 @@
     if (effortMuted) {
       if (ev.type === 'assistant' && !ev.parent_tool_use_id) {
         ((ev.message || {}).content || []).forEach(function (b) {
-          if (b && b.type === 'text' && b.text) { const k = track(el('blk', '')); k.innerHTML = renderMd(b.text); foldCode(k); }
+          if (b && b.type === 'text' && b.text) mdBlock(track(el('blk', '')), b.text);
         });
         stampMessage(ev.uuid);
         return;
@@ -360,7 +367,7 @@
               // the CLI's API-error echo — stash for the result, never draw as prose (see
               // syntheticEcho's declaration); tool_use content in synthetic frames is untouched
               if ((ev.message || {}).model === '<synthetic>') { syntheticEcho.push(b.text); return; }
-              const k = track(el('blk', '')); k.innerHTML = renderMd(b.text); foldCode(k);
+              mdBlock(track(el('blk', '')), b.text);
             }
           });
         }
@@ -678,6 +685,7 @@
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
       case '__clear':            sideReset(); return clearLogUI();
       case '__side':             return sideAnswer(ev);   // side-question answer (8.11)
+      case '__export':           return exportAnswer(ev); // the CLI's /export text for the header popup (15.4)
       case '__taskOutput': {     // a roster pane's poll answered (11.7); keyed by task_id
         const s = ev.id && bgOut[String(ev.id)];
         if (!s) return;          // the roster dropped the task meanwhile — nothing to paint on
@@ -702,6 +710,10 @@
       }
       case '__exit': {
         setBusy(false);
+        // An export still preparing can never be answered now — a crash drains no pending callback
+        // (only an intentional stop does, ClaudeCli.stop). Seen 2026-10-10: a resume of a session
+        // with no file exited 1 under an open popup, which read "Preparing…" for good (15.4).
+        if (exportState && exportState.kind === 'loading') exportAnswer({ error: 'claude process exited (' + ev.code + ')' });
         const line = statusLine('claude process exited (' + ev.code + ')', SVG_ALERT, 'status err');
         // WHY it died, when it said anything. Folded, because a crash dump is long and the first
         // lines are rarely the useful ones — but present, which it was not before.

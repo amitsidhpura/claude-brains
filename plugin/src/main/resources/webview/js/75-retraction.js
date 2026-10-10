@@ -139,7 +139,7 @@
           turnStamped = false;   // a turn the CLI started gets its own reply stamp (1.30)
           setBusy(true);
         }
-        flushMd();
+        finishBubble();
         curBubble = null; curRaw = '';
         curMsgUuid = null; curMsgEls = [];
         msgStreamed = true;   // deltas will draw this message — its assistant frame is only a stamp
@@ -163,13 +163,13 @@
           t.classList.add('run');
           openTool = { el: t, name: cb.name || 'tool', json: '', id: cb.id || null };
           if (cb.id) toolsById[cb.id] = openTool;
-          flushMd();
+          finishBubble();
           curBubble = null; // text after a tool starts a fresh block
         } else if (cb.type === 'web_search_tool_result') {
           serverToolResult(cb);
         } else if (cb.type === 'redacted_thinking') {
           // no deltas follow and nothing streams — the finished block is the whole event (1.21)
-          flushMd(); curBubble = null;
+          finishBubble(); curBubble = null;
           (curTurn || log).appendChild(track(thinkBlock('', 0, true))); maybeScroll();
         } else if (cb.type === 'thinking') {
           curThink = track(el('think-live', ''));
@@ -191,6 +191,10 @@
         const d = e.delta || {};
         if (d.type === 'text_delta') {
           if (!curBubble) {
+            // A fresh block starts from an EMPTY source. curRaw was reset only at message_start, so
+            // a text → tool → text message (fixture 93's shape) re-rendered the first text inside
+            // the second block — fixture 96 step 3 read 'Hello **world**Done.' off it (2026-10-10).
+            curRaw = '';
             curBubble = track(el('blk', ''));
             // 1.30: the turn's FIRST text block carries the reply time (page clock — the assistant
             // frame's `timestamp` arrives only after the text has streamed). Tool loops later in
@@ -285,11 +289,14 @@
           openTool = null;
         } else if (curThink) {
           finishThinking();
+        } else if (curBubble) {
+          // a text block ended: fold and offer copy NOW, not at message_stop — a tool call may
+          // follow in the same message and the next text opens a fresh block (fixture 93's shape)
+          finishBubble();
         }
         break;
       case 'message_stop':
-        flushMd();              // the last deltas may still be waiting on a frame
-        foldCode(curBubble);    // only once the block is final, not on every delta
+        finishBubble();         // the last deltas may still be waiting on a frame; fold once final
         curBubble = null;
         finishThinking();
         turnTokens += msgTokens; msgTokens = 0; msgChars = 0;
@@ -320,7 +327,7 @@
       const lc = localCommandText(content);
       if (lc && lc.text) {
         if (lc.isErr) errorBlock(lc.text);
-        else { const k = track(el('blk', '')); k.innerHTML = renderMd(lc.text); foldCode(k); }
+        else mdBlock(track(el('blk', '')), lc.text);
       }
       return;
     }

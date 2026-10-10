@@ -206,13 +206,44 @@
     return out;
   }
 
+  // ONE clipboard route for the page: Kotlin's CopyPasteManager (ChatPanel "copy"). Not
+  // navigator.clipboard — it needs a focused document and a user activation, which the webview
+  // does not always hold (a programmatic click rejected the write, 2026-10-10), and it cannot be
+  // read back by the harness; the IDE's clipboard can (xclip).
+  function copyText(text) { bridge({ kind: 'copy', text: String(text == null ? '' : text) }); }
   // delegate copy-button clicks (codeblock header icon)
   log.addEventListener('click', (e) => {
     const btn = e.target.closest('.copy');
     if (!btn) return;
     const pre = btn.closest('.codeblock').querySelector('pre');
-    if (navigator.clipboard && pre) navigator.clipboard.writeText(pre.textContent);
+    if (pre) copyText(pre.textContent);
     btn.innerHTML = SVG_CHECK;
     setTimeout(() => { btn.innerHTML = SVG_COPY; }, 1200);
+  });
+
+  /* Copy response (15.4). mdBlock paints a FINAL assistant text block in one step: render, keep
+     the markdown SOURCE on the element, fold long code, add the copy control. The live path paints
+     the same element many times while streaming (flushMd) and calls copyable() only once the block
+     is final — the control is appended LAST because an innerHTML assignment wipes it. Copying the
+     source rather than textContent is the reference client's behaviour too (its button copies the
+     message's text content, markdown and all). The side panel's answers are .blk as well but are
+     not responses, so they never go through here. */
+  function mdBlock(k, src) { k.innerHTML = renderMd(src); k.__md = src; foldCode(k); copyable(k); return k; }
+  function copyable(k) {
+    if (!k || k.querySelector(':scope > .blk-copy')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'blk-copy'; b.title = 'Copy response';
+    b.innerHTML = SVG_COPY;
+    k.appendChild(b);
+  }
+  log.addEventListener('click', function (e) {
+    const btn = e.target.closest('.blk-copy');
+    if (!btn) return;
+    e.stopPropagation();
+    const k = btn.parentNode;
+    // the source when the block kept it (every assistant text block does), else what is on screen
+    copyText(typeof k.__md === 'string' ? k.__md : k.textContent);
+    btn.innerHTML = SVG_CHECK;
+    setTimeout(function () { btn.innerHTML = SVG_COPY; }, 1200);
   });
 

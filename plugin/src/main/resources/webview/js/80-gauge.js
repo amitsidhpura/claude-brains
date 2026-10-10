@@ -199,7 +199,7 @@
     // the first one that offers it rather than waiting for the turn to finish suspending. A miss
     // returns 0 and leaves the tag-derived seed alone.
     reconcileFromResult(ev);
-    flushMd();
+    finishBubble();
     curBubble = null;
     finishThinking();
     // A background subagent suspends the turn: the CLI emits an intermediate `result` while the
@@ -239,7 +239,7 @@
       // subtype can't split them. Error → red echo above; success → the prose it always was.
       // Not track()ed: no stampMessage follows a result, and a pending block would be stamped by
       // the NEXT message's uuid.
-      syntheticEcho.forEach(function (t) { const k = el('blk', ''); k.innerHTML = renderMd(t); foldCode(k); });
+      syntheticEcho.forEach(function (t) { mdBlock(el('blk', ''), t); });
       const done = el('done', '');
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
       done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero

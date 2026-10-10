@@ -12,7 +12,7 @@
     // assistant text block (markdown + code), stamped as the turn's first reply text (1.30)
     el('ts', fmtClock(new Date()));
     const b = el('blk', '');
-    b.innerHTML = renderMd('An assistant **text block** with `inline code`, a [link](#), a list:\n\n' +
+    mdBlock(b, 'An assistant **text block** with `inline code`, a [link](#), a list:\n\n' +
       '- first item\n- second item\n\n```js\nfunction add(a, b) { return a + b; }\n```\n\n' +
       // a LOOSE ordered list starting past 1, with a nested bullet and a wrapped line
       '3. Third step, loose (blank lines between items)\n\n4. Fourth step\n   - a nested bullet\n' +
@@ -372,6 +372,13 @@
           { label: 'Hold', description: 'Wait for approval.' } ] }],
         answers: { 'Ship the new rate now?': 'Ship it' } },
     ]);
+
+    // Export popup (15.4), left READY so tg('exportMenu') shows the rows live with the CLI's file
+    // name and the character count — the text is the measured 2.1.296 shape (the TUI's ❯ / ● glyphs).
+    // The other three states (preparing / nothing yet / failed) are a renderExport() call away.
+    exportState = { kind: 'ready', name: '2026-10-10-104200-dev-gallery-show-every-ui-state.txt',
+      text: '\n❯ Dev gallery — show every UI state.\n\n● An assistant text block with inline code, a link, a list…' };
+    renderExport();
 
     awaitingUser = false; // clear the flag the permission/ask cards set, so real input isn't blocked
     maybeScroll();

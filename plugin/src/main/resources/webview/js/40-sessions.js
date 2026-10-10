@@ -85,10 +85,66 @@
   let histWanted = false;
   document.getElementById('histBtn').onclick = function (e) {
     e.stopPropagation();
+    closeMenus();   // the export popup hangs from the same header
     if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
     histWanted = true;
     bridge({ kind: 'history' }); // Kotlin answers with a 'sessions' event -> renderHistory shows the panel
   };
+
+  /* ---------- Export conversation (15.4) ----------
+     The CLI builds the text (`export_conversation`, the terminal's /export — ClaudeCli.kt) and the
+     panel only copies or saves it. One ask per OPEN of the popup (the conversation may have grown
+     since), the rows stay .off until the answer lands, an answer to a popup already closed is
+     dropped, and the CLI boundary (__clear) forgets the text — it belongs to the process that
+     produced it. Typed /export and /copy are not offered: the slash menu is the CLI's own command
+     list, and these two are host widgets (the chip / New button rule). */
+  const exportMenu = document.getElementById('exportMenu');
+  const exportStatus = document.getElementById('exportStatus');
+  const exportName = document.getElementById('exportName');
+  const EXPORT_NAME_HINT = exportName.textContent;
+  let exportState = null;   // null | {kind:'loading'} | {kind:'ready', text, name} | {kind:'empty'} | {kind:'failed', error}
+  document.getElementById('exportBtn').onclick = function (e) {
+    histPanel.classList.remove('show');
+    tg('exportMenu', e);
+    if (!exportMenu.classList.contains('show')) return;
+    exportState = { kind: 'loading' };
+    renderExport();
+    bridge({ kind: 'export' });
+  };
+  function exportAnswer(ev) {
+    if (!exportMenu.classList.contains('show')) { exportState = null; return; }
+    if (ev.error) exportState = { kind: 'failed', error: String(ev.error) };
+    else if (!ev.text) exportState = { kind: 'empty' };
+    else exportState = { kind: 'ready', text: String(ev.text), name: String(ev.default_filename || 'conversation.txt') };
+    renderExport();
+  }
+  function renderExport(status) {
+    const s = exportState || { kind: 'loading' };
+    const ready = s.kind === 'ready';
+    exportMenu.querySelectorAll('.popup-item').forEach(function (it) {
+      it.classList.toggle('off', !ready);
+      it.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    });
+    exportName.textContent = ready ? s.name : EXPORT_NAME_HINT;
+    exportStatus.textContent = status ? status
+      : s.kind === 'loading' ? 'Preparing the conversation…'
+      : s.kind === 'failed' ? 'Could not prepare the conversation: ' + s.error
+      : s.kind === 'empty' ? 'Nothing to export yet.'
+      : 'The whole conversation as plain text, ' + s.text.length.toLocaleString() + ' characters.';
+  }
+  exportMenu.addEventListener('click', function (e) {
+    const item = e.target.closest('.popup-item');
+    if (!item || !exportState || exportState.kind !== 'ready') return;
+    const s = exportState;
+    if (item.dataset.act === 'copy') {
+      // the popup stays: its footer is where the outcome is read (the IDE's clipboard manager
+      // does not fail; the one failure mode, no bridge, is the harness's own stub)
+      copyText(s.text); renderExport('Copied to clipboard.');
+    } else if (item.dataset.act === 'save') {
+      bridge({ kind: 'exportSave', name: s.name, text: s.text });   // Kotlin opens the IDE's save dialog
+      closeMenus();
+    }
+  });
   function renderHistory(items, current) {
     histList.innerHTML = items.length ? '' : '<div class="hist-empty">No past conversations for this project.</div>';
     items.forEach(function (s) {
@@ -135,6 +191,7 @@
 
   function clearLogUI() {
     pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
+    exportState = null; exportMenu.classList.remove('show');   // the /export text belongs to the process that is going (15.4)
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';
     updateTopFade();   // emptied log sits at the top; a clamped scrollTop fires no reliable event

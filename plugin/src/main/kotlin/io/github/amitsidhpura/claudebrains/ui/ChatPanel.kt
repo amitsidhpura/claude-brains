@@ -214,6 +214,17 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val name = msg["name"]?.jsonPrimitive?.content ?: "file"
                 saveAttachment(name, data)
             }
+            // Every copy control on the page (code block, Copy response, the export popup's row —
+            // 1.11 / 15.4) lands here rather than in navigator.clipboard: Chromium's clipboard API
+            // needs a focused document AND a user activation, which a tool-window webview does not
+            // always hold (measured 2026-10-10: a programmatic click rejected the write), while the
+            // IDE's clipboard manager has neither condition and is the one Ctrl+C uses.
+            "copy" -> msg["text"]?.jsonPrimitive?.content?.let { text ->
+                ApplicationManager.getApplication().invokeLater {
+                    com.intellij.openapi.ide.CopyPasteManager.getInstance()
+                        .setContents(java.awt.datatransfer.StringSelection(text))
+                }
+            }
             "perm" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val allow = msg["allow"]?.jsonPrimitive?.content == "true"
@@ -291,6 +302,29 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                         else put("backgrounded", response?.get("backgrounded") ?: JsonPrimitive(true))
                     })
                 }
+            }
+            // Export conversation (15.4): the header popup asked for the CLI's own /export text. The
+            // answer rides a __export frame; the page copies or saves it with the panel's widgets.
+            "export" -> session.exportConversation { response, error ->
+                pushFrame(buildJsonObject {
+                    put("type", "__export")
+                    if (error != null) put("error", error)
+                    else {
+                        put("text", response?.get("text") ?: JsonPrimitive(""))
+                        put("default_filename", response?.get("default_filename") ?: JsonPrimitive("conversation.txt"))
+                    }
+                })
+            }
+            // "Save to file…" on that popup: the text the popup showed comes back with the click
+            // (not re-asked — a turn that ran meanwhile must not change what was counted) and goes
+            // into the IDE's native save dialog under the CLI's own file name. The name is reduced
+            // to a basename the way the reference client does it; nothing else is trusted.
+            "exportSave" -> {
+                val text = msg["text"]?.jsonPrimitive?.content ?: return
+                val name = msg["name"]?.jsonPrimitive?.content
+                    ?.substringAfterLast('/')?.substringAfterLast('\\')?.replace(":", "")
+                    ?.takeIf { it.isNotBlank() && it != "." && it != ".." } ?: "conversation.txt"
+                saveText(name, text)
             }
             // Side question (8.11): the page's own row id rides the request and comes back on the
             // `__side` frame, so the answer lands on the row that asked — order is not assumed.
@@ -681,6 +715,20 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 .onFailure {
                     com.intellij.openapi.diagnostic.Logger.getInstance(ChatPanel::class.java)
                         .warn("saving attachment $name failed", it)
+                }
+        }
+    }
+
+    /** The export popup's plain text (15.4), through the same native dialog as [saveAttachment]. */
+    private fun saveText(name: String, text: String) {
+        ApplicationManager.getApplication().invokeLater {
+            val descriptor = saveDescriptor("Export Conversation", "Save the conversation as plain text")
+            val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
+            val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, name)
+            if (wrapper != null) runCatching { wrapper.file.writeText(text, StandardCharsets.UTF_8) }
+                .onFailure {
+                    com.intellij.openapi.diagnostic.Logger.getInstance(ChatPanel::class.java)
+                        .warn("saving export $name failed", it)
                 }
         }
     }

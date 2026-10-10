@@ -17,6 +17,17 @@
 .blk li > p { margin: .25em 0; }
 .blk a { color: var(--blue); text-decoration: none; }
 .blk a:hover { text-decoration: underline; }
+/* Copy response (15.4): a hover-revealed control at the block's top-right corner — the code block's
+   header copy, lifted to the whole reply — appended once the block is FINAL (a streaming re-render
+   replaces innerHTML and would wipe it; js/20-markdown.js). Copies the block's markdown SOURCE.
+   A --raised plate because it sits over prose, unlike the header icons; the :has rule keeps the
+   control (absolute, so its own margin is moot) from taking the last child's zero bottom margin. */
+.blk .blk-copy { display: none; position: absolute; top: 0; right: 0; padding: 2px; border: 0;
+  background: var(--raised); color: var(--muted); border-radius: var(--radius); cursor: pointer; }
+.blk:hover .blk-copy { display: inline-flex; }
+.blk .blk-copy:hover { color: var(--fg); }
+.blk .blk-copy svg { width: 14px; height: 14px; display: block; }
+.blk > :has(+ .blk-copy) { margin-bottom: 0; }
 .blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;
   font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 

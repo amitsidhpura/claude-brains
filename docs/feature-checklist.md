@@ -17,13 +17,13 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 98 ✅ · 0 🟥 · 0 🟧 · 1 ⬜ · 46 ➖ (145 rows) — 1 open row, awaiting a decision
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 99 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (145 rows) — no open rows; one [DECIDE] tag (9.9) still parked
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** three, all from the 2.1.296 audit 2026-10-10 — one new row
-  (11.7 background task output) and two re-opened (9.9 the 1M switch — measured inert on 2.1.296;
-  15.4 export / copy response — `export_conversation` answers over stdio). 1.30 (message
-  timestamps), 1.31 (question option previews) and 4.10 (auto-mode server-fallback dialog) were
-  taken and built the same day. Earlier: 1.29 (2.1.270
+- **Awaiting a decision ([DECIDE]):** one — 9.9, the 1M switch (re-opened by the 2.1.296 audit
+  2026-10-10; measured inert on 2.1.296). The audit's other rows were taken and built the same
+  day: 1.30 (message timestamps), 1.31 (question option previews), 4.10 (auto-mode
+  server-fallback dialog), 11.7 (background task output) and 15.4 (export / copy response).
+  Earlier: 1.29 (2.1.270
   audit) built 2026-09-13; the ten 2026-09-04 full-surface rows are settled (1.26–1.28, 2.12, 3.7,
   3.8, 4.7, 4.8, 6.5, 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3 deferred 2026-09-04)
 
@@ -51,7 +51,7 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30 and 1.31 were built the same day) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30, 1.31, 4.10, 11.7 and 15.4 were built the same day) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Row shape** — `**id** mark [effort] **Name** [tags] — gist`, the gist one to two lines of what
@@ -452,6 +452,12 @@ auto-include selection, voice.
 - **1.11** ✅ **Code blocks** — language label, copy button, offline syntax highlighter (keywords /
       strings / comments / numbers / php-vars; deliberately not a full grammar bundle)
   <!-- --><details><summary>Read more…</summary>
+  The copy button (and every other copy control on the page — Copy response, the export popup's
+  row, 15.4) writes through Kotlin's `CopyPasteManager` (`bridge{kind:'copy', text}`, since
+  2026-10-10), not `navigator.clipboard`: Chromium's API needs a focused document and a user
+  activation, which the tool-window webview does not always hold (a programmatic click rejected
+  the write, measured 2026-10-10), and the IDE clipboard can be read back by the harness's live
+  check (xclip).
   A fence is a run of three OR MORE backticks and closes only on a run at least as long
   (CommonMark), so a ````markdown fence may carry a ``` block or a table inside it. Fixed
   2026-09-08: a ````markdown table answer used to render as its first sentence plus the literal
@@ -1668,7 +1674,7 @@ auto-include selection, voice.
   git timeout, 50 files, 1MB/file caps; present since ≤2.1.233).
   </details>
 
-## 15. ⬜ Onboarding & misc
+## 15. ✅ Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
@@ -1680,17 +1686,37 @@ auto-include selection, voice.
   — Anthropic-internal only; `/stickers`, `/radio`, `/powerup`; the "How is Claude doing?"
   survey.
   </details>
-- **15.4** ⬜ [XS] **`/export` / `/copy` — export the conversation, copy a response** [DECIDE] —
-  was ➖ "the transcript is on disk; the terminal exports it". Re-opened 2026-10-10: VS Code added a
-  Copy response button (+ typed `/copy`, 2.1.277) and Export conversation (+ typed `/export`, copy
-  or save as plain text, 2.1.280), and the CLI now serves the export over stdio.
+- **15.4** ✅ [XS] **`/export` / `/copy` — export the conversation, copy a response** — built
+  2026-10-10: a hover-revealed Copy response control on every finished assistant text block
+  (copies the block's markdown source), and an Export conversation popup on the header — Copy to
+  clipboard / Save to file… (the IDE's save dialog, under the CLI's own file name) — fed by
+  `export_conversation` over stdio. Typed `/export` and `/copy` are not offered: host widgets,
+  the chip / New button rule.
   <!-- --><details><summary>Read more…</summary>
-  2.1.296 audit (2026-10-10). PROBED: `export_conversation` → `{text, default_filename:
-  "conversation-2026-10-10-115641.txt"}` (`text` empty on a turnless session; schema: "@internal
-  Requests the conversation as the plain text the terminal's /export writes, with the file name
-  that command would offer, for a host that copies or saves it with its own widgets"). A
-  copy-response button is local (the reply's markdown source is in the block; 1.11 has the
-  per-code-block copy). `/share` stays the terminal's half.
+  Was ➖ "the transcript is on disk; the terminal exports it"; re-opened by the 2.1.296 audit
+  (2026-10-10) when VS Code added Copy response (+ typed `/copy`, 2.1.277) and Export
+  conversation (+ typed `/export`, 2.1.280) and the CLI began serving the export over stdio.
+  PROBED 2026-10-10 on 2.1.296 (scratch config dir, haiku): `export_conversation` →
+  `{text, default_filename}`; turnless `text:""` + `conversation-2026-10-10-160049.txt`; after a
+  turn the TUI's own plain text (`❯ prompt` / `● reply`, no header) under
+  `2026-10-10-160050-<prompt slug>.txt`; a `--resume`d process answers its whole history before
+  any turn. The popup asks once per OPEN (the conversation may have grown), the rows stay off
+  until the text lands ("Preparing the conversation…" / "Nothing to export yet." / "Could not
+  prepare the conversation: …"), Copy reports in the footer and stays open, Save sends the shown
+  text back to Kotlin (not re-asked — a turn meanwhile must not change what was counted) and
+  closes, an answer to a closed popup is dropped, `__clear` forgets the text. Copy response
+  copies `el.__md` — the source, as the reference client does — appended once a block is final
+  (`finishBubble` at content_block_stop / message_stop / result / tool start; the whole-message,
+  local-command, synthetic-echo and replay paths through `mdBlock`). A CLI that exits while the
+  popup is preparing answers it with the exit (a crash drains no pending callback — seen live on
+  a resume of a session with no file). Building it also fixed a latent renderer bug: the
+  streaming markdown accumulator was reset only at message_start, so a text → tool → text
+  message re-rendered the first text inside the second block (fixture 96 step 3 read it off the
+  source). Fixture 96 (15 steps, 49 asserts; negative control on the pre-change sandbox: step 1
+  failed on the missing control and the not-yet-rendered block, step 2 aborted). Hand-driven
+  live over CDP against the sandbox CLI: a fresh process answers "Nothing to export yet.", a
+  resumed session 739 characters under its own `<date>-<time>-<slug>.txt` name; Save (a native
+  IDE dialog) not driven. `/share` stays the terminal's half.
   </details>
 - **15.5** ➖ [LG] **`ask_debugger_help`** [NEW] — deferred by the user 2026-08-29 (backlog, [LG]
   "debugger MCP tools"): a debug-session MCP server (stack, variables, breakpoints) with a

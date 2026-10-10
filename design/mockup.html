@@ -48,6 +48,7 @@
   <button onclick="tg('modeMenu', event)">mode</button>
   <button onclick="tg('modelMenu', event)">model</button>
   <button onclick="tg('slashMenu', event)">slash</button>
+  <button onclick="tg('exportMenu', event)">export</button>
   <button onclick="event.stopPropagation(); document.getElementById('send').classList.toggle('stop')">stop</button>
   <span class="sep"></span>
   <!-- states that can't coexist with a populated log / history list -->
@@ -90,6 +91,17 @@
       <button class="ok" title="Save"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
       <button class="no" title="Cancel" onclick="cancelRename()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>
     <span class="actions">
+      <!-- Export (15.4): opens DOWN from the header, #histPanel's width and right edge. Shown here in
+           its READY state (rows live, the CLI's file name, the character count); the other three
+           footers are "Preparing the conversation…", "Nothing to export yet." and
+           "Could not prepare the conversation: …", with both rows .off. devbar → export. -->
+      <button class="icon-btn" title="Export conversation" onclick="tg('exportMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
+      <div id="exportMenu" class="popup">
+        <div class="popup-h"><span>Export conversation</span></div>
+        <div class="popup-item" data-act="copy" aria-disabled="false"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="pi-body"><div class="pi-title">Copy to clipboard</div><div class="pi-desc">The whole conversation as plain text</div></span></div>
+        <div class="popup-item" data-act="save" aria-disabled="false"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg></span><span class="pi-body"><div class="pi-title">Save to file…</div><div class="pi-desc" id="exportName">2026-10-10-104200-create-a-new-test-txt-file.txt</div></span></div>
+        <div class="popup-f" id="exportStatus">The whole conversation as plain text, 4,812 characters.</div>
+      </div>
       <button class="icon-btn" title="Reload this conversation"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
       <button class="icon-btn" title="Past conversations" onclick="tgHist(event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
       <button class="icon-btn" title="New conversation" onclick="newConversation()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
@@ -217,6 +229,8 @@
           </li>
         </ol>
         <p>See <a href="#">strict typing</a> and the <a href="#">RFC that introduced it</a> for the original rationale.</p>
+        <!-- 15.4: hover-revealed Copy response (top-right; copies the markdown source) -->
+        <button type="button" class="blk-copy" title="Copy response"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
       </div>
       </div>
     </div>
@@ -1170,7 +1184,7 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
 <script>
   var MOCK_SPARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
   // dev toolbar toggles (mockup only)
-  var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu'];
+  var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu','exportMenu'];
   // Mirrors chat.html: Escape on the slash menu must stick even though the input handler
   // re-asserts .show while the text still looks like "/cmd".
   var slashEscaped = false;

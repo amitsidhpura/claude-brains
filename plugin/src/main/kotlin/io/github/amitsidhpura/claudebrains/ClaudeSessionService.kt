@@ -508,6 +508,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         c.backgroundTask(toolUseId, onAnswer)
     }
 
+    /** The conversation as the terminal's `/export` plain text (15.4); see [ClaudeCli.exportConversation]. */
+    fun exportConversation(onAnswer: (response: kotlinx.serialization.json.JsonObject?, error: String?) -> Unit) {
+        val c = cli ?: return onAnswer(null, "claude is not running")
+        c.exportConversation(onAnswer)
+    }
+
     /**
      * Answer a host dialog (4.10) with the kind's own result token (`continue` / `interrupt` for
      * the auto-mode server-fallback notice). FIRST ANSWER WINS, and a dialog the CLI already

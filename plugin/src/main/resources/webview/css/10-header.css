@@ -54,4 +54,13 @@
    behaviours. Colour-only everywhere now. */
 .icon-btn:hover { color: var(--fg); }
 .icon-btn svg { width: 19px; height: 19px; display: block; }
+/* Export popup (15.4): the one popup hanging from the HEADER, so it opens DOWNWARD — the composer
+   popups' bottom anchor is overridden. Anchored to .actions (not its button) so it shares
+   #histPanel's right edge and 310px width — the conversations-list idiom, whole. The rows wear .off
+   until the CLI's text has landed (css/70-popups.css). */
+#head .actions { position: relative; }
+/* 13px = the header's 8px bottom padding + 1px border below .actions, plus #histPanel's own 4px gap
+   (renderHistory sets its top to head.offsetHeight + 4) — measured 2026-10-10: +9px put the popup's
+   top edge 0.6px INTO the header's border line. */
+#head .actions .popup { bottom: auto; top: calc(100% + 13px); right: -4px; min-width: 0; width: 310px; }
 
