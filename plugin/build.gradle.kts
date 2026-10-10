@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.15.0"
+version = "0.16.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,22 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.16.0</b>
+            <ul>
+              <li>The editor's selection rides every prompt: a live pill in the composer follows
+                  what you highlight (or the cursor line), its × leaves it out of one message, and
+                  the sent message shows the same pill — click it to reopen those lines</li>
+              <li>Include open file: a second switch in the paperclip menu attaches the open file's
+                  content when nothing is highlighted (unsaved edits included, 50,000-character
+                  cap); a highlight always wins, as in VS Code</li>
+              <li>Both live in the paperclip menu as switch rows and persist across restarts;
+                  Include selection is on by default, Include open file off</li>
+              <li>Resuming a conversation after the IDE closed over a running background command
+                  no longer draws a stray "Pondered for 1s" line</li>
+              <li>The Copy response control appears at the end of a reply's first line when the
+                  reply is hovered, with the text wrapping around it — it used to sit over the text
+                  and could cover the end of a long first line</li>
+            </ul>
             <b>0.15.0</b>
             <ul>
               <li>Message timestamps: a small time above each prompt and above the first reply
@@ -148,16 +164,6 @@ val changeNotesHtml = """
                   sits on its own line above the buttons, so Accept, Always allow and Reject keep
                   one height; the placeholder adds "applies to Reject", since a note before
                   Accept is not sent</li>
-            </ul>
-            <b>0.13.1</b>
-            <ul>
-              <li>Numbered lists in Claude's answers keep counting across a blank line between
-                  items, a wrapped line, a nested bullet or an indented code block — they used
-                  to restart at 1. after each one; a list that starts at another number keeps
-                  it, and a list resumed after a code block continues from where it left off</li>
-              <li>A code fence of four or more backticks — the shape Claude uses for a markdown
-                  block that contains a fence of its own — renders as one code block; it used to
-                  print a stray placeholder line and drop the whole block</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
