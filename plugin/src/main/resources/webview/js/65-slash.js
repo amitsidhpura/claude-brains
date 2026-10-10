@@ -173,7 +173,7 @@
     if (men && !mentionEscaped) {
       const q = men.q.toLowerCase();
       return openMenu(men.start, files.filter(function (f) { return f.toLowerCase().includes(q); }).slice(0, 20)
-        .map(function (f) { return { ins: f, disp: f }; }));
+        .map(function (f) { return { ins: mentionToken(f).slice(1), disp: f }; }));   // the typed `@` stays; `"a b.txt"` for a spaced path (fixture 91)
     }
     hideMenu();
   }

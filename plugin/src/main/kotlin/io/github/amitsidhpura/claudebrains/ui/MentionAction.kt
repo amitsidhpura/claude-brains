@@ -61,6 +61,8 @@ class MentionAction : AnAction() {
  * shape the @-picker inserts, see ClaudeSessionService.listProjectFiles); anything outside stays
  * absolute, which the CLI reads just as well. A folder gets a trailing slash so the token reads
  * as one — the CLI lists a `@dir/` mention. Duplicates collapse, order is the selection's.
+ * Paths are handed over BARE; the webview's mentionToken() (50-blocks.js) quotes one that holds a
+ * space (`@"a b/c.txt"`) — the CLI reads an unquoted mention only up to its first space.
  */
 object MentionPaths {
     /** @param entries (absolute path, isDirectory) per selected item */

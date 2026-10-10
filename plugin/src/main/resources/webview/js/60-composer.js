@@ -271,7 +271,7 @@
   // with a separating space when the caret follows a non-space character so a token never fuses
   // with what was already typed; the caret lands after the last token. Fixture 75 pins the rule.
   function insertMentions(paths) {
-    const toks = (paths || []).filter(Boolean).map(function (p) { return '@' + p + ' '; }).join('');
+    const toks = (paths || []).filter(Boolean).map(function (p) { return mentionToken(p) + ' '; }).join('');   // quoted when the path holds a space (fixture 91)
     if (!toks) return;
     const v = input.value, before = v.slice(0, input.selectionStart), after = v.slice(input.selectionEnd);
     const sep = before && !/\s$/.test(before) ? ' ' : '';

@@ -660,21 +660,41 @@
    * is not a mention). Sentence-final punctuation is left outside the chip. The rule is pinned by
    * fixture 74; the picker (65-slash.js) only ever inserts project-relative paths, and the chip
    * carries that path in data-path for the delegated #log click handler (00-core.js).
+   * A QUOTED token — `@"dir with space/file (2).xlsx"` — is one mention: the CLI reads a bare
+   * `@path` only up to its first space (measured 2026-10-10 on 2.1.295: no file attachment for
+   * the raw or the backslash-escaped spelling, a `file` attachment for the quoted one), so
+   * mentionToken() writes the quoted form and this reader takes it back. The chip's text keeps
+   * the quotes (textContent stays the prompt); data-path is the bare path. Fixture 91.
    */
   function mentionHtml(text) {
     const s = text == null ? '' : String(text);
-    const re = /(^|\s)@([^\s@]+)/g;
+    const re = /(^|\s)@(?:"([^"\n]+)"|([^\s@]+))/g;
     let out = '', last = 0, m;
     while ((m = re.exec(s)) !== null) {
-      const punct = m[2].match(/[.,;:!?)\]]+$/);
-      const tok = punct ? m[2].slice(0, m[2].length - punct[0].length) : m[2];
+      const quoted = m[2] != null;
+      let tok = quoted ? m[2] : m[3];
+      if (!quoted) {
+        const punct = tok.match(/[.,;:!?)\]]+$/);
+        if (punct) tok = tok.slice(0, tok.length - punct[0].length);
+      }
       if (!tok || !(tok.indexOf('/') !== -1 || /\.[A-Za-z0-9]+$/.test(tok))) continue;
       const at = m.index + m[1].length;   // index of the '@'
+      const shown = quoted ? '@"' + tok + '"' : '@' + tok;
       out += esc(s.slice(last, at)) +
-        '<span class="mention" data-path="' + esc(tok) + '" title="' + esc(tok) + '">@' + esc(tok) + '</span>';
-      last = at + 1 + tok.length;
+        '<span class="mention" data-path="' + esc(tok) + '" title="' + esc(tok) + '">' + esc(shown) + '</span>';
+      last = at + shown.length;
     }
     return out + esc(s.slice(last));
+  }
+  /**
+   * The token the composer writes for a path: bare `@path` unless the path holds whitespace or a
+   * colon, or ends in a character the CLI would not read as part of a path — then `@"path"`. The
+   * official webview's rule (its OL0()); a folder's trailing `/` stays bare, so `@docs/` is
+   * unchanged. Shared by the @-menu (65-slash.js) and the IDE context menu (60-composer.js).
+   */
+  function mentionToken(path) {
+    const p = path == null ? '' : String(path);
+    return (/[\s:]/.test(p) || !/[\w\/]$/.test(p)) ? '@"' + p + '"' : '@' + p;
   }
 
 /**

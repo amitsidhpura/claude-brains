@@ -383,7 +383,7 @@ megabytes).
 | `tool_progress` | `{tool_use_id, tool_name, parent_tool_use_id, elapsed_time_seconds, task_id?, heartbeat?, subagent_type?, subagent_retry?{agent_id, attempt, max_retries, retry_delay_ms, error_status, error_category}}` |
 | `keep_alive` | 30 s timer; ignore |
 | `auth_status` | `{isAuthenticating, output[], error?}` — only with `--enable-auth-status` |
-| `attachment` | @internal — at-mentioned files, IDE selections, pasted media, structured output |
+| `attachment` | @internal — at-mentioned files, IDE selections, pasted media, structured output. An at-mention is read from the prompt text as `@path` up to the first whitespace, or `@"path with spaces"` (measured 2.1.295: the raw and backslash-escaped spellings attach nothing; the binary's grammar is `@(?:"([^"\n]+)"\|…)`) |
 | `tombstone` | @internal — "consumers that render or persist the stream should remove the referenced message" |
 | `command_lifecycle` | `{command_uuid, state}` — pairs with stdin `bash_command` (CCR terminal UIs) |
 | `active_goal` | `/goal` Stop-hook state; `value` null when cleared |

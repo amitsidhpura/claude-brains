@@ -857,6 +857,10 @@ auto-include selection, voice.
   `VIRTUAL_FILE_ARRAY` to `VIRTUAL_FILE` because a tab's context carries one file and is not
   obliged to provide the array. Hand-tested 2026-09-13 (MT-2.15, § 17.2): tab, editor body and a
   two-file Project-view selection, all three as expected.
+  A path holding a space (or a colon) is inserted as `@"path"` since 2026-10-10: the CLI reads a
+  bare `@path` only up to its first space and attaches nothing (measured on 2.1.295 — raw and
+  backslash-escaped spellings both dropped; the quoted one attached; the official webview quotes the
+  same way). `mentionToken()` in `50-blocks.js`, fixture 91 (control on the pre-fix build: 5 failed).
   </details>
 - **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
 - **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
@@ -883,6 +887,9 @@ auto-include selection, voice.
   VS Code 2.1.267 fixed @-mentions dropping paths with spaces; our chip rule ends a token at
   whitespace by construction, and whether the CLI resolves an unquoted spaced `@path` from our
   picker is unmeasured.
+  A quoted mention `@"dir with space/file (2).xlsx"` is ONE chip since 2026-10-10 (the user's
+  screenshot showed the chip cut at the first space with ` Sheet (2).xlsx` as plain text); the chip
+  text keeps the quotes, `data-path` is the bare path. Fixture 91.
   </details>
 
 ## 7. ✅ Slash commands (`docs/slash-commands.md` is the source of truth)

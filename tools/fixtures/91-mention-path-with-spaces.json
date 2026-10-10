@@ -1,0 +1,73 @@
+{
+ "item": "6.5 / 6.9 Mentions whose path holds a space are written as `@\"path\"` (2026-10-10): the picker and the IDE context menu quote them, the sent-bubble chip reads the quoted form back as ONE mention",
+ "branch": "mentionToken() (50-blocks.js, shared) decides the token shape — bare `@path` unless the path holds whitespace or a colon, or ends in a character the CLI would not read as part of a path, then `@\"path\"`; used by insertMentions (60-composer.js, the `__mention` host frame) and by the @-menu's rows (65-slash.js updateAuto → pick). mentionHtml (50-blocks.js) accepts `@\"…\"` as one token: the chip keeps the quotes in its text (bubble textContent stays byte-identical), data-path carries the bare path for the #log click handler (00-core.js).",
+ "provenance": "USER SYMPTOM 2026-10-10 (screenshot of the real panel): the sent bubble showed a chip `@_local/2026-09-21/metrobuildsuppliers.com.au_Comparison_Final` followed by plain text ` Sheet (2).xlsx` — the picker had inserted the raw path, the chip regex stopped at the space, and (measured below) the CLI never attached the file. MEASURED 2026-10-10 over stdio, CLI 2.1.295, `claude -p --output-format stream-json --max-turns 1 --disallowedTools Read,…` in ~/Sites/claude-brains-testing with a probe file `_probe/space dir/Comparison Final Sheet (2).txt` (deleted afterwards, transcripts deleted, lastSessionId untouched): raw `@_probe/space dir/…` → NO `attachment{type:'file'}` record, the model reached for a tool; backslash-escaped `@_probe/space\\ dir/…` → no file attachment either; `@\"_probe/space dir/Comparison Final Sheet (2).txt\"` → `attachment{type:'file', filename, displayPath, content}` persisted and the model answered from it; control `@_probe/plain.txt` → file attachment. The binary's strings carry the grammar `@(?:\"([^\"\\n]{1,N})\"|…)`; the official VS Code webview writes `@\"${path}\"` when `/[\\s:]/` matches the path or it ends in a non-word character (its OL0()), and the public changelog lists '[VSCode] Fixed @-mentions dropping files whose paths contain spaces'. The `__mention` and `files` frames are OUR OWN Kotlin→webview frames (self-consistency only); the `files` list is saved from the page's own `files` binding and restored in the last step so the sandbox's picker is left as found. NEGATIVE CONTROL RUN 2026-10-10 against the sandbox still serving the pre-change webview (started on the unchanged build, fixture written first): 4 passed, 5 failed — step 1 read the raw `@_local/… (2).xlsx @docs/ ` (caret 58, two short of the quoted form's 60); step 2's menu opened with its one row and closed on pick (GUARDs) but Enter inserted the raw path; step 3 read two chips either way (GUARD), the first one's text `@\"_local/2026-09-21/Comparison` with an EMPTY data-path — the old regex took the opening quote into the token and stopped at the space. FIRST FIXED-BUILD RUN: 6/3 — the picker step read `see @@\"…\"`: the @-menu's `ins` is spliced in AFTER the `@` the user typed, so the row carries the token without its own `@` (`mentionToken(f).slice(1)`); the other two were the fixture's own JSON spacing. Then 9/9. LIVE END-TO-END 2026-10-10 in the sandbox (CLI 2.1.295 via the fixed panel, fresh conversation over CDP, the prompt sent through sendTurn with the quoted mention): the bubble drew ONE chip (`@\"_probe/space dir/Comparison Final Sheet (2).txt\"`, data-path the bare path) and the transcript c5364f7c (testing project) persisted `attachment{type:'file', filename:<abs path>, displayPath:'_probe/space dir/Comparison Final Sheet (2).txt'}` carrying the file's text as its record 3, BEFORE the model's own Read call — the attachment is the CLI's, not the tool's. Haiku answered the secret word.",
+ "steps": [
+  {
+   "note": "IDE context menu (6.5): a spaced path is inserted quoted, a folder stays bare",
+   "setup": "window.__mn91 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); const input = document.getElementById('input'); input.value = ''; input.setSelectionRange(0, 0); window.onClaudeEvent(JSON.stringify({type:'__mention', items:[\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\", 'docs/']})); const r = { value: input.value, caret: input.selectionStart }; input.value = ''; return r; })();",
+   "frames": [],
+   "expect": [
+    {
+     "js": "window.__mn91.value",
+     "equals": "@\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\" @docs/ ",
+     "why": "DISCRIMINATING: the spaced path is wrapped in double quotes, the folder is not (pre-fix: the raw path, which the CLI reads up to its first space)"
+    },
+    {
+     "js": "window.__mn91.caret",
+     "equals": 60,
+     "why": "follows the value: the caret lands after the insertion (reads 58 pre-fix, 60 fixed)"
+    }
+   ]
+  },
+  {
+   "note": "@-menu pick (picker): the chosen spaced row is inserted quoted, with the trailing space; the sandbox's file list is saved and restored",
+   "setup": "window.__pk91 = (function () { const input = document.getElementById('input'); const saved = files.slice(); window.onClaudeEvent(JSON.stringify({type:'files', items:[\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\", 'src/app.js']})); input.value = 'see @Compar'; input.setSelectionRange(input.value.length, input.value.length); input.dispatchEvent(new Event('input', {bubbles:true})); const menu = document.getElementById('mention'); const r = { shown: menu.style.display, rows: menu.children.length }; input.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true, cancelable:true})); r.value = input.value; r.caret = input.selectionStart; r.shownAfter = menu.style.display; input.value = ''; window.onClaudeEvent(JSON.stringify({type:'files', items: saved})); return r; })();",
+   "frames": [],
+   "expect": [
+    {
+     "js": "window.__pk91.shown + '/' + window.__pk91.rows",
+     "equals": "block/1",
+     "why": "GUARD: typing @Compar opens the menu with the one matching row (both builds)"
+    },
+    {
+     "js": "window.__pk91.value",
+     "equals": "see @\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\" ",
+     "why": "DISCRIMINATING: Enter inserts the quoted token plus a space (pre-fix: the raw path)"
+    },
+    {
+     "js": "window.__pk91.shownAfter",
+     "equals": "none",
+     "why": "GUARD: the menu closes on pick"
+    }
+   ]
+  },
+  {
+   "note": "Sent bubble (6.9): a quoted mention is ONE chip whose text keeps the quotes and whose data-path is the bare path; a plain mention beside it is unchanged",
+   "setup": "window.__mc91 = (function () { window.onClaudeEvent(JSON.stringify({type:'__clear'})); const txt = 'Check @\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\" and @src/app.js.'; const d = addUserMessage(txt, []); const chips = Array.prototype.slice.call(d.querySelectorAll('.mention')); return { chips: chips.length, texts: chips.map(function (c) { return c.textContent; }), paths: chips.map(function (c) { return c.dataset.path; }), textSame: d.textContent === txt }; })();",
+   "frames": [],
+   "expect": [
+    {
+     "js": "window.__mc91.chips",
+     "equals": 2,
+     "why": "GUARD: two chips either way — pre-fix the first one just stops at the space"
+    },
+    {
+     "js": "JSON.stringify(window.__mc91.texts)",
+     "equals": "[\"@\\\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\\\"\",\"@src/app.js\"]",
+     "why": "DISCRIMINATING: the whole quoted token is the chip, quotes included (pre-fix: '@\"_local/2026-09-21/Comparison')"
+    },
+    {
+     "js": "JSON.stringify(window.__mc91.paths)",
+     "equals": "[\"_local/2026-09-21/Comparison Final Sheet (2).xlsx\",\"src/app.js\"]",
+     "why": "DISCRIMINATING: data-path is the bare path the click handler opens"
+    },
+    {
+     "js": "window.__mc91.textSame",
+     "equals": true,
+     "why": "GUARD: the bubble's text is byte-identical to the prompt"
+    }
+   ]
+  }
+ ]
+}
