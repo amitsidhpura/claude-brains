@@ -69,6 +69,23 @@
   from `.claude/settings.local.json` at spawn — measured 2026-09-04; `PropertiesComponent` stays
   the fallback). Check the allowlist during each CLI re-audit (grep the binary for
   `update_settings keys not allowed`). Last checked 2.1.270 (2026-09-13): still `outputStyle` only.
+  **CHANGED at 2.1.296 (2026-10-10):** `{localSettings: Set(["outputStyle"]), userSettings:
+  Set(["effortLevel"])}` — `effortLevel` at USER scope is the first key of interest (the slider's
+  persistence, 9.2); project scope unchanged; unprobed live (would write the user's own settings).
+- **2.1.296 audit leads, probe-first** (2026-10-10; rows cite them): on-demand diagnostics — same
+  twelve IDE tools, so the CLI-side half should reach our `getDiagnostics` for free; ask the live
+  panel to "read the current diagnostics" and watch for the call (2.3). The VS Code 2.1.285 fix for
+  a 10-minute stall when the editor never answers the pre-tool autosave — what does `Autosave.kt`
+  do on a blocked EDT, and is the CLI's hook timeout the same ten minutes (2.10)? A
+  `system/session_title_changed` push exists — tape one with `--linger` before replacing the 8.3
+  transcript probe. Ultracode is a settings key (`apply_flag_settings {settings:{ultracode}}`) —
+  the fast-mode path reaches it (9.2 [SM]). `initialize.claude_code_version` could drive the
+  "may be out of date" hint instead of the exit-1 heuristic [XS]. Synced claude.ai skills arrive
+  as short names + `aliases` + a "(claude.ai sync)" suffix `markCustom` does not know — a
+  "claude.ai" badge is an [XS] if wanted (7.3). `permission_check_status {status:"checking"}` and
+  `instruction_size_warning` are banner candidates once one is seen (1.26).
+- **Timestamps polish (1.30)**: relative day labels ("Today") go stale across midnight in a page
+  left open — relabel on a minute timer, or use absolute dates; not asked for.
 - Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.
@@ -171,8 +188,9 @@
 ## Someday / conditional
 - **Fold the pinned previous-version roster rows** (2.1.28x lists `claude-opus-5`/`-4-8`/`-4-7`/`-4-6`,
   `claude-fable-5`, `claude-sonnet-4-6` after the aliases; no flag distinguishes them, the TUI shows
-  all 11 too — measured 2026-09-27) under a "Previous versions" divider keyed off the `claude-*-N-N`
-  value shape. Offered 2026-09-27, not asked for; mockup first if ever taken.
+  all 11 too — measured 2026-09-27; EIGHT pinned rows at 2.1.296, `claude-haiku-4-5-20251001` and
+  `claude-sonnet-5` joined — measured 2026-10-10) under a "Previous versions" divider keyed off the
+  `claude-*-N-N` value shape. Offered 2026-09-27, not asked for; mockup first if ever taken.
 - **11.5 Elicitation form** (deferred 2026-08-29; the decline ack shipped that day): only if a
   server the user actually uses elicits. First a ~30-line stdio MCP probe server in
   `~/Sites/claude-brains-testing/.mcp.json` whose one tool calls `elicitation/create` (form mode,

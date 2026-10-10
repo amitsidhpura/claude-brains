@@ -3,6 +3,34 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-first) — re-audit 2.1.270 → 2.1.296 (26 versions, all measured); 1.30 + 1.31 built and hand-tested live + replay; harness 952
+- Audit mechanics: the CLI had auto-updated to 2.1.296 that morning (extension too), so the
+  baseline binary came from the 2.1.270 vsix (runbook step 3, 104 MB). Control subtypes 103 → 155:
+  28 Mods `ui_*` (surface enum has no JetBrains), dialog feeders (`get_status`, `export_conversation`,
+  `get_skills/sandbox/chrome_dialog`, `get_task_output`) all probed `success` over stdio;
+  `list_directory` refused. Roster 5 → 13 rows, NO `[1m]`; three one-turn probes showed
+  `set_model "opus[1m]"` echoed as `claude-opus-5-5[1m]` with `contextWindow` 1,000,000 either way
+  → 9.9 re-opened. `update_settings` allowlist grew `userSettings:[effortLevel]`. The extension
+  declares `supportedDialogKinds:["fable_overage_consent_prompt","auto_mode_server_fallback"]`.
+- Six [DECIDE] rows opened (1.30, 1.31, 4.10, 11.7 new; 9.9, 15.4 re-opened); the user took 1.30
+  and 1.31 the same day. Changelog lines tagged Cloud sessions / Claude Tag / Code Review skipped.
+- Cleanup trap: the auto-mode classifier refused deleting the three probe transcripts and restoring
+  `lastSessionId` ("Session Transcript Tampering"), and the `rm` with shell variables tripped the
+  built-in check — left to the user, recorded in the audit block (gotchas § Testing).
+- 1.31's answered-card choice was made from a side-by-side render (both candidates with the real
+  stylesheets, served from the scratchpad, Playwright screenshot): "full card + summary" (B) won.
+- Fixtures 92/93 written FIRST and run on the old-build sandbox: 26 discriminating fails / 12
+  guard passes (one guard mis-counted the Other row). After the edit: 38/38, full harness 952/0,
+  `./gradlew test` 169 (the shared `replay-sample.jsonl` has no assistant prose — the ts test
+  synthesises a two-record transcript).
+- `foldBlock` is one-shot (`data-folded`), so the preview box got `refoldPreview` +
+  `wirePreviewFold`. Real-panel gap measurements over CDP: 8/8/18 px as designed.
+- Hand test (one Haiku turn in the sandbox): a real `can_use_tool` carried `preview` on all three
+  options — the field is live on 2.1.296; hover/pick/Submit/reply stamp, then Refresh replayed
+  the card with pick, preview, summary and both stamps.
+- Shell traps on this box: `grep` is ugrep, `ls` is eza (hung a background chain), `comm` wants
+  `LC_ALL=C sort`; Bash output over ~30 KB is persisted with a 2 KB preview.
+
 ## 2026-10-10 (twentieth) — spaced-mention fix hand-tested; zip built; MCP popup and push-line questions answered, no code
 - Set up the hand test: sandbox `runIde` on the testing project, three files with spaces/brackets in
   their paths (distinct secret words), `buildPlugin` for the real PhpStorm. The user: "Working
@@ -219,28 +247,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   as paragraphs, inline code is not opaque to `*` emphasis, mid-line fence placeholder leak.
 - Context saved, committed and pushed on the user's ask ("save / commit and push").
 
-## 2026-09-05 (eleventh) — 0.13.0 released and Approved the same day
-- Load → "what are unreleased updates" → "next version?" (0.13.0: `docs/release.md` progression puts
-  ten [NEW] rows on the minor digit; the 2026-08-26 0.11.1-as-patch decision is the contrast) →
-  "Lets release updates." Steps 1–5 ran from one Python script that asserted EVERY exact token
-  before the first write (`version = "0.12.5"` once; `version="0.12.5"` once; the feed URL once —
-  the bare number appears three times in the feed, gotchas § Build) and dropped the 0.12.3 notes
-  block to keep exactly three.
-- `test buildPlugin` 8s, 163/0; zip = our jar + six OSS deps; plugin.xml INSIDE the jar checked for
-  `<version>0.13.0</version>` and the new notes (bytes, not clock). `verifyPlugin` in the background
-  to a scratch log with `VERIFY_EXIT` appended: **8/8 verdict files Compatible**, ladder PS-242.26775
-  → PS-263.3889 (was 7 at 0.12.4). No warnings files.
-- Notes drafted to scratch and shown WHOLE at the gate with a prep-status table; "Go ahead please"
-  → commit `a988d95`, tag, push, `gh release create --notes-file`, asset `cmp` identical, raw feed
-  advertised 0.13.0 on the first fetch, `marketplace-upload` green in 13s with receipt id 1162736.
-  The Marketplace API listed 0.12.5 right after (known lag); the user's screenshot ~35 min later:
-  **Approved**, plus a new "IDE run" verifier row (gotchas § Build).
-- Notes shape that worked: ✨ New (ten, one row each) · 🐛 Fixes (the two 3.7 follow-ups) · Install
-  · ⚠️ Notes carrying the live-only caveats (edited command, reject note, withdrawn card), the 4.9
-  deferral and the Fable thinking no-op. Internal work (folds, mockup parity, probe tool) left out.
-- The sandbox PhpStorm stayed up the whole time and interfered with nothing.
-
 ## Digest
+- **2026-09-05 (eleventh)** — 0.13.0 released and Approved the same day: steps 1–5 from one Python script asserting every exact token before the first write; `test buildPlugin` 163/0; `verifyPlugin` 8/8 Compatible (PS-242 → PS-263); notes shown WHOLE at the gate ("Go ahead please") → commit `a988d95`, tag, `gh release create`, feed + Marketplace upload green (receipt 1162736), Approved ~35 min later with a new "IDE run" verifier row. Notes shape that worked: ✨ New · 🐛 Fixes · Install · ⚠️ Notes (live-only caveats, deferrals); internal work left out.
 - **2026-09-05 (tenth)** — mockup parity pass: the 13 JS-rendered states with no static example added from the renderers' own markup; the class-coverage grep (every `.class` in `webview/css/*.css` vs the mockup) reports 0 absent. Browser check via Playwright MCP needs `python3 -m http.server 8731 --bind 127.0.0.1` (it blocks `file:`), screenshots land in the repo root + `.playwright-mcp/` → delete (gotchas § Webview). Model chip "Fable (1M)" with no checked row: roster measured by a bare `initialize` on 2.1.261 and 2.1.236 (`fable[1m]` on both), every writer of the selected id read, menu code diffed against 0.12.5 (identical) — no path produces the label from the persisted `fable[1m]`; not reproduced → parked at the user's ask (backlog § Next up). A bare `initialize` probe writes NO transcript.
 - **2026-09-05 (ninth)** — checklist fold reformat shipped as a design task (§3 first, "looks perfect", then the file); the user's browser markdown extension exposed two traps GitHub's API missed (blank lines inside a list item → spaced paragraphs, fixed by a leading `<!-- -->`; a nested list inside a fold closes `</details>` early in marked) → folds hold paragraphs only, verified through three parsers (gotchas § Docs). 1.26 measured with the new `tools/probe_stdio.py`: of twelve `system` subtypes only `vcs_state_changed` and `notification` reach this wire, six are REPL-only; all twelve drawn through one status-line renderer, first frame of each kept in `window.__bannerSeen`; per-kind glyphs chosen side by side in the REAL panel, `.status a` rule from a screenshot. 1.28: the CLI DOES send `control_cancel_request` to the host (interrupt over a parked ask) — Kotlin drops the pending entry, pushes `__perm_cancelled`, the card settles as withdrawn. 1.27: the cut marker opens the whole tool text in a read-only `LightVirtualFile` (`SessionStore.toolText` by tool id on replay). Traps → gotchas § Testing: `pgrep -f` matching its own shell (exit 144); `innerHTML` re-serialises SVG; a `.click()` on a missing element aborts the harness. Harness 776 (fixtures 84), Kotlin 163; checklist 93 ✅ · 0 ⬜ · 47 ➖, audit complete.
 - **2026-09-05 (eighth)** — 4.8 closed (all four steps), 4.9 number-key answers ➖ ("no keyboard shortcuts for now"), 2.12 built (`WorkspaceRoots.extraDirs` → one `--add-dir` per root outside basePath; probe: attached dir → 0 Read asks), 3.7 reject-with-note built (inline after Reject, deny only) whose hand test exposed and fixed three older defects (duplicate error OUT box via `cardDenies`, replay "1 file changed" for a rejected edit via `reqFiles`, replayed card without its note; Kotlin test on `denied-edit.jsonl`), 3.8 editable Bash command built (CLI runs `updatedInput.command`; the transcript never records the edit; a single-rule grant follows the edit, a compound card writes per-part rules from `splitCommand`, a whole-string rule never matches, bare-`&` compounds re-ask every time). Traps → gotchas § Testing: `addUserMessage` over CDP sends a real prompt on a live session; computed `display` in `.split` is `flex`; no mid-frame harness hook; a Bash line always has an IN row. Harness 714 (fixtures 81), Kotlin 160; checklist 90 ✅ · 3 ⬜ · 47 ➖.

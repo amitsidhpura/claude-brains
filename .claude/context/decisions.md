@@ -4,6 +4,41 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 1.31: the answered ask card keeps its tabs and adds a summary; previews are text, follow hover > pick > option 0, and a pick no longer auto-advances
+The user chose "B — full card + summary" from a side-by-side render of both candidates (real
+stylesheets, served from the scratchpad, Playwright screenshot) — the compact replacement (A) was
+a quarter of the height but lost the checked options and the picked preview. The preview box shows
+the text as written (newlines kept, one wrapping ``` fence stripped), NOT through `renderMd`: the
+tool's wording is "monospace box" and both real samples (the 2.1.220 fixture, the 2026-10-10 live
+call) are indented trees that paragraphing would flatten. Precedence hover > checked > option 0
+because the TUI's cursor starts at the top and a radio group gives no separate "highlight"; the
+single-select auto-advance is suppressed on a panel with previews because it hid the preview the
+pick had just chosen. Folding is its own `refoldPreview` (foldBlock is one-shot). Replay of a
+cancelled card rests on option 0 (the live resting state), not "No preview". *Rejected:* markdown
+rendering of previews; a compact answered card; hover-only previews (keyboard users would never
+see one); hiding the box on cancelled replays.
+
+## 2026-10-10 — 1.30: a time above the prompt and above the turn's FIRST reply text; date lines between turns; always on
+User's choices: prompt + first reply text (not every assistant message — a tool loop would stamp
+many times; not prompt-only), no on/off switch (no settings page by design; add later if noise).
+Live stamps are the page clock (the typed prompt has no wire frame and the reply's `assistant`
+frame arrives after its text streamed); replay stamps are the record timestamp, which
+`SessionStore` now serialises as `ts` on user/assistant items only. Date lines live in `#log`,
+never inside `.turn` (sticky bubble, containment), and are re-laid from `data-day` by a pure DOM
+pass after every replay chunk so the `renderEarlier` seam is right; the first stamped turn gets a
+line only when its day is not today. Day labels reuse `fmtWhen`'s relative wording (stale across
+midnight — accepted, the history list has the same property). *Rejected:* a tooltip (never shows
+on Linux JCEF); `toLocale…` formatting (the webview's locale would reorder the date); a stamp per
+API message; a preference switch.
+
+## 2026-10-10 — Re-audit scope rules: skip the changelog's `[Cloud sessions]` / `[Claude Tag]` / `[Code Review]` lines; open [DECIDE] rows instead of deciding; probe cleanup the user cannot be worked around
+Those three tags are other Anthropic products, never this panel's clients — 200 of 2,032 lines.
+The 1M switch (9.9) was RE-OPENED with the measurement rather than retired on my own judgement.
+When the session's permission classifier refuses to delete probe transcripts or restore
+`lastSessionId`, the cleanup is listed for the user (ids in state.md / the audit block) — no
+scripted workaround, by conventions. *Rejected:* retiring 9.9 unasked; deleting the transcripts
+through a different tool.
+
 ## 2026-10-10 — The push status line stays "Pushed <branch>"; richer detail LEFT by the user
 Asked what the transcript holds for a push and whether the line could say more. Measured/read:
 `vcs_state_changed {kind, branch?, cwd}` is the whole frame, never persisted; the branch is parsed

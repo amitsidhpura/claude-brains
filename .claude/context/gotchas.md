@@ -762,6 +762,13 @@ re-read those before trusting memory here.
   32 of 3.6M pixels at max channel delta 4). Prove no-change by pixel-diffing (PIL
   `ImageChops.difference`, look at max delta and count), or by re-running twice to see the jitter.
 
+- **`foldBlock` is ONE-SHOT** (`data-folded` guard, one rAF measurement, one click listener). A
+  block whose content is REPAINTED afterwards keeps a stale fold decision: a short text after a
+  long one stays `.fold` (harmless), a long one after a short one never folds (tall). The 1.31
+  preview box, which repaints on every hover and pick, got its own `refoldPreview` (re-measure
+  after each paint, always land folded) + `wirePreviewFold` (toggle attached once) — copy that,
+  don't call foldBlock twice (a second call is a no-op by the guard).
+
 ## Testing, probes and sandboxes
 - **A background chain that waits on the CDP port with `until ! ss…; until ss…` can sit in its
   loop forever** — on 2026-09-09 one such chain never printed PORT_UP through a whole sandbox
@@ -1090,6 +1097,26 @@ re-read those before trusting memory here.
 - **A CDP eval right after a harness run sees an EMPTY panel** — the harness sends `__clear` between
   fixtures, so "measure what the fixture left" returns nulls. Replay the frames inside the probe
   script (`tools/cdp.py -f probe.js`) and measure in the same eval (2026-10-08, fixture 89 heights).
+- **The session cannot clean up after a stdio probe that ran a turn** (2026-10-10): the auto-mode
+  classifier refused `rm` of the probe transcripts under `~/.claude/projects/<enc>/` and the
+  python edit restoring `lastSessionId` in `~/.claude.json` ("Session Transcript Tampering"), and
+  the built-in `rm` check refused `rm "$D/$id.jsonl"` (a shell variable that could expand to `/`
+  — write literal paths or `"${D:?}/${id:?}"`). Plan the cleanup as the USER's step: record the
+  session ids and the pre-probe `lastSessionId` BEFORE probing, list them in the audit block /
+  state.md. A bare `initialize` writes nothing; only a turn does.
+- **The shell on this box is not GNU**: `grep` is `ugrep` (GNU `\{n,m\}` repeats fail with
+  "invalid repeat" → `/usr/bin/grep`), `ls` is `eza --icons` (hung a background chain for the
+  whole 180 s timeout on 2026-10-10 — use `/usr/bin/ls`), and `comm` needs `LC_ALL=C sort -u` on
+  both inputs or reports "not in sorted order" and drops lines. Bash tool output past ~30 KB is
+  persisted to a file with a 2 KB preview — split big diffs or write them to the scratchpad.
+- **`plugin/src/test/resources/fixtures/replay-sample.jsonl` has NO assistant prose** (its 14
+  assistant records are thinking + tool_use only) — a test that needs an assistant text block
+  (`role("assistant").first()` threw, 2026-10-10) builds a two-record synthetic transcript, the
+  compaction test's pattern. Its one AskUserQuestion DOES carry an option `preview` (2.1.220).
+- **Counting a card's inputs: the Other row is one too** — a 2-option single-select has THREE
+  radios; a guard written as 2 read 3 on both builds (fixture 92, fixed before the fixed-build run).
+- **Fixture dates: construct them in-page with `new Date(y, m, d, h, mi)`**, never epoch literals
+  — the expected `h:mm` / `D Mon YYYY` strings then hold in any timezone the sandbox runs in.
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with

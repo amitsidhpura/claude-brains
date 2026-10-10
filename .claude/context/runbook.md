@@ -50,6 +50,20 @@ sandboxes" has the traps (extraction is the only extension diff base; whitelist 
    memory, conventions.md); update the header References/date, §2's "unchanged in <ver>", and
    the [NEW] legend. Stale-count sweep of §16 while there.
 
+Notes from the 2026-10-10 run (2.1.270 → 2.1.296, 26 versions in one hop):
+- Use `/usr/bin/grep` and `LC_ALL=C sort -u` throughout (gotchas § Testing — the box's `grep` is
+  ugrep; `comm` silently drops lines on non-C order). The subtype helper differs per build
+  (`subtype:R(` in 2.1.270, `subtype:A(` in 2.1.296) — find it by matching `("initialize")` first.
+- Filter the changelog to `grep -v '^- \[Cloud sessions\]\|^- \[Claude Tag\]\|^- \[Code Review\]'`
+  (other products) and read the rest WHOLE in ~230-line slices; `[VSCode]` lines are the extension.
+- Dialog kinds: the extension's `supportedDialogKinds` literal (`grep -oa '"auto_mode_[a-z_]*"\|
+  "fable_overage_consent_prompt"' extension.js`) is the only list of kinds a host can declare;
+  the CLI's `dialog_kind` is an open string.
+- Record the testing project's `lastSessionId` BEFORE any probe that runs a turn, and expect to
+  hand the transcript cleanup to the user (the classifier refuses it — gotchas § Testing).
+- Keep the tapes: the scratchpad is per session, so paste label sets, roster diffs and probe
+  shapes into the checklist's audit block the same day (`init-<ver>.jsonl` pairs are ~35 KB each).
+
 ## Iterate a webview change against the live harness (the 5.6 polish loop, 2026-08-23)
 Eight rounds ran this loop; each takes ~3 minutes:
 1. **Fixture first**: add the new DISCRIMINATING asserts to the fixture while the sandbox still
