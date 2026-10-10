@@ -768,6 +768,11 @@ re-read those before trusting memory here.
   preview box, which repaints on every hover and pick, got its own `refoldPreview` (re-measure
   after each paint, always land folded) + `wirePreviewFold` (toggle attached once) — copy that,
   don't call foldBlock twice (a second call is a no-op by the guard).
+- **Anchors outside `.blk` fall to the browser's default blue** — `.blk a` (30-blocks.css) and
+  `.status a` are the only link rules; a new surface that draws its own `<a>` (the 4.10 dialog
+  card's paragraphs, 2026-10-10) needs its own `a { color: var(--blue) }` or the link is
+  invisible on the warm card. Only the real-panel render showed it; pin it with a computed-colour
+  assert against a throwaway `.blk a` (fixture 94).
 
 ## Testing, probes and sandboxes
 - **A background chain that waits on the CDP port with `until ! ss…; until ss…` can sit in its
@@ -1117,6 +1122,14 @@ re-read those before trusting memory here.
   radios; a guard written as 2 read 3 on both builds (fixture 92, fixed before the fixed-build run).
 - **Fixture dates: construct them in-page with `new Date(y, m, d, h, mi)`**, never epoch literals
   — the expected `h:mm` / `D Mon YYYY` strings then hold in any timezone the sandbox runs in.
+- **`[].every()` is `true`: a "both buttons disabled / enabled" assert PASSES on the pre-change
+  build with no buttons at all** (fixture 94's negative control, 2026-10-10 — three vacuous
+  greens). Pin the length in the same expression (`bs.length===2 && bs.every(…)`), and make
+  click asserts return `'absent'` on a missing element instead of throwing (a throw aborts the
+  whole harness run, so the asserts after it are never read).
+- **A `grep -o` with a wide context window over a minified bundle (`extension.js`, the CLI
+  binary) can run for minutes** and gets backgrounded at 120 s — bound the window (≤ ~900 chars),
+  pipe through `head -c`, and run several patterns in one backgrounded command.
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with

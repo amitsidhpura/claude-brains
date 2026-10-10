@@ -3,6 +3,34 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-second) — 4.10 auto-mode server-fallback dialog built from the schema; fixture 94; harness 980; committed `d26f670`
+- "Can we implement 4.10?" → yes, with the CLI side fully measured and the frame itself not:
+  the 2.1.296 binary's dialog definition gives the payload `{gatewayHost?, title, paragraphs[],
+  helpUrl}`, the result enum `continue|interrupt|cancelled` and the host answer
+  `{behavior:"completed"|"cancelled", result}`; the gate is `sdkHost && supportedDialogKinds
+  .includes(kind)`, else "no dialog surface to warn on, continuing in auto mode". The 2.1.296
+  VS Code `webview/index.js` renderer (`auto-mode-server-fallback-prompt`) gave every render
+  rule, including the https-on-claude.com/anthropic.com link filter and the 500 ms disabled
+  buttons. The reference extraction is still 2.1.270 (declares two kinds) — read the 2.1.296
+  extension from `~/.vscode/extensions/` directly.
+- A bare `initialize` with `supportedDialogKinds:["auto_mode_server_fallback"]` answered
+  `success` on 2.1.296 over stdio (scratchpad probe, `python3 -I`, no transcript written).
+- Order that made the negative control free: sandbox launched on the pre-change tree FIRST,
+  fixture 94 written, run (7 discriminating fails, step 2 aborted on the missing card, three
+  `[].every()` asserts passed vacuously → lengths pinned), THEN the code. After: 27/27, full
+  harness 979/0, `./gradlew test` 169.
+- The real-panel render (harness `Panel` + screenshot) showed the "Learn more" link in the
+  browser's default blue — the only link rule is `.blk a`, and the card's paragraphs sit outside
+  `.blk`. `.card.dlg .dlg-p a { color: var(--blue) }` + a 28th assert comparing computed colours
+  against a throwaway `.blk a`; sandbox restarted (resource change), 28/28, harness 980/0.
+- Gaps measured over CDP: header→paragraph 8, paragraph→paragraph 18, paragraph→buttons 10 — the
+  attach / block / card-b tokens, as designed.
+- Undeclared dialog kinds are now LEFT UNANSWERED in `handleControlRequest` (the schema's rule),
+  not acked with `{}` like the catch-all arm — a kind can only reach us if we declared it, so a
+  miss there is a list drift between `ClaudeCli.DIALOG_KINDS` and `renderDialog`.
+- Checklist: 4.10 ✅, §4 ✅, 97 ✅ · 2 ⬜ · 46 ➖; protocol doc § 9c carries the declaration and the
+  answer shape. Committed on the user's "commit and push" — one feature commit, one context commit.
+
 ## 2026-10-10 (twenty-first) — re-audit 2.1.270 → 2.1.296 (26 versions, all measured); 1.30 + 1.31 built and hand-tested live + replay; harness 952
 - Audit mechanics: the CLI had auto-updated to 2.1.296 that morning (extension too), so the
   baseline binary came from the 2.1.270 vsix (runbook step 3, 104 MB). Control subtypes 103 → 155:
@@ -222,32 +250,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   verifier rows incl. the IDE-run row, before the API listed it (as gotchas § Build predicts).
 - Context save committed and pushed on the user's own ask ("/context save · commit and push").
 
-## 2026-09-08/09 (twelfth) — two renderer fixes: 4-backtick fences, CommonMark lists; both hand-tested
-- Load → user screenshot: an answer rendering as one sentence + the literal line `B0 \``. No
-  transcript (session deleted), so the regex was reproduced in node: a ````markdown fence split at
-  three backticks, the leftover backtick broke the whole-line placeholder. Fix `(`{3,})…\1`*`;
-  fixture 85 written FIRST and run against the running pre-fix sandbox (8/15 failed), then the
-  edit, restart, 15/15; full harness 776→791; a real CDP turn confirmed by key to carry ````.
-- User's first hand test used a three-backtick fence (told them it proved nothing); the retest
-  with an explicit four-backtick ask and a README-with-inner-fence ask both carried ```` on the
-  wire (verified by key) and rendered right.
-- 2026-09-09: "numbered lists are always `1.`, I have seen it so many times" — three screenshots,
-  one of them the fix's own plan. Plan mode → CommonMark list parser (`mdList`, content indent,
-  loose/tight, `<ol start>`, recursive item bodies, fence indent strip, `.blk li > p`). Fixture 86
-  (38 asserts; step 7 = the plan's list verbatim) as the control: 17 failed pre-fix. Prototyped in
-  node with stubs before the restart — all shapes right first time. Harness 829/0, test 163/0.
-- The sandbox exited cleanly on its own twice (7 and 5.5 min after launch); one port-wait chain
-  never fired; a `grep -c` tail made a pass look like a failure; a transcript-by-key script
-  unbounded to the turn reported the same list for every prompt — all in gotchas § Testing.
-- The user ran the eight-prompt hand-test script (live, replay, plan card): every shape right, and
-  the transcripts confirm each prompt produced the shape it targeted (loose, hard-wrapped with
-  indented continuation, `1.`+unindented fence+`2.`, nested at indent 3 + indented fence, `1. 1.
-  1.`, bullets+fence+table). Recorded in the 1.10 fold.
-- Backlog gained three pre-existing renderer gaps found on the way: indent-only code blocks render
-  as paragraphs, inline code is not opaque to `*` emphasis, mid-line fence placeholder leak.
-- Context saved, committed and pushed on the user's ask ("save / commit and push").
-
 ## Digest
+- **2026-09-08/09 (twelfth)** — two renderer fixes, both hand-tested by the user with an eight-prompt script (live, replay, plan card; transcripts verified by key): a ````markdown fence split at three backticks (regex `(`{3,})…\1`*`, fixture 85 written first → 8/15 failed pre-fix, then 15/15) and "numbered lists are always `1.`" → a CommonMark list parser (`mdList`: content indent, loose/tight, `<ol start>`, recursive bodies, fence indent strip; fixture 86, 17 failed pre-fix; prototyped in node before the restart). Harness 829/0, test 163/0. A three-backtick hand test proved nothing — the retest asked for four explicitly. Three pre-existing renderer gaps found on the way → backlog § Housekeeping (indent-only code blocks, `*` inside inline code, mid-line fence leak). Traps → gotchas § Testing: the sandbox exits cleanly on its own; a `grep -c` tail read a pass as a failure; a transcript-by-key script unbounded to the turn.
 - **2026-09-05 (eleventh)** — 0.13.0 released and Approved the same day: steps 1–5 from one Python script asserting every exact token before the first write; `test buildPlugin` 163/0; `verifyPlugin` 8/8 Compatible (PS-242 → PS-263); notes shown WHOLE at the gate ("Go ahead please") → commit `a988d95`, tag, `gh release create`, feed + Marketplace upload green (receipt 1162736), Approved ~35 min later with a new "IDE run" verifier row. Notes shape that worked: ✨ New · 🐛 Fixes · Install · ⚠️ Notes (live-only caveats, deferrals); internal work left out.
 - **2026-09-05 (tenth)** — mockup parity pass: the 13 JS-rendered states with no static example added from the renderers' own markup; the class-coverage grep (every `.class` in `webview/css/*.css` vs the mockup) reports 0 absent. Browser check via Playwright MCP needs `python3 -m http.server 8731 --bind 127.0.0.1` (it blocks `file:`), screenshots land in the repo root + `.playwright-mcp/` → delete (gotchas § Webview). Model chip "Fable (1M)" with no checked row: roster measured by a bare `initialize` on 2.1.261 and 2.1.236 (`fable[1m]` on both), every writer of the selected id read, menu code diffed against 0.12.5 (identical) — no path produces the label from the persisted `fable[1m]`; not reproduced → parked at the user's ask (backlog § Next up). A bare `initialize` probe writes NO transcript.
 - **2026-09-05 (ninth)** — checklist fold reformat shipped as a design task (§3 first, "looks perfect", then the file); the user's browser markdown extension exposed two traps GitHub's API missed (blank lines inside a list item → spaced paragraphs, fixed by a leading `<!-- -->`; a nested list inside a fold closes `</details>` early in marked) → folds hold paragraphs only, verified through three parsers (gotchas § Docs). 1.26 measured with the new `tools/probe_stdio.py`: of twelve `system` subtypes only `vcs_state_changed` and `notification` reach this wire, six are REPL-only; all twelve drawn through one status-line renderer, first frame of each kept in `window.__bannerSeen`; per-kind glyphs chosen side by side in the REAL panel, `.status a` rule from a screenshot. 1.28: the CLI DOES send `control_cancel_request` to the host (interrupt over a parked ask) — Kotlin drops the pending entry, pushes `__perm_cancelled`, the card settles as withdrawn. 1.27: the cut marker opens the whole tool text in a read-only `LightVirtualFile` (`SessionStore.toolText` by tool id on replay). Traps → gotchas § Testing: `pgrep -f` matching its own shell (exit 144); `innerHTML` re-serialises SVG; a `.click()` on a missing element aborts the harness. Harness 776 (fixtures 84), Kotlin 163; checklist 93 ✅ · 0 ⬜ · 47 ➖, audit complete.

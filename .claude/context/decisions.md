@@ -4,6 +4,32 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 4.10 built from the schema without a real frame; the panel declares exactly `auto_mode_server_fallback`; undeclared kinds are left unanswered; answer tokens allowlisted in Kotlin
+"Can we implement 4.10?" — yes. **Why building without a frame is not "fixing what you cannot
+reproduce":** the row is a feature, and everything the card depends on IS measured — the payload,
+result enum and answer shape from the 2.1.296 binary's dialog definition, the render rules from the
+2.1.296 VS Code webview, and 2.1.296 accepting the declaration on `initialize` (stdio). The frame
+itself cannot be staged (it needs the server classifier down), and it can only ever arrive AFTER
+the kind is declared — so "wait for a real frame first" is circular; the `window.__dialogSeen`
+watch is the audit the first real frame will get. Undeclared, the user never sees the billing
+notice at all (the CLI "continues in auto mode" silently).
+**Declare one kind, not VS Code's two:** `fable_overage_consent_prompt` (9.7) has no card, and the
+CLI's own rule is "declare exactly the kinds you can render" — a declared kind without a renderer
+parks the turn until the dialog deadline.
+**An undeclared kind is logged and left unanswered**, not acked `{}` like the sdk-mcp catch-all:
+the schema says a host "must not answer" a kind it did not declare and that `{behavior:"cancelled"}`
+is a real settlement; a `{}` success is an undefined shape. A kind can only reach us declared, so
+the branch is a drift alarm, not a feature.
+**ChatPanel allowlists `continue|interrupt`** so nothing the page could be coaxed into sending
+reaches the wire as a settlement; `cancelled` is the CLI's own default, never a host's answer.
+**Copied the 500 ms disabled buttons** (`armInputGrace`): cheap, measured reference behaviour, and
+the card lands under wherever the user was about to click.
+**Paragraphs are plain text, not `renderMd`:** the reference renders them as text and splits only
+on the help URL; markdown would invent structure the payload does not carry.
+*Rejected:* building the card only after a real frame (impossible without declaring); replay
+support (nothing known to be persisted — live-only, like the task frames); a Learn more link for
+any https URL (the reference filters to claude.com / anthropic.com, so do we).
+
 ## 2026-10-10 — 1.31: the answered ask card keeps its tabs and adds a summary; previews are text, follow hover > pick > option 0, and a pick no longer auto-advances
 The user chose "B — full card + summary" from a side-by-side render of both candidates (real
 stylesheets, served from the scratchpad, Playwright screenshot) — the compact replacement (A) was
