@@ -114,6 +114,11 @@
 - **15.5 Debugger MCP tools** [LG] (deferred 2026-08-29): expose the live PhpStorm debug session (`XDebuggerManager` → frames, variables, breakpoints) as bridge tools in `IdeTools.kt`, mirroring VS Code's `claude-vscode-extension` MCP server + `ask_debugger_help` hand-off; needs an Xdebug session in the sandbox to test
 
 ## Deferred (user's choice, do last)
+- **Richer push status line** (user asked 2026-10-10, then "leave this requirement"): the frame is
+  `vcs_state_changed {kind, branch?, cwd}` — branch parsed by the CLI from git's OUTPUT (a `-q` push →
+  bare "Pushed"), `cwd` ignored by `bannerLine` (50-blocks.js) although it would disambiguate four
+  "Pushed main" from four repos; remote/commit range only in the Bash OUT text; nothing persisted,
+  so live-only stays. Candidate: "Pushed main → origin · api" from the Bash command + `cwd`.
 - **4.9 number-key answers on cards** — deferred 2026-09-05 ("no keyboard shortcuts for now"); do not re-propose.
 - Conversation tabs (+ 8.8 reopen-closed-session and 8.10 session groups/sidebar, both deferred 2026-08-29 — only worth it with tabs or worktrees)
 - Auto-include selection (checklist 6.6; the insert-mention half, 6.5, SHIPPED 2026-09-04 as the Project-view/editor context-menu action)
@@ -151,6 +156,17 @@
   `.ask-b → .ask-foot`) is 10px. Found in the 2026-08-13 spacing survey, offered, not taken.
 - `.claude/skills/` is git-ignored (`.gitignore:22` ignores all of `.claude/*` bar `context/`),
   so the `/context` workflow itself does NOT travel to a fresh clone — un-ignore if wanted.
+
+- **The @-picker's file list is a one-shot at page load** (`ChatPanel.seedUi()` → `listProjectFiles()`
+  over `ProjectFileIndex`): files created while the IDE was closed, or before the VFS refreshed, are
+  missing (and deleted ones linger) until the page reloads (seen 2026-10-10 in the sandbox; a CDP
+  `location.reload()` re-pushed it). Fix = re-push on a `VirtualFileListener`/`BulkFileListener`
+  change or on each @-menu open (cheap: 46 files here, capped at 3000).
+- **`claude-stdout` reader thread dies with an uncaught `IOException: Stream closed`** on every
+  New conversation (real PhpStorm idea.log 2026-10-10 10:58:37, the moment the CLI process is
+  replaced). Harmless — the new process gets a new reader — but a stack trace per New in the IDE
+  log. Fix = catch the close in the reader loop (`cli/ClaudeCli.kt`) when the process is being torn
+  down.
 
 ## Someday / conditional
 - **Fold the pinned previous-version roster rows** (2.1.28x lists `claude-opus-5`/`-4-8`/`-4-7`/`-4-6`,

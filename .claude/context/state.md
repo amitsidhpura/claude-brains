@@ -1,32 +1,39 @@
 # State
 
 ## Current focus
-**2026-10-10 (nineteenth session, Linux): @-mentions whose path holds a space — built, controlled,
-harness- and live-verified, committed.** User screenshot: the sent-bubble chip cut at the first
-space (`@_local/…/Comparison_Final` + plain ` Sheet (2).xlsx`). MEASURED over stdio (2.1.295):
-the CLI reads a bare `@path` up to its first space and attaches NOTHING for a spaced path — raw
-and backslash-escaped spellings both; `@"path with spaces"` attaches (`attachment{type:'file'}`).
-The official webview quotes the same way (its `OL0()`). Fix: `mentionToken()` in
-`plugin/src/main/resources/webview/js/50-blocks.js` (quote on whitespace/colon/non-word tail;
-`@docs/` stays bare), used by `insertMentions` (`60-composer.js`) and the @-menu rows
-(`65-slash.js`, `ins` WITHOUT the `@` the user typed); `mentionHtml` reads `@"…"` back as one chip
-(text keeps the quotes, data-path bare). Fixture 91 (control 5 fail → 9/9), harness **914/0**,
-live turn in the sandbox persisted the file attachment before the model's own Read. Docs:
-checklist 6.5/6.9, protocol doc `attachment` row, gotchas § Protocol, mockup quoted chip.
-`./gradlew test` NOT run (Kotlin change is a comment).
+**2026-10-10 (twentieth session, Linux): the spaced @-mention fix was HAND-TESTED by the user in
+the sandbox ("Working great!"); a zip from `main` is built; two IDE-side reports were diagnosed as
+not ours.** Hand test: picker `@Compar` → `@"hand test/Comparison Final Sheet (2).txt" `, the
+Project-view "Mention in Claude Brains" on a spaced folder/file, one chip per mention, the model
+answered the file's secret word. Found while setting up: the picker's file list is pushed ONCE at
+page load (`seedUi()` → `listProjectFiles()` over the VFS index) — files created while the IDE was
+closed were missing until the page was reloaded over CDP (backlog § Housekeeping).
+PhpStorm 2026.2's "MCP Server" status-bar popup rendering with its bottom row clipped is the IDE's
+Compose/Skiko popup under an OpenGL-context failure on this Wayland box (idea.log), not the plugin
+(gotchas § IDE platform); its "No active connections" is expected — the CLI connects to OUR bridge.
+The user asked about richer "Pushed main" lines, then LEFT the requirement (decisions 2026-10-10;
+findings in backlog § Deferred). Side find: the plugin's `claude-stdout` reader thread dies with an
+uncaught "Stream closed" on every New conversation (backlog § Housekeeping).
+**2026-10-10 (nineteenth):** spaced @-mention paths quoted `@"…"` — `mentionToken()` in
+`plugin/src/main/resources/webview/js/50-blocks.js`, `insertMentions` (`60-composer.js`), @-menu
+rows (`65-slash.js`, `ins` without the typed `@`), `mentionHtml` reads it back; fixture 91, harness
+**914/0**, live-verified (CLI 2.1.295 persisted the `file` attachment). Measured: a bare spaced
+`@path` attaches NOTHING, backslash-escaped neither; the official webview quotes the same way.
 **Earlier on 2026-10-10 (eighteenth):** bold wrapping italic (`inlineMd()` bold regex admits single
 `*`, fixture 90) — journal 2026-10-10, decisions 2026-10-10.
 **2026-10-08 (seventeenth / sixteenth):** opened-thought trailing gap (`thinkBlock()` trims,
 fixture 89) and the Default selection following the model the CLI serves (fixture 88).
-**FIVE fixes are now NOT installed in the real PhpStorm**: PATH lookup (2026-09-27), Default chip
-and thinking trim (2026-10-08), bold-wrapping-italic and spaced @-mentions (2026-10-10). Its panel
-runs the VS Code extension's binary via the unfixed fallback. A build from `main` (`cd plugin &&
-./gradlew buildPlugin`, zip in `plugin/build/distributions/`, restart) or a 0.14.1 release installs
-all five; the user's call.
+**FIVE fixes are now NOT installed in the real PhpStorm** (2026.2 on this box): PATH lookup
+(2026-09-27), Default chip and thinking trim (2026-10-08), bold-wrapping-italic and spaced
+@-mentions (2026-10-10). Its panel runs the VS Code extension's binary via the unfixed fallback.
+**A zip with all five is BUILT**: `plugin/build/distributions/claude-brains-0.14.0.zip` (2026-10-10
+11:14, same version number as the installed release — Install Plugin from Disk replaces it in
+place); or a 0.14.1 release for the custom-repo and Marketplace users. The user's call.
 The newest `claude` CLI on this box is **2.1.295** (`~/.local/share/claude/versions/`); last
-re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm is DOWN (its `runIde` died with the
-previous Claude Code process); the testing project holds three sandbox transcripts
-(2026-10-08 ×2, 2026-10-10 c5364f7c) — the user's call whether to reset.
+re-audit was at 2.1.270 (2026-09-13). The sandbox PhpStorm was left RUNNING on the fixed build
+(CDP 9222; a `runIde` dies with the Claude Code process that launched it). The testing project
+holds hand-test files (`hand test/…`, `plain-control.txt`) and sandbox transcripts (2026-10-08 ×2,
+2026-10-10 ×2+) — the user's call whether to reset.
 
 ## Open investigations
 - **Where the user's Fable default comes from** — not on this Linux box (no `model` key in
@@ -95,7 +102,7 @@ previous Claude Code process); the testing project holds three sandbox transcrip
 - [x] Bold wrapping italic — `inlineMd()` bold regex, fixture 90, committed 2026-10-10.
 - [x] Spaced @-mention paths quoted `@"…"` — `mentionToken()`, fixture 91, committed 2026-10-10.
 - [ ] Get all FIVE fixes (PATH lookup 2026-09-27, Default chip + thinking trim 2026-10-08, bold
-      wrapping italic + spaced @-mentions 2026-10-10) into the real PhpStorm: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
+      wrapping italic + spaced @-mentions 2026-10-10) into the real PhpStorm — the zip is built: local zip install, or a 0.14.1 patch release (user's call; `verifyPlugin` on
       every release).
 - [ ] Re-audit 2.1.270 → 2.1.293 (runbook), starting from the leads above; the 1M switch first;
       the per-process roster question second.
@@ -107,8 +114,8 @@ previous Claude Code process); the testing project holds three sandbox transcrip
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About; the Windows CRLF
       splice check (checklist 3.2 fold); Windows look of the 1.29 card header path; Windows
       `./gradlew test` + VFS click check.
-- [ ] Testing repo carries hand-test leftovers (README.md, test-code.js, timestamp*.txt) and three
-      sandbox transcripts (2026-10-08 ×2, 2026-10-10) — the user's call whether to reset.
+- [ ] Testing repo carries hand-test leftovers (README.md, test-code.js, timestamp*.txt, `hand test/`,
+      `plain-control.txt`) and sandbox transcripts — the user's call whether to reset.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251).
 
 ## Known gaps (deliberately left)

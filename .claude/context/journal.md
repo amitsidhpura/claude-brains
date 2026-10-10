@@ -3,6 +3,26 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twentieth) — spaced-mention fix hand-tested; zip built; MCP popup and push-line questions answered, no code
+- Set up the hand test: sandbox `runIde` on the testing project, three files with spaces/brackets in
+  their paths (distinct secret words), `buildPlugin` for the real PhpStorm. The user: "Working
+  great!". No code changed this session.
+- Trap: the panel's @-picker list is pushed ONCE at page load (`seedUi()` → `listProjectFiles()`
+  over `ProjectFileIndex`); files created while the IDE was closed were absent (and a deleted probe
+  path still listed) until `location.reload()` over CDP re-ran `seedUi()`. Backlog § Housekeeping.
+- PhpStorm 2026.2 "MCP Server" popup with its button row clipped: the IDE's own Compose widget;
+  idea.log shows `[SKIKO] Fallback to next API — RenderException: Cannot create OpenGL context` at
+  each first open (10:31, 11:17) on this Wayland session. The plugin registers no status-bar widget
+  and the CLI connects to OUR WebSocket bridge, so "No active connections" there is expected.
+- Same log: `Exception in thread "claude-stdout" java.io.IOException: Stream closed` at 10:58:37,
+  the moment a New conversation replaced the CLI process — harmless, noisy. Backlog § Housekeeping.
+- Push status line question (two screenshots: four identical "Pushed main", one bare "Pushed"):
+  explored, not built — the user left it. The CLI's `vcs_state_changed` carries `{kind, branch?,
+  cwd}` only, the branch is PARSED FROM GIT'S OUTPUT (a `-q` push → bare "Pushed"), the frame is
+  never persisted, and `gitOperation.push` on the tool result has only `branch` too. The remote URL
+  and commit range exist solely in the Bash OUT text. Findings in backlog § Deferred.
+- Plan mode was entered for that question and exited with nothing written.
+
 ## 2026-10-10 (nineteenth) — spaced @-mention paths: quoted `@"…"` on insert, read back as one chip; fixture 91; harness 914
 - User screenshot: the sent bubble's chip stopped at the first space of `…Comparison_Final Sheet
   (2).xlsx`. The conversation was not on this box, so the CLI side was MEASURED with a stdio probe
@@ -220,24 +240,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   deferral and the Fable thinking no-op. Internal work (folds, mockup parity, probe tool) left out.
 - The sandbox PhpStorm stayed up the whole time and interfered with nothing.
 
-## 2026-09-05 (tenth) — mockup parity pass; model-chip mismatch investigated, parked
-- The user asked whether every plugin feature is in `design/mockup.html`. Static markup was fully
-  mirrored; the JS-rendered states from the 2026-09-04 audit were not (13 CSS classes had no
-  example). Added them all from the renderers' own markup; the class-coverage script (every
-  `.class` in `webview/css/*.css` grepped against the mockup) now reports 0 absent.
-- Verified in a real browser: the Playwright MCP blocks `file:` URLs — serve the repo with
-  `python3 -m http.server 8731 --bind 127.0.0.1` (kill with the bracketed `pkill -f 'http.serve[r]
-  8731'`); element screenshots land in the REPO ROOT and a `.playwright-mcp/` folder appears
-  (gitignored) — delete both after. gotchas § Webview.
-- Model chip "Fable (1M)" with no checked row (user screenshot): measured the CLI roster by a bare
-  `initialize` over stdio on 2.1.261 and 2.1.236 (Fable value `fable[1m]` on both), read every
-  writer of the selected id, diffed the menu code against 0.12.5 (identical). No path found that
-  produces that label from the persisted `fable[1m]`; one inferred inconsistency (1M OFF on
-  Default → `claude-opus-5`, unmatched by value). Not reproduced → no fix; parked at the user's ask.
-- A bare `initialize` probe (no prompt) writes NO transcript; the earlier `probe_stdio.py` run with
-  a prompt did, and was deleted.
-
 ## Digest
+- **2026-09-05 (tenth)** — mockup parity pass: the 13 JS-rendered states with no static example added from the renderers' own markup; the class-coverage grep (every `.class` in `webview/css/*.css` vs the mockup) reports 0 absent. Browser check via Playwright MCP needs `python3 -m http.server 8731 --bind 127.0.0.1` (it blocks `file:`), screenshots land in the repo root + `.playwright-mcp/` → delete (gotchas § Webview). Model chip "Fable (1M)" with no checked row: roster measured by a bare `initialize` on 2.1.261 and 2.1.236 (`fable[1m]` on both), every writer of the selected id read, menu code diffed against 0.12.5 (identical) — no path produces the label from the persisted `fable[1m]`; not reproduced → parked at the user's ask (backlog § Next up). A bare `initialize` probe writes NO transcript.
 - **2026-09-05 (ninth)** — checklist fold reformat shipped as a design task (§3 first, "looks perfect", then the file); the user's browser markdown extension exposed two traps GitHub's API missed (blank lines inside a list item → spaced paragraphs, fixed by a leading `<!-- -->`; a nested list inside a fold closes `</details>` early in marked) → folds hold paragraphs only, verified through three parsers (gotchas § Docs). 1.26 measured with the new `tools/probe_stdio.py`: of twelve `system` subtypes only `vcs_state_changed` and `notification` reach this wire, six are REPL-only; all twelve drawn through one status-line renderer, first frame of each kept in `window.__bannerSeen`; per-kind glyphs chosen side by side in the REAL panel, `.status a` rule from a screenshot. 1.28: the CLI DOES send `control_cancel_request` to the host (interrupt over a parked ask) — Kotlin drops the pending entry, pushes `__perm_cancelled`, the card settles as withdrawn. 1.27: the cut marker opens the whole tool text in a read-only `LightVirtualFile` (`SessionStore.toolText` by tool id on replay). Traps → gotchas § Testing: `pgrep -f` matching its own shell (exit 144); `innerHTML` re-serialises SVG; a `.click()` on a missing element aborts the harness. Harness 776 (fixtures 84), Kotlin 163; checklist 93 ✅ · 0 ⬜ · 47 ➖, audit complete.
 - **2026-09-05 (eighth)** — 4.8 closed (all four steps), 4.9 number-key answers ➖ ("no keyboard shortcuts for now"), 2.12 built (`WorkspaceRoots.extraDirs` → one `--add-dir` per root outside basePath; probe: attached dir → 0 Read asks), 3.7 reject-with-note built (inline after Reject, deny only) whose hand test exposed and fixed three older defects (duplicate error OUT box via `cardDenies`, replay "1 file changed" for a rejected edit via `reqFiles`, replayed card without its note; Kotlin test on `denied-edit.jsonl`), 3.8 editable Bash command built (CLI runs `updatedInput.command`; the transcript never records the edit; a single-rule grant follows the edit, a compound card writes per-part rules from `splitCommand`, a whole-string rule never matches, bare-`&` compounds re-ask every time). Traps → gotchas § Testing: `addUserMessage` over CDP sends a real prompt on a live session; computed `display` in `.split` is `flex`; no mid-frame harness hook; a Bash line always has an IN row. Harness 714 (fixtures 81), Kotlin 160; checklist 90 ✅ · 3 ⬜ · 47 ➖.
 - **2026-09-04 (seventh)** — 4.8 built as a SPLIT button (main half = the CLI's default destination, caret = the other targets; no memory of the last pick, user's spec) after the user heard the decline recommendation and chose the split. Stdio probe 2.1.260: the ECHOED `destination` decides the file — projectSettings / localSettings / userSettings each wrote theirs, session wrote nothing and stopped the re-ask, cliArg behaved as session, a bogus value dropped the grant silently → Kotlin forwards only the four offered (`PermissionDestinations`). Two probe confounds (both gotchas § Testing): an untrusted scratch workspace never loads project settings (stderr says so, stdout does not) → scratch `CLAUDE_CONFIG_DIR` with a trust-patched `.claude.json`; a zsh `for … set -- $c` loop ran every cell with `--cfg`. Compound card gained an `All of these` header + destination rows; fixture 77 (control 11 fail), harness 670, Kotlin 147.

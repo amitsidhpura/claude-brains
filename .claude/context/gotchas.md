@@ -32,6 +32,11 @@ re-read those before trusting memory here.
   "nothing" is unmeasured (somewhere in 200 KB–2 MB); the transcript keeps only the typed text,
   never the attachment. Consequence: the panel cannot know a mention was cut — only the IDE
   action, which sees the file size, could warn (backlog).
+- **`vcs_state_changed.branch` is parsed from git's OUTPUT, not the command** (2.1.295 emitter read
+  2026-10-10): the ref-update line (`abc..def  main -> main`) names it; a `git push -q` prints
+  none, so the frame is a bare `{kind:'push', cwd}` and the panel says just "Pushed". The frame
+  carries no remote, hash or range, and is never persisted; `gitOperation.push` on the tool
+  result (schema `{branch}`) adds nothing. The sibling `code_change_published` needs a forge URL.
 - **A bare `@path` mention ends at the first SPACE, and a space-bearing path attaches NOTHING** —
   no error, the model just reaches for a tool. Measured 2026-10-10 (2.1.295, `claude -p` stream-json,
   `--max-turns 1`, Read disallowed, a secret word in the file): raw `@a b/c d.txt` → no `file`
@@ -364,6 +369,12 @@ re-read those before trusting memory here.
   usually the reference. Windowed replay also means browser find only sees loaded blocks.
 
 ## IDE platform / VFS
+- **PhpStorm 2026.2's "MCP Server" status-bar popup is the IDE's, Compose-rendered — a clipped button
+  row is Skiko's fallback, not a plugin fault.** 2026-10-10: the user's popup lost its bottom row;
+  idea.log had `[SKIKO] Fallback to next API` + `RenderException: Cannot create OpenGL context`
+  at each first open (Wayland session). The plugin has no status-bar widget and its bridge is a
+  separate WebSocket server, so that popup's "No active connections" is the normal reading.
+  Check: `-Dskiko.renderApi=SOFTWARE_FAST` in the custom VM options, or disable the plugin and look.
 - **A tool window whose factory is not `DumbAware` is REPLACED by "This view is not available until
   indexes are built" for the whole indexing pass** — on every project open. It reads like our panel
   failed to load; it is the platform's placeholder. `ClaudeToolWindowFactory : ToolWindowFactory,

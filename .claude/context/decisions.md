@@ -4,6 +4,15 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — The push status line stays "Pushed <branch>"; richer detail LEFT by the user
+Asked what the transcript holds for a push and whether the line could say more. Measured/read:
+`vcs_state_changed {kind, branch?, cwd}` is the whole frame, never persisted; the branch is parsed
+from git's OUTPUT by the CLI, so a `-q` push yields a bare "Pushed"; `gitOperation.push` (tool-result
+sidecar, 2.1.295 schema) carries only `branch`; remote URL and commit range live only in the Bash OUT
+text the panel already draws. Three options were drafted (command-derived remote/repo; plus
+output-parsed range with a repo link; frame `cwd` only) — the user said "leave this requirement"
+before choosing. **Status:** declined for now, findings in backlog § Deferred; nothing built.
+
 ## 2026-10-10 — Spaced mention paths are QUOTED (`@"a b/c.txt"`) at insert time, in the webview, by the official rule
 `mentionToken()` (50-blocks.js) writes `@"path"` when the path holds whitespace or a colon or ends in
 a non-word character, else bare `@path`; both insert surfaces (the @-menu, the IDE context menu) use
