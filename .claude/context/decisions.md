@@ -4,6 +4,18 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-11 — Copy response control: a FLOAT at the first line, opacity-hidden until hover, no plate — the one reserved-space exception
+The hover-only plate pinned absolute at the block's corner sat over the text column and clipped a
+long first line (user's screenshot; rendered side by side in the real panel). Now inserted as the
+block's FIRST child and floated right: the first line wraps around it, nothing is ever covered.
+Hidden by OPACITY, not display — a float that comes and goes reflows the line on every hover — so
+one icon's width stays reserved at the end of one line: the deliberate exception to "never reserve
+space for hover affordances" (conventions), taken over covering or jumping the text. `.codeblock` /
+`.diff` clear it (a block child would run under it and meet its own header copy); `.blk > .blk-copy
++ *` drops its top margin (the dot/first-line alignment the user caught). Hover on the icon only
+brightens it (user: no plate). *Rejected*: always visible ("so many copy buttons"); a footer row
+under the reply (a row per reply); padding the whole block's right edge (narrows every reply).
+
 ## 2026-10-11 — A zero-turn result the page never waited for draws no summary; the orphaned-task notification stays undrawn
 The CLI's empty wake on `--resume` (a background task of the previous process reported as
 "stopped": task_notification → init → result num_turns 0) is machinery, not a turn: `onResult`

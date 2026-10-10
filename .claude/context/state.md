@@ -1,37 +1,28 @@
 # State
 
 ## Current focus
-**2026-10-10 (twenty-seventh session, Linux): 6.6 AUTO-INCLUDE EDITOR SELECTION + Include open file built,
-measured, live-checked, hand-tested — COMMITTED `cf8ee58` and pushed (user's ask). Earlier today: 0.15.0 released and Approved
-(`1da78a8`, tag `v0.15.0`); 9.9 retired + popup fit; 15.4, 1.30, 11.7.**
-- **6.6 (uncommitted, working tree)**: the active editor's selection rides every prompt as a LIVE
-  pill (`File.kt:12-18`, first in `#chips`; cursor line when nothing is highlighted), × drops it
-  for one message, the paperclip entry "Include selection" is the persistent switch
-  (`claudeCode.includeSelection`, default on, never hidden). `SelectionTracker.kt` → `__selection`
-  → the pill; send adds `selection{path,start,end,text}` to `{kind:'user'}` and ChatPanel appends
-  `RenderLimits.ideSelectionTag` AFTER the prompt (the CLI's own `<ide_selection>` wording);
-  `SessionStore` splits it back for the replay pill (`splitIdeSelection`, prompt-first only — a
-  tag-only text is the TUI's injected record and stays dropped, 6.3). The CLI's own route
-  (`selection_changed` over the IDE socket) was MEASURED DEAD in stream-json mode first (gotchas §
-  Protocol). Evidence: fixture 99 (14 steps / 40 asserts, control failed on the untouched build),
-  harness **1089→1129**, test **169→174**, live over CDP (open route selected index.php 4-6 → pill →
-  haiku answered path / lines / text; resume drew the pill; `_local/6.6-live.png`). Docs done
-  (checklist 100 ✅ · 45 ➖, limits, protocol, backlog, plugin.xml, README). Hand-tested by the user in the real PhpStorm the same day (six steps, all passed — journal). **Not built**: the "Include open file" (file CONTENT) entry — backlog, off by default.
-- **Include open file + switch rows (same evening, in the same commit)**: the paperclip's ✓ item is now
-  `#attachFooter` with `#tglSel` (ON) / `#tglFile` (OFF) in the model-footer idiom; `activeSel()`:
-  highlight if the selection switch is on, else `{…, file:true}` if the file switch is on, else
-  the cursor line; the page sends only the flag, ChatPanel reads the buffer on a pooled thread at
-  send (`readFileText`, >4 MB skipped) into `<ide_opened_file>… File content:` capped at
-  `OPEN_FILE_MAX_CHARS` 50,000; `OPEN_RE` parses it back to `selection{…, file:true}`; pill
-  `File.kt · file`. Evidence: fixture 99 23/67 (control recorded), test 176, harness 1158, live
-  over CDP (`_local/6.6-file-live.png`). Zip 21:00 built for the user's hand test.
-- **MT-11.8 (2026-10-11, committed `abcf060`)**: "✻ Pondered for 1s" under "Resumed" — the CLI's own empty
-  wake on `--resume` when the previous process left a background task running (gotchas § Protocol;
-  measured twice over stdio on a copy of this session). `onResult` (`80-gauge.js`) now returns on a
-  `num_turns === 0` result while `!busy && !workStart` (NOT `!reqTokens` — it keeps the last
-  request's count; fixture 100 step 3 caught that). Fixture 100 (4 steps / 8 asserts; control 5/8),
-  harness **1166**, test 176, zip 00:20 built. The user's panel shows the line until that zip is
-  installed; the trigger recurs whenever the IDE closes over a running background shell.
+**2026-10-11 (twenty-ninth session, Linux): 0.16.0 is PREPPED and HALTED at the approval gate
+(user: "Stop release until I say so") while the Copy response control was re-placed. The release
+prep — `version = "0.16.0"` + the 0.16.0 notes entry in `plugin/build.gradle.kts`, `updatePlugins.xml`
+→ v0.16.0 — is UNCOMMITTED by design: never push a feed without its asset. The control fix is
+committed (`f754eac`, pushed). 0.15.0 remains the released version.**
+- **Copy response control (MT-15.4b, 2026-10-11, committed `f754eac`)**: first child of `.blk`, floated right, hidden by
+  opacity until the reply is hovered, icon-only brighten on hover, `.codeblock`/`.diff` clear it,
+  `.blk > .blk-copy + *` margin 0 (`css/30-blocks.css`, `copyable()` in `20-markdown.js`, mockup
+  mirrored). Decided with the user in three injected-CSS rounds in the sandbox (decisions.md).
+  Fixture 96 step 9b (54 asserts), test 176, harness 1166→1172.
+- **To finish the release**: (1) the user's OK on the look in the sandbox; (2) change the notes
+  bullet in `changeNotesHtml` ("always visible" → "shows when the reply is hovered") and the same
+  bullet in the GitHub notes; (3) `./gradlew test buildPlugin verifyPlugin` again (zip changed),
+  verdict files 8/8, zip re-read; (4) the gate with the COMPLETE notes; (5) steps 7-10 of
+  `docs/release.md` only on "go".
+- **Shipped since v0.15.0, committed and pushed** (detail: checklist 6.6 / MT-11.8, journal
+  twenty-seventh + twenty-eighth): 6.6 auto-include selection + Include open file (`cf8ee58`:
+  `SelectionTracker.kt` → `__selection` → the pill; `#tglSel`/`#tglFile` switch rows; the panel
+  writes the CLI's own `<ide_selection>` / `<ide_opened_file>` tag after the prompt, the CLI's
+  `selection_changed` route being dead in stream-json mode; fixture 99, 69 asserts) and MT-11.8
+  (`abcf060`: no summary for the CLI's zero-turn wake on `--resume`; fixture 100). Both hand-tested
+  by the user in the real PhpStorm.
 - **Pending the user**: a release is NOT started — 0.16.0 would be the version if asked (feature →
   minor; one feature since v0.15.0, commit `cf8ee58`). The real PhpStorm runs the 21:17 zip of this
   code, so nothing is pending there. The `· file` pill click is caret-only now (`select:false` on the open route,

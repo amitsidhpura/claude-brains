@@ -3,6 +3,24 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-11 (twenty-ninth) — 0.16.0 prepped and HALTED at the gate; the Copy response control re-placed (float, hover by opacity, no plate); fixture 96 54 asserts
+- "Lets release it" → steps 1-5 from one script (0.16.0, notes entry added / 0.13.1 dropped, feed),
+  `test buildPlugin verifyPlugin` green (176, 8/8 Compatible, 7 jars, baked notes re-read from an
+  extracted copy), notes presented at the gate. Then the user: the Copy response control's
+  "styling seems not fine" → "Stop release until I say so".
+- Rendered candidates side by side in the real sandbox panel (A current, B/C transparent, D
+  bordered, E float, F footer): the current absolute control COVERS a long first line. Built E:
+  first child + float right; `.codeblock`/`.diff` clear; then the user's three rounds of feedback,
+  each checked by INJECTING the rule into the live page: first line below the dot (→ `.blk >
+  .blk-copy + *` margin 0), "so many copy buttons" (→ hover by opacity, place kept), "remove the
+  background on hover" (→ icon brightens only). Fixture 96 step 9b pins it (54 asserts); test 176.
+- The release prep (version 0.16.0 in `plugin/build.gradle.kts` + notes incl. a Copy-control bullet
+  that must now say "on hover", `updatePlugins.xml` → v0.16.0) sits UNCOMMITTED on purpose: a
+  pushed feed without its asset 404s every custom-repo user. Committed: the control fix + fixture
+  + context. Pending: the user's OK on the look, then rebuild with verifyPlugin and the gate.
+- Sandbox tool window was closed mid-session ("No chat-panel target among 0") — a relaunch
+  brought it back with the page; the user asked to "reopen" and that was the route.
+
 ## 2026-10-11 (twenty-eighth) — "Pondered for 1s" under Resumed: the CLI's empty wake on --resume after an orphaned background task; onResult guard; fixture 100; harness 1166
 - User's screenshot: "Resumed" then "✻ Pondered for 1s" with no turn. Replay summaries draw
   BEFORE the Resumed line, so it was live: a `result` after the resume. Bare `--resume` of the
@@ -245,30 +263,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   and commit range exist solely in the Bash OUT text. Findings in backlog § Deferred.
 - Plan mode was entered for that question and exited with nothing written.
 
-## 2026-10-10 (nineteenth) — spaced @-mention paths: quoted `@"…"` on insert, read back as one chip; fixture 91; harness 914
-- User screenshot: the sent bubble's chip stopped at the first space of `…Comparison_Final Sheet
-  (2).xlsx`. The conversation was not on this box, so the CLI side was MEASURED with a stdio probe
-  (2.1.295, `claude -p` stream-json, `--max-turns 1`, Read disallowed, a secret word in a file under
-  `_probe/space dir/`): raw and backslash-escaped mentions attach NOTHING (the model reaches for a
-  tool, no error); `@"path"` persists `attachment{type:'file'}` and the model answers from it.
-- The binary's `(?:^|\s)@((?:[^\s\\]|\\ )+)` string was a red herring — it exists, the escaped
-  form still attached nothing. An `@[^@\s]+` string nearby was a highlight.js grammar. The real
-  grammar is `@(?:"([^"\n]+)"|…)`; the official webview's `OL0()` quotes on `/[\s:]/` or a non-word
-  tail, and the changelog has "[VSCode] Fixed @-mentions dropping files whose paths contain spaces".
-- Fix: `mentionToken()` (50-blocks.js) + `mentionHtml` reads the quoted form; `insertMentions` and
-  the @-menu rows use it. Control on the pre-change sandbox: 4/5. First fixed run 6/3: the picker
-  splices `ins` AFTER the `@` the user typed → `mentionToken(f).slice(1)`; two were the fixture's
-  own Python `json.dumps` spacing vs `JSON.stringify` (use `separators=(',',':')`). Then 9/9, 914/0.
-- Live end-to-end over CDP (`bridge({kind:'new'})`, `sendTurn` with the quoted mention): one chip;
-  transcript c5364f7c record 3 is the CLI's `file` attachment (displayPath with the space), the
-  model's Read came later. `--max-turns 1` + a tool call = empty `result`; `-p` without `< /dev/null`
-  waits 3 s for stdin and warns.
-- Probe files and their four transcripts deleted; the testing project's `lastSessionId` had NOT
-  moved (`-p` does not touch it). The sandbox died with the Claude Code process that ran `runIde`.
-- Committed and pushed on the user's ask (fix + this context save). Not installed in the real
-  PhpStorm — five fixes pending there.
-
 ## Digest
+- **2026-10-10 (nineteenth)** — spaced @-mention paths: the composer inserts `@"path with spaces"` (quoted when the path holds whitespace/colon/trailing punctuation) and `mentionHtml` reads the quoted form back as one chip; fixture 91, harness 914. Committed + pushed on the user's ask.
 - **2026-10-10 (eighteenth)** — bold wrapping italic (`**_x_**` / `***x***`) rendered raw: `inlineMd`'s bold regex refused a single `*` inside the run → admitted; fixture 90 (control on the unchanged build), harness 905. Committed + pushed on the user's ask.
 - **2026-10-08 (seventeenth)** — opened-thought trailing gap: 13/13 persisted `thinking` blocks end with `\n\n` and `.think .body` is the one `pre-wrap` block → `thinkBlock()` trims (live, replay, gallery, redacted share the builder); fixture 89 written on the UNCHANGED sandbox first (3 discriminating fail → 6/6), harness 893; traps → gotchas § Testing (`pgrep | xargs -r kill`, a CDP eval right after the harness sees an empty panel). Committed + pushed on the user's ask.
 - **2026-10-08 (sixteenth)** — chip "Default (Opus 5.5)" while the session ran on Fable: the roster's `default` row never names the effective model, only `system/init.model` / `message.model` / `result.modelUsage` do → `defaultResolvedFromCli` + `reconcileCliModel()`, `chipLabelFor()` the one label rule, the gauge keyed by `effectiveModelId()`; fixture 88 (control 12/5 → 17/17), harness 887, test 168; live on a FRESH CLI (fixture 55's real `setModel` had pinned the old one); the roster is per-PROCESS (11 rows over stdio, 13 in the panel). Committed + pushed on the user's ask.

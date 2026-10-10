@@ -651,6 +651,16 @@ re-read those before trusting memory here.
   externally, return true); the JS delegate is the polite first layer. Fixture 67.
 
 ## Webview / CSS / layout
+- **An absolute control at a block's corner sits OVER the text column** — a long first line runs
+  under it (the 15.4 copy control, caught 2026-10-11). A float as the FIRST child wraps the line
+  around it instead; hide it with `opacity`, never `display` (a float that leaves layout reflows the
+  line on hover); block children that carry their own right-side control need `clear: right`; and a
+  `.blk > *:first-child { margin-top: 0 }` rule stops working the moment a control is inserted first
+  — re-target it (`.blk > .blk-copy + *`) or the first line drops below the dot. A floated
+  `inline-flex` reports computed `display: flex` (fixture 96 step 9b).
+- **Candidate styling can be INJECTED into the live sandbox page** (`tools/cdp.py` + a `<style>`
+  element) for the user to judge in the real window before any restart — the restart + harness
+  come once the look is settled (2026-10-11).
 - **Every popup list needs `capToRows` on OPEN, and the helper must measure the POPUP** (2026-10-10):
   `#modelItems` had no cap at all — the 13-row 2.1.296 roster put the filter box under the
   tool-window title in the real PhpStorm — and `capToRows` clamped by the LIST's box, so a popup
