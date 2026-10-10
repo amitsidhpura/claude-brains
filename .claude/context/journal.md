@@ -37,8 +37,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Cleanup: the three audit-probe transcripts deleted (the classifier allowed it this time),
   `lastSessionId` was already back; `reference/anthropic-claude-code/` rsynced to 2.1.296; the
   0.14.0 zip REBUILT 16:48 (same number as the 2026-09-13 release — a disk install; 0.14.1 is the
-  user's call). Totals: fixture 96 15/48, harness 1073/0, test 169. Three commits + this save;
-  not pushed.
+  user's call). Totals: fixture 96 15/48, harness 1073/0, test 169. Three commits + the save,
+  then pushed on the user's "save / commit and push".
 
 ## 2026-10-10 (twenty-third) — 11.7 background task output + Run in background: probed live, built, fixture 95; harness 1025
 - "What is 11.7?" → "Lets do it." The row's own note said probe first, so the session opened

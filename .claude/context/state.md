@@ -2,8 +2,8 @@
 
 ## Current focus
 **2026-10-10 (twenty-fourth session, Linux): 15.4 built, every copy routed through Kotlin, 1.30's
-midnight gap closed, 11.7 measured and hand-tested live, cleanup done — four commits (`759c904`,
-`96315e0`, `a556a3a`, + this save), NOT pushed.**
+midnight gap closed, 11.7 measured and hand-tested live, cleanup done — commits `759c904`,
+`96315e0`, `a556a3a`, `cd0c855` + this save, PUSHED on the user's "commit and push".**
 1. **15.4 export / copy response** (`759c904`). A hover copy control on every finished assistant
    text block (`mdBlock` / `copyable` in `plugin/src/main/resources/webview/js/20-markdown.js`,
    source on `el.__md`, `finishBubble` in `70-events.js` at every live finalisation site) and an
@@ -91,8 +91,8 @@ user's call (`verifyPlugin` every release). The sandbox PhpStorm was left RUNNIN
 - [x] 15.4 export / copy response — built, measured, live-checked (2026-10-10).
 - [x] 11.7 hand-tested live; disabled / Monitor / interrupt measured.
 - [x] 1.30 midnight relay; probe-transcript cleanup; extraction → 2.1.296; zip rebuilt.
-- [ ] **Push** the four commits (user's ask) and get the TEN fixes into the real PhpStorm: disk
-      install of the rebuilt 0.14.0 zip, or cut **0.14.1** (user's call; `verifyPlugin`).
+- [ ] Get the TEN fixes into the real PhpStorm: disk install of the rebuilt 0.14.0 zip, or cut
+      **0.14.1** (user's call; `verifyPlugin` every release).
 - [ ] **Decide 9.9** (retire / hide / keep the inert 1M switch).
 - [ ] When a real `auto_mode_server_fallback` frame lands (`window.__dialogSeen`, console warning),
       compare with fixture 94's payloads and the 4.10 fold; fix the card if they differ.
