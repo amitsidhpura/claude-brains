@@ -84,8 +84,9 @@
   as short names + `aliases` + a "(claude.ai sync)" suffix `markCustom` does not know — a
   "claude.ai" badge is an [XS] if wanted (7.3). `permission_check_status {status:"checking"}` and
   `instruction_size_warning` are banner candidates once one is seen (1.26).
-- **Timestamps polish (1.30)**: relative day labels ("Today") go stale across midnight in a page
-  left open — relabel on a minute timer, or use absolute dates; not asked for.
+- **15.4 follow-ups**: the Save row's native dialog has never been driven (no xdotool/ydotool on
+  the Wayland box — the user's hand or an input tool); a Monitor's row could say "Monitor" (the
+  roster shows `local_bash` for it, measured 2026-10-10); sub-agents across an interrupt unmeasured.
 - Watch-item: if the CLI's control-response schema ever admits a `feedback` field on allow,
   switch ClaudeCli.respondPermission to the TUI's exact shape (extra text block on the
   tool_result) instead of the `updatedInput.plan` append — two-line change.

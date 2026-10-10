@@ -523,6 +523,11 @@ re-read those before trusting memory here.
   (2026-08-29, `ClaudeSettingsSchema.kt`). Write "the shared `.claude/settings.json`" instead.
 
 ## JCEF is not a browser (Linux)
+- **`navigator.clipboard.writeText` rejects in the panel unless the document is focused AND a user
+  activation is live — a CDP / programmatic click has neither (2026-10-10: the page said "Could not
+  copy", `xclip -o` still held the old text).** Every copy control bridges `{kind:'copy'}` to Kotlin's
+  `CopyPasteManager` instead; read it back with `xclip -selection clipboard -o` (XWayland) — never
+  trust a swapped check-glyph as proof the clipboard changed.
 - **HTML `title` tooltips do not render at all** (user, 2026-09-05: hovered every titled control,
   header buttons included — nothing). Not a per-element bug: `JBCefBrowser` shows no title tooltip
   on Linux unless `CefDisplayHandler.onTooltip` is handled (backlog § Next up). Until then a
@@ -605,6 +610,19 @@ re-read those before trusting memory here.
   externally, return true); the JS delegate is the polite first layer. Fixture 67.
 
 ## Webview / CSS / layout
+- **A streaming accumulator must reset when its bubble is DROPPED, not only at message_start**
+  (2026-10-10): `curRaw` survived the tool-start `curBubble = null`, so a text → tool → text message
+  re-rendered the first text inside the second block. Fixture asserts on a block should read its
+  SOURCE (`el.__md`) as well as the DOM — that is what caught it (fixture 96 step 3).
+- **A popup hanging from the header anchors on `#head .actions`, not on its button** — a
+  `.menu-anchor` around one icon lands the popup at THAT icon, 87px left of #histPanel's edge. Its
+  `top` is `calc(100% + 13px)` (8px padding + 1px border + the list's 4px gap); +9px put the edge
+  0.6px INTO the header's border line. Measure with `getBoundingClientRect` against `#head`'s
+  bottom — the computed `bottom` of a positioned element is never `'auto'`, it resolves to px
+  (fixture 96 step 6's first assert was wrong that way).
+- **A CLI crash drains NO pending control callback — only `ClaudeCli.stop()` does.** A host→CLI ask
+  with a visible loading state (the export popup's "Preparing…") must also listen for `__exit`, or a
+  resume of a session with no file (exit 1) leaves it loading for good (2026-10-10).
 - **Viewing the mockup through the Playwright MCP**: `file:` URLs are blocked — serve the repo root
   with `python3 -m http.server 8731 --bind 127.0.0.1` and open `/design/mockup.html`; stop it with the
   bracketed `pkill -f 'http.serve[r] 8731'`. Element screenshots (`target: '#frame'`) save into the
@@ -783,6 +801,21 @@ re-read those before trusting memory here.
   capture a stack over CDP — the fastest way to find "who closed this".
 
 ## Testing, probes and sandboxes
+- **A bare foreground `sleep N` is REFUSED by the CLI itself (2.1.296: "use Monitor or a background
+  run")** — a foreground-shell test (the 11.7 offer) needs a loop (`for i in $(seq 1 30); do echo
+  tick $i; sleep 1; done`); the first live B run never reached the offer and read as a panel bug.
+- **A probe script that copies `~/.claude/.credentials.json` deletes it in a `finally`, and the
+  cleanup is checked BEFORE reading results** — the first `bg_probe.py` crashed on a NameError ahead
+  of its `rmtree` and left `cfg117/` with the credentials on disk (2026-10-10, caught minutes later).
+- **`git add -p` with `s`: the sub-hunks come in FILE order** — a `printf 's\ny\nn'` staged the
+  doc-comment above the new function and left the function out; always `git diff --cached | grep`
+  for the symbol before committing a split (2026-10-10).
+- **Python `json.dumps` ≠ `JSON.stringify`** for a fixture's `equals`: default separators add
+  spaces (`", "`), JS adds none — pass `separators=(',', ':')` (fixture 96 step 9).
+- **Hand-driving the sandbox panel over CDP is a full live test at haiku prices**: `bridge({kind:
+  'new'})`, `bridge({kind:'model', model:'haiku'})`, `sendTurn(prompt, [])`, click `.card-b .ok` on
+  each permission card, poll the DOM every 1.5 s (`scratchpad/drive117.py` shape) — the 11.7 roster
+  pane and the "Run in background" offer were proven that way against the real CLI.
 - **A background chain that waits on the CDP port with `until ! ss…; until ss…` can sit in its
   loop forever** — on 2026-09-09 one such chain never printed PORT_UP through a whole sandbox
   lifetime while a sibling chain with the same loops did; cause not found. Wait on a LOG LINE the

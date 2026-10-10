@@ -4,6 +4,39 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 15.4: export rides a HEADER popup fed by the CLI's own `/export` text; Copy response is per block and copies the SOURCE; no typed `/copy` / `/export`
+"Lets do 15.4". **Where:** a popup hanging from the header (the conversation's own controls live
+there: reload, history, new), anchored to `.actions` so it shares #histPanel's right edge and 310px
+width — the conversations-list idiom whole. **What text:** the CLI's `export_conversation` answer,
+verbatim, so the panel's export IS what `/export` in the terminal writes. **When asked:** once per
+OPEN (the conversation may have grown); the rows stay off until the text lands; a late answer to a
+closed popup is dropped; `__clear` and a CLI exit settle it. **Save:** the shown text rides back on
+the click — not re-asked in Kotlin — so a turn that ran meanwhile cannot change what the footer
+counted. **Copy response:** one hover control per finished text block (the unit the user looks at;
+a message with tools is several blocks), copying the markdown source like the reference client.
+*Rejected:* an actions row under the message (VS Code's hover row — reflows the turn); building the
+export from the DOM (drifts from the terminal's text and loses tool lines); Kotlin re-asking on
+Save (race with a running turn); typed `/copy` / `/export` (the slash menu is the CLI's own command
+list — host widgets live on buttons, the chip / New rule); a per-message copy (our blocks are per
+content block; no single element is "the message").
+
+## 2026-10-10 — EVERY copy control goes through Kotlin's `CopyPasteManager`, never `navigator.clipboard`
+A CDP-driven click on the new control and on the export row left the real clipboard untouched:
+Chromium's clipboard API needs a focused document AND a transient user activation, neither of
+which a tool-window webview reliably holds, and nothing in the harness can read it back. The IDE's
+clipboard manager has no such conditions, is what Ctrl+C uses, and `xclip -o` reads it (XWayland)
+— all three controls (code block 1.11, response and export 15.4) measured verbatim. One route,
+`bridge{kind:'copy', text}`. *Rejected:* `navigator.clipboard` with an `execCommand('copy')`
+fallback (both gesture-gated; unverifiable); keeping the code block on the old path (two
+mechanisms for one gesture drift).
+
+## 2026-10-10 — Day labels relay at local midnight on ONE timer; labels stay relative
+The 1.30 gap ("Today" stale past midnight in a page left open). One `setTimeout` re-armed for the
+next local midnight (+1 s slack) calls `placeDaySeps`, a pure function of the DOM and today's key.
+*Rejected:* a minute timer (the backlog's first idea — 1440 wake-ups for one change a day);
+absolute dates (the 1.30 decision chose relative labels); relabelling only on resume (the gap as
+it stood).
+
 ## 2026-10-10 — 11.7: task output lives on the ROSTER ROW and polls; "Run in background" is gated by the foreground `task_started`; a pane dies with its row
 "Lets do it" on 11.7, after the probe. **Where the output goes:** the roster row (the `bg` chip's
 popup), not the timeline. The reference client shows it on agent-map cards, which our roster IS;

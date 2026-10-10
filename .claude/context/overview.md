@@ -100,6 +100,7 @@ Toolchain requirements (Java 21, Gradle 8.10.2, instrumentCode off) are load-bea
 | Won't load in a REAL IDE | install the zip in the real PhpStorm — the sandbox cannot catch this class |
 | Reproduces ONLY in the sandbox | suspect the sandbox (2024.2.6, stock keymap) — it invents symptoms too |
 | Poking around by hand | DevTools window (Find Action → "Claude Brains: Open DevTools") |
+| "Did the copy reach the clipboard?" | `xclip -selection clipboard -o` after the click over CDP — every copy control goes through Kotlin's `CopyPasteManager`, so the IDE clipboard is the truth (`navigator.clipboard` is not used; gotchas § JCEF) |
 
 **Start at the top row** — cheapest and most skipped. Check by KEY, not substring. The live
 panel is for AFTER you know the data exists.

@@ -3,6 +3,43 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-fourth) — 15.4 built (export popup + copy response), every copy through Kotlin; 1.30 midnight relay; 11.7 measured + hand-tested live; cleanup done; harness 1073
+- "Lets do 15.4" → probed first under a scratch `CLAUDE_CONFIG_DIR` (one haiku turn, two processes):
+  `export_conversation` is `text:""` + `conversation-<date>-<time>.txt` turnless, the TUI's own
+  `❯ prompt / ● reply` text under `<date>-<time>-<slug>.txt` after a turn, the whole history on a
+  `--resume`d process before any turn. Built: a hover copy control per finished reply block
+  (`mdBlock`/`copyable`, source on `el.__md`, `finishBubble` at every live finalisation site) and
+  an Export popup hanging from the header (`.actions`-anchored, opens DOWN, #histPanel's width),
+  one ask per open, Copy / Save rows off until the text lands, Save sends the shown text back.
+- Sandbox launched on the pre-change tree first → control free (step 1 failed, step 2 aborted).
+  Fixture 96's step 3 read `'Hello **world**Done.'` off the second block's source: `curRaw` was
+  reset only at message_start — a text → tool → text message re-rendered the first text in the
+  second block. Fixed at bubble creation. A resume of a session with no file exited 1 under the
+  open popup and left it "Preparing…" for good — a crash drains no pending callback; `__exit`
+  now answers a loading export.
+- "Finish these points fully": the REAL clipboard did not change after a CDP click — Chromium's
+  `navigator.clipboard` needs focus + a user activation. Every copy control (code block, response,
+  export row) now bridges `{kind:'copy'}` to Kotlin's `CopyPasteManager`; `xclip -o` read all three
+  back verbatim. Save's native dialog stays undriven (no xdotool/ydotool on this Wayland box).
+- 1.30: one timer re-armed at each local midnight re-lays the date lines (`armMidnight`).
+- 11.7's three unmeasured answers, one stdio probe: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` →
+  the error text AND no `task_started` for the foreground shell (the gated offer can never show
+  it); a Monitor is a plain `local_bash` background task, `get_task_output` serves it, every line
+  wakes the model; an interrupt leaves a background shell running (`still_queued:[]`, the wake
+  turn later finishes the reply). Hand-driven in the sandbox over CDP (real CLI, haiku): pane
+  grows and dies with its row, wake turn = a reply block in the same turn; foreground loop → the
+  offer ~6 s in → click → roster + turn end → wake. A bare foreground `sleep 30` is refused by the
+  CLI itself ("use Monitor or a background run") — the first B run never reached the offer.
+- My own traps: the probe's first run crashed on a NameError BEFORE its `rmtree` and left the
+  credentials copy on disk (caught minutes later; cleanup is in a `finally` now); `git add -p`'s
+  `s` sub-hunks come in FILE order — the reversed y/n staged the comment and left the function;
+  Python `json.dumps` default separators ≠ `JSON.stringify`.
+- Cleanup: the three audit-probe transcripts deleted (the classifier allowed it this time),
+  `lastSessionId` was already back; `reference/anthropic-claude-code/` rsynced to 2.1.296; the
+  0.14.0 zip REBUILT 16:48 (same number as the 2026-09-13 release — a disk install; 0.14.1 is the
+  user's call). Totals: fixture 96 15/48, harness 1073/0, test 169. Three commits + this save;
+  not pushed.
+
 ## 2026-10-10 (twenty-third) — 11.7 background task output + Run in background: probed live, built, fixture 95; harness 1025
 - "What is 11.7?" → "Lets do it." The row's own note said probe first, so the session opened
   with a stdio probe under a scratch `CLAUDE_CONFIG_DIR` (credentials copy, `.claude.json` with
@@ -233,38 +270,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - The real PhpStorm keeps its 2.1.270 CLI until a build with the fix is installed. Committed and
   pushed on the user's ask (fix + this context save).
 
-## 2026-09-13 (fourteenth) — runbook step 3b; re-audit → 2.1.270; 1.29, 6.5-tab, 5.6, 3.7 built + hand-tested
-- Load found CLI 2.1.270 (state said .263). The unused `reference/claude-code-log` clone became runbook
-  step 3b: the public CHANGELOG supplies LEADS only, never evidence. It paid off at once — chip X,
-  prompt fold, flat model list, arrow-key destination, Cancel on Switch account have no new `case`
-  label and surfaced only there. The 2.1.260 CLI baseline came from the 2.1.260 vsix (background).
-- Audit: 26 new extension labels (all terminal's-half dialogs/internals), 5 CLI subtypes (4 probed
-  `success`), roster +`/output-style`, `update_settings` allowlist unchanged, `maxEffortLevel` clamp
-  text measured; ONE real find: `bashEditDiff` in the Bash result sidecar → 1.29, taken the same day.
-- 1.29 built on the 4.4 resolved-edit surface (no CSS); fixture 87 written first (control 22/27 fail).
-  The real panel then drew NOTHING: the CLI attaches the sidecar only in auto/bypass by default — the
-  discovery probe had come up in auto (`probe_stdio.py` without `--mode` ≠ default, gotchas). Three
-  more probes + the binary's gate function pinned it; documented on the row. Hand test MT-1.29 (4 steps).
-- 6.5 on the editor-tab menu: one `add-to-group` + a `VIRTUAL_FILE` fallback; group id verified in the
-  IDE's `PlatformActions.xml` first. MT-2.15.
-- 5.6: a second selection while a comment draft was open did nothing, silently. Five options; user
-  picked settle-on-next-selection + a rule-stating placeholder (draft-on-decision already existed).
-  Fixture 53 +2 steps (control 10/14 fail). MT-6.9.
-- 3.7: the inline note field stretched Accept/Always-allow/Reject (34px flex item, stretch row). Four
-  options; user picked the plan-card layout (field above) and wrote the placeholder wording. Fixture 78
-  re-pinned (control 3/41 fail); `.card-b .plan-fb` override deleted. MT-6.10.
-- Totals: test 164/0, harness 856 → 870/0. Two traps to gotchas: the "readable sentences" webview
-  diff is minifier noise across a ten-version hop; `ls` is `eza` in Bash-tool shells (`ls -t` hung a
-  background task 22 min). Committed and pushed on the user's ask.
-- **0.14.0 released** on the user's "go" after the full-notes gate (8 verdicts Compatible, zip = jar +
-  6 OSS deps). `gh release create` hit a GitHub HTTP 500 and left a DRAFT without the asset while the
-  feed already said 0.14.0 — view/upload/edit-publish recovered it in ~2 min (gotchas § Build); asset
-  `cmp` equal, `marketplace-upload` green (update id 1169274), **Approved** within the hour.
-- Marketplace screenshots reviewed: only 03 was stale (its cards predate the 0.13.0 note field);
-  regenerated with the field above the buttons and a 1.29 Bash edit-diff card on the right, scene
-  trimmed to fit (gotchas § Webview: overflow cuts the TOP). The user uploaded all five.
-
 ## Digest
+- **2026-09-13 (fourteenth)** — re-audit → 2.1.270 through the new runbook step 3b (the public CHANGELOG is LEADS only; it surfaced five UI changes with no new `case` label); ONE real find, 1.29 (`bashEditDiff` sidecar — attached only in auto/bypass by default, the discovery probe had come up in auto), built the same day with 6.5-tab, 5.6 and 3.7 (user picked layouts from rendered options), all hand-tested; harness 870, test 164; **0.14.0 released** (`gh release create` hit a 500 and left a draft without the asset while the feed already said 0.14.0 — recovered in ~2 min; Approved within the hour); Marketplace screenshot 03 regenerated.
 - **2026-09-09 (thirteenth)** — 0.13.1 released as a patch (one renderer-only commit since v0.13.0 decided the version): `docs/release.md` in order with every precondition asserted before the first write, `test buildPlugin verifyPlugin` as one background run (163/0, 8 verdict files all Compatible — PS-263 joined the `recommended()` ladder), jar bytes checked for the new code, step-6 gate with the full notes → commit `8e19916`, tag, `gh release create`, feed. `marketplace-upload` green before the checks ran; Approved the same day with four verifier rows, visible in the UI before the API listed it (gotchas § Build). Context save committed and pushed on the user's own ask.
 - **2026-09-08/09 (twelfth)** — two renderer fixes, both hand-tested by the user with an eight-prompt script (live, replay, plan card; transcripts verified by key): a ````markdown fence split at three backticks (regex `(`{3,})…\1`*`, fixture 85 written first → 8/15 failed pre-fix, then 15/15) and "numbered lists are always `1.`" → a CommonMark list parser (`mdList`: content indent, loose/tight, `<ol start>`, recursive bodies, fence indent strip; fixture 86, 17 failed pre-fix; prototyped in node before the restart). Harness 829/0, test 163/0. A three-backtick hand test proved nothing — the retest asked for four explicitly. Three pre-existing renderer gaps found on the way → backlog § Housekeeping (indent-only code blocks, `*` inside inline code, mid-line fence leak). Traps → gotchas § Testing: the sandbox exits cleanly on its own; a `grep -c` tail read a pass as a failure; a transcript-by-key script unbounded to the turn.
 - **2026-09-05 (eleventh)** — 0.13.0 released and Approved the same day: steps 1–5 from one Python script asserting every exact token before the first write; `test buildPlugin` 163/0; `verifyPlugin` 8/8 Compatible (PS-242 → PS-263); notes shown WHOLE at the gate ("Go ahead please") → commit `a988d95`, tag, `gh release create`, feed + Marketplace upload green (receipt 1162736), Approved ~35 min later with a new "IDE run" verifier row. Notes shape that worked: ✨ New · 🐛 Fixes · Install · ⚠️ Notes (live-only caveats, deferrals); internal work left out.
