@@ -1,9 +1,17 @@
 # State
 
 ## Current focus
-**2026-10-10 (twenty-fourth session, Linux): 15.4 built, every copy routed through Kotlin, 1.30's
-midnight gap closed, 11.7 measured and hand-tested live, cleanup done — commits `759c904`,
-`96315e0`, `a556a3a`, `cd0c855` + this save, PUSHED on the user's "commit and push".**
+**2026-10-10 (twenty-fifth session, Linux): 9.9 decided and built (switch retired, gauge lookup
+fixed), the model popup fitted to the panel — commits `96e32d1`, `8324cd8` + this save, PUSHED on
+the user's "save / commit and push". Earlier today (twenty-fourth): 15.4, the Kotlin clipboard
+route, 1.30's midnight relay, 11.7 measured + hand-tested (`759c904`, `96315e0`, `a556a3a`).**
+0. **9.9 + popup fit** (`8324cd8`, `96e32d1`). The footer's 1M switch is gone; `windowConfirmed`
+   replaces `oneMFromCli`; `reconcileFromResult` (`80-gauge.js`) also matches the roster's
+   `resolvedModel`, tags stripped both sides; `capToRows` (`40-sessions.js`) measures the popup
+   against `#head` + viewport and `tg('modelMenu')` caps `#modelItems` with no row count. Fixtures
+   97 + 98; hand-tested by the user in the real PhpStorm (4% after a turn, the switch row gone).
+   The user has the 17:37 zip installed (everything through 9.9); the popup fit is in the 17:45
+   zip, NOT yet installed.
 1. **15.4 export / copy response** (`759c904`). A hover copy control on every finished assistant
    text block (`mdBlock` / `copyable` in `plugin/src/main/resources/webview/js/20-markdown.js`,
    source on `el.__md`, `finishBubble` in `70-events.js` at every live finalisation site) and an
@@ -29,21 +37,20 @@ midnight gap closed, 11.7 measured and hand-tested live, cleanup done — commit
    REBUILT 16:48 (`plugin/build/distributions/claude-brains-0.14.0.zip`, `buildPlugin` only — no
    `verifyPlugin`, not a release).
 
-**[DECIDE] rows:** one — 9.9 (At a glance: 99 ✅ · 0 ⬜ · 46 ➖).
+**[DECIDE] rows:** none (At a glance: 99 ✅ · 0 ⬜ · 46 ➖ — "no open tasks", answered 2026-10-10).
 
-**Pending in the real PhpStorm: TEN fixes** (PATH lookup 2026-09-27, Default chip + thinking trim
-2026-10-08, bold-wrapping-italic + spaced @-mentions, 1.30 + 1.31, 4.10, 11.7, 15.4 + copy route,
-midnight relay — all 2026-10-10). **0.14.0 is the RELEASED version (2026-09-13)**; the rebuilt zip
-carries that number with newer content — fine for a disk install, a release is **0.14.1** and the
-user's call (`verifyPlugin` every release). The sandbox PhpStorm was left RUNNING on the final build
+**Pending in the real PhpStorm: ONE fix** — the popup fit (`96e32d1`; zip rebuilt 17:45). The user
+installed the 17:37 zip 2026-10-10, which carried the other eleven fixes since the 0.14.0 release.
+**0.14.0 is the RELEASED version (2026-09-13)**; the rebuilt zip carries that number with newer
+content — fine for a disk install, a release is **0.14.1** and the user's call (`verifyPlugin`). The sandbox PhpStorm was left RUNNING on the final build
 (CDP 9222; dies with the Claude Code process that launched it — `:9222` closed at `load` is normal).
 
 ## Open investigations
 - **Where the user's Fable default comes from** — still unknown. A bare `initialize` on 2.1.296
   (this Max account) resolved `default` → `claude-sonnet-5-5`; the 2.1.270 binary said
   `claude-opus-5[1m]`. The panel shows what the CLI serves; it does not change what runs.
-- **Model chip "Fable (1M)" with no ✓ row** (parked) — the 9.9 measurement (tagless roster, tag
-  accepted and echoed) supports the "persisted `fable[1m]` matches no tagless row" candidate.
+- **Model chip "Fable (1M)" with no ✓ row** (parked, backlog § Next up) — the switch that wrote
+  tagged values is retired; fixture 97 pins that a persisted tagged value keeps its ✓.
 - **Roster per PROCESS**: 2.1.293 terminal probe 11 rows (no `fable` alias), 2.1.296 13 WITH it —
   a flags-fetch timing lead, unproven.
 - **The wake turn** (a completed background shell wakes the model): CHECKED 2026-10-10 — it draws
@@ -53,7 +60,7 @@ user's call (`verifyPlugin` every release). The sandbox PhpStorm was left RUNNIN
 - **Title tooltips never show on Linux JCEF** — backlog § Next up.
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **1073** (fixtures to **96**); `./gradlew test` **169**.
+- `python3 tools/live_harness.py` baseline **1089** (fixtures to **98**); `./gradlew test` **169**.
 - Sandbox PhpStorm 2024.2.6: `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"` (background, from the repo root). `runIde` blocks
   until the IDE exits. Stop it with `pgrep -f 'transformed/PhpStorm-2024.2.[6]' | xargs -r kill`
@@ -91,9 +98,8 @@ user's call (`verifyPlugin` every release). The sandbox PhpStorm was left RUNNIN
 - [x] 15.4 export / copy response — built, measured, live-checked (2026-10-10).
 - [x] 11.7 hand-tested live; disabled / Monitor / interrupt measured.
 - [x] 1.30 midnight relay; probe-transcript cleanup; extraction → 2.1.296; zip rebuilt.
-- [ ] Get the TEN fixes into the real PhpStorm: disk install of the rebuilt 0.14.0 zip, or cut
-      **0.14.1** (user's call; `verifyPlugin` every release).
-- [ ] **Decide 9.9** (retire / hide / keep the inert 1M switch).
+- [x] 9.9 decided (retired) and built; popup fit — 2026-10-10.
+- [ ] Install the 17:45 zip (popup fit) in the real PhpStorm, or cut 0.14.1.
 - [ ] When a real `auto_mode_server_fallback` frame lands (`window.__dialogSeen`, console warning),
       compare with fixture 94's payloads and the 4.10 fold; fix the card if they differ.
 - [ ] 15.4 Save row: drive the native dialog by hand once (the user, or an input tool).
@@ -104,7 +110,7 @@ user's call (`verifyPlugin` every release). The sandbox PhpStorm was left RUNNIN
       `turn_preempted` / `queued_turn_count` (1.9).
 - [ ] Renderer follow-ups in backlog § Housekeeping (indent-only code blocks; `*` inside inline
       code; mid-line fence placeholder leak; `~~~` fences).
-- [ ] **Model chip / menu mismatch** — parked; capture chip title + persisted value vs roster.
+- [ ] **Model chip / menu mismatch** — parked; on a recurrence capture chip title + persisted value.
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About; Windows CRLF splice
       check; Windows look of the 1.29 card header; Windows `./gradlew test` + VFS click check.
 - [ ] Testing repo hand-test leftovers (`hand test/…`, `plain-control.txt`, sandbox transcripts
@@ -124,7 +130,9 @@ user's call (`verifyPlugin` every release). The sandbox PhpStorm was left RUNNIN
 - **Before the first turn nothing on the wire names a settings `model` override** (9.1 gap).
 - **The Thinking switch is INERT on Fable** — "document only". **Do not gate UI on roster
   capability flags** (9.10); only `supportsFastMode` is gated — disabled on Default by design.
-- **The 1M switch is inert on 2.1.296** (9.9 [DECIDE]) — reads OFF on every row.
+- **No 1M switch** (9.9, retired 2026-10-10): the CLI serves 1M with or without `[1m]`; a tagged
+  value is accepted if persisted or typed. The gauge seeds 200K for an untagged pick until the
+  first result confirms the real window (a few seconds of a too-high percentage on a fresh pick).
 - The picker shows the CLI's whole roster, pinned previous versions included (eight at 2.1.296).
 - Typing `/model` or `/clear` is refused; the chip / New button are the surfaces. No keyboard-only
   new conversation; no shortcuts on any card.

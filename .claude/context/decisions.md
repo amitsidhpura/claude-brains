@@ -4,6 +4,27 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 9.9: the 1M switch is RETIRED (not hidden); the gauge follows the CLI's reported window for any pick
+Decided by the user after a step-by-step hand test in the real PhpStorm. **Why retire:** the CLI
+serves a 1,000,000 window with or without the `[1m]` tag (measured over stdio for untagged
+`sonnet`, `sonnet[1m]`, `opus`, `opus[1m]`), so the switch could not change the model; what it DID
+change was the gauge denominator (OFF pinned 200K → 20% shown for 4% used), and the reconcile
+that should have corrected it never matched an alias pick. A control that cannot change the model
+has nothing to come back for. A `[1m]` tag on a persisted or typed value stays accepted (the CLI
+echoes it; the ✓ ignores it). *Rejected:* hiding it while no roster value carries `[1m]` (keeps
+dead code and a dead denominator path alive for a hypothetical); keeping it with only the lookup
+fix (the switch would snap back ON after every turn — a toggle that undoes itself).
+
+## 2026-10-10 — The model list is capped by MEASURED fit, not a row count; the cap helper measures the popup
+The 13-row 2.1.296 roster made the popup taller than the panel. **Fit, not rows:** the roster is
+shown whole (2026-09-27 decision), so the list takes whatever height the panel leaves between the
+header and the composer and scrolls, ✓ row in view — a five-row cap like the slash menu's would
+hide the newer models behind a scrollbar on every open. **The helper measures the popup:** a list
+cap that clamps by the list's own box misses the header / search / footer around it; `capToRows`
+now clamps by the popup's overflow past `#head`'s bottom (+4px, the history panel's gap) and the
+viewport. *Rejected:* a fixed row count; folding the roster (decided against 2026-09-27); a CSS
+max-height (follows the IDE font, the trap capToRows exists for).
+
 ## 2026-10-10 — 15.4: export rides a HEADER popup fed by the CLI's own `/export` text; Copy response is per block and copies the SOURCE; no typed `/copy` / `/export`
 "Lets do 15.4". **Where:** a popup hanging from the header (the conversation's own controls live
 there: reload, history, new), anchored to `.actions` so it shares #histPanel's right edge and 310px

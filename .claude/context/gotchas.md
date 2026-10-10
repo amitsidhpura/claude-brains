@@ -610,6 +610,17 @@ re-read those before trusting memory here.
   externally, return true); the JS delegate is the polite first layer. Fixture 67.
 
 ## Webview / CSS / layout
+- **Every popup list needs `capToRows` on OPEN, and the helper must measure the POPUP** (2026-10-10):
+  `#modelItems` had no cap at all — the 13-row 2.1.296 roster put the filter box under the
+  tool-window title in the real PhpStorm — and `capToRows` clamped by the LIST's box, so a popup
+  whose header ran off the top still measured on-screen. It now clamps by `.popup`'s overflow past
+  `#head`'s bottom (+4) and the viewport. The sandbox panel (871px) had shown the same since the
+  roster grew; nobody opened the menu there — after a roster/row-count change, open every popup in
+  the sandbox and screenshot it (the gallery opens none).
+- **A usage map keyed by FULL ids never matches an ALIAS selection** (`sonnet` vs
+  `claude-sonnet-5-5`): `windowFromUsage` missed every roster pick for weeks and the gauge sat on
+  the tag seed; only Default (resolvedModel) ever matched. Match through the roster's
+  `resolvedModel` too, and strip `[1m]` on both sides (fixture 97).
 - **A streaming accumulator must reset when its bubble is DROPPED, not only at message_start**
   (2026-10-10): `curRaw` survived the tool-start `curBubble = null`, so a text → tool → text message
   re-rendered the first text inside the second block. Fixture asserts on a block should read its
@@ -801,6 +812,14 @@ re-read those before trusting memory here.
   capture a stack over CDP — the fastest way to find "who closed this".
 
 ## Testing, probes and sandboxes
+- **"Either way" needs BOTH sides of the one variable measured** (2026-10-10): the 9.9 audit probed
+  `opus`, `opus[1m]`, `sonnet[1m]` and declared the window "1M with or without the tag" — untagged
+  `sonnet`, the case the user actually hit, was never run. Pair every tagged probe with its untagged
+  twin before writing "either way".
+- **A hand test in the real IDE, one step at a time with screenshots, found in ten minutes what the
+  harness and the sandbox had not** (the gauge pinned at 20%, the popup off the top): the harness
+  asserts what fixtures ask, and nobody had asked. Walk the user through a row's surfaces step by
+  step (one instruction, wait for the screenshot) when a row is [DECIDE] or "measured inert".
 - **A bare foreground `sleep N` is REFUSED by the CLI itself (2.1.296: "use Monitor or a background
   run")** — a foreground-shell test (the 11.7 offer) needs a loop (`for i in $(seq 1 30); do echo
   tick $i; sleep 1; done`); the first live B run never reached the offer and read as a panel bug.

@@ -3,6 +3,28 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-fifth) — 9.9 decided by a hand test in the real PhpStorm: the 1M switch retired, the gauge lookup it masked fixed; the model popup fits the panel; harness 1089
+- The user installed the rebuilt zip and we walked 9.9 one step at a time in the real IDE: `sonnet`
+  + switch ON → 4% after a turn; switch OFF → the gauge JUMPED to 20% for the same ~40K tokens and
+  stayed there after the next turn. The disk said both turns were plain `claude-sonnet-5-5`; the
+  live window is not persisted. A stdio probe (scratch cfg) then measured the case the audit had
+  skipped: `set_model "sonnet"` → `contextWindow` 1,000,000, same as `sonnet[1m]` — the audit had
+  probed opus / opus[1m] / sonnet[1m], never untagged sonnet, and called it "either way".
+- So the switch could not change the model and only mis-set the gauge; and the reconcile that
+  should have corrected it never matched an ALIAS pick (`windowFromUsage` compared `sonnet` to the
+  key `claude-sonnet-5-5`; only full-id selections such as Default's resolvedModel ever matched).
+  Explained in plain terms, the user chose the recommended option: retire + fix. `oneMFromCli` →
+  `windowConfirmed`; the roster `resolvedModel` is the third candidate; tags ignored both sides.
+  Fixture 97 (control: switch present, 20%); fixture 55 trimmed; harness 1079; commit `8324cd8`.
+- The user's next screenshot: the 13-row roster popup taller than the panel, its filter box under
+  the tool-window title. No cap existed on `#modelItems` at all (slash and history have five-row
+  caps), and `capToRows` measured the LIST box, so a popup whose header ran off the top still
+  looked on-screen. Fixed by measuring the popup against `#head`'s bottom + 4 and the viewport,
+  `capToRows(modelItems, Infinity)` on open, the ✓ row scrolled into view. The sandbox panel
+  (871px) reproduced it — nobody had opened the menu there after the roster grew to 13. Fixture 98
+  (control 3/10 failed); harness 1089; commit `96e32d1`; zip rebuilt 17:45.
+- Checklist: 99 ✅ · 46 ➖, no [DECIDE] rows left — the user asked and the answer is "none open".
+
 ## 2026-10-10 (twenty-fourth) — 15.4 built (export popup + copy response), every copy through Kotlin; 1.30 midnight relay; 11.7 measured + hand-tested live; cleanup done; harness 1073
 - "Lets do 15.4" → probed first under a scratch `CLAUDE_CONFIG_DIR` (one haiku turn, two processes):
   `export_conversation` is `text:""` + `conversation-<date>-<time>.txt` turnless, the TUI's own
