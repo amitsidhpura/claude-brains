@@ -18,7 +18,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   frames (control 5/8 on the pre-fix build → 8/8); first full run 1165/1 on a fresh IDE (the known
   timing case), warm rerun 1166/0; test 176; zip 00:20. Docs: MT-11.8, gotchas § Protocol.
   Decided with the user: the "stopped" task notification itself stays undrawn (tasks this panel
-  session never saw). NOT committed.
+  session never saw). Committed `abcf060` + pushed on the user's ask, with this context save
+  (journal digest to 2026-10-10 eighteenth).
 
 ## 2026-10-10 (twenty-seventh) — 6.6 auto-include selection + Include open file: CLI route measured dead, panel route built; switch rows; fixture 99; harness 1089→1158; test 176; live + replay over CDP; user hand-tested the selection half
 - Asked which deferred rows are worth reviving → recommended 6.6 first; discussed it to a ten-point
