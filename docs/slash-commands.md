@@ -110,7 +110,17 @@ headlessly, 54 → 55 wire entries) added `/advisor` and `/reload-plugins` and d
 `/artifact-design` (its row stays, marked removed; the only other change is
 `/artifact-capabilities`' description text). 2026-09-13: the 2.1.270 roster (re-probed headlessly, the 2.1.260 vsix binary as
 baseline, 56 → 57 wire entries) added `/output-style` only — no drops, no hint or description
-changes.
+changes. 2026-10-10: the 2.1.296 roster (re-probed headlessly in the testing repo, the 2.1.270
+vsix binary as baseline; 75 → 74 wire entries on this account because claude.ai-synced skills
+now ride the roster) added the built-in `/focus [on|off]` ("Toggle focus view: just your prompt,
+summary, and response" — Hidden, checklist 12.6); every built-in row now carries `builtin: true`;
+synced skills are listed by short name (`docs`, `pdf`, `xlsx`, …) with `aliases:
+["anthropic-skills:<name>"]` and a "(claude.ai sync)" description suffix instead of the
+`anthropic-skills:` prefix (not a suffix `markCustom` knows, so they stay out of the menu as
+before); `plugin-authoring` / `plugin-types` left this roster. Hint changes: `/effort`
+`<low|medium|high|xhigh|max|auto|ultracode [on|off]>`, `/doctor` `""` → `[prompt-audit [<path>]]`,
+`/code-review` + `[--max-findings <n>|all]`; description-only changes on `/fast`, `/heapdump`,
+`/ultrareview`, `/code-review`, `/artifact-capabilities`. Rows below updated.
 Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
 relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
 are visible in the menu; every other built-in is hidden.
@@ -133,7 +143,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/clear` | Hidden | [ ] | `/reset`, `/new` | Start a new session with empty context. REMOVED as a panel command 2026-08-29: the header's New-conversation button does the same thing; the `[name]` hint (2.1.241) made a menu pick insert-not-run, and naming already lives in the header pencil (checklist 7.6) |
 | `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
 | `/context` | Enabled - sent to CLI | [x] |  | Show current context usage. Broke a second way ~CLI 2.1.24x: the CLI began tagging local built-ins' output `model:"<synthetic>"` (the API-error-echo tag), so the usage table drew as one red `.error` block; fixed 2026-09-04 by draining the stash by the RESULT's `is_error` (fixture 70), re-verified live in the panel |
-| `/code-review` | Enabled - sent to CLI | [x] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs and reuse/simplification/efficiency cleanups at the give… |
+| `/code-review` | Enabled - sent to CLI | [x] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs (plus reuse/simplification/efficiency cleanups where the model's… — hint grew `[--max-findings <n>\|all]` at 2.1.288 (measured on 2.1.296, 2026-10-10); 2.1.296 also fixed the SDK/IDE run "ending on a raw JSON array" — findings now print as a numbered list (not re-driven in the panel yet) |
 | `/simplify` | Enabled - sent to CLI | [x] |  | Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hu… |
 | `/verify` | Enabled - sent to CLI | [x] |  | Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior — drive the affected flo… |
 | `/run` | Enabled - sent to CLI | [x] |  | Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change… |
@@ -152,9 +162,10 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
 | `/model` | Hidden | [ ] |  | Set the AI model for Claude Code Composer has the model chip + dropdown. |
-| `/effort` | Hidden | [ ] |  | Set effort level for model usage Composer has the effort slider. |
+| `/effort` | Hidden | [ ] |  | Set effort level for model usage Composer has the effort slider. Hint at 2.1.296: `<low\|medium\|high\|xhigh\|max\|auto\|ultracode [on\|off]>` — Ultracode is its own toggle since 2.1.284 (checklist 9.2). |
 | `/rename` | Hidden | [ ] | `/name` | Rename the current conversation The panel header has inline rename (same custom-title record). |
 | `/usage` | Hidden | [ ] | `/cost`, `/stats` | Show session cost, plan usage, and what's contributing to your limits **Declined 2026-08-06** as a panel surface — stays Hidden by decision, not omission. |
+| `/focus` | Hidden | [ ] |  | Toggle focus view: just your prompt, summary, and response — hint `[on\|off]`. **New on the headless roster at 2.1.296** (measured 2026-10-10); it toggles the TUI's reading mode, and the panel's Focus view is deferred (checklist 12.6). |
 
 ### Hidden — configuration & diagnostics (the terminal's half)
 
@@ -167,11 +178,11 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/color` | Hidden | [ ] |  | Set the prompt bar color for this session |
 | `/config` | Hidden | [ ] | `/settings` | Set a setting by key |
 | `/debug` | Hidden | [ ] |  | Enable debug logging for this session and help diagnose issues |
-| `/doctor` | Hidden | [ ] | `/checkup` | Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics co… |
+| `/doctor` | Hidden | [ ] | `/checkup` | Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics co… Hint `[prompt-audit [<path>]]` since 2.1.283 (was none; under the pick rule it would now insert, not run). |
 | `/extra-usage` | Hidden | [ ] |  | Renamed to /usage-credits |
-| `/fast` | Hidden | [ ] |  | Toggle fast mode (Opus 5) |
+| `/fast` | Hidden | [ ] |  | Toggle fast mode (Opus 5.5) — description text only changed at 2.1.296 (was "Opus 5") |
 | `/fewer-permission-prompts` | Hidden | [ ] |  | Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to… |
-| `/heapdump` | Hidden | [ ] |  | Dump the JS heap to ~/Desktop |
+| `/heapdump` | Hidden | [ ] |  | Dump the JS heap to the Desktop; on Linux with no Desktop folder, the home directory (2.1.296 wording) |
 | `/import` | Hidden | [ ] |  | Import config from another AI coding agent |
 | `/insights` | Hidden | [ ] |  | Generate a report analyzing your Claude Code sessions |
 | `/mcp` | Hidden | [ ] |  | Manage MCP servers |
@@ -180,7 +191,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/run-skill-generator` | Hidden | [ ] |  | Author or improve the run-<unit> skill — a per-project skill that tells agents how to build, launch, and drive this project's app. Use wh… |
 | `/schedule` | Hidden | [ ] | `/routines` | Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule. |
 | `/team-onboarding` | Hidden | [ ] |  | Help teammates ramp on Claude Code with a guide from your usage |
-| `/ultrareview` | Hidden | [ ] |  | Start a cloud agent that finds and verifies bugs in your branch (~5-10 min, $5-$25 USD) · Runs in Claude Code on the web. See https://cod… |
+| `/ultrareview` | Hidden | [ ] |  | Start a cloud agent that finds and verifies bugs in your branch (~15-25 min, $5-$25 USD) · Runs in a cloud session. See https://code.claud… (2.1.296 wording) |
 | `/update-config` | Hidden | [ ] |  | Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "wheneve… |
 | `/usage-credits` | Hidden | [ ] |  | Configure usage credits or request them from your admin when you hit a limit |
 

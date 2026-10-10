@@ -495,9 +495,13 @@ Field notes worth keeping (schema doc strings, abridged):
 **Loop → client** (CLI sends, blocks on reply; exhaustive — the dispatcher throws on anything
 else): `can_use_tool`, `hook_callback`, `mcp_message`, `elicitation` (default answer
 `{action:"decline"}`), `request_user_dialog` (`{dialog_kind, payload, tool_use_id?}`; kinds seen:
-`refusal_fallback_prompt`, `fable_overage_consent_prompt`; a client that declared no
-`supportedDialogKinds` is never sent one — the CLI "stays silent so a capable client (or the
-worker's park deadline) settles it"), `oauth_token_refresh`, `host_auth_token_refresh`.
+`refusal_fallback_prompt`, `fable_overage_consent_prompt`, and from 2.1.281
+`auto_mode_server_fallback` — the auto-mode billed-classifier Continue/Stop dialog; the VS Code
+extension at 2.1.296 declares exactly `["fable_overage_consent_prompt","auto_mode_server_fallback"]`;
+a client that declared no `supportedDialogKinds` is never sent one — the CLI "stays silent so a
+capable client (or the worker's park deadline) settles it", and the 2.1.296 schema adds "a host
+that receives a kind it did not declare must not answer it… never with {behavior:"cancelled"}"
+— checklist 4.10), `oauth_token_refresh`, `host_auth_token_refresh`.
 
 `can_use_tool` request fields beyond what we render: `display_name`, `description`, `title`,
 `requires_user_interaction`, `decision_reason`, `agent_id`,
@@ -774,6 +778,26 @@ per-item evidence via `git show 9bd1683:docs/client-parity.md`). Every row below
 2.1.222 CLI vocabulary; none is rendered. **Probe first if ever wanted** — zero local records for
 most of them.
 
+- **2.1.296 additions (re-audit 2026-10-10; 103 → 155 typed control subtypes, none removed)** —
+  host-facing read-only dialog feeders, every one PROBED `success` over stdio with the panel's
+  flags: `get_status` (`{sections:[{title, rows:[{label, value}]}]}`), `export_conversation`
+  (`{text, default_filename}` — checklist 15.4), `get_skills_dialog`, `get_sandbox_dialog`,
+  `get_chrome_dialog`, `get_chrome_browsers` / `select_chrome_browser` (unprobed), `get_memory_dialog`
+  (+`memories[]`); `get_task_output {task_id}` (accepted; unknown id → error — 11.7);
+  `mcp_read_resource {serverName, uri}` (`ui://` only); `list_directory` → "Unsupported control
+  request subtype" over stdio (remote sidebar only); `claim_session` (sets the session cwd — NOT
+  probed). The Claude Mods UI family, 28 subtypes `ui_attach, ui_client_fault, ui_client_module,
+  ui_client_press, ui_close, ui_copy, ui_detach, ui_focus, ui_input, ui_invalidate, ui_log,
+  ui_message, ui_pane_focus, ui_pane_show, ui_panes, ui_press, ui_prompt_autocomplete,
+  ui_prompt_edit, ui_prompt_fill, ui_prompt_read, ui_prompt_suggest, ui_read_selection, ui_render,
+  ui_scroll, ui_select, ui_status, ui_toast` — `ui_render.surface` ∈ `desktop|mobile|vscode`, no
+  JetBrains surface (11.1). New `system` frames, none seen on a plain turn:
+  `instruction_size_warning`, `session_title_changed`, `session_metadata`,
+  `per_turn_effort_changed`, `permission_check_status`, `turn_preempted`,
+  `file_attachments_missing`, `peer_message_hold`, `turn_handoff`, `turn_handoff_available`,
+  `upgrade_relay_marker`, `remote_tools_reannounce`, `set_chrome_browser_hints`,
+  `set_prompt_suggestions_paused` (1.26). `update_settings` allowlist at 2.1.296:
+  `{localSettings: ["outputStyle"], userSettings: ["effortLevel"]}` (13.3).
 - **`model_consent_fallback`** — the Fable usage-credit gate swapping the session model pre-send
   (`choice:"consent"|"switch_default"|"cancelled"`), self-described "Not yet in the public
   SDKMessage union". The gate's dialog arrives as `request_user_dialog{dialog_kind:
@@ -940,7 +964,20 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
   output_style, pid, remote_control_auto_enable, remote_control_auto_on_by_default` — no MCP data,
   no context window (13a, 17a). Later additions: `analytics_disabled`, `current_permission_mode`,
   `session_state` (≤ 2.1.250); `remote_control_available:bool` (2.1.251, `@internal`); `agents[]`
-  entries carry `model:"inherit"` from 2.1.251. `current_permission_mode` is what seeds the mode
+  entries carry `model:"inherit"` from 2.1.251; `remote_control_auto_connect_default`,
+  `user_output_styles_dir` (2.1.270); `claude_code_version:"2.1.296"` and
+  `feedback_mode:{kind:"post"}` (2.1.296, bare initialize measured 2026-10-10 — 21 top-level
+  keys). The same probe on 2.1.296: the roster carries NO `[1m]` value (13 rows: `default, opus,
+  fable, sonnet, haiku` + eight pinned ids) and `set_model` with a `[1m]` suffix is accepted and
+  echoed in `system/init.model` while `result.modelUsage[*].contextWindow` is 1,000,000 with or
+  without it (checklist 9.9). The turn's `system/init` at 2.1.296 also carries
+  `claude_code_version, per_turn_effort_active, view_mode, terminal_slash_commands,
+  messaging_socket_path, scratchpad_path, product_feedback_disabled, memory_paths` and
+  `capabilities: [interrupt_receipt_v1, interrupt_cancel_queued_v1, interrupt_send_now_v1,
+  msg_lifecycle_v1, request_marker_lists_v1, sdk_mcp_tools_list_changed, sdk_mcp_manifests,
+  mcp_read_resource_v1, mcp_tool_ui_meta_v1, ui_surface_v1]`; `result` adds `queued_turn_count,
+  first_content_frame_ms, time_to_request_ms, ttft_ms, ttft_stream_ms, safety_stops,
+  subagent_stats, result_index, api_error_status`. `current_permission_mode` is what seeds the mode
   chip at spawn (`ChatPanel.pushInitMeta` → `__mode`): measured 2026-09-04 on 2.1.260 it reads
   `auto` on a no-flag launch, and `system/init` only repeats the mode with the first turn (4.7).
 - `TodoWrite` is retired from 2.1.222's roster (every local record is 2.1.178); replaced by

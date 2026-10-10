@@ -3,25 +3,29 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.270, last re-audit 2026-09-13; last FULL-SURFACE audit 2026-09-04 at 2.1.260)
-- VS Code extension — 2.1.270 from `~/.vscode/extensions/anthropic.claude-code-2.1.270-linux-x64`
-  (auto-updated this time), diffed against the 2.1.260 extraction; the local
+**References** (both on 2.1.296, last re-audit 2026-10-10; last FULL-SURFACE audit 2026-09-04 at 2.1.260)
+- VS Code extension — 2.1.296 from `~/.vscode/extensions/anthropic.claude-code-2.1.296-linux-x64`
+  (auto-updated; a 2.1.293 dir sits beside it), diffed against the 2.1.270 extraction; the local
   `reference/anthropic-claude-code/` extraction is re-synced to the newest audited version after
-  each audit as the diff base for the NEXT one
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.270`; the 2.1.260 baseline binary (no
-  longer on disk) came out of the 2.1.260 vsix's `resources/native-binary/`; headless roster in
-  `docs/slash-commands.md`
+  each audit as the diff base for the NEXT one (still at 2.1.270 until the next sync)
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.296`; the 2.1.270 baseline binary (no
+  longer on disk — the dir held 2.1.294–296) came out of the 2.1.270 vsix's `resources/native-binary/`;
+  headless roster in `docs/slash-commands.md`
 - Public CHANGELOG (`reference/claude-code-log`, a clone of `anthropics/claude-code`) — read
-  2.1.261 → 2.1.270 for LEADS only (runbook step 3b, first used 2026-09-13); no mark rests on it
+  2.1.271 → 2.1.296 for LEADS only (runbook step 3b; `[Cloud sessions]`, `[Claude Tag]` and
+  `[Code Review]` lines skipped — not our clients); no mark rests on it
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.270, re-audit 2026-09-13; full-surface audit 2026-09-04 at 2.1.260) — 94 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 47 ➖ (141 rows) — no open rows
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 96 ✅ · 0 🟥 · 0 🟧 · 3 ⬜ · 46 ➖ (145 rows) — 3 open rows, all awaiting a decision
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
-- **Awaiting a decision ([DECIDE]):** none — 1.29 (the one row the 2.1.270 audit added) was taken
-  and built the same day, 2026-09-13. The ten rows of the 2026-09-04 full-surface audit are settled:
-  1.26–1.28, 2.12, 3.7, 3.8, 4.7, 4.8, 6.5 and 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3
-  deferred 2026-09-04
+- **Awaiting a decision ([DECIDE]):** four, all from the 2.1.296 audit 2026-10-10 — two new rows
+  (4.10 auto-mode server-fallback dialog, 11.7 background task output) and two re-opened (9.9 the
+  1M switch — measured inert on 2.1.296; 15.4 export / copy response — `export_conversation`
+  answers over stdio). 1.30 (message timestamps) and 1.31 (question option previews) were taken
+  and built the same day. Earlier: 1.29 (2.1.270
+  audit) built 2026-09-13; the ten 2026-09-04 full-surface rows are settled (1.26–1.28, 2.12, 3.7,
+  3.8, 4.7, 4.8, 6.5, 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3 deferred 2026-09-04)
 
 **Status marks**
 
@@ -47,7 +51,7 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30 and 1.31 were built the same day) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Row shape** — `**id** mark [effort] **Name** [tags] — gist`, the gist one to two lines of what
@@ -96,6 +100,115 @@ has no literal in the binary and § 12 has zero local records — unknown if it 
 `task_summary`/`turn_duration` (not on a plain turn); SandboxNetworkAccess asks (a bespoke card
 header, needs sandbox on); `post_turn_summary`/`away_summary` (`@internal`). Agent transcripts
 and inventories in the 2026-09-04 session scratchpad (`full/`).
+
+</details>
+
+<details><summary><b>Re-audit 2026-10-10 (2.1.270 → 2.1.296)</b></summary>
+
+Twenty-six versions in one hop (the CLI and the extension both auto-updated to 2.1.296 the
+morning of the audit); everything below is measured unless it says CHANGELOG. Sources: the 2.1.296
+extension from `~/.vscode/extensions/` diffed against the 2.1.270 extraction; the 2.1.296 CLI from
+`~/.local/share/claude/versions/` against the 2.1.270 vsix's native binary (runbook step 3 —
+`versions/` held only 2.1.294–296); the CHANGELOG 2.1.271 → 2.1.296 for leads (its `[Cloud
+sessions]` / `[Claude Tag]` / `[Code Review]` lines skipped). **Extension:** the same twelve
+`tool("…")` registrations (counted both sides). `contributes` gained four commands —
+`acceptProposedHunk` / `rejectProposedHunk` (+ `…FromBar`): per-hunk Accept/Reject in the
+proposed-change diff tab (3.3) — and six settings: `attachOpenFile` (default ON: the open editor
+file rides every message — 6.6), `continueAfterReload` (8.14), `lockEditorGroups`,
+`scrollToBottomOnSend` (1.14), `showMessageTimestamps` (default ON since 2.1.290 — 1.30),
+`spinnerVerbs` (1.13). Three new gates (`tengu_per_turn_effort`, `tengu_ccr_v2_session_crud_cli`,
+`tengu_staged_ladybug`). ~150 new `case` labels, all host RPC for dialogs or internals: Bookmarks
+(`get_session_bookmarks` / `update_session_bookmark` / `get_bookmarked_responses` — 15.3), Export
+(`export_conversation` / `open_export_document` — 15.4), Status (`get_status`), Sandbox / Chrome /
+Skills / Memory dialogs (`get_sandbox_dialog` + `set_sandbox_setting`; `get_chrome_dialog` +
+`get_chrome_browsers` / `select_chrome_browser` / `set_chrome_setting`; `get_skills_dialog` +
+`set_skill_state`; `get_memory_dialog` + `read|write|delete_memory_file`, `open_memory_file|folder`,
+`save_opened_memory_files`, `set_memory_setting`), plugin options (`get_plugin_options` /
+`save_plugin_options` / `find_link_marketplace`), `open_plan` (typed `/plan`), `run_in_background`
++ `get_task_output` (11.7), `sign_out` (10.1), `design_login_*` (Claude Design sync),
+`reveal_feedback_report`, `refresh_remote_control_lock`, `open_held_session`, session-list filter /
+archive (`get_session_list_filter`, `update_session_list_filter`, `unarchive_sessions` — 8.10),
+plus zod/enum internals (`int32`, `WORKING_*`…); REMOVED: the raw SSE labels
+(`content_block_delta`, `message_start`…), `oidc_federation`, `user_oauth`. Its
+`supportedDialogKinds` literal grew from `["fable_overage_consent_prompt"]` to that plus
+`"auto_mode_server_fallback"` (4.10). Webview strings: 290 new readable sentences (Bookmarks,
+Export, Status, Sandbox "Commands run outside the sandbox", Chrome, Skills "Listed for Claude by
+name only…", "Restore code and conversation" (rewind/fork options), "Continuing the step that was
+interrupted when the window reloaded", the auto-mode Continue/Stop copy, "No preview for this
+option", "This conversation is still open somewhere else"); 20 removed ("Continue in Terminal to
+edit memory?", "Continue in Terminal to configure agents?", "Usage tracking is only available for
+Claude AI subscribers"…). Settings schema: `allowedProviders`, `allowClaudeInChromeWithManagedMcp`,
+`attribution:false`, npm-marketplace `registry` / `version` — the terminal's half. **CLI:** typed
+control vocabulary 103 → 155, 52 new, none removed. 28 are the Claude Mods UI family
+(`ui_attach … ui_toast`, 2.1.287; `ui_render.surface` ∈ `desktop|mobile|vscode` — no JetBrains
+surface, 11.1). Host-facing, read-only dialog feeders, ALL PROBED over stdio 2026-10-10 with the
+panel's flags (scratchpad `accept_probe.py` / `accept-296.jsonl`): `get_status` → `{sections:[{title,
+rows:[{label, value}]}]}` ("Session": Version / Session ID / Session kind `interactive` / Peer
+address / cwd / Login method / Organization / Email; "Environment": Model, MCP servers…);
+`export_conversation` → `{text, default_filename:"conversation-2026-10-10-115641.txt"}`;
+`get_skills_dialog` → `{skills:[{name, display_name, description, source, …}]}`;
+`get_sandbox_dialog` → twelve keys (`supported, locked, mode:"disabled", restrictions{…}`…);
+`get_chrome_dialog` → `{allowed, subscriber, wsl, installed, connected, enabled_by_default,
+at_startup, urls{install, reconnect, permissions}}`; `get_memory_dialog` now also `memories[]`;
+`get_task_output {task_id}` → error "no shell or Monitor task with that task_id in this session"
+(accepted; the success shape needs a live task); `mcp_read_resource` → error "serverName must be a
+string" (accepted; `ui://` resources only); `list_directory` → "Unsupported control request
+subtype" (remote-sidebar only, like `read_file`). Not probed: `claim_session` (mutating — sets the
+session's cwd), `select_chrome_browser`, the `ui_*` family. New `system` subtypes, none seen on a
+plain turn: `instruction_size_warning`, `session_title_changed` (8.3 lead), `session_metadata`,
+`per_turn_effort_changed`, `permission_check_status` (`checking` after ~4 s on an auto-mode check),
+`turn_preempted {reason:"rapid_followup"}` (1.9), `file_attachments_missing` (remote clients),
+`peer_message_hold`, `turn_handoff(_available)`, `upgrade_relay_marker`, `remote_tools_reannounce`,
+`set_chrome_browser_hints`, `set_prompt_suggestions_paused` (@internal) — unlisted `system`
+subtypes fall through `70-events.js` untouched (1.26). `update_settings` allowlist CHANGED:
+`{localSettings: Set(["outputStyle"]), userSettings: Set(["effortLevel"])}` (13.3 watch, 9.2).
+**Bare `initialize` on both binaries** (testing repo): two new top-level keys
+`claude_code_version:"2.1.296"` and `feedback_mode:{kind:"post"}`; `current_permission_mode`
+reads `auto` on both (2.1.284 made auto the default when none is configured). Roster 5 → 13 rows
+and NO `[1m]` value anywhere: `default` (→ `claude-sonnet-5-5` on this Max account; the 2.1.270
+binary resolved it to `claude-opus-5[1m]`), `opus` → Opus 5.5, `fable` → Fable 5.1, `sonnet` →
+Sonnet 5.5, `haiku` → Haiku 5.5 (haiku now carries `supportsEffort` / `supportedEffortLevels` /
+`supportsAdaptiveThinking` / `supportsAutoMode`), plus pinned previous versions
+`claude-haiku-4-5-20251001`, `claude-sonnet-5`, `claude-opus-5`, `claude-fable-5`,
+`claude-opus-4-8`, `-4-7`, `-4-6`, `claude-sonnet-4-6`; `default.supportsFastMode` true → absent
+(9.4). **MEASURED on three one-turn runs** (scratchpad `onem_probe.py`): `set_model "opus[1m]"` →
+`system/init.model = claude-opus-5-5[1m]`; `"opus"` → `claude-opus-5-5`; `"sonnet[1m]"` →
+`claude-sonnet-5-5[1m]`; `result.modelUsage[*].contextWindow` = 1,000,000 in all three — the tag
+is accepted and echoed, the window is 1M either way (9.9 [DECIDE]). The turn's `system/init` now
+also carries `claude_code_version, per_turn_effort_active, view_mode, terminal_slash_commands,
+messaging_socket_path, scratchpad_path, product_feedback_disabled, memory_paths` and
+`capabilities` = `interrupt_receipt_v1, interrupt_cancel_queued_v1, interrupt_send_now_v1,
+msg_lifecycle_v1, request_marker_lists_v1, sdk_mcp_tools_list_changed, sdk_mcp_manifests,
+mcp_read_resource_v1, mcp_tool_ui_meta_v1, ui_surface_v1`; `result` carries `queued_turn_count,
+first_content_frame_ms, time_to_request_ms, ttft_ms, ttft_stream_ms, safety_stops,
+subagent_stats, result_index, api_error_status` beside the old keys. Commands (same account both
+runs, so claude.ai-synced skills ride both): `/focus [on|off]` NEW (12.6 — leaves 7.8's TUI-only
+list); every built-in row now carries `builtin:true`; synced skills renamed from
+`anthropic-skills:<n>` to `<n>` with `aliases:["anthropic-skills:<n>"]` and a "(claude.ai sync)"
+description suffix (our `markCustom` knows " (project)" / " (user)" only, so they stay Hidden by
+the allowlist exactly as the prefixed names did); `plugin-authoring` / `plugin-types` left this
+roster; hint changes `/effort` `<low|medium|high|xhigh|max|auto|ultracode [on|off]>`, `/doctor` `""`
+→ `[prompt-audit [<path>]]` (would INSERT under 7.5 — Hidden), `/code-review` +
+`[--max-findings <n>|all]`; description-only changes `/fast` (Opus 5.5), `/heapdump`,
+`/ultrareview`, `/code-review`, `/artifact-capabilities` — `docs/slash-commands.md` updated.
+**CHANGELOG-only leads with no new label**, each cited on its row: Stop/Escape end only the turn
+while background agents keep running (1.7, unmeasured here); `message_stop` now sent on cut-short
+replies (2.1.287, 1.13); `--permission-prompt-tool` now receives background subagents' asks
+(2.1.285, 3.1); the 10-minute stall when the editor never answers the pre-tool autosave (2.1.285,
+2.10); an on-demand diagnostics read with the SAME twelve tools (2.1.285, 2.3); `/model` Max
+effort is session-only (2.1.295, 9.2); the Ultracode on/off switch under the effort slider
+(2.1.284, 9.2 — `ultracode` is a settings key, so `apply_flag_settings` reaches it); Opus 5.5 /
+Sonnet 5.5 / Haiku 5.5 and the Pro default moving to Opus (2.1.280/284/293); auto mode as the
+no-config default (2.1.284); `[1m]` dropped from `/model` labels (2.1.283) and 1M by default on
+Bedrock/Vertex/Foundry/gateways (2.1.287). **Terminal's half, no row:** Mods and `You should
+know`, AGENTS.md, `allowedProviders`, every gateway / Remote Control / cloud-session / vim /
+fullscreen / screen-reader / plugin-marketplace line. Cleanup owed after this audit: the three
+one-turn probes wrote transcripts `982ad0ee…`, `60d9bd11…`, `830d916b…` under
+`~/.claude/projects/-home-syncroze-Sites-claude-brains-testing/` and moved its `lastSessionId`
+(was `8c92f59b-0b22-4152-95b9-1c6d4260ecab`) — the session's permission classifier refused the
+delete and the restore, so they are the user's to remove. Tapes and label sets in the 2026-10-10
+session scratchpad (`init-270/296.jsonl`, `accept-296.jsonl`, `onem-*.jsonl`, `subtypes-*.txt`,
+`changelog-filtered.md`).
 
 </details>
 
@@ -305,7 +418,8 @@ auto-include selection, voice.
       `RenderLimits.kt`), project-relative middle-ellipsised paths, click-to-open with line ranges
 - **1.5** ✅ **IN/OUT boxes** — tool input/output in the diff's geometry; size caps and
       `.io-cut`/`.cmd-cut` truncation markers (`docs/limits.md`)
-- **1.6** ✅ **AskUserQuestion card** — radio/checkbox + free-text "other" → `updatedInput`
+- **1.6** ✅ **AskUserQuestion card** — radio/checkbox + free-text "other" → `updatedInput`;
+      option previews and the answered summary since 2026-10-10 (1.31)
 - **1.7** ✅ **Stop / interrupt** — Send↔Stop toggle → `interrupt`; a mid-turn Stop replays as the
       stopped line, not a user message
 - **1.8** ✅ **Retry** — re-runs the last prompt with its attachments
@@ -454,7 +568,15 @@ auto-include selection, voice.
   `.status a` now wears `--blue` like `.blk a` (control: 1 fail on the rule-less build).
   2.1.270 audit (2026-09-13): the CLI added a `dev_intent` `system` subtype (`kind:"ios_app"…`,
   schema-only, unprobed); unlisted `system` subtypes fall through `70-events.js` untouched, so
-  nothing to do.
+  nothing to do. 2.1.296 audit (2026-10-10): fourteen more `system` subtypes, none seen on a plain
+  turn — `instruction_size_warning {total_chars, total_limit_chars}` (a banner candidate if it
+  ever lands: "the instruction files in the session prompt… over the recommended limit"),
+  `session_title_changed` (8.3), `session_metadata`, `per_turn_effort_changed`,
+  `permission_check_status {status:"checking"|"done"}` (an auto-mode check that has waited ~4 s —
+  a card-note candidate), `turn_preempted` (1.9), `file_attachments_missing`, `peer_message_hold`,
+  `turn_handoff` / `turn_handoff_available`, `upgrade_relay_marker`, `remote_tools_reannounce`,
+  `set_chrome_browser_hints`, `set_prompt_suggestions_paused`. Same rule: they fall through
+  untouched until one is measured.
   </details>
 - **1.27** ✅ **Open a tool's full IN/OUT in an editor tab** — the cut marker under a
   truncated IN or OUT box reads "open in editor" and opens the whole text, read-only, in an
@@ -549,12 +671,74 @@ auto-include selection, voice.
   `moreFiles` 0); a `moreFiles > 0` sidecar still is not — fixture steps 2-3 prove our capping only.
   </details>
 
-## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.270)
+- **1.30** ✅ **Message timestamps** [NEW] — a small muted time above each prompt bubble and above
+  the first reply text of the turn, and a date line between turns where the day changes (Today /
+  Yesterday / D Mon YYYY). Always on, no switch (user's choice 2026-10-10). VS Code has shown
+  times by default since 2.1.290 (`claudeCode.showMessageTimestamps`).
+  <!-- --><details><summary>Read more…</summary>
+  Taken and built 2026-10-10 (2.1.296 audit, user's "yes" the same day; choices: prompt + first
+  reply text only — tool loops later in the turn get no stamp; always on). The typed prompt has
+  NO wire frame, so live stamps are the page clock (`sendTurn` → `addUserMessage(text, imgs, ts)`;
+  the first text block of a turn via `turnStamped` in `onStream`), while replay stamps are the
+  record's timestamp: `SessionStore.Item.ts` (epoch ms, user and assistant items only, pinned by
+  SessionStoreTest) → `renderBlocks`. One builder each way: `tsLine` / `fmtClock`, `daySep` /
+  `fmtDayLabel` (factored out of `fmtWhen`, whose output is unchanged). The prompt stamp is a
+  `.turn` child BEFORE `.msg-user` (outside the containment; it scrolls away as the bubble pins);
+  the reply stamp a `.turn-body` child before the first `.blk`. Date lines are `#log` children
+  re-laid by `placeDaySeps()` from the turns' `data-day` after every replay chunk (so the
+  `renderEarlier` seam is right); the live path checks the previous sibling turn only, and the
+  first stamped turn gets a line only when its day is not today. MEASURED in the real panel
+  2026-10-10 (CDP): stamp → bubble 8px, stamp → first block 8px (both `--attach-gap`), 18px
+  (`--block-gap`) around a date line, 11px `--muted`. Fixture 93 (16 asserts; negative control on
+  the pre-change build 5 passed / 11 failed, every discriminating assert failing); full harness
+  952/0. Hand-tested live 2026-10-10 in the sandbox: "2:36 PM" above the prompt and above the
+  reply, and the same two stamps after Refresh (replay) with no date line (same day). Relative
+  day labels go stale across midnight in a page left open — the history list has the same
+  property; a resume relabels.
+  </details>
+- **1.31** ✅ **Question option previews + answered-question record** [NEW] — an
+  `AskUserQuestion` option's `preview` (single-select questions only) shows in a monospace box
+  under the option list, following hover > the pick > option 0; an option without one says "No
+  preview for this option"; a pick on such a question no longer auto-advances to the next tab, so
+  the preview stays readable. After Submit the full card stays (tabs, picks, preview) and a
+  summary rides under it — one row per question, the question text over the answer (user's pick
+  2026-10-10 over a compact replacement, rendered side by side first). Replay draws the same.
+  <!-- --><details><summary>Read more…</summary>
+  Taken and built 2026-10-10 (2.1.296 audit). MEASURED on the real wire the same day (sandbox,
+  CLI 2.1.296, Haiku 5.5): a prompt asking for previews produced a `can_use_tool` whose three
+  options each carried `preview` (`"notes.md\n# Scratch notes\n- idea one"`, a `tmp/` tree, a
+  3-line JS snippet) — the field is live, not only the 2.1.220 recording in
+  `plugin/src/test/resources/fixtures/replay-sample.jsonl`. The box shows the text as written
+  (newlines kept, one whole wrapping ``` fence stripped — `previewText`), not through `renderMd`:
+  the tool's own words are "monospace box" and both real samples are indented trees that
+  paragraphing would flatten. It folds under the shared 3-line contract but NOT via `foldBlock`
+  (which measures once): `refoldPreview` re-measures after every repaint and `wirePreviewFold`
+  attaches the toggle once (docs/limits.md § Folded). Builders shared by live and replay:
+  `paintPreview`, `askSummaryHtml`, `resolveAsk(card, result, summary)`; `replayAsk` paints the
+  picked option (Other → none; no pick, i.e. a cancelled card → option 0, the live resting state)
+  and appends the summary unless `denied`. Kotlin unchanged: `questions` already round-trips
+  whole and `answers` come from `toolUseResult`. Fixture 92 (22 asserts; negative control on the
+  pre-change build 7 passed / 15 failed — no box, auto-advance hid the panel, no summary rows);
+  full harness 952/0. Hand-tested live 2026-10-10: the box followed hover and the pick, the panel
+  stayed on a pick, Submit left "Which scratch file should I create next? → scratch.js" under the
+  card and the model continued; Refresh replayed the card with the pick checked, its preview and
+  the same row. Mockup carries a live card with a preview and an answered replayed card.
+  </details>
+
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.296)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
       (FILE_SAVED / FILE_SAVED_ALL / DIFF_REJECTED, `docs/ide-mcp-protocol.md` § 4)
 - **2.3** ✅ **`getDiagnostics`** — via `DaemonCodeAnalyzerImpl.getHighlights` (warnings and up)
+  <!-- --><details><summary>Read more…</summary>
+  2.1.296 audit (2026-10-10), CHANGELOG 2.1.285 "[VSCode] an on-demand diagnostics tool so Claude
+  in the panel can read the Problems panel's current errors and warnings at any time, not only
+  right after it edits a file" — the extension's `tool("…")` roster is still the same twelve, so
+  the on-demand half is CLI-side and should reach our bridge's `getDiagnostics` for free.
+  PROBE-FIRST before claiming it: ask the live panel to "read the current diagnostics" and watch
+  for an `mcp__ide__getDiagnostics` call.
+  </details>
 - **2.4** ✅ **`close_tab`** — closes the one review opened under that `tab_name`; both close tools
   reply with the reference's exact strings.
   <!-- --><details><summary>Read more…</summary>
@@ -580,6 +764,11 @@ auto-include selection, voice.
   `initialize`, answered after `saveDocument` on the EDT; `Autosave.kt`); same mechanism as VS
   Code's `claudeCode.autosave`. Verified live 2026-08-17: an unsaved `ZEBRA-43` buffer was what
   `Read` returned.
+  2.1.296 audit (2026-10-10), CHANGELOG 2.1.285 lead: VS Code fixed "every file Read, Write and
+  Edit stalling for ten minutes and then being skipped when the editor stops responding to the
+  extension's automatic save before the tool runs" — the same hook shape as ours. Unmeasured here:
+  what `Autosave.kt` does when `saveDocument` never returns (a blocked EDT), and whether the CLI's
+  hook timeout is the same ten minutes. A lead, not a defect.
   </details>
 - **2.11** ✅ **Stale lock sweep** — `~/.claude/ide/*.lock` files with a dead pid deleted on every
       lock write (the CLI's own rule; `IdeLockFile.sweepStale`); 17 → 2 on first run, 2026-08-17
@@ -615,6 +804,12 @@ auto-include selection, voice.
   <!-- --><details><summary>Read more…</summary>
   Dual surface decided 2026-08-09; replaces VS Code's editor-title buttons. No keyboard shortcuts
   by design.
+  2.1.296 audit (2026-10-10): VS Code added per-hunk review in its proposed-change diff tab —
+  "accept and reject buttons under each change" (2.1.275) and the commands `Claude Code: Accept /
+  Reject Change at Cursor` (`acceptProposedHunk` / `rejectProposedHunk`, enabled on
+  `viewingProposedDiff`) plus comment-thread-bar variants (2.1.296 `contributes`). Ours is
+  whole-edit (3.5 covers editing the right pane before accept). Backlog already holds "editor
+  accept/reject v2 tweak-travel"; this is the reference shape for it.
   </details>
 - **3.4** ✅ **"File was modified by the user"** — `staleRecovered` surfaced on the tool line
 - **3.5** ✅ **In-diff editing before accept** — the permission diff's right pane is editable; the
@@ -713,7 +908,7 @@ auto-include selection, voice.
   0 abort; the grant-follows-the-edit asserts 4 fail on the hide-always build and 3 on the
   hide-compound build), `EditProposalsTest` (+4), mockup mirrored (3 boxes).
   </details>
-## 4. ✅ Permission modes
+## 4. ⬜ Permission modes
 - **4.1** ✅ **Mode chip** — the CLI's own four modes via `set_permission_mode`: manual (`default`,
       aliased in the chip), acceptEdits, plan, auto (the safety-classifier mode)
 - **4.2** ➖ **`bypassPermissions`** — removed 2026-08-03 with the relaunch machinery; the CLI
@@ -783,6 +978,27 @@ auto-include selection, voice.
   <!-- --><details><summary>Read more…</summary>
   VS Code answers a focused card with 1/2/3 and Esc; ours would be a keydown handler scoped to
   the focused card, not a global chord (12.4). Revisit only if the user asks for keyboard answers.
+  </details>
+- **4.10** ⬜ [MD] **Auto-mode server-fallback dialog (Continue / Stop)** [NEW] [DECIDE] — when
+  auto mode's server-side classifier is unavailable and the session falls back to billed classifier
+  requests, the CLI asks the host to render a Continue/Stop dialog (CHANGELOG 2.1.281: "in the VS
+  Code and JetBrains panels… replacing the unanswerable warning line"). It is a
+  `request_user_dialog{dialog_kind:"auto_mode_server_fallback"}`, sent ONLY to a client that
+  declared the kind in `initialize.supportedDialogKinds`; we declare none, so the CLI takes its
+  silent default — the same mechanism as 9.7's consent gate.
+  <!-- --><details><summary>Read more…</summary>
+  2.1.296 audit (2026-10-10). MEASURED: the extension's `supportedDialogKinds` literal is
+  `["fable_overage_consent_prompt","auto_mode_server_fallback"]` (2.1.270 declared only the
+  first). The CLI schema: "declare exactly the kinds you can render… a host that receives a kind
+  it did not declare must not answer it (an error-subtype response is discarded and the dialog
+  stays pending) — never with {behavior:"cancelled"}, which is a real settlement". Payload
+  UNMEASURED — it cannot be triggered on demand (needs the server classifier to be unavailable);
+  the webview copy is "Auto mode is using Claude Code's built-in classifier in this session, and
+  those classifier requests are billed. Continue to keep going in auto mode, or Stop to end this
+  turn." If taken: declare the kind, keep the first frame in a `window.__dialogSeen` watch (the
+  9.7 idiom) and build the card from a real frame. `kind:` literals `auto_mode_flagged_allow`,
+  `auto_mode_outside_reads`, `auto_mode_setup_review`, `auto_mode_unavailable` also exist in the
+  binary — unattributed; not shown to be dialog kinds.
   </details>
 
 ## 5. ✅ Plan mode
@@ -863,6 +1079,12 @@ auto-include selection, voice.
   same way). `mentionToken()` in `50-blocks.js`, fixture 91 (control on the pre-fix build: 5 failed).
   </details>
 - **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
+  <!-- --><details><summary>Read more…</summary>
+  2.1.296 audit (2026-10-10): VS Code now attaches the OPEN FILE by default — `claudeCode.attachOpenFile`
+  (2.1.271, default true: "Add the file that is open in the editor to your messages, and show it in
+  the message box. When off, only text you select is added") — and shows the selection as a
+  `[⧉ …]` pill in the TUI prompt (2.1.271). Still deferred; the reference shape when revived.
+  </details>
 - **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
   our picker is IDE-indexed and no gap has shown.
   <!-- --><details><summary>Read more…</summary>
@@ -921,12 +1143,17 @@ auto-include selection, voice.
   The list: `/login /logout /resume /help /add-dir /rewind /diff /update /theme /vim /keybindings
   /export /copy /bug /feedback /memory /permissions /hooks /mcp /plugin /agents /doctor /status
   /config /ide /terminal-setup /voice /desktop /mobile /teleport /remote-control /background
-  /branch /fork /btw /tasks /skills /skill-doctor /pause-memory /alias /focus /brief /wellbeing
+  /branch /fork /btw /tasks /skills /skill-doctor /pause-memory /alias /brief /wellbeing
   /radio /cd /subtask /plan /artifacts /autofix-pr /loops /workflows /daemon /statusline /tui
   /scroll-speed /sandbox /output-style /stop /exit /version /release-notes /upgrade /install
   /web-setup /privacy-settings /remote-env /cloud-plugins /onboarding …` (the 2026-09-04
   full-surface audit added the tail from the binary's category map; `/advisor` left this list at
-  2.1.260 — it is on the headless roster now, Hidden in `docs/slash-commands.md`).
+  2.1.260 and `/focus [on|off]` at 2.1.296 — both on the headless roster now, Hidden in
+  `docs/slash-commands.md`). 2.1.296 also marks every built-in roster row `builtin:true` and lists
+  claude.ai-synced skills by short name (`docs`, `pdf`…) with `aliases:["anthropic-skills:<n>"]`
+  and a "(claude.ai sync)" description suffix — not a custom-entry suffix `markCustom` knows, so
+  they stay Hidden by the allowlist exactly as the prefixed names did (a "claude.ai" badge is an
+  [XS] if ever wanted).
   </details>
 - **7.9** ✅ **Panel equivalents of TUI commands** — `/rename` (header pencil), `/model` +
       `/effort` (chips), `/tasks` (bg roster, read-only), `/resume` (history), `/clear` (New)
@@ -945,6 +1172,13 @@ auto-include selection, voice.
       `custom-title` (newest rename wins) → summary → first user message
 - **8.3** ✅ **Header title** — shown as soon as the transcript can name it (probe at
       `message_start`, re-read at every `result`; `seedUi()` on every load)
+  <!-- --><details><summary>Read more…</summary>
+  2.1.296 audit (2026-10-10): a `system/session_title_changed {title}` frame now exists ("the
+  session's current name… at most 200 code points; a suffix can make it unique", @internal) — a
+  push that could replace the transcript probe. Not seen on three plain one-turn probes (the
+  auto-title lands after the turn; stdin was closed at `result`). Probe with `--linger` before
+  relying on it.
+  </details>
 - **8.4** ✅ **Rename** — in place from the header pencil, writing the CLI's own `custom-title`
   record (the same thing `/rename` does).
   <!-- --><details><summary>Read more…</summary>
@@ -1034,6 +1268,13 @@ auto-include selection, voice.
   ("Default (Fable 5.1)") and the row's description ("Fable 5.1 · from your settings"); the panel
   follows, never sends `set_model`; a named row is left alone (protocol doc § models; fixture 88).
   Gap: nothing on the wire names the override before the first turn.
+  2.1.296 audit (2026-10-10), bare `initialize` in the testing repo: the roster is 13 rows with NO
+  `[1m]` value — `default` (resolved `claude-sonnet-5-5` on this Max account; the 2.1.270 binary
+  said `claude-opus-5[1m]`), `opus` → Opus 5.5, `fable` → Fable 5.1, `sonnet` → Sonnet 5.5, `haiku`
+  → Haiku 5.5, plus eight pinned previous versions (`claude-opus-5`, `claude-fable-5`,
+  `claude-sonnet-5`, `claude-haiku-4-5-20251001`, `claude-opus-4-8/-4-7/-4-6`, `claude-sonnet-4-6`)
+  — the backlog's "fold the pinned rows" item is now eight rows deep. New top-level keys
+  `claude_code_version` (the panel's "may be out of date" hint could read it) and `feedback_mode`.
   </details>
 - **9.2** ✅ **Effort slider** — low / medium / high / xhigh / max, the last row of the model-menu
   footer; the level shows only on the footer's own "Effort" label, never on a chip.
@@ -1049,6 +1290,15 @@ auto-include selection, voice.
   "Effort 'max' exceeds the cap for <model> set by your settings or organization; set to 'medium'
   instead (this session only)" — the same confirmation line the slider already draws, so the cap
   is visible; the slider dot keeps the pick, as the TUI's does.
+  2.1.296 audit (2026-10-10): the `/effort` hint is now `<low|medium|high|xhigh|max|auto|ultracode
+  [on|off]>` — Ultracode became its own toggle (2.1.284: "no longer forces xhigh effort and stays on
+  at any effort level"; VS Code shows an Ultracode on/off switch under its slider and "· Ultracode"
+  on the model pill). The binary says it is "the `ultracode` settings key (--settings or
+  apply_flag_settings)", so the fast-mode path (9.4) reaches it; `system/init` gained
+  `per_turn_effort_active` and a `per_turn_effort_changed` system subtype (gate
+  `tengu_per_turn_effort`). Also: `/model` Max effort is session-only (2.1.295 fix text), and the
+  `update_settings` allowlist now admits `effortLevel` at `userSettings` scope (13.3) — a
+  persistence channel the slider could use. No change made; leads only.
   </details>
 - **9.3** ✅ **Context gauge** — a ring on the composer showing context use, reset on compaction;
   click = `/compact`.
@@ -1064,6 +1314,9 @@ auto-include selection, voice.
   click, reconciled from the CLI's `fast_mode_state` (off|on|cooldown + reason on the tooltip) at
   initialize and every `result`; pref persisted as `claudeCode.fastMode`. Built 2026-08-24;
   fixture 55; history in decisions 2026-08-24.
+  2.1.296 audit (2026-10-10): the `default` roster row no longer carries `supportsFastMode` (it
+  resolves to Sonnet 5.5 on this account; `opus` and the pinned Opus 5 / 4.8 rows keep it), so the
+  switch is disabled on Default — the gate working as designed, worth knowing when it "vanishes".
   </details>
 - **9.5** ✅ **Thinking on/off** — a switch in the model-menu footer, default ON, never gated.
   **Inert on Fable** — measured, kept as-is by user decision ("document only").
@@ -1092,18 +1345,42 @@ auto-include selection, voice.
   the CLI takes the silent default. Needs the Fable allowance to run out. WATCH: the first
   `system/model_fallback` frame lands in `window.__modelFallbackSeen` + a console warning
   (70-events.js). Revivable as [MD] once one is captured: consent card + chip update.
+  2.1.296 audit (2026-10-10): VS Code's `supportedDialogKinds` is `["fable_overage_consent_prompt",
+  "auto_mode_server_fallback"]` — the second is the new auto-mode Continue/Stop dialog (4.10),
+  gated the same way. 2.1.282 changed the SDK-host behaviour when this prompt goes unanswered:
+  "the turn now ends instead" of switching models — so the chip-lies-after-fallback risk is
+  smaller than when this was deferred; still unobserved.
   </details>
 - **9.8** ➖ **Subagent model / cloud providers** — `CLAUDE_CODE_SUBAGENT_MODEL`, Bedrock / Vertex /
       Foundry setup; env and terminal configuration
-- **9.9** ✅ **1M-context toggle** [NEW] — a switch in the model-menu footer that appends or strips
-  `[1m]` on the selected model. **No client-side validity logic** (user decision 2026-08-24): an
-  unsupported combo fails on the next turn with the API's own 400.
+- **9.9** ✅ **1M-context toggle** [DECIDE] — a switch in the model-menu footer that appends or
+  strips `[1m]` on the selected model. **No client-side validity logic** (user decision
+  2026-08-24): an unsupported combo fails on the next turn with the API's own 400. **Re-opened
+  2026-10-10:** on CLI 2.1.296 no roster value carries `[1m]` and the context window is 1M with or
+  without the tag, so the switch always reads OFF and changes nothing but the model-id string.
+  Retire it, hide it while no roster value carries `[1m]`, or keep it as-is — the user's call.
   <!-- --><details><summary>Read more…</summary>
-  Re-selects through `setModel` (persistence rides `claudeCode.selectedModel`; `default`
-  resolves to `claude-opus-5[1m]`). `set_model` never rejects (until 2.1.251's `PreModelSwitch`
+  Re-selects through `setModel` (persistence rides `claudeCode.selectedModel`; `default` resolved
+  to `claude-opus-5[1m]` when built). `set_model` never rejects (until 2.1.251's `PreModelSwitch`
   hooks — 9.11). The switch reconciles to the REAL window from `result.modelUsage[].contextWindow`
   after each model's first turn (`reconcileFromResult`); gauge denominator set explicitly on
   toggle. Built 2026-08-24; fixture 55; decisions 2026-08-24.
+  MEASURED 2026-10-10 (three one-turn stdio runs on 2.1.296 in the testing repo, scratchpad
+  `onem_probe.py`): `set_model "opus[1m]"` → success, `system/init.model = claude-opus-5-5[1m]`;
+  `set_model "opus"` → `claude-opus-5-5`; `set_model "sonnet[1m]"` → `claude-sonnet-5-5[1m]`; and
+  `result.modelUsage[<model>].contextWindow` = 1,000,000 in all three (also for the
+  `claude-haiku-5-5` side model). So the tag is accepted and echoed, but the window is 1M either
+  way — the CHANGELOG agrees: Opus 5.5 / Sonnet 5.5 / Haiku 5.5 ship with 1M (2.1.280/284/293),
+  the picker dropped "(1M context)" where Opus already has it (2.1.283), 1M is the default on
+  Bedrock / Vertex / Foundry / gateways "with no [1m] suffix" (2.1.287), a custom
+  `ANTHROPIC_BASE_URL` gets 1M too (2.1.285), and a gateway that refuses the context-1m beta is
+  retried without it (2.1.295). The 2.1.296 binary still carries the `opus[1m]` / `sonnet[1m]` /
+  `fable[1m]` / `opusplan[1m]` alias strings. Roster at 2.1.296: `default, opus, fable, sonnet,
+  haiku` + eight pinned ids, none tagged (2.1.270: `opus[1m]`, `claude-fable-5-1[1m]`). By this
+  row's own reconcile rule the switch should flip ON after the first turn while the persisted
+  value stays untagged — consistent with the backlog's "chip says Fable (1M) while the menu checks
+  no row" candidate (a persisted `fable[1m]` matching no tagless row); not re-driven in the live
+  panel today.
   </details>
 - **9.10** ➖ **Per-model gating of effort / Thinking** — proposed and dropped 2026-08-26 on
   measurement: no roster capability flag tracks behaviour in either direction. Only
@@ -1144,7 +1421,7 @@ auto-include selection, voice.
   2.1.269: VS Code's Switch-account screen got a Cancel button — still the terminal's half.
   </details>
 
-## 11. ✅ Extensibility (MCP / plugins / skills / hooks / subagents)
+## 11. ⬜ Extensibility (MCP / plugins / skills / hooks / subagents)
 - **11.1** ➖ **Plugin / MCP / hooks / agents management UI** — the terminal's half (`/plugin`,
       `/mcp`, `/hooks`, `/agents`, `~/.claude`)
   <!-- --><details><summary>Read more…</summary>
@@ -1155,6 +1432,17 @@ auto-include selection, voice.
   `get_output_style_locations`; `/output-style [style]` joined the roster) and `update_plugin`;
   the CLI side is `get_hooks_listing`, `list_permission_rules`, `reload_output_styles` (all
   probed `success` 2026-09-13). All configuration — the terminal's half, verdict unchanged.
+  2.1.296 audit (2026-10-10): VS Code grew Sandbox (`/sandbox`), Claude in Chrome (`/chrome`),
+  Skills on/off (`/skills`), Status (`/status`), Memory (edit saved memories in-dialog; "Continue
+  in Terminal to edit memory?" removed) and plugin-options dialogs, plus Sign out (`/logout`); the
+  CLI side is the read-only feeders `get_sandbox_dialog`, `get_chrome_dialog` /
+  `get_chrome_browsers` / `select_chrome_browser`, `get_skills_dialog`, `get_status`,
+  `get_memory_dialog` (+`memories[]`) — all probed `success` over stdio 2026-10-10 (shapes in the
+  audit block); writes go through CLI subcommands (`edit-sandbox-settings`,
+  `edit-skill-overrides`, `edit-chrome-settings`). Claude Mods (2.1.287) add a 28-subtype `ui_*`
+  host surface (`ui_render`, `ui_press`, `ui_toast`, `ui_prompt_*`…) whose `surface` enum is
+  `desktop|mobile|vscode` — no JetBrains surface exists, so mod UI stays the terminal's half by
+  construction. Verdict unchanged.
   </details>
 - **11.2** ✅ **What the panel shows from this family** — MCP server failure notice at init, MCP
   prompts and skills in the / menu, hook output, sub-agent progress line + prompt + final report,
@@ -1206,6 +1494,23 @@ auto-include selection, voice.
   (11.2). `/mcp`, `/plugins`, `/agents` can also FIX things; VS Code has no such view. Revivable
   as [SM]: a popup listing `server · status` (+ agents/skills/plugins) from the init frame.
   </details>
+- **11.7** ⬜ [MD] **Background task output + Run in background** [NEW] [DECIDE] — VS Code 2.1.287
+  shows the output of background shells and Monitors on their agent-map cards and offers "Run in
+  background" on a running command or sub-agent. The CLI side is the new `get_task_output
+  {task_id}` control request (PROBED 2026-10-10: an unknown id answers the error "no shell or
+  Monitor task with that task_id in this session"; the success shape needs a live task). Our 11.3
+  roster rows show a name and a ✕ only.
+  <!-- --><details><summary>Read more…</summary>
+  2.1.296 audit (2026-10-10). `task_id` is "the task_id from task_started or
+  background_tasks_changed" (the roster already holds it). "Run in background" is a webview→host
+  RPC (`case"run_in_background"`) in the extension; the CLI request it maps to was not identified
+  — no `run_in_background` control subtype exists, and `system/init.capabilities` now lists
+  `interrupt_send_now_v1` (the TUI's send-now "moves running tools to the background instead of
+  cancelling the turn", 2.1.281) — probe before building. Related new frames: `turn_preempted
+  {reason:"rapid_followup", uuid}` and `result.queued_turn_count` (1.9), and 2.1.286's "Stop and
+  Escape end only the current turn; background agents keep running" (1.7 — whether our `interrupt`
+  does the same is unmeasured).
+  </details>
 
 ## 12. ✅ UI placement, windows, keys
 - **12.1** ✅ **Right-anchored tool window** — JetBrains moves/floats/undocks it natively (covers
@@ -1231,7 +1536,9 @@ auto-include selection, voice.
   (cards always shown). Revivable as [MD], mockup first; folded IN/OUT boxes already do half of
   it.
   2.1.269: live progress rows for running subagents under the tool-call groups in Focus view —
-  still deferred.
+  still deferred. 2.1.296: `/focus [on|off]` joined the headless roster ("Toggle focus view: just
+  your prompt, summary, and response", `builtin:true`) — Hidden in `docs/slash-commands.md`; it
+  would only toggle the TUI's view.
   </details>
 - **12.7** ➖ **Light theme / configurable colours** — decided 2026-08-07 (dark only)
 
@@ -1279,6 +1586,12 @@ auto-include selection, voice.
   against the CLI's own "always allow" rule writes into the same file), not through the CLI —
   offered 2026-09-04, not taken.
   Re-checked at 2.1.270 (2026-09-13): the allowlist is still `new Set(["outputStyle"])`.
+  CHANGED at 2.1.296 (2026-10-10, binary): the allowlist is now per source —
+  `{localSettings: new Set(["outputStyle"]), userSettings: new Set(["effortLevel"])}` — still
+  string values, no deletion; `model` and `permissions` remain refused. `effortLevel` at USER
+  scope is the first key of interest to land (the slider's persistence, 9.2); the project-scope
+  half this row wants is unchanged. Unprobed live (a write would touch the user's own
+  `~/.claude/settings.json`).
   </details>
 
 ## 14. ✅ Worktrees & git
@@ -1302,7 +1615,7 @@ auto-include selection, voice.
   git timeout, 50 files, 1MB/file caps; present since ≤2.1.233).
   </details>
 
-## 15. ✅ Onboarding & misc
+## 15. ⬜ Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
@@ -1314,7 +1627,18 @@ auto-include selection, voice.
   — Anthropic-internal only; `/stickers`, `/radio`, `/powerup`; the "How is Claude doing?"
   survey.
   </details>
-- **15.4** ➖ **`/share` / `/export` / `/copy`** — the transcript is on disk; the terminal exports it
+- **15.4** ⬜ [XS] **`/export` / `/copy` — export the conversation, copy a response** [DECIDE] —
+  was ➖ "the transcript is on disk; the terminal exports it". Re-opened 2026-10-10: VS Code added a
+  Copy response button (+ typed `/copy`, 2.1.277) and Export conversation (+ typed `/export`, copy
+  or save as plain text, 2.1.280), and the CLI now serves the export over stdio.
+  <!-- --><details><summary>Read more…</summary>
+  2.1.296 audit (2026-10-10). PROBED: `export_conversation` → `{text, default_filename:
+  "conversation-2026-10-10-115641.txt"}` (`text` empty on a turnless session; schema: "@internal
+  Requests the conversation as the plain text the terminal's /export writes, with the file name
+  that command would offer, for a host that copies or saves it with its own widgets"). A
+  copy-response button is local (the reply's markdown source is in the block; 1.11 has the
+  per-code-block copy). `/share` stays the terminal's half.
+  </details>
 - **15.5** ➖ [LG] **`ask_debugger_help`** [NEW] — deferred by the user 2026-08-29 (backlog, [LG]
   "debugger MCP tools"): a debug-session MCP server (stack, variables, breakpoints) with a
   console hand-off, as VS Code has.
@@ -1330,9 +1654,9 @@ auto-include selection, voice.
   </details>
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")
-- **16.1** ✅ **Unit tests** — `./gradlew test` (164, JUnit 5 over SessionStore/RenderLimits);
+- **16.1** ✅ **Unit tests** — `./gradlew test` (169, JUnit 5 over SessionStore/RenderLimits);
       every suite's negative control RUN
-- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 87, 870 assertions (2026-09-13),
+- **16.2** ✅ **Live harness** — `tools/live_harness.py`: fixtures numbered to 93, 952 assertions (2026-10-10),
       real captured wire frames replayed into the live webview over CDP
 - **16.3** ✅ **Dev aids** — `./gradlew probe` (replay without the IDE); `tools/cdp.py`;
       `window.__gallery()`; DevTools action; `runIde -PjcefDebugPort` (sandbox Registry still wins
