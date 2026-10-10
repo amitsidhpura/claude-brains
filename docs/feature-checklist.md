@@ -1554,9 +1554,14 @@ auto-include selection, voice.
   `query.backgroundTasks(toolUseId)` → `background_tasks{tool_use_id}`, response `.backgrounded ?? true`)
   and its render rules (poll every 1000 ms while running and visible, drop the partial first line
   when truncated, honour `\r`, "No output yet." / "No output." / "Output is not available.") were
-  read out of the 2.1.296 extension + webview. UNMEASURED: the disabled answer ("Background tasks
-  are disabled in this session.", `strings`; `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`) and a Monitor
-  task. Design: the pane lives with its roster row — when the task ends the roster drops it and
+  read out of the 2.1.296 extension + webview. MEASURED later the same day (second stdio probe,
+  same recipe): under `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` `background_tasks` answers the error
+  "Background tasks are disabled in this session." AND the foreground shell never gets a
+  `task_started` — so the panel's offer, gated on that frame, cannot appear and the disabled note
+  is unreachable from the button (correct either way); a Monitor task is an ordinary
+  `task_type:"local_bash"`, `is_backgrounded:true` background task (roster frame first, tool_result
+  "Monitor started (task …, expires in 1m …)"), `get_task_output` serves its stream, and EVERY
+  line it prints wakes the model (one `result` with `origin` per event). Design: the pane lives with its roster row — when the task ends the roster drops it and
   the pane goes (the timeline's task line says how it ended; the model usually reads the
   `output_file` itself); a sub-agent's row answers "Output is not available." on the first ask.
   Our wording is shorter than the reference's ("Not moved: it may have just finished or already be
@@ -1567,8 +1572,20 @@ auto-include selection, voice.
   pre-change sandbox: first assert failed, step aborted on the missing button; its first run on
   the changed build caught the row click closing the popup — the list is rebuilt before the click
   reaches the document handler, so stopPropagation like the ✕). Related, still unmeasured:
-  `turn_preempted{reason:"rapid_followup"}` / `result.queued_turn_count` (1.9) and whether our
-  `interrupt` leaves background agents running (1.7). A completed background shell also WAKES the
+  `turn_preempted{reason:"rapid_followup"}` / `result.queued_turn_count` (1.9). Our `interrupt`
+  LEAVES a background shell running (measured 2026-10-10: interrupt 4 s after `task_started` →
+  `{still_queued:[]}` + `result error_during_execution`; `get_task_output` kept growing, the shell
+  completed 36 s later with its notification and the model woke and finished the interrupted
+  task) — the roster keeps the row across a Stop, which is right. Sub-agents unmeasured.
+  HAND-TESTED LIVE 2026-10-10 in the sandbox panel (CDP-driven, real CLI, haiku, Manual mode): a
+  `run_in_background` 25-tick loop → "1 task" chip, the row's pane opened and grew tick by tick
+  (asked once a second), the roster emptied 25 s later and the pane went with it, and the wake
+  turn drew its reply as a second text block in the same turn (no user bubble — there is no user
+  frame on the wire); a FOREGROUND 30-tick loop → "Run in background" appeared 6 s after the line
+  (3 s of that the permission card), the click removed it, the roster listed the shell, the
+  "manually backgrounded" tool_result settled the line and the turn ended, and the wake turn
+  reported the loop done 30 s later. A bare foreground `sleep 30` never reaches the offer: the CLI
+  itself refuses it ("use Monitor or a background run"). A completed background shell also WAKES the
   model: the probe saw an extra `result` (with an `origin` key) answering the completion
   notification before the next prompt's turn.
   </details>

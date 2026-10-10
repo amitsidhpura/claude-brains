@@ -484,7 +484,9 @@ class ClaudeCli(
      * the turn's `result` — the model answers with the command still running. The CLI only
      * registers a foreground shell as a task a few seconds in (`task_started{is_backgrounded:
      * false}` at +3 s), which is the frame the panel's offer waits for. The "disabled" answer
-     * is the error "Background tasks are disabled in this session." (`strings`, unmeasured). */
+     * is the error "Background tasks are disabled in this session." (MEASURED 2026-10-10 under
+     * `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` — where the foreground shell also never gets a
+     * `task_started`, so the offer that would send this never appears). */
     fun backgroundTask(toolUseId: String, onAnswer: (response: JsonObject?, error: String?) -> Unit) =
         sendControlRequest(buildJsonObject {
             put("subtype", "background_tasks")

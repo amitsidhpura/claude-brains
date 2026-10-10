@@ -901,6 +901,18 @@ binary. Item numbers refer to the deleted `docs/client-parity.md` (`git show 9bd
   (exit code 0)"}` + `background_tasks_changed{tasks:[]}`, and then WAKES the model: an extra
   turn (`system/init` + `result`, the result carrying an `origin` key the ordinary one lacks)
   answers the completion before the next prompt's turn.
+- **Disabled, Monitor, interrupt (measured 2026-10-10, 2.1.296, second stdio probe):** under
+  `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` a foreground Bash gets NO `task_started` at all and
+  `background_tasks{tool_use_id}` answers `{subtype:"error", error:"Background tasks are disabled in
+  this session."}`. A `Monitor` tool call is a background task like any shell: `background_tasks_changed`
+  then `task_started{is_backgrounded:true, task_type:"local_bash"}`, tool_result "Monitor started (task
+  <id>, expires in 1m unless the source ends first; you get one notice at expiry …)", `get_task_output`
+  serves its stream, and each printed line wakes the model (a `result` with `origin` per event), ending
+  `task_updated{completed}` + `task_notification{completed, output_file}` + an empty roster. An
+  `interrupt` while a background shell runs answers `{still_queued:[]}` with `result{subtype:
+  "error_during_execution", is_error:true}` and LEAVES the shell running — its output kept growing, it
+  completed on its own with the usual three frames, and the wake turn then finished the interrupted
+  reply.
 - Only `Agent` and `WebFetch` inputs carry `prompt`; `TaskUpdate` input is `{taskId, status}`
   (`activeForm` is on `TaskCreate` beside `description`) (3, 5).
 
