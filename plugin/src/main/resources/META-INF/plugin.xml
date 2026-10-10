@@ -43,8 +43,6 @@
           <li><b>Dark UI only</b> — the panel does not follow light IDE themes.</li>
           <li><b>One conversation at a time</b> — full history with resume and replay exists,
               tabs don't.</li>
-          <li><b>No auto-context from the editor</b> — the current selection isn't attached
-              automatically; use @-file mentions or paste.</li>
         </ul>
     ]]></description>
 

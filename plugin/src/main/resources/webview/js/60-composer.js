@@ -1,6 +1,79 @@
   /* ---------- attachments (composer chips) ---------- */
   let pending = []; // { kind:'image'|'pdf'|'text', media_type, data(base64), name, w, h }
 
+  /* ---------- editor selection (6.6) ----------
+     Kotlin's SelectionTracker pushes `__selection {path,start,end,text}` (debounced) whenever the
+     active editor's selection or caret moves or the editor tab changes; a bare `__selection` means
+     no editor. The page keeps the LAST one as ideSel and draws it as the FIRST chip in #chips — a
+     live pill, so what will ride the message is visible before send, not after (user, 2026-10-10).
+     The pill's × drops it for the current message only (selDropped, cleared by the next change).
+     The paperclip menu's footer holds two switches in #modelFooter's idiom (a click never closes
+     the menu), both Kotlin-persisted through ONE {kind:'selPref', on, file} and seeded on every
+     load by `__selPref`: "Include selection" (selIncluded, default ON) and "Include open file"
+     (fileIncluded, default OFF — the active file's CONTENT rides when nothing is highlighted; the
+     highlight always wins, VS Code's rule). The page only ever sends a `file` FLAG: Kotlin reads
+     the buffer at send time (RenderLimits.ideSelectionTag with the content), so nothing big
+     crosses the bridge on caret moves. Kotlin turns the object into the <ide_selection> /
+     <ide_opened_file> text the CLI's own IDE integration marks this context with; the page never
+     sees that text. The CLI's own route — a `selection_changed` notification over the IDE socket
+     — was measured dead in stream-json mode on 2.1.296 (fixture 99's provenance), which is why
+     the panel carries it itself. */
+  let ideSel = null, selIncluded = true, fileIncluded = false, selDropped = false;
+  // What rides the next message: the highlight when the selection switch is on; else the whole
+  // file (flag only) when that switch is on; else the cursor line; else nothing.
+  function activeSel() {
+    if (!ideSel || selDropped) return null;
+    if (selIncluded && ideSel.text) return ideSel;
+    if (fileIncluded) return { path: ideSel.path, start: ideSel.start, end: ideSel.end, text: '', file: true };
+    return selIncluded ? ideSel : null;
+  }
+  function selRange(s) { return s.start + (s.end > s.start ? '-' + s.end : ''); }
+  function selName(s) { return String(s.path || '').split(/[\\/]/).pop() || s.path; }
+  function selLabel(s) { return s.file ? selName(s) + ' · file' : selName(s) + ':' + selRange(s); }
+  // The pill: lead icon + `File.kt:12-18` (or `File.kt · file`); the composer's copy carries the ×
+  // (same .rm plate as a file chip); a click anywhere else opens the file at those lines.
+  function selChip(s, withRm) {
+    const chip = document.createElement('span');
+    chip.className = 'att isel click';
+    chip.title = s.file ? s.path + ' · whole file · cursor line ' + s.start : s.path + ':' + selRange(s);
+    chip.innerHTML = (s.file ? SVG_FILE : SVG_SEL) + '<span class="isel-l">' + esc(selLabel(s)) + '</span>' +
+      (withRm ? '<button class="rm" title="Not for this message">' + SVG_X + '</button>' : '');
+    chip.onclick = function (e) {
+      if (e.target.closest('.rm')) { selDropped = true; renderAttachments(); return; }
+      // the whole file rode: land on the cursor line, highlight nothing (a selected line would
+      // misstate what was sent); a selection pill re-selects exactly the lines that went
+      if (s.file) bridge({ kind: 'open', path: s.path, line: s.start, select: false });
+      else bridge({ kind: 'open', path: s.path, line: s.start, endLine: s.end });
+    };
+    return chip;
+  }
+  function setIdeSelection(s) {
+    const start = s && +s.start > 0 ? +s.start : 1;
+    ideSel = (s && s.path) ? { path: s.path, start: start, end: +s.end > start ? +s.end : start, text: s.text == null ? '' : String(s.text) } : null;
+    selDropped = false;   // a fresh selection is a fresh offer
+    renderAttachments();
+  }
+  const tglSel = document.getElementById('tglSel'), tglFile = document.getElementById('tglFile');
+  function syncSelMenu() {
+    if (tglSel) setTgl(tglSel, selIncluded);
+    if (tglFile) setTgl(tglFile, fileIncluded);
+  }
+  function bridgeSelPref() { bridge({ kind: 'selPref', on: selIncluded, file: fileIncluded }); }
+  function setSelIncluded(on, fromUser) {
+    selIncluded = on !== false;
+    syncSelMenu(); renderAttachments();
+    if (fromUser) bridgeSelPref();
+  }
+  function setFileIncluded(on, fromUser) {
+    fileIncluded = on === true;
+    syncSelMenu(); renderAttachments();
+    if (fromUser) bridgeSelPref();
+  }
+  if (tglSel) {   // the switch rows: flip, persist, re-render; stopPropagation as tglFast does
+    tglSel.onclick = function (e) { e.stopPropagation(); setSelIncluded(!selIncluded, true); };
+    tglFile.onclick = function (e) { e.stopPropagation(); setFileIncluded(!fileIncluded, true); };
+  }
+
   // File categorisation, ported from the reference webview (sit / ait / ybe / wbe / cit). Images send
   // as base64 image blocks; PDFs and any text/code file send as `document` blocks. Code files carry an
   // empty MIME in the browser, so the extension allowlist is what lets .php/.py/.js/… through.
@@ -62,6 +135,8 @@
   }
   function renderAttachments() {
     chips.innerHTML = '';
+    const sel = activeSel();
+    if (sel) chips.appendChild(selChip(sel, true));   // 6.6: first in the row — the one chip the composer updates by itself
     pending.forEach(function (p, i) {
       const chip = document.createElement('span');
       chip.className = p.data ? 'att click' : 'att';
@@ -69,8 +144,9 @@
       chip.onclick = function (e) { if (!e.target.closest('.rm')) openAtt(p); };  // image → lightbox, file → download; rm handles itself
       chips.appendChild(chip);
     });
-    chips.style.display = pending.length ? 'flex' : 'none';
-    Array.prototype.forEach.call(chips.querySelectorAll('.rm'), function (b) {
+    chips.style.display = (pending.length || sel) ? 'flex' : 'none';
+    // file chips only: the selection pill's × is wired in selChip (and has no index to splice)
+    Array.prototype.forEach.call(chips.querySelectorAll('.att:not(.isel) .rm'), function (b) {
       b.onclick = function () { pending.splice(+b.dataset.i, 1); renderAttachments(); };
     });
   }
@@ -198,13 +274,17 @@
 
   // ts (1.30): the prompt's instant, epoch ms — the page clock live (the typed prompt has no wire
   // frame), the record's timestamp on replay. Omitted → no stamp, no data-day.
-  function addUserMessage(text, imgs, ts) {
+  // sel (6.6): the editor selection that rode the prompt — the composer's object live, the
+  // item's {path,start,end} on replay (SessionStore parses the tag back out). Drawn as the first
+  // chip of the bubble's row, the same pill the composer showed, minus the ×.
+  function addUserMessage(text, imgs, ts, sel) {
     const turnEl = newTurn();
     const d = document.createElement('div');
     d.className = 'msg-user';
-    if (imgs.length) {
+    if (imgs.length || sel) {
       const atts = document.createElement('span');
       atts.className = 'msg-atts';
+      if (sel && sel.path) atts.appendChild(selChip({ path: sel.path, start: +sel.start || 1, end: +sel.end || +sel.start || 1, file: !!sel.file }, false));
       imgs.forEach(function (p) {
         const chip = document.createElement('span');
         chip.className = p.data ? 'att click' : 'att';
@@ -250,16 +330,18 @@
     }
   }
 
-  let lastUser = null;                 // { text, images } — for Retry
+  let lastUser = null;                 // { text, images, selection } — for Retry
   let retrySeen = null;                // last "attempt/max" retry line drawn — the wire emits each retry twice (see api_retry)
   let history = [], histIdx = 0, histDraft = ''; // sent-message history for ↑/↓ recall
 
-  function sendTurn(t, imgs) {
+  // sel (6.6): the selection snapshot taken when the message was composed (activeSel() at
+  // submit, the queue item's own on drain, lastUser's on Retry) — null sends no selection key.
+  function sendTurn(t, imgs, sel) {
     pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
-    const bubble = addUserMessage(t, imgs, Date.now());
+    const bubble = addUserMessage(t, imgs, Date.now(), sel);
     daySepBefore(bubble.parentNode);   // 1.30: a date line when the day changed since the last turn
     turnStamped = false;               // the reply's first text block gets its own stamp
-    lastUser = { text: t, images: imgs };
+    lastUser = { text: t, images: imgs, selection: sel || null };
     if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null; retrySeen = null;
@@ -269,7 +351,12 @@
     // still running, and nothing re-advertised it: the CLI emits this level signal only when
     // membership CHANGES, so the roster stayed wrong until the next start/exit. The reset belongs
     // to the CLI process lifetime instead (clearLogUI); see the schema quote there.
-    bridge({ kind: 'user', text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) });
+    const frame = { kind: 'user', text: t, images: imgs.map(function (p) { return { kind: p.kind, media_type: p.media_type, data: p.data, name: p.name }; }) };
+    if (sel && sel.path) {
+      frame.selection = { path: sel.path, start: sel.start, end: sel.end, text: sel.text || '' };
+      if (sel.file) frame.selection.file = true;   // Kotlin reads the buffer; no content on the bridge
+    }
+    bridge(frame);
     stopping = false;
     setBusy(true);
     smoothToBottom();
@@ -353,7 +440,7 @@
     if (interrupted || busy || !queue.length) return;
     const next = queue.shift();
     renderQueue();
-    sendTurn(next.text, next.images || []);
+    sendTurn(next.text, next.images || [], next.selection || null);
   }
 
   function submit() {
@@ -378,11 +465,11 @@
       }
       // else 'text' → fall through and send as a normal turn (CLI expands custom/prompt commands)
     }
-    const imgs = pending;
+    const imgs = pending, sel = activeSel();   // 6.6: the selection as composed, even if it is queued
     clearComposer();
     // A turn is already running: hold this one instead of racing it (item 24).
-    if (busy) { queue.push({ text: t, images: imgs }); renderQueue(); smoothToBottom(); return; }
-    sendTurn(t, imgs);
+    if (busy) { queue.push({ text: t, images: imgs, selection: sel }); renderQueue(); smoothToBottom(); return; }
+    sendTurn(t, imgs, sel);
   }
   send.onclick = function () { if (busy) { stopping = true; bridge({ kind: 'stop' }); } else submit(); };
 
@@ -392,7 +479,7 @@
     r.innerHTML = '<a href="#">' + SVG_RETRY + 'Retry</a>';
     r.querySelector('a').onclick = function (e) {
       e.preventDefault();
-      if (!busy && lastUser) { r.remove(); sendTurn(lastUser.text, lastUser.images); }
+      if (!busy && lastUser) { r.remove(); sendTurn(lastUser.text, lastUser.images, lastUser.selection || null); }
     };
   }
 

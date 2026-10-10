@@ -3,6 +3,44 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-10 (twenty-seventh) — 6.6 auto-include selection + Include open file: CLI route measured dead, panel route built; switch rows; fixture 99; harness 1089→1158; test 176; live + replay over CDP; user hand-tested the selection half
+- Asked which deferred rows are worth reviving → recommended 6.6 first; discussed it to a ten-point
+  list (live pill, × per message, paperclip entry always visible, selection on / open-file content
+  later and off, persistence like the model pick, bubble + replay, measure the CLI route first).
+- Measured first: a stdlib fake "ide" WS bridge pushed VS Code's exact `selection_changed` to the
+  CLI over stdio (scratch cfg, haiku) — four variants, all NONE / no tag. Bundle reading: the
+  consumer is a TUI React hook; `BXr` yields no ideName for a plain `ws` client. Panel route it is.
+- Built: `SelectionTracker.kt` (selection/caret/tab listeners, 150 ms Alarm, change-only, cap),
+  `__selection` / `__selPref` frames, the `.att.isel` pill first in `#chips` and in the bubble, the
+  `data-act=selection` paperclip entry with `.pi-check`, `selection{…}` on `{kind:'user'}`,
+  `RenderLimits.ideSelectionTag / splitIdeSelection / SELECTION_MAX_CHARS`, SessionStore's
+  `selection` on user items, `claudeCode.includeSelection`. Mockup: entry + pill + bubble example.
+- The 6.3 test caught that my tag wording equals the CLI's own (its fixture record parsed): the
+  parser now requires the prompt-first form, tag-only texts stay dropped; test 169 → 174.
+- Fixture 99 (14 steps, 40 asserts; control on the untouched build failed at step 0); live over CDP:
+  the open route selected index.php 4-6 → pill; haiku answered path / lines / text verbatim; the
+  transcript holds one block prompt-first; resume drew the pill (`_local/6.6-live.png`).
+- Docs: checklist 6.6 ✅ (100 ✅ · 45 ➖), limits row, protocol note, backlog ("Include open file"
+  follow-up), plugin.xml + README "not there yet" lines.
+- User's hand test in the real PhpStorm, one step at a time, six steps all passed (highlight /
+  caret / tab switch; × and the toggle; send + exact quote; resume + pill click; toggle survives a
+  restart; a queued message keeps its own selection). One finding: "Include editor selection"
+  wrapped in the fixed-width popup → renamed "Include selection"; zip 20:18.
+- Then "Lets implement Include open file" + "toggles like the model menu's" (screenshot): planned
+  (matrix decided: highlight wins = VS Code's rule; `File.kt · file`; 50 K cap), fixture 99 →
+  23 steps / 67 asserts (control: `.tgl-row` 0, `#tglSel` threw), built (RenderLimits content tag
+  + `file` flag, `claudeCode.includeOpenFile`, ChatPanel reads the buffer on a pooled thread at
+  send, `#attachFooter` with `#tglSel` / `#tglFile`, `activeSel()` matrix), test 176, harness
+  1158, live over CDP (haiku quoted README's last line; resume `· file` pill), zip 21:00.
+  Docs: checklist, limits row, backlog line gone, plugin.xml bullet gone, README.
+- User's hand test of the open-file half, seven steps, all passed; one defect between steps: the
+  tag's trailing "may or may not" note was read by Sonnet as the file's last line → note moved
+  BEFORE the content, tag closes after it (`OPEN_RE` detects `\nFile content:\n`), test 176,
+  zip 21:10 reinstalled, the rerun quoted the unsaved marker. "Include selection" came up OFF
+  after install — the IDE's `other.xml` held `false` from the earlier round, persistence working.
+  User: a `· file` pill click must not highlight → `select:false` on the open route from the file
+  pill, `openFile(select)`; fixture 99 → 24 steps / 69 asserts. NOT committed.
+
 ## 2026-10-10 (twenty-sixth) — 0.15.0 released and Approved the same day: release.md end to end, verifier 8/8, notes gate held
 - "Lets release the updates" after "what version?" → 0.15.0 (six features since v0.14.0 → minor,
   by release.md's progression and the 0.13.1 precedent). Steps 1-5 from one script asserting every
@@ -231,61 +269,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   only). Not installed in the real PhpStorm — four fixes pending there. Committed and pushed on the
   user's ask (fix + this context save).
 
-## 2026-10-08 (seventeenth) — opened-thought trailing gap: thinkBlock() trims; fixture 89; harness 893
-- User screenshot: an opened "Thought for 1s" with a larger gap before the next Edit line than any
-  other block pair. Measured first: 13 of 13 persisted `thinking` blocks in the 40 newest transcripts
-  (2.1.270–2.1.293) end with `\n\n`; none starts with whitespace. `.think .body` is the panel's one
-  `white-space: pre-wrap` block, so the newlines painted an empty line (opened body 40px vs 20px for
-  the trimmed text, line-height 20.15px at 13px). The official webview never shows it because it
-  renders thinking through its markdown renderer.
-- Fix: `text = (text || '').trim()` at the top of `thinkBlock()` (`50-blocks.js`); the `empty`
-  check reuses it. Live (`finishThinking` on `content_block_stop` / `message_stop`), replay, gallery
-  and the redacted path all go through that builder — no CSS, no Kotlin change.
-- Free negative control: the sandbox was down, so it was started on the UNCHANGED build first,
-  fixture 89 written and run (3 guards pass, 3 discriminating fail), then the edit, restart, 6/6;
-  full harness 893/0. Height readings taken over CDP on the old build BEFORE the kill and recorded in
-  the fixture's provenance.
-- Trap: `pids=$(pgrep … | tr '\n' ' '); kill $pids` STILL fails in zsh ("illegal pid: a b c") —
-  variables are not word-split; `pgrep -f '…' | xargs -r kill` is the recipe (gotchas § Testing,
-  corrected). The un-bounded `until ! ss …` wait then spun past the 120s tool timeout.
-- Trap: a CDP eval right after a harness run sees an EMPTY panel — the harness `__clear`s between
-  fixtures; replay the frames inside the probe script before measuring.
-- `./gradlew test` skipped on purpose (JS-only). Not installed in the real PhpStorm — now three fixes
-  pending there. Committed and pushed on the user's ask (fix + this context save).
-
-## 2026-10-08 (sixteenth) — the Default selection follows the model the CLI actually serves; fixture 88; live-verified
-- User's 2026-09-27 report revisited: chip "Default (Opus 5.5)" while a whole session ran on
-  Fable and spent the Fable allowance; selecting Opus by hand "fixed" it. Measured over stdio on
-  2.1.283 (2026-09-27) and 2.1.293 (today) with `--settings '{"model":"haiku"}'`: the roster's
-  `default` row keeps saying Opus 5.5 while `system/init.model`, every assistant `message.model`
-  and `result.modelUsage` say Haiku; nothing in the initialize response (20 keys) names the
-  effective model. The panel read only the roster → the chip could not know.
-- Fix: `defaultResolvedFromCli` + `reconcileCliModel()` (`30-menus.js`), hooked from `system/init`
-  and the assistant case (`70-events.js`); `chipLabelFor()` is now the one label rule for the
-  chip's three writers; the Default row's description becomes "<real> · from your settings";
-  `80-gauge.js` matches `modelUsage` by `effectiveModelId()` — with `default` selected the ring
-  had never received the authoritative window. Named rows untouched; no `set_model` ever sent.
-- Fixture 88 (17 asserts): control on the pre-fix sandbox 12/5 (the five discriminating asserts;
-  step 3 passes vacuously there), fixed 17/17. First FULL run 886/1: fixture 67's synthetic
-  `system/init` carries `model:'<fixture>'`, which my page-lifetime override remembered across
-  the roster push → step 1 now resets it explicitly. Second full run 887/0; Kotlin 168/0.
-- Live end-to-end took two attempts: the first turn ran on Opus 5.5 because fixture 55's real
-  `setModel` calls had reached the sandbox CLI (five "Set model to …" echoes in its transcript)
-  and an explicit `set_model` beats settings. `bridge({kind:'new'})` → fresh CLI (pid by command
-  line) → one turn: chip "Default (Haiku 5.5)", row "Haiku 5.5 · from your settings", transcript
-  `488fb690` `message.model: claude-haiku-5-5`, taped `modelUsage` contextWindow 1,000,000 (the
-  CLI's own number for Haiku 5.5 — the ring was right). Override file removed afterwards.
-- Found on the way: the roster is per-PROCESS — the same 2.1.293 binary listed 11 rows over a
-  terminal stdio probe and 13 in the sandbox panel (`haiku→claude-haiku-5-5`, a `fable` alias).
-- Two probe traps (gotchas § Testing): a poll on `#log .generating` never fired; `ls -t` over the
-  transcripts picked an older file twice (mtime bumped) — find the session by `"version"` + first
-  `timestamp`.
-- Mid-session the user updated the VS Code extension to 2.1.293 and restarted the real PhpStorm:
-  its panel now runs the extension's 2.1.293 binary through the UNFIXED fallback — right version
-  by coincidence. Neither fix is installed there; local zip or 0.14.1 is the user's call.
-- Committed and pushed on the user's ask (fix + this context save).
-
 ## Digest
+- **2026-10-08 (seventeenth)** — opened-thought trailing gap: 13/13 persisted `thinking` blocks end with `\n\n` and `.think .body` is the one `pre-wrap` block → `thinkBlock()` trims (live, replay, gallery, redacted share the builder); fixture 89 written on the UNCHANGED sandbox first (3 discriminating fail → 6/6), harness 893; traps → gotchas § Testing (`pgrep | xargs -r kill`, a CDP eval right after the harness sees an empty panel). Committed + pushed on the user's ask.
+- **2026-10-08 (sixteenth)** — chip "Default (Opus 5.5)" while the session ran on Fable: the roster's `default` row never names the effective model, only `system/init.model` / `message.model` / `result.modelUsage` do → `defaultResolvedFromCli` + `reconcileCliModel()`, `chipLabelFor()` the one label rule, the gauge keyed by `effectiveModelId()`; fixture 88 (control 12/5 → 17/17), harness 887, test 168; live on a FRESH CLI (fixture 55's real `setModel` had pinned the old one); the roster is per-PROCESS (11 rows over stdio, 13 in the panel). Committed + pushed on the user's ask.
 - **2026-09-27 (fifteenth)** — "why is it not showing Opus 5.5?": every panel transcript said `version 2.1.270` while the terminal ran 2.1.283 — `/proc/<pid>/exe` was the VS Code extension's bundled binary, because `resolveExecutable()` walked the IDE's bare PATH while the CLI spawned under the shell overlay; fixed by one `ShellEnv.overlay()` feeding both (`ShellEnvTest`), negative control with `runIde` under a stripped PATH; the 11-row roster is the CLI's own (pty-driven TUI showed the same); traps: `pgrep -x claude` misses the versioned binary, `strings` on 2.1.28x is string-table only, a pty TUI needs a trusted dir and moves `lastSessionId`.
 - **2026-09-13 (fourteenth)** — re-audit → 2.1.270 through the new runbook step 3b (the public CHANGELOG is LEADS only; it surfaced five UI changes with no new `case` label); ONE real find, 1.29 (`bashEditDiff` sidecar — attached only in auto/bypass by default, the discovery probe had come up in auto), built the same day with 6.5-tab, 5.6 and 3.7 (user picked layouts from rendered options), all hand-tested; harness 870, test 164; **0.14.0 released** (`gh release create` hit a 500 and left a draft without the asset while the feed already said 0.14.0 — recovered in ~2 min; Approved within the hour); Marketplace screenshot 03 regenerated.
 - **2026-09-09 (thirteenth)** — 0.13.1 released as a patch (one renderer-only commit since v0.13.0 decided the version): `docs/release.md` in order with every precondition asserted before the first write, `test buildPlugin verifyPlugin` as one background run (163/0, 8 verdict files all Compatible — PS-263 joined the `recommended()` ladder), jar bytes checked for the new code, step-6 gate with the full notes → commit `8e19916`, tag, `gh release create`, feed. `marketplace-upload` green before the checks ran; Approved the same day with four verifier rows, visible in the UI before the API listed it (gotchas § Build). Context save committed and pushed on the user's own ask.

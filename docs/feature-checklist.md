@@ -17,8 +17,8 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 99 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 46 ➖ (145 rows) — no open rows, no [DECIDE] tags
-- **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools)
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 100 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (145 rows) — no open rows, no [DECIDE] tags
+- **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools). 6.6 (auto-include selection) left the deferred list and shipped 2026-10-10.
 - **Awaiting a decision ([DECIDE]):** none — 9.9 (the 1M switch) was decided 2026-10-10 after a
   hand test: retired, and the gauge lookup it was masking fixed. The 2.1.296 audit's other rows
   were taken and built the same day: 1.30 (message timestamps), 1.31 (question option previews),
@@ -1111,12 +1111,60 @@ auto-include selection, voice.
   backslash-escaped spellings both dropped; the quoted one attached; the official webview quotes the
   same way). `mentionToken()` in `50-blocks.js`, fixture 91 (control on the pre-fix build: 5 failed).
   </details>
-- **6.6** ➖ **Auto-include current selection** — deferred by the user (do last)
+- **6.6** ✅ **Auto-include editor selection / open file** — the active editor's selection rides
+  every prompt as a LIVE pill in the composer (`File.kt:12-18`, first in the chip row; nothing
+  highlighted = `File.kt:7`, the cursor line), its × drops it for that message only. The paperclip
+  menu's footer holds two switches in the model menu's idiom, IDE-level like the model pick, a
+  click never closing the menu: **Include selection** (ON by default) and **Include open file**
+  (OFF): with it on and nothing highlighted the file's CONTENT rides (`File.kt · file`, unsaved
+  buffer first, 50,000-char cap); a highlight always wins, VS Code's rule. The sent bubble wears
+  the same pill, live and on replay; a click opens the lines in the editor.
   <!-- --><details><summary>Read more…</summary>
-  2.1.296 audit (2026-10-10): VS Code now attaches the OPEN FILE by default — `claudeCode.attachOpenFile`
-  (2.1.271, default true: "Add the file that is open in the editor to your messages, and show it in
-  the message box. When off, only text you select is added") — and shows the selection as a
-  `[⧉ …]` pill in the TUI prompt (2.1.271). Still deferred; the reference shape when revived.
+  Built 2026-10-10 (user: "Lets implement it", after a step-by-step discussion that settled: live
+  pill not snapshot — "better is person to know what is going to be sent and not after send";
+  menu entry always visible — "or else how user can enable that"; persistence as the model pick).
+  **Route measured first**: a VS Code-shaped `selection_changed` notification pushed over the
+  MCP-over-WS "ide" client (a stdlib fake bridge, scratch `CLAUDE_CONFIG_DIR`, haiku, one turn)
+  never reached the model in stream-json mode — four variants (plain; `TERMINAL_EMULATOR=
+  JetBrains-JediTerm`; `FORCE_CODE_TERMINAL=1`; sent after a first turn): answer "NONE", no tag in
+  the transcript. In the 2.1.296 bundle the handler is a React hook in the TUI tree
+  (`Lee(He, C.offerIdeSelection)`) and the attachment gate (`BXr`) yields no ideName for a plain
+  `ws` client (`ws-ide` is filtered from user config). So the panel carries it: `SelectionTracker.kt`
+  (selection + caret + editor-tab listeners, 150 ms `Alarm`, change-only, text capped at
+  `SELECTION_MAX_CHARS`) → `__selection` → the pill; on send the page adds
+  `selection{path,start,end,text}` to `{kind:'user'}` and ChatPanel appends
+  `RenderLimits.ideSelectionTag` AFTER the prompt — `<ide_selection>The user selected the lines A
+  to B from PATH:…`, the CLI's own wording (byte-matched on the client-parity 37 record the 6.3
+  test holds), `<ide_opened_file>… cursor at line N` when nothing is highlighted. SessionStore
+  splits it back (`splitIdeSelection`, prompt-first only: a tag-only text is the TUI's injected
+  record and stays dropped, 6.3); the compact title reads the prompt. `__selPref` seeds the switch
+  (`claudeCode.includeSelection`, default true). **Include open file** (the same evening, user: "Lets implement it" + the switch-row
+  screenshot): the ✓ item became two `.tgl-row`s in a `.popup-f.pf-stack` footer (`#tglSel`,
+  `#tglFile`); `activeSel()` = highlight if the selection switch is on, else `{…, file:true}` if
+  the file switch is on, else the cursor line; the page sends only the FLAG and ChatPanel reads
+  the buffer on a pooled thread at send time (`readFileText`, unsaved first; >4 MB skipped) into
+  `<ide_opened_file>… File content:\n…</ide_opened_file>` (`OPEN_FILE_MAX_CHARS` 50,000, note);
+  `OPEN_RE` parses the content form back to `selection{…, file:true}`; `claudeCode.includeOpenFile`
+  default false, both prefs in one `__selPref {on,file}`. VS Code has ONE setting
+  (`attachOpenFile`, selection always on) and the same highlight-wins rule (its selection and
+  opened-file builders are exclusive on the text); our "selection OFF + file ON" row has no VS
+  Code equivalent and attaches the file regardless of the highlight. Evidence: fixture 99 →
+  23 steps / 67 asserts (control on the ✓-item build: `.tgl-row` 0, `#tglSel` threw), test 176,
+  harness 1129→1158; live over CDP (sandbox, real CLI, haiku): `#tglFile` flipped with the menu
+  staying open, README.md opened with no line → pill `README.md · file` (tooltip whole file ·
+  cursor line 1), haiku quoted the file's real last line, the transcript record is one block
+  prompt-first with `File content:`, resume drew the `· file` pill (`_local/6.6-file-live.png`).
+  Hand-tested by the user in the real PhpStorm the same evening, seven steps, all passed — and one
+  defect found and fixed between steps: with the "may or may not be related" note AFTER the
+  content inside the tag, Sonnet quoted the note as the file's last line; the note now precedes
+  the content and the tag closes right after it, and the rerun quoted an UNSAVED marker line
+  (buffer read, not disk). Also seen: a `· file` pill click highlighted the attached cursor line (the open
+  route's single-line rule) — the user wanted caret only, so the file pill now bridges
+  `{kind:'open', …, select:false}` and `openFile(select = false)` skips the selection; a
+  selection pill still re-selects its lines (fixture 99 step 21b, 24 steps / 69 asserts). Evidence: fixture 99 (14 steps, 40 asserts; negative control on the pre-change build:
+  step 0's pill / row / menu asserts failed), harness 1089→1129, test 174 (RenderLimitsTest round
+  trip incl. a Windows drive path, the cap note, the TUI wording; SessionStoreSelectionTest: prompt
+  + tag, cursor-only, tag-only dropped, title). Live (sandbox PhpStorm over CDP, real editor + real CLI, haiku): the panel's own open route selected index.php 4-6 in the editor → the tracker pushed it → pill `index.php:4-6` with the exact text; a haiku turn asked what the IDE context says and answered the path, "Lines 4-6" and the three lines verbatim; the transcript record is ONE text block, prompt first, tag after; resuming that session drew the bubble with the same pill and the prompt without the tag (`_local/6.6-live.png`). Hand-tested by the user in the real PhpStorm the same day, six steps, all passed: highlight / caret / tab switch, × and the toggle, send + the exact (mid-word) quote back, resume + a pill click selecting the lines, the toggle surviving a restart, a queued message keeping its own selection. Finding: the entry's label wrapped in the fixed-width popup → "Include selection".
   </details>
 - **6.7** ➖ **`list_files_request` / `respectGitIgnore`** [NEW] — declined by the user 2026-08-29:
   our picker is IDE-indexed and no gap has shown.

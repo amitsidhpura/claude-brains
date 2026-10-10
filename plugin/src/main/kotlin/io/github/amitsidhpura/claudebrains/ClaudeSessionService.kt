@@ -124,6 +124,17 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         c.askSideQuestion(question, history, onAnswer)
     }
 
+    /** 6.6: whether the editor selection rides every prompt — the paperclip menu's "Include editor
+     *  selection" entry. Application-level like the model pick: global across projects, survives
+     *  restarts, seeded to the page on every load (ChatPanel.seedUi). Default ON. */
+    fun includeSelection(): Boolean = props.getBoolean(SELECTION_KEY, true)
+    fun setIncludeSelection(on: Boolean) = props.setValue(SELECTION_KEY, on, true)
+
+    /** 6.6: "Include open file" — the active file's content rides the prompt when nothing is
+     *  highlighted (the highlight always wins). Same persistence as the selection switch. Default OFF. */
+    fun includeOpenFile(): Boolean = props.getBoolean(OPEN_FILE_KEY, false)
+    fun setIncludeOpenFile(on: Boolean) = props.setValue(OPEN_FILE_KEY, on, false)
+
     /** Persisted thinking preference (9.5), stored as the exception (off). ON resets the CLI to
      * its session default (max_thinking_tokens null); OFF caps it at 0. */
     fun thinkingOff(): Boolean = props.getBoolean(THINKING_OFF_KEY, false)
@@ -267,9 +278,11 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * Open a file reference from the panel. [line]/[endLine] are 1-BASED line numbers (the shape
      * `Read`'s `offset`/`limit` use); when present the editor lands on that line and SELECTS the
      * range, so clicking "chat.html (lines 40-119)" shows exactly the slice Claude read rather than
-     * the top of the file.
+     * the top of the file. [select] false lands the caret on [line] WITHOUT selecting anything —
+     * the `· file` pill's click (6.6): the whole file rode, so a highlighted line would misstate
+     * what was sent (user, 2026-10-10).
      */
-    fun openFile(rawPath: String, line: Int? = null, endLine: Int? = null): Boolean {
+    fun openFile(rawPath: String, line: Int? = null, endLine: Int? = null, select: Boolean = true): Boolean {
         val p = rawPath.trim().replace('\\', '/')
         if (p.isEmpty()) return false
         // findVFileOnDisk, not findVFile: the click is a user action on a path the transcript
@@ -283,7 +296,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             // OpenFileDescriptor takes a 0-BASED line; the wire carries 1-based, so convert once here
             val zero = line?.let { maxOf(0, it - 1) } ?: 0
             com.intellij.openapi.fileEditor.OpenFileDescriptor(project, vf, zero, 0).navigate(true)
-            if (line == null) return@invokeLater
+            if (line == null || !select) return@invokeLater
             val editor = com.intellij.openapi.fileEditor.FileEditorManager
                 .getInstance(project).selectedTextEditor ?: return@invokeLater
             val doc = editor.document
@@ -618,5 +631,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         const val CUSTOM_MODELS_KEY = "claudeCode.customModels"
         const val FAST_MODE_KEY = "claudeCode.fastMode"
         const val THINKING_OFF_KEY = "claudeCode.thinkingOff"
+        const val SELECTION_KEY = "claudeCode.includeSelection"
+        const val OPEN_FILE_KEY = "claudeCode.includeOpenFile"
     }
 }

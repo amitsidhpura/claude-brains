@@ -1,0 +1,557 @@
+{
+ "item": "6.6 Auto-include editor selection + Include open file (2026-10-10): the live pill, its per-message \u00d7, the two paperclip SWITCH rows (selection ON / file OFF by default), the file label, the wire flag, the sent bubble, replay, queue and retry",
+ "branch": "__selection {path,start,end,text} \u2192 ideSel; __selPref {on,file} \u2192 selIncluded / fileIncluded (#tglSel / #tglFile in #attachMenu's .popup-f footer, setTgl, the switch does NOT close the menu); activeSel(): selIncluded && text \u2192 the selection; else fileIncluded \u2192 {\u2026, file:true} (label `File \u00b7 file`, tooltip whole file + cursor line); else selIncluded \u2192 the cursor line; else null. The send adds selection{path,start,end,text[,file:true]} \u2014 the page never sends content; ChatPanel reads the buffer at send time and writes the <ide_opened_file \u2026 File content:> tag; SessionStore parses it back to selection{\u2026, file:true}. A `\u00b7 file` pill click bridges {kind:'open', path, line, select:false} (caret only); a selection pill bridges {\u2026, endLine}.",
+ "provenance": "Page-side contract only: the frames are OUR host frames (ChatPanel pushes __selection / __selPref; fixture-invented shapes match the Kotlin producer by construction, pinned by RenderLimitsTest's splice checks and the SessionStoreSelectionTest round trip). The CLI route was MEASURED DEAD 2026-10-10 on 2.1.296 over stdio: a VS Code-shaped selection_changed notification over the MCP-over-WS 'ide' client (fake bridge, 4 variants incl. after a first turn) never reached the model (answer NONE, no <ide_selection> in the transcript) \u2014 the hook lives in the TUI's React tree and the ideName gate (BXr) returns null for a plain 'ws' client. Negative control: on the pre-change build step 0's pill/menu asserts fail.",
+ "steps": [
+  {
+   "note": "0 \u2014 pref seeded {on:true,file:false} + a 12-18 selection: the pill is the FIRST chip in #chips, the row shows, the paperclip footer has two switch rows, selection ON / file OFF",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); setBusy(false); clearComposer(); if (!window.__realBridge99) { window.__realBridge99 = window.__bridge; } window.__tape99 = []; window.__bridge = function(j){ window.__tape99.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "__selPref",
+     "on": true,
+     "file": false
+    },
+    {
+     "type": "__selection",
+     "path": "/home/dev/Sites/sample-project/src/components/App.kt",
+     "start": 12,
+     "end": 18,
+     "text": "fun render() {\n  val x = 1\n  return x\n}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "getComputedStyle(document.getElementById('chips')).display",
+     "equals": "flex",
+     "why": "DISCRIMINATING: the chip row shows for a selection alone (pre-change: hidden, no attachments)"
+    },
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: one selection pill"
+    },
+    {
+     "js": "(function(){ var l = document.querySelector('#chips .att.isel .isel-l'); return l ? l.textContent : 'absent'; })()",
+     "equals": "App.kt:12-18",
+     "why": "label = basename:start-end"
+    },
+    {
+     "js": "document.querySelector('#chips .att').classList.contains('isel')",
+     "equals": true,
+     "why": "the pill is first in the row"
+    },
+    {
+     "js": "(document.querySelector('#chips .att.isel') || {}).title",
+     "equals": "/home/dev/Sites/sample-project/src/components/App.kt:12-18",
+     "why": "the tooltip carries the full path"
+    },
+    {
+     "js": "document.querySelectorAll('#attachMenu .tgl-row').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: the paperclip menu's footer holds the two switch rows (pre-change: a \u2713 popup-item, no .tgl-row)"
+    },
+    {
+     "js": "document.getElementById('tglSel').classList.contains('on')",
+     "equals": true,
+     "why": "Include selection ON"
+    },
+    {
+     "js": "document.getElementById('tglFile').classList.contains('on')",
+     "equals": false,
+     "why": "Include open file OFF (default)"
+    },
+    {
+     "js": "document.querySelectorAll('#attachMenu .popup-item').length",
+     "equals": 2,
+     "why": "Upload + Add context stay items; the old \u2713 item is gone"
+    }
+   ]
+  },
+  {
+   "note": "1 \u2014 nothing highlighted (empty text, cursor line 7): file:line, still attached",
+   "frames": [
+    {
+     "type": "__selection",
+     "path": "/home/dev/Sites/sample-project/src/components/App.kt",
+     "start": 7,
+     "end": 7,
+     "text": ""
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var l = document.querySelector('#chips .att.isel .isel-l'); return l ? l.textContent : 'absent'; })()",
+     "equals": "App.kt:7",
+     "why": "cursor-only label is file:line"
+    },
+    {
+     "js": "activeSel().text",
+     "equals": "",
+     "why": "the payload carries the empty text, so Kotlin writes the opened-file tag"
+    }
+   ]
+  },
+  {
+   "note": "2 \u2014 the pill's \u00d7 drops the selection for THIS message only",
+   "setup": "document.querySelector('#chips .att.isel .rm').click();",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 0,
+     "why": "pill gone"
+    },
+    {
+     "js": "activeSel() === null",
+     "equals": true,
+     "why": "nothing would be sent"
+    },
+    {
+     "js": "getComputedStyle(document.getElementById('chips')).display",
+     "equals": "none",
+     "why": "no chips left \u2192 the row hides"
+    }
+   ]
+  },
+  {
+   "note": "3 \u2014 the next editor change brings it back",
+   "frames": [
+    {
+     "type": "__selection",
+     "path": "/home/dev/Sites/sample-project/src/components/App.kt",
+     "start": 20,
+     "end": 20,
+     "text": "val y = 2"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 1,
+     "why": "the \u00d7 was per-message, not sticky"
+    },
+    {
+     "js": "(function(){ var l = document.querySelector('#chips .att.isel .isel-l'); return l ? l.textContent : 'absent'; })()",
+     "equals": "App.kt:20",
+     "why": "one-line selection labels as a single line"
+    }
+   ]
+  },
+  {
+   "note": "4 \u2014 selection switch OFF: no pill, {kind:'selPref', on:false, file:false} bridged, the row STAYS visible",
+   "setup": "document.getElementById('tglSel').click();",
+   "expect": [
+    {
+     "js": "document.getElementById('tglSel').classList.contains('on')",
+     "equals": false,
+     "why": "unticked"
+    },
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 0,
+     "why": "no pill while off"
+    },
+    {
+     "js": "(function(){ var p = window.__tape99.filter(function(t){ return t.kind === 'selPref'; }).slice(-1)[0]; return p ? [p.on, p.file].join('|') : 'none'; })()",
+     "equals": "false|false",
+     "why": "DISCRIMINATING: {kind:'selPref', on:false} bridged for persistence (file stays false)"
+    },
+    {
+     "js": "(function(){ var e = document.getElementById('tglSel'); return !e.hidden && getComputedStyle(e).display !== 'none'; })()",
+     "equals": true,
+     "why": "the switch row is how the user turns it back on \u2014 never hidden"
+    }
+   ]
+  },
+  {
+   "note": "5 \u2014 toggle ON again: the pill is back, pref bridged true",
+   "setup": "document.getElementById('tglSel').click();",
+   "expect": [
+    {
+     "js": "document.getElementById('tglSel').classList.contains('on')",
+     "equals": true,
+     "why": "ticked"
+    },
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 1,
+     "why": "pill back without a new editor event (the page kept the last selection)"
+    },
+    {
+     "js": "(function(){ var p = window.__tape99.filter(function(t){ return t.kind === 'selPref'; }).slice(-1)[0]; return p ? [p.on, p.file].join('|') : 'none'; })()",
+     "equals": "true|false",
+     "why": "bridged true (file stays false)"
+    }
+   ]
+  },
+  {
+   "note": "6 \u2014 send: the user frame carries the selection, the bubble wears the pill first, Retry remembers it, the composer pill persists",
+   "setup": "input.value = 'Explain this'; submit();",
+   "expect": [
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "/home/dev/Sites/sample-project/src/components/App.kt|20|20|string",
+     "why": "DISCRIMINATING: {kind:'user'} gained selection{path,start,end,text}"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; return b ? b.querySelectorAll('.att.isel').length : 'no-bubble'; })()",
+     "equals": 1,
+     "why": "the sent bubble shows the pill"
+    },
+    {
+     "js": "Array.from(document.querySelectorAll('#log .msg-user .msg-atts .att.isel .isel-l')).map(function(l){ return l.textContent; }).join(',')",
+     "equals": "App.kt:20",
+     "why": "same label as the composer showed"
+    },
+    {
+     "js": "lastUser.selection.start",
+     "equals": 20,
+     "why": "Retry resends with the selection"
+    },
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 1,
+     "why": "the composer pill stays: the editor selection is still there"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; return b.querySelector('.msg-atts').firstChild.classList.contains('isel'); })()",
+     "equals": true,
+     "why": "pill first in the bubble's chip row"
+    }
+   ]
+  },
+  {
+   "note": "7 \u2014 replay path: addUserMessage with an item selection draws the same pill (SessionStore emits selection{path,start,end})",
+   "setup": "setBusy(false); addUserMessage('replayed prompt', [], Date.now(), {path:'/x/y/Main.kt', start:3, end:9});",
+   "expect": [
+    {
+     "js": "Array.from(document.querySelectorAll('#log .msg-user .msg-atts .att.isel .isel-l')).map(function(l){ return l.textContent; }).join(',')",
+     "equals": "App.kt:20,Main.kt:3-9",
+     "why": "DISCRIMINATING: replay bubble carries the pill"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; var p = b.querySelector('.att.isel'); return p ? p.title : 'absent'; })()",
+     "equals": "/x/y/Main.kt:3-9",
+     "why": "tooltip = full path and lines"
+    }
+   ]
+  },
+  {
+   "note": "8 \u2014 no editor (bare __selection): no pill, the row hides",
+   "frames": [
+    {
+     "type": "__selection"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 0,
+     "why": "nothing to attach"
+    },
+    {
+     "js": "getComputedStyle(document.getElementById('chips')).display",
+     "equals": "none",
+     "why": "row hidden"
+    }
+   ]
+  },
+  {
+   "note": "9 \u2014 a send with no selection has NO selection key at all",
+   "setup": "input.value = 'plain'; submit();",
+   "expect": [
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "no-selection",
+     "why": "absent key, not an empty object"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; return b ? b.querySelectorAll('.att.isel').length : 'no-bubble'; })()",
+     "equals": 0,
+     "why": "no pill on the bubble"
+    }
+   ]
+  },
+  {
+   "note": "10 \u2014 pref OFF at send time: a live selection is neither shown nor sent",
+   "setup": "setBusy(false); document.getElementById('tglSel').click();",
+   "frames": [
+    {
+     "type": "__selection",
+     "path": "/home/dev/Sites/sample-project/src/components/App.kt",
+     "start": 1,
+     "end": 2,
+     "text": "x"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 0,
+     "why": "off \u2192 no pill even with a selection"
+    },
+    {
+     "js": "document.getElementById('tglSel').classList.contains('on')",
+     "equals": false,
+     "why": "unticked"
+    }
+   ]
+  },
+  {
+   "note": "11 \u2014 \u2026and the frame it sends is clean",
+   "setup": "input.value = 'q'; submit();",
+   "expect": [
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "no-selection",
+     "why": "DISCRIMINATING: pref off suppresses the key"
+    }
+   ]
+  },
+  {
+   "note": "12 \u2014 queued while busy: the item keeps the selection it was composed with and sends it on drain",
+   "setup": "setBusy(false); document.getElementById('tglSel').click(); window.onClaudeEvent(JSON.stringify({type:'__selection', path:'/home/dev/Sites/sample-project/src/components/App.kt', start:30, end:31, text:'a\\nb'})); setBusy(true); input.value = 'later'; submit();",
+   "expect": [
+    {
+     "js": "queue.length",
+     "equals": 1,
+     "why": "held, not sent"
+    },
+    {
+     "js": "queue[0].selection.start",
+     "equals": 30,
+     "why": "snapshot taken at compose time"
+    }
+   ]
+  },
+  {
+   "note": "13 \u2014 drain sends it with the selection",
+   "setup": "setBusy(false); drainQueue(false);",
+   "expect": [
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "/home/dev/Sites/sample-project/src/components/App.kt|30|31|string",
+     "why": "the queued turn carried its selection"
+    },
+    {
+     "js": "queue.length",
+     "equals": 0,
+     "why": "drained"
+    }
+   ]
+  },
+  {
+   "note": "14 \u2014 Include open file ON, nothing highlighted: the pill reads `App.kt \u00b7 file`, the pref is bridged {on:true,file:true}, the send carries selection.file === true",
+   "setup": "setBusy(false); document.getElementById('tglFile').click();",
+   "frames": [
+    {
+     "type": "__selection",
+     "path": "/home/dev/Sites/sample-project/src/components/App.kt",
+     "start": 7,
+     "end": 7,
+     "text": ""
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.getElementById('tglFile').classList.contains('on')",
+     "equals": true,
+     "why": "switch ON"
+    },
+    {
+     "js": "(function(){ var l = document.querySelector('#chips .att.isel .isel-l'); return l ? l.textContent : 'absent'; })()",
+     "equals": "App.kt \u00b7 file",
+     "why": "DISCRIMINATING: the file label"
+    },
+    {
+     "js": "(function(){ var t = (document.querySelector('#chips .att.isel') || {}).title; return t.indexOf('whole file') >= 0 && t.indexOf('cursor line 7') >= 0; })()",
+     "equals": true,
+     "why": "tooltip says whole file + cursor line"
+    },
+    {
+     "js": "activeSel().file === true",
+     "equals": true,
+     "why": "the flag the send will carry"
+    },
+    {
+     "js": "(function(){ var p = window.__tape99.filter(function(t){ return t.kind === 'selPref'; }).slice(-1)[0]; return p ? [p.on, p.file].join('|') : 'none'; })()",
+     "equals": "true|true",
+     "why": "DISCRIMINATING: both prefs in one bridge call"
+    }
+   ]
+  },
+  {
+   "note": "15 \u2014 \u2026and the send: selection.file true, empty text (Kotlin reads the buffer), bubble label `App.kt \u00b7 file`, Retry remembers the flag",
+   "setup": "input.value = 'what is open'; submit();",
+   "expect": [
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text, ('file' in u.selection) ? u.selection.file : 'nofile'].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "/home/dev/Sites/sample-project/src/components/App.kt|7|7|string|true",
+     "why": "DISCRIMINATING: file flag on the wire"
+    },
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u.selection.text; })()",
+     "equals": "",
+     "why": "no content crosses the bridge \u2014 Kotlin reads it"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; var l = b && b.querySelector('.att.isel .isel-l'); return l ? l.textContent : 'none'; })()",
+     "equals": "App.kt \u00b7 file",
+     "why": "the bubble wears the file pill"
+    },
+    {
+     "js": "lastUser.selection.file === true",
+     "equals": true,
+     "why": "Retry resends the flag"
+    }
+   ]
+  },
+  {
+   "note": "16 \u2014 a highlight with BOTH switches ON: the selection wins (VS Code's rule), no file flag",
+   "setup": "setBusy(false);",
+   "frames": [
+    {
+     "type": "__selection",
+     "path": "/home/dev/Sites/sample-project/src/components/App.kt",
+     "start": 12,
+     "end": 18,
+     "text": "fun render() {}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){ var l = document.querySelector('#chips .att.isel .isel-l'); return l ? l.textContent : 'absent'; })()",
+     "equals": "App.kt:12-18",
+     "why": "selection label, not \u00b7 file"
+    },
+    {
+     "js": "!activeSel().file",
+     "equals": true,
+     "why": "no flag"
+    }
+   ]
+  },
+  {
+   "note": "17 \u2014 \u2026sent: the frame has NO file key",
+   "setup": "input.value = 'explain'; submit();",
+   "expect": [
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text, ('file' in u.selection) ? u.selection.file : 'nofile'].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "/home/dev/Sites/sample-project/src/components/App.kt|12|18|string|nofile",
+     "why": "DISCRIMINATING: highlight wins, key absent"
+    }
+   ]
+  },
+  {
+   "note": "18 \u2014 selection OFF + file ON with a highlight: the file rides (the row VS Code cannot express)",
+   "setup": "setBusy(false); document.getElementById('tglSel').click();",
+   "expect": [
+    {
+     "js": "document.getElementById('tglSel').classList.contains('on')",
+     "equals": false,
+     "why": "selection switch off"
+    },
+    {
+     "js": "(function(){ var l = document.querySelector('#chips .att.isel .isel-l'); return l ? l.textContent : 'absent'; })()",
+     "equals": "App.kt \u00b7 file",
+     "why": "DISCRIMINATING: file label despite the highlight"
+    },
+    {
+     "js": "activeSel().file === true",
+     "equals": true,
+     "why": "flag set"
+    },
+    {
+     "js": "(function(){ var p = window.__tape99.filter(function(t){ return t.kind === 'selPref'; }).slice(-1)[0]; return p ? [p.on, p.file].join('|') : 'none'; })()",
+     "equals": "false|true",
+     "why": "prefs bridged"
+    }
+   ]
+  },
+  {
+   "note": "19 \u2014 both OFF: no pill, a send has no selection key",
+   "setup": "document.getElementById('tglFile').click(); input.value = 'bare'; submit();",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#chips .att.isel').length",
+     "equals": 0,
+     "why": "nothing to attach"
+    },
+    {
+     "js": "(function(){ var u = window.__tape99.filter(function(t){ return t.kind === 'user'; }).slice(-1)[0]; return u ? (u.selection ? [u.selection.path, u.selection.start, u.selection.end, typeof u.selection.text, ('file' in u.selection) ? u.selection.file : 'nofile'].join('|') : 'no-selection') : 'no-user-frame'; })()",
+     "equals": "no-selection",
+     "why": "DISCRIMINATING: key absent"
+    },
+    {
+     "js": "(function(){ var p = window.__tape99.filter(function(t){ return t.kind === 'selPref'; }).slice(-1)[0]; return p ? [p.on, p.file].join('|') : 'none'; })()",
+     "equals": "false|false",
+     "why": "prefs bridged"
+    }
+   ]
+  },
+  {
+   "note": "20 \u2014 a switch click leaves the paperclip menu OPEN (model-footer idiom)",
+   "setup": "setBusy(false); document.getElementById('attachBtn').click(); document.getElementById('tglFile').click();",
+   "expect": [
+    {
+     "js": "document.getElementById('attachMenu').classList.contains('show')",
+     "equals": true,
+     "why": "DISCRIMINATING: the old \u2713 item closed the menu; a switch does not"
+    },
+    {
+     "js": "document.getElementById('tglFile').classList.contains('on')",
+     "equals": true,
+     "why": "flipped"
+    }
+   ]
+  },
+  {
+   "note": "21 \u2014 replay: an item selection with file:true draws the `\u00b7 file` pill (SessionStore emits file:true for a content tag)",
+   "setup": "closeMenus(); addUserMessage('replayed', [], Date.now(), {path:'/x/y/Main.kt', start:3, end:3, file:true});",
+   "expect": [
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; var l = b && b.querySelector('.att.isel .isel-l'); return l ? l.textContent : 'none'; })()",
+     "equals": "Main.kt \u00b7 file",
+     "why": "DISCRIMINATING: replay file pill"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')).slice(-1)[0]; return b.querySelector('.att.isel').title.indexOf('whole file') >= 0; })()",
+     "equals": true,
+     "why": "tooltip"
+    }
+   ]
+  },
+  {
+   "note": "21b \u2014 pill clicks: a `\u00b7 file` pill opens at the cursor line with select:false and no endLine; a selection pill opens its exact range (no select key)",
+   "setup": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')); b[b.length - 1].querySelector('.att.isel').click(); })();",
+   "expect": [
+    {
+     "js": "(function(){ var o = window.__tape99.filter(function(t){ return t.kind === 'open'; }).slice(-1)[0]; return o ? [o.path, o.line, ('endLine' in o) ? o.endLine : 'noEnd', ('select' in o) ? String(o.select) : 'noSelect'].join('|') : 'none'; })()",
+     "equals": "/x/y/Main.kt|3|noEnd|false",
+     "why": "DISCRIMINATING: the file pill asks for caret only (pre-change: endLine 3, no select key)"
+    },
+    {
+     "js": "(function(){ var b = Array.from(document.querySelectorAll('#log .msg-user')); var sel = b.map(function(x){ return x.querySelector('.att.isel'); }).filter(function(p){ return p && p.querySelector('.isel-l').textContent === 'App.kt:12-18'; })[0]; sel.click(); return (function(){ var o = window.__tape99.filter(function(t){ return t.kind === 'open'; }).slice(-1)[0]; return o ? [o.path, o.line, ('endLine' in o) ? o.endLine : 'noEnd', ('select' in o) ? String(o.select) : 'noSelect'].join('|') : 'none'; })(); })()",
+     "equals": "/home/dev/Sites/sample-project/src/components/App.kt|12|18|noSelect",
+     "why": "a selection pill still re-selects its lines"
+    }
+   ]
+  },
+  {
+   "note": "22 \u2014 restore: selection ON / file OFF (the defaults) for the fixtures that follow; real bridge back",
+   "setup": "document.getElementById('tglSel').click(); document.getElementById('tglFile').click(); window.__bridge = window.__realBridge99;",
+   "expect": [
+    {
+     "js": "document.getElementById('tglSel').classList.contains('on')",
+     "equals": true,
+     "why": "default"
+    },
+    {
+     "js": "document.getElementById('tglFile').classList.contains('on')",
+     "equals": false,
+     "why": "default"
+    }
+   ]
+  }
+ ]
+}

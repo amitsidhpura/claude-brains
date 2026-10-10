@@ -153,7 +153,7 @@ Working end to end and used daily.
 
 By design, and not planned: a settings page and an in-IDE login — both are the terminal's half
 of the split above. Declined on purpose: cost and token/usage display, which pulls the panel away
-from the many-times-an-hour loop it exists for. Deferred but wanted: conversation tabs,
-auto-include selection, and voice input.
+from the many-times-an-hour loop it exists for. Deferred but wanted: conversation tabs and
+voice input.
 
 Personal project — issues and PRs aren't actively solicited, but you're welcome to fork it.

@@ -5,6 +5,15 @@ Each bullet is a RULE plus the minimum evidence to trust it. Payload shapes live
 re-read those before trusting memory here.
 
 ## Protocol / wire
+- **An IDE→CLI `selection_changed` notification over the MCP-over-WS "ide" client does NOTHING in
+  the panel's stream-json mode** (measured 2026-10-10, 2.1.296, four variants incl. after a first
+  turn): the consumer is a React hook in the TUI tree (`Lee(He, C.offerIdeSelection)`) and the
+  `selected_lines_in_ide` attachment needs an ideName that `BXr` only yields for `sse-ide` /
+  `ws-ide` configs or a detected terminal (`FORCE_CODE_TERMINAL` measured: still nothing). The
+  panel writes the `<ide_selection>` text itself (6.6, `RenderLimits.ideSelectionTag`). The tag's
+  wording IS the CLI's own — `<ide_selection>The user selected the lines A to B from PATH:` — so a
+  parser for ours must require the prompt-first `\n\n` form or it resurrects the TUI's injected
+  records (the 6.3 test caught exactly that).
 
 - **The roster's `default` row LIES about what `default` runs.** `initialize.models[0]` is the
   CLI's built-in default (`resolvedModel: claude-opus-5-5`, "Opus 5.5 · …") whatever a settings
@@ -369,6 +378,19 @@ re-read those before trusting memory here.
   usually the reference. Windowed replay also means browser find only sees loaded blocks.
 
 ## IDE platform / VFS
+- **`ClaudeSessionService.openFile(path, line)` with a line and NO endLine SELECTS that line** —
+  the 6.6 tracker then reports a one-line selection WITH text, not a cursor. A pure cursor-only
+  case cannot be driven over CDP (no input tool on this box); it is covered by fixture 99 step 1
+  and the unit tests, not live (2026-10-10).
+- **A note INSIDE an injected tag must come BEFORE the payload, never after**: with "This may or
+  may not be related to the current task." placed after the file content inside
+  `<ide_opened_file>`, Sonnet quoted the note as the file's last line (hand test 2026-10-10);
+  haiku had quoted the real line in the CDP run, so a single model's pass proves nothing about
+  the boundary. The tag now ends right after the content.
+- **Editor listeners for the whole IDE go through `EditorFactory.eventMulticaster`** (selection +
+  caret, with a parent Disposable) plus `FileEditorManagerListener.FILE_EDITOR_MANAGER` on the
+  project bus for tab switches; re-read `selectedTextEditor` after a Swing-thread `Alarm` debounce
+  and push only on change (`SelectionTracker.kt`). No read action needed: everything is on the EDT.
 - **PhpStorm 2026.2's "MCP Server" status-bar popup is the IDE's, Compose-rendered — a clipped button
   row is Skiko's fallback, not a plugin fault.** 2026-10-10: the user's popup lost its bottom row;
   idea.log had `[SKIKO] Fallback to next API` + `RenderException: Cannot create OpenGL context`
@@ -821,6 +843,27 @@ re-read those before trusting memory here.
   capture a stack over CDP — the fastest way to find "who closed this".
 
 ## Testing, probes and sandboxes
+- **A kill → wait → relaunch chain run in the BACKGROUND races a foreground "wait for :9222"
+  loop**: the loop saw the OLD sandbox's port still open ("port up after 1s") twice on
+  2026-10-10. It worked out only because the relaunch was faster than the 25 s sleep that
+  followed — check the IDE's start time (`ps -o lstart= -p $(pgrep -f 'transformed/PhpStorm…')`)
+  or wait for the port to CLOSE first, in the foreground, before waiting for it to open.
+- **`bridge({kind:'open', path})` with NO line puts the caret at the top with nothing selected** —
+  the one way to drive the tracker's cursor-only / "Include open file" branch over CDP (a line
+  with no end SELECTS that line, see § IDE platform). `scratchpad/drive66b.py`.
+- **A `cd plugin && …` Bash call MOVES the session cwd for later calls** (2026-10-10): the full
+  harness launched as `python3 tools/live_harness.py` from `plugin/` failed with "No such file" and
+  the background pipe still EXITED 0 — read the output file, never the exit code, and use absolute
+  paths for background runs.
+- **A fake bridge for the CLI needs no library**: a ~80-line stdlib RFC 6455 server (handshake with
+  the auth header checked and `Sec-WebSocket-Protocol: mcp` echoed, masked text frames, ping/close)
+  answering `initialize` / `tools/list` / `tools/call` is enough for the CLI to list it as the
+  connected "ide" server; push notifications from it with `--mcp-config` pointing at its port
+  (`scratchpad/sel_probe.py` shape, 6.6). `python3 -I` has no `websockets`; the harness's does
+  because it runs without `-I`.
+- **The panel's own open route is an input tool for the editor**: `bridge({kind:'open', path,
+  line, endLine})` selects a range in the real editor, which is how the 6.6 tracker was driven live
+  without keyboard/mouse automation (`scratchpad/drive66.py`).
 - **"Either way" needs BOTH sides of the one variable measured** (2026-10-10): the 9.9 audit probed
   `opus`, `opus[1m]`, `sonnet[1m]` and declared the window "1M with or without the tag" — untagged
   `sonnet`, the case the user actually hit, was never run. Pair every tagged probe with its untagged

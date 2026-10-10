@@ -1,43 +1,38 @@
 # State
 
 ## Current focus
-**2026-10-10 (twenty-sixth session, Linux): 0.15.0 RELEASED and Approved — `docs/release.md`
-end to end (commit `1da78a8`, tag `v0.15.0`, GitHub release with the asset, feed serving 0.15.0,
-`marketplace-upload` green, Marketplace "Approved" with JetBrains' ladder green). Earlier today:
-9.9 retired + gauge lookup fixed and the popup fit (`8324cd8`, `96e32d1`); 15.4, the Kotlin
-clipboard route, 1.30's midnight relay, 11.7 measured + hand-tested (`759c904`, `96315e0`,
-`a556a3a`). Twelve features/fixes shipped since v0.14.0 (2026-09-13).**
-0. **9.9 + popup fit** (`8324cd8`, `96e32d1`). The footer's 1M switch is gone; `windowConfirmed`
-   replaces `oneMFromCli`; `reconcileFromResult` (`80-gauge.js`) also matches the roster's
-   `resolvedModel`, tags stripped both sides; `capToRows` (`40-sessions.js`) measures the popup
-   against `#head` + viewport and `tg('modelMenu')` caps `#modelItems` with no row count. Fixtures
-   97 + 98; hand-tested by the user in the real PhpStorm (4% after a turn, the switch row gone).
-   The user has the 17:37 zip installed (everything through 9.9); the popup fit is in the 17:45
-   zip, NOT yet installed.
-1. **15.4 export / copy response** (`759c904`). A hover copy control on every finished assistant
-   text block (`mdBlock` / `copyable` in `plugin/src/main/resources/webview/js/20-markdown.js`,
-   source on `el.__md`, `finishBubble` in `70-events.js` at every live finalisation site) and an
-   Export conversation popup hanging from the header (`#exportBtn` / `#exportMenu` in `chat.html`,
-   logic in `40-sessions.js`): one `bridge{kind:'export'}` per open → `ClaudeCli.exportConversation`
-   (`export_conversation`) → `__export{text, default_filename | error}`; Copy / Save rows off until
-   the text lands; Save sends the shown text back on `exportSave` → `ChatPanel.saveText` (native
-   dialog). **Every copy control** (code block, response, export row) bridges `{kind:'copy', text}`
-   → `CopyPasteManager` — `navigator.clipboard` needs focus + a user activation (measured). Also
-   fixed: the streaming accumulator never reset between text blocks of one message; a CLI exit
-   under a loading export. Evidence: fixture 96 (15 steps, 48 asserts; control on the pre-change
-   sandbox), harness **1073/0**, test **169**, `xclip -o` read all three copies back verbatim, live
-   export against the sandbox CLI (fresh → "Nothing to export yet.", resumed → 739 chars).
-   **Not driven:** the Save row's native dialog (no Wayland input tool on this box).
-2. **1.30 midnight relay** (`96315e0`): `armMidnight` in `50-blocks.js`, one timer per local
-   midnight re-lays the date lines. Not fixture-pinned beyond "timer armed" (needs a fake clock).
-3. **11.7 measured + hand-tested** (`a556a3a`): disabled answer, Monitor task, interrupt — all
-   measured (protocol § 12); the roster pane and the "Run in background" offer driven live in the
-   sandbox panel over CDP against the real CLI (checklist 11.7). A bare foreground `sleep` is
-   refused by the CLI itself — use a loop.
-4. **Cleanup done:** the three audit-probe transcripts deleted; `lastSessionId` was already
-   `8c92f59b-…`; `reference/anthropic-claude-code/` rsynced to **2.1.296**; the 0.14.0 zip
-   REBUILT 16:48 (`plugin/build/distributions/claude-brains-0.14.0.zip`, `buildPlugin` only — no
-   `verifyPlugin`, not a release).
+**2026-10-10 (twenty-seventh session, Linux): 6.6 AUTO-INCLUDE EDITOR SELECTION built, measured,
+live-checked — UNCOMMITTED (the user's call). Earlier today: 0.15.0 released and Approved
+(`1da78a8`, tag `v0.15.0`); 9.9 retired + popup fit; 15.4, 1.30, 11.7.**
+- **6.6 (uncommitted, working tree)**: the active editor's selection rides every prompt as a LIVE
+  pill (`File.kt:12-18`, first in `#chips`; cursor line when nothing is highlighted), × drops it
+  for one message, the paperclip entry "Include selection" is the persistent switch
+  (`claudeCode.includeSelection`, default on, never hidden). `SelectionTracker.kt` → `__selection`
+  → the pill; send adds `selection{path,start,end,text}` to `{kind:'user'}` and ChatPanel appends
+  `RenderLimits.ideSelectionTag` AFTER the prompt (the CLI's own `<ide_selection>` wording);
+  `SessionStore` splits it back for the replay pill (`splitIdeSelection`, prompt-first only — a
+  tag-only text is the TUI's injected record and stays dropped, 6.3). The CLI's own route
+  (`selection_changed` over the IDE socket) was MEASURED DEAD in stream-json mode first (gotchas §
+  Protocol). Evidence: fixture 99 (14 steps / 40 asserts, control failed on the untouched build),
+  harness **1089→1129**, test **169→174**, live over CDP (open route selected index.php 4-6 → pill →
+  haiku answered path / lines / text; resume drew the pill; `_local/6.6-live.png`). Docs done
+  (checklist 100 ✅ · 45 ➖, limits, protocol, backlog, plugin.xml, README). Hand-tested by the user in the real PhpStorm the same day (six steps, all passed — journal). **Not built**: the "Include open file" (file CONTENT) entry — backlog, off by default.
+- **Include open file + switch rows (same evening, uncommitted)**: the paperclip's ✓ item is now
+  `#attachFooter` with `#tglSel` (ON) / `#tglFile` (OFF) in the model-footer idiom; `activeSel()`:
+  highlight if the selection switch is on, else `{…, file:true}` if the file switch is on, else
+  the cursor line; the page sends only the flag, ChatPanel reads the buffer on a pooled thread at
+  send (`readFileText`, >4 MB skipped) into `<ide_opened_file>… File content:` capped at
+  `OPEN_FILE_MAX_CHARS` 50,000; `OPEN_RE` parses it back to `selection{…, file:true}`; pill
+  `File.kt · file`. Evidence: fixture 99 23/67 (control recorded), test 176, harness 1158, live
+  over CDP (`_local/6.6-file-live.png`). Zip 21:00 built for the user's hand test.
+- **Pending the user**: (a) say whether to commit (one commit for 6.6 + the open-file switch;
+  working tree = 25 paths); (b) a release is NOT started — 0.16.0 would be the version if asked
+  (feature → minor). The `· file` pill click is caret-only now (`select:false` on the open route,
+  user's ask 2026-10-10; fixture 99 step 21b) — zip rebuilt after it.
+- Earlier today, all committed and released in 0.15.0 (journal twenty-second → twenty-sixth for the
+  detail): 9.9 retired + popup fit (`8324cd8`, `96e32d1`; fixtures 97 + 98), 15.4 export / copy
+  response (`759c904`; fixture 96; every copy through `CopyPasteManager`), 1.30 midnight relay
+  (`96315e0`), 11.7 measured + hand-tested (`a556a3a`), probe-transcript cleanup, extraction → 2.1.296.
 
 **[DECIDE] rows:** none (At a glance: 99 ✅ · 0 ⬜ · 46 ➖ — "no open tasks", answered 2026-10-10).
 
@@ -97,6 +92,16 @@ disk-installed 0.14.0 build (17:37 zip) on its next plugin check. **0.15.0 is th
   A release starts only when the user asks (conventions).
 
 ## Next steps
+- [x] 6.6 auto-include selection — measured, built, fixture 99, live + replay over CDP (2026-10-10).
+- [x] **6.6 hand test in the real PhpStorm** — the user, 2026-10-10, six steps all passed: pill
+      follows highlight / caret / tab switch; × per message; toggle off survives a restart; send
+      → bubble pill + exact quote; resume + pill click selects the lines; a queued message carries
+      its own selection. Label renamed "Include selection" (wrapped at the popup's fixed width);
+      zip 20:18 rebuilt with it — the user installs it to confirm the one-line label.
+- [ ] **Commit 6.6** when the user says so (working tree holds it; `git status` lists 20 files).
+- [x] "Include open file" switch + switch rows — built, fixture 99 (67 asserts), live over CDP (2026-10-10 evening).
+- [x] **Hand test of the open-file half** — the user, 2026-10-10 evening, seven steps all passed
+      (tag note moved before the content after Sonnet quoted it as the last line; zip 21:10).
 - [x] 15.4 export / copy response — built, measured, live-checked (2026-10-10).
 - [x] 11.7 hand-tested live; disabled / Monitor / interrupt measured.
 - [x] 1.30 midnight relay; probe-transcript cleanup; extraction → 2.1.296; zip rebuilt.
@@ -116,7 +121,7 @@ disk-installed 0.14.0 build (17:37 zip) on its next plugin check. **0.15.0 is th
 - [ ] **Waiting on the user**: Windows DevTools fold diagnostic + Help→About; Windows CRLF splice
       check; Windows look of the 1.29 card header; Windows `./gradlew test` + VFS click check.
 - [ ] Testing repo hand-test leftovers (`hand test/…`, `plain-control.txt`, sandbox transcripts
-      incl. today's drive sessions) — the user's call whether to reset.
+      incl. today's drive sessions, 6.6's `583f77e9…` among them) — the user's call whether to reset.
 - [ ] SchemaStore watch (no action until it syncs past 2.1.251).
 
 ## Known gaps (deliberately left)
@@ -142,7 +147,8 @@ disk-installed 0.14.0 build (17:37 zip) on its next plugin check. **0.15.0 is th
   CLI's own auto-deny result. A note typed before Accept on an ordinary card is dropped.
 - Markdown: a bullet-character change does not split a list; the offline highlighter colours its
   keyword set inside EVERY language (1.11).
-- plugin.xml "Not there yet" list unchanged: dark UI only, one conversation, no auto-context.
+- plugin.xml "Not there yet" list: dark UI only, one conversation, selection-not-whole-file (6.6 replaced the
+  "no auto-context" bullet 2026-10-10).
 
 ## Which machine — check FIRST, both are real
 2026-08-26 → 2026-10-10 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`).

@@ -127,6 +127,8 @@ this cap was future-proofing rather than a live fix.
 | tool description | 140 chars | `RenderLimits.DESC_MAX` (live + replay) | ❌ one line, accepted |
 | tool-result `(note: …)` caveat | 400 chars, then the note is DROPPED entirely; a match at position 0 of the result is dropped at any size | `RenderLimits.NOTE_MAX` + the position-0 guard (live + replay). Not a truncation: a capture past the bound — or one that IS the whole result — is OUTPUT the end-anchored regex misread as a caveat (output containing the literal `(note:` that happens to end with `)`), so showing a slice of it would be showing the wrong thing. Every real CLI note template is sentence-sized (≤ ~200 chars) AND appended after other text (three join with a leading space, Edit's escape-swap note with `\n` — measured from the 2.1.251/2.1.252 binaries with `strings`). Added 2026-09-01 after live sightings; fixture 69 + `RenderLimitsTest` | ❌ deliberate — the output itself still renders in the OUT box |
 | session title fallback | 80 chars | `SessionStore.titleOf` | ❌ a title, not content |
+| open file content (6.6 "Include open file") | 50,000 chars | `RenderLimits.OPEN_FILE_MAX_CHARS` — read by `ChatPanel` at send time (unsaved buffer first; files over 4 MB are not read at all and the cursor-line tag goes instead) | ✅ "… (file truncated at 50000 characters)" in the tag; the pill says `· file`, never a size |
+| editor selection text (6.6) | 20,000 chars | `RenderLimits.SELECTION_MAX_CHARS` — `SelectionTracker` caps what crosses the JS bridge, `ideSelectionTag` writes the note into the prompt | ✅ "… (selection truncated at 20000 characters)" in the tag; the pill shows lines, never a size |
 
 ### Every cap that drops CONTENT announces it (2026-08-05)
 

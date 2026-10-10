@@ -142,7 +142,6 @@
   so live-only stays. Candidate: "Pushed main → origin · api" from the Bash command + `cwd`.
 - **4.9 number-key answers on cards** — deferred 2026-09-05 ("no keyboard shortcuts for now"); do not re-propose.
 - Conversation tabs (+ 8.8 reopen-closed-session and 8.10 session groups/sidebar, both deferred 2026-08-29 — only worth it with tabs or worktrees)
-- Auto-include selection (checklist 6.6; the insert-mention half, 6.5, SHIPPED 2026-09-04 as the Project-view/editor context-menu action)
 - @-mention symbols from the IDE index (checklist 6.4 [MD], deferred 2026-08-29)
 - Focus view — prompts + responses only, tool noise hidden (checklist 12.6 [MD], deferred 2026-08-29; mockup first)
 - Fable overage consent card + chip update on fallback (checklist 9.7 [MD], deferred 2026-08-29) — build only after `window.__modelFallbackSeen` has captured a real frame

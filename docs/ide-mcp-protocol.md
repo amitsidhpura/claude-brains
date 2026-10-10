@@ -690,7 +690,16 @@ close_channel, speech_audio_level, speech_to_text_message, file_updated, plan_co
 `from-extension` DOM wrapper). Host→webview pushes: `update_state, visibility_changed,
 font_configuration_changed, create_new_conversation, toggle_dictation, open_plugins_dialog,
 insert_at_mention, selection_changed, session_states_update, proactive_suggestions_update,
-usage_update, auth_url, tool_permission_request, user_dialog_request`. Webview→host: ~78 request
+usage_update, auth_url, tool_permission_request, user_dialog_request`. **IDE→CLI notifications over
+the MCP socket** (`selection_changed {text, filePath, fileUrl, selection{start,end,isEmpty}}`,
+`at_mentioned {filePath, lineStart, lineEnd}`; extension.js `gD` / `je1`, 300 ms debounce,
+change-only): MEASURED DEAD for us 2026-10-10 on 2.1.296 — pushed from a fake "ide" WS server to
+the CLI in the panel's stream-json mode, before and after a first turn, with and without a
+JetBrains terminal marker / `FORCE_CODE_TERMINAL=1`, the next prompt reached the model with no
+`<ide_selection>` (haiku answered NONE; nothing in the transcript). The consumer is a React hook in
+the TUI tree (`Lee(He, C.offerIdeSelection)`) and the `selected_lines_in_ide` attachment builder
+(`Iyn`) needs an ideName that `BXr` only yields for `sse-ide` / `ws-ide` configs or a detected
+terminal. Checklist 6.6 therefore writes the tag itself (`RenderLimits.ideSelectionTag`). Webview→host: ~78 request
 types covering sessions (list/get/delete/rename/fork/teleport), files/diffs
 (open_file, open_diff, open_file_diffs, open_markdown_preview + plan comments, create_worktree),
 model/mode (set_model, set_permission_mode, set_thinking_level, apply_settings), MCP

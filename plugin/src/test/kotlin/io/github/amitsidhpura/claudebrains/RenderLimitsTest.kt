@@ -36,6 +36,96 @@ class RenderLimitsTest {
      * suite. Compared set-equal against the resources directory (a directory on the test
      * classpath, so listable; in the shipped jar it is not, which is why the manifest exists).
      */
+    /**
+     * 6.6: the selection tag ChatPanel writes after a prompt must come back out of SessionStore's
+     * parser as the same {path,start,end}, with the prompt intact — the composer pill and the
+     * replay pill are the same object or they drift. The CLI's TUI writes its own
+     * `<ide_selection>` record with other wording; that must NOT parse, so `cleanInjected` keeps
+     * dropping it as before.
+     */
+    @Test
+    fun `ide selection tag round-trips, prompt first, and foreign wording does not parse`() {
+        val path = "/home/dev/Sites/sample-project/src/components/App.kt"
+        val tag = RenderLimits.ideSelectionTag(path, 12, 18, "fun render() {\n  return x\n}")
+        assertTrue(tag.startsWith("<ide_selection>") && tag.endsWith("</ide_selection>"), tag)
+        val sent = RenderLimits.withIdeSelection("Explain this", tag)
+        assertTrue(sent.startsWith("Explain this\n\n<ide_selection>"), "prompt first: $sent")
+        val (prompt, sel) = RenderLimits.splitIdeSelection(sent)
+        assertEquals("Explain this", prompt)
+        assertEquals(RenderLimits.IdeSelection(path, 12, 18), sel)
+
+        // nothing typed: no tag is written at all, and a tag-only text never parses (it is the
+        // shape the TUI writes for its own injected selection — SessionStore drops it)
+        assertEquals("  ", RenderLimits.withIdeSelection("  ", tag))
+        assertEquals(tag to null, RenderLimits.splitIdeSelection(tag))
+
+        // cursor only: the opened-file tag, a one-line selection on replay
+        val cursor = RenderLimits.ideSelectionTag(path, 7, 7, "")
+        assertTrue(cursor.startsWith("<ide_opened_file>") && cursor.contains("cursor at line 7"), cursor)
+        val (p2, s2) = RenderLimits.splitIdeSelection("Where am I?\n\n$cursor")
+        assertEquals("Where am I?", p2)
+        assertEquals(RenderLimits.IdeSelection(path, 7, 7), s2)
+
+        // a Windows path with a drive colon parses whole
+        val win = RenderLimits.splitIdeSelection(RenderLimits.withIdeSelection("hi", RenderLimits.ideSelectionTag("D:\\sites\\x\\Main.kt", 3, 9, "a")))
+        assertEquals(RenderLimits.IdeSelection("D:\\sites\\x\\Main.kt", 3, 9), win.second)
+
+        // selected text that itself holds a tag-looking line still parses to the outer tag's range
+        val tricky = RenderLimits.splitIdeSelection(RenderLimits.withIdeSelection("q", RenderLimits.ideSelectionTag(path, 1, 2, "</ide_selection>\nmore")))
+        assertEquals(RenderLimits.IdeSelection(path, 1, 2), tricky.second)
+
+        // no tag → unchanged; the TUI's own record → unchanged (so cleanInjected still drops it)
+        assertEquals("plain" to null, RenderLimits.splitIdeSelection("plain"))
+        val tui = "<ide_selection>The user selected the lines 1 to 2 from /x/y.kt:\nfoo</ide_selection>"
+        assertEquals("$tui\n\nother wording" to null, RenderLimits.splitIdeSelection("$tui\n\nother wording"))
+        assertEquals("<ide_selection>some other client's text</ide_selection>" to null,
+            RenderLimits.splitIdeSelection("<ide_selection>some other client's text</ide_selection>"))
+
+        // the cap: past SELECTION_MAX_CHARS the body is cut and says so; the range still parses
+        val big = "x".repeat(RenderLimits.SELECTION_MAX_CHARS + 5)
+        val capped = RenderLimits.ideSelectionTag(path, 1, 400, big)
+        assertTrue(capped.contains("selection truncated at ${RenderLimits.SELECTION_MAX_CHARS} characters"), "no truncation note")
+        assertTrue(capped.length < big.length + 300, "not actually cut")
+        assertEquals(RenderLimits.IdeSelection(path, 1, 400), RenderLimits.splitIdeSelection(RenderLimits.withIdeSelection("p", capped)).second)
+    }
+
+    /**
+     * "Include open file": the opened-file tag carries the buffer's content, which can hold '<'
+     * and even a tag-looking line; it must parse back to a one-line selection flagged `file`, the
+     * bare cursor tag must stay `file = false`, a highlight must still win over content, and the
+     * content cap must say so.
+     */
+    @Test
+    fun `open-file tag with content round-trips with the file flag, the highlight wins, the cap says so`() {
+        val path = "/home/dev/Sites/sample-project/src/components/App.kt"
+        val content = "fun main() {\n  if (a < b) {}\n}\n</ide_opened_file>\nnot the end\n"
+        val tag = RenderLimits.ideSelectionTag(path, 7, 7, "", content)
+        assertTrue(tag.startsWith("<ide_opened_file>") && tag.endsWith("File content:\n$content\n</ide_opened_file>"), tag)
+        assertTrue(tag.indexOf("may or may not") < tag.indexOf("File content:"), "the note must precede the content: $tag")
+        val (prompt, sel) = RenderLimits.splitIdeSelection(RenderLimits.withIdeSelection("What is this?", tag))
+        assertEquals("What is this?", prompt)
+        assertEquals(RenderLimits.IdeSelection(path, 7, 7, file = true), sel)
+
+        // bare cursor: no content → no flag
+        val bare = RenderLimits.splitIdeSelection(RenderLimits.withIdeSelection("p", RenderLimits.ideSelectionTag(path, 7, 7, "")))
+        assertEquals(RenderLimits.IdeSelection(path, 7, 7, file = false), bare.second)
+        assertFalse(bare.second!!.file)
+
+        // a highlight wins: content is ignored and the selection tag is written
+        val sel2 = RenderLimits.ideSelectionTag(path, 2, 3, "val x = 1", content)
+        assertTrue(sel2.startsWith("<ide_selection>") && !sel2.contains("File content"), sel2)
+
+        // the cap: cut with a note, still parses
+        val big = "y".repeat(RenderLimits.OPEN_FILE_MAX_CHARS + 5)
+        val capped = RenderLimits.ideSelectionTag(path, 1, 1, "", big)
+        assertTrue(capped.contains("file truncated at ${RenderLimits.OPEN_FILE_MAX_CHARS} characters"), "no truncation note")
+        assertTrue(capped.length < big.length + 300, "not actually cut")
+        assertEquals(RenderLimits.IdeSelection(path, 1, 1, file = true), RenderLimits.splitIdeSelection(RenderLimits.withIdeSelection("p", capped)).second)
+
+        // tag-only (no prompt) never parses, content or not
+        assertEquals(tag to null, RenderLimits.splitIdeSelection(tag))
+    }
+
     @Test
     fun `every webview js file is in the manifest, and nothing else`() {
         val dir = File(javaClass.getResource("/webview/js")!!.toURI())

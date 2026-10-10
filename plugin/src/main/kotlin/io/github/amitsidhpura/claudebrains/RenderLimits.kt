@@ -475,6 +475,85 @@ object RenderLimits {
      */
     val AUTH_BLOCKED_CODES = setOf("authentication_failed", "oauth_org_not_allowed")
 
+    /**
+     * The editor selection that rides a prompt (checklist 6.6). The composer shows a pill; the
+     * panel writes one of these tags AFTER the typed text (prompt first, so the CLI's titles and
+     * history read the prompt, and SessionStore's compact title does too); SessionStore parses
+     * it back into `selection {path,start,end}` for the replay pill. The CLI's own IDE
+     * integration marks the same context `<ide_selection>` / `<ide_opened_file>` (the reference
+     * client's system prompt: "marked with ide_selection tags"), so the model knows the
+     * vocabulary; the inner wording is ours — the CLI's template is not a literal in its bundle.
+     * Measured 2026-10-10 on 2.1.296: the CLI's own route (a `selection_changed` notification
+     * over the IDE socket) never reaches the model in stream-json mode, so the panel carries it.
+     * Writer and parser live here together, or the pill on replay drifts from the one sent.
+     */
+    data class IdeSelection(val path: String, val start: Int, val end: Int, val file: Boolean = false)
+
+    /** Selected text cap, characters (truncated with a note). SelectionTracker caps what it pushes
+     *  to the page at this too, so a select-all of a large file never rides the webview bridge. */
+    const val SELECTION_MAX_CHARS = 20_000
+
+    /** "Include open file": the active file's CONTENT (read by ChatPanel at send time, unsaved
+     *  buffer first) rides the opened-file tag when nothing is highlighted. Capped with a note. */
+    const val OPEN_FILE_MAX_CHARS = 50_000
+
+    private const val SEL_OPEN = "<ide_selection>The user selected the lines "
+    private const val OPEN_OPEN = "<ide_opened_file>The user has "
+    private const val MAYBE = "This may or may not be related to the current task."
+
+    /**
+     * Highlighted [text] → the selection tag (the highlight always wins — VS Code's rule, measured
+     * in its bundle: the selection and opened-file builders are exclusive on `text`). No text and
+     * [fileContent] → the opened-file tag WITH the content ("Include open file" ON). No text, no
+     * content → the cursor-line tag.
+     */
+    fun ideSelectionTag(path: String, start: Int, end: Int, text: String, fileContent: String? = null): String {
+        if (text.isEmpty()) {
+            if (fileContent == null) return "${OPEN_OPEN}$path open in the IDE, cursor at line $start. $MAYBE</ide_opened_file>"
+            val body = if (fileContent.length > OPEN_FILE_MAX_CHARS)
+                fileContent.substring(0, OPEN_FILE_MAX_CHARS) + "\n… (file truncated at $OPEN_FILE_MAX_CHARS characters)"
+            else fileContent
+            // the note goes BEFORE the content and the tag closes right after it: with the note
+            // after, Sonnet quoted "This may or may not…" as the file's last line (hand test 2026-10-10)
+            return "${OPEN_OPEN}$path open in the IDE, cursor at line $start. $MAYBE\nFile content:\n$body\n</ide_opened_file>"
+        }
+        val body = if (text.length >= SELECTION_MAX_CHARS)
+            text.substring(0, SELECTION_MAX_CHARS) + "\n… (selection truncated at $SELECTION_MAX_CHARS characters)"
+        else text
+        return "${SEL_OPEN}$start to $end from $path:\n$body\n\n$MAYBE</ide_selection>"
+    }
+
+    /** The prompt with its tag after it. A blank prompt sends the prompt alone: the composer never
+     *  submits with nothing typed, and a tag-only text is the TUI's record shape (see split). */
+    fun withIdeSelection(prompt: String, tag: String): String = if (prompt.isBlank()) prompt else prompt + "\n\n" + tag
+
+    private val SEL_RE = Regex("""\n\n<ide_selection>The user selected the lines (\d+) to (\d+) from (.+?):\n[\s\S]*?</ide_selection>\s*$""")
+    // group 3 is the rest of the tag: "This may…" for a bare cursor, "This may…\nFile content:\n…"
+    // when the open file rode along — [\s\S]*? because file content holds '<' and anything else
+    private val OPEN_RE = Regex("""\n\n<ide_opened_file>The user has (.+?) open in the IDE, cursor at line (\d+)\. ([\s\S]*?)</ide_opened_file>\s*$""")
+
+    /**
+     * (prompt, selection) — the prompt without its tag, and the parsed selection (null when none).
+     * The tag parses only AFTER a prompt (the `\n\n` form withIdeSelection writes; the composer
+     * never sends a selection with nothing typed). A text that IS a tag is the CLI's own TUI
+     * record — a separate user message whose wording turned out to match ours byte for byte
+     * (SessionStoreTest's fixture record) — and comes back unchanged, so SessionStore's
+     * `cleanInjected` keeps dropping it as the injected context it is.
+     */
+    fun splitIdeSelection(text: String?): Pair<String?, IdeSelection?> {
+        if (text == null) return null to null
+        SEL_RE.find(text)?.let { m ->
+            return text.substring(0, m.range.first) to
+                IdeSelection(m.groupValues[3], m.groupValues[1].toInt(), m.groupValues[2].toInt())
+        }
+        OPEN_RE.find(text)?.let { m ->
+            val line = m.groupValues[2].toInt()
+            val file = m.groupValues[3].contains("\nFile content:\n")
+            return text.substring(0, m.range.first) to IdeSelection(m.groupValues[1], line, line, file)
+        }
+        return text to null
+    }
+
     /** The same values as a JS object literal, for the webview splice. */
     fun asJs(): String {
         fun arr(v: Collection<String>) = v.joinToString(",", "[", "]") { "\"$it\"" }

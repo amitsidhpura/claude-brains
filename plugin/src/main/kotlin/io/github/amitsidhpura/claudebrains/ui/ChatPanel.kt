@@ -207,7 +207,34 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     val name = o["name"]?.jsonPrimitive?.content ?: "file"
                     io.github.amitsidhpura.claudebrains.cli.Attachment(kind, mt, data, name)
                 } ?: emptyList()
-                session.sendUser(text, attachments)
+                // 6.6: the composer's selection snapshot → the tag the model reads, after the
+                // prompt. The page sends {path,start,end,text[,file]}; an absent key sends nothing
+                // extra. `file` ("Include open file", nothing highlighted) means READ THE BUFFER
+                // HERE, at send time — the page never carries file content, and this handler runs
+                // on the CEF thread, so the read (a read action) hops to a pooled thread the way
+                // openEditorPermissionDiff's does; ClaudeCli.writeLine is synchronized.
+                val sel = msg["selection"] as? JsonObject
+                val path = sel?.get("path")?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                if (sel == null || path == null) { session.sendUser(text, attachments); return }
+                val start = sel["start"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                val end = sel["end"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()?.coerceAtLeast(start) ?: start
+                val selText = sel["text"]?.jsonPrimitive?.contentOrNull ?: ""
+                val wantFile = selText.isEmpty() && sel["file"]?.jsonPrimitive?.contentOrNull == "true"
+                if (!wantFile) {
+                    session.sendUser(RenderLimits.withIdeSelection(text, RenderLimits.ideSelectionTag(path, start, end, selText)), attachments)
+                    return
+                }
+                ApplicationManager.getApplication().executeOnPooledThread {
+                    // a giant file is cut at OPEN_FILE_MAX_CHARS anyway — never read a multi-MB one whole;
+                    // an unreadable file degrades to the cursor-line tag (the bubble still said · file)
+                    val content = if (runCatching { File(path).length() }.getOrDefault(0L) > MAX_OPEN_FILE_READ_BYTES) null
+                        else readFileText(path)
+                    session.sendUser(RenderLimits.withIdeSelection(text, RenderLimits.ideSelectionTag(path, start, end, "", content)), attachments)
+                }
+            }
+            "selPref" -> {   // 6.6: the two paperclip switches, persisted together
+                session.setIncludeSelection(msg["on"]?.jsonPrimitive?.content == "true")
+                msg["file"]?.jsonPrimitive?.contentOrNull?.let { session.setIncludeOpenFile(it == "true") }
             }
             "download" -> {
                 val data = msg["data"]?.jsonPrimitive?.content ?: return
@@ -401,7 +428,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "open" -> msg["path"]?.jsonPrimitive?.content?.let {
                 val line = msg["line"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
                 val endLine = msg["endLine"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
-                if (!session.openFile(it, line, endLine)) notifyMissing(it)
+                val select = msg["select"]?.jsonPrimitive?.contentOrNull != "false"   // the · file pill: caret only
+                if (!session.openFile(it, line, endLine, select)) notifyMissing(it)
             }
             // 1.27: the cut marker on a LIVE IN/OUT box — the page still holds the whole text.
             "openText" -> {
@@ -944,6 +972,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             ?: pushFrame(buildJsonObject { put("type", "__fastMode"); put("pref", session.fastMode()) })
         // Thinking is Kotlin-owned preference with no CLI echo — seed it on every load.
         pushFrame(buildJsonObject { put("type", "__thinking"); put("on", !session.thinkingOff()) })
+        // 6.6: the selection switch and whatever the editor holds right now — the tracker only
+        // pushes on CHANGE, so a reloaded page would otherwise show no pill until the caret moved.
+        pushFrame(buildJsonObject { put("type", "__selPref"); put("on", session.includeSelection()); put("file", session.includeOpenFile()) })
+        pushSelection(selectionTracker.current())
         lastCommandsChanged?.let { pushEvent(it) }   // after the seed: it REPLACES the init roster
 
         lastTitle = null; titleProbed = false
@@ -963,6 +995,27 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         // tool window through the context-menu action) go in now, after the seed they belong to.
         uiSeeded = true
         flushPendingMentions()
+    }
+
+    /**
+     * 6.6: the active editor's selection, live. [SelectionTracker] watches selection, caret and
+     * editor-tab changes (debounced) and calls back only when the result differs; the page keeps
+     * the last one as the composer pill. Before the page is seeded the frame is dropped like any
+     * other, and seedUi re-pushes [SelectionTracker.current]. Text is already capped by the tracker.
+     */
+    private val selectionTracker = SelectionTracker(project, parent) { pushSelection(it) }
+
+    /** "Include open file" reads the buffer whole before cutting at OPEN_FILE_MAX_CHARS; past this
+     *  size the read is skipped and the cursor-line tag goes instead. */
+    private val MAX_OPEN_FILE_READ_BYTES = 4L * 1024 * 1024
+
+    private fun pushSelection(sel: SelectionTracker.Sel?) {
+        pushFrame(buildJsonObject {
+            put("type", "__selection")
+            if (sel != null) {
+                put("path", sel.path); put("start", sel.start); put("end", sel.end); put("text", sel.text)
+            }
+        })
     }
 
     /** Set once the page has loaded and been seeded; before that a pushed frame finds no

@@ -508,6 +508,7 @@ object SessionStore {
         var file: String? = null
         var toolId: String? = null         // the tool_use id, so a replayed cut box can ask for its whole text (1.27)
         var images = mutableListOf<JsonObject>()
+        var selection: io.github.amitsidhpura.claudebrains.RenderLimits.IdeSelection? = null // the editor selection that rode the prompt (6.6)
         var questions: JsonElement? = null // AskUserQuestion input
         var answers: JsonElement? = null   // chosen answers (from toolUseResult)
         var plan: String? = null           // ExitPlanMode plan markdown
@@ -589,6 +590,7 @@ object SessionStore {
             questions?.let { put("questions", it) }
             answers?.let { put("answers", it) }
             if (images.isNotEmpty()) put("images", buildJsonArray { images.forEach { add(it) } })
+            selection?.let { s -> put("selection", buildJsonObject { put("path", s.path); put("start", s.start); put("end", s.end); if (s.file) put("file", true) }) }
         }
     }
 
@@ -924,11 +926,16 @@ object SessionStore {
                                     }
                                 if (routed) continue
                             }
-                            val text = userTextFull(obj)?.let { cleanInjected(it) }?.takeIf { it.isNotBlank() }
+                            // 6.6: the panel's own selection tag rides the prompt's text block; it
+                            // comes off here and draws as the bubble's pill. Only our wording parses —
+                            // the TUI's own <ide_selection> record still falls to cleanInjected.
+                            val (body, sel) = io.github.amitsidhpura.claudebrains.RenderLimits.splitIdeSelection(userTextFull(obj))
+                            val text = body?.let { cleanInjected(it) }?.takeIf { it.isNotBlank() }
                             val atts = attachmentsOf(content)
-                            if (text == null && atts.isEmpty()) continue
+                            if (text == null && atts.isEmpty() && sel == null) continue
                             val item = Item("user")
                             item.text = text ?: ""
+                            item.selection = sel
                             item.ts = ts?.toEpochMilli()
                             // Attach everything here; the budget is applied afterwards walking
                             // from the NEWEST turn back (see trimAttachments) so the visible tail
@@ -1672,5 +1679,7 @@ object SessionStore {
     /** First text part only, flattened to one line — the compact form titles and lists use. */
     private fun userText(obj: JsonObject): String? =
         textParts(obj["message"]?.jsonObject?.get("content"))
-            .firstOrNull()?.trim()?.replace("\n", " ")
+            .firstOrNull()
+            ?.let { io.github.amitsidhpura.claudebrains.RenderLimits.splitIdeSelection(it).first }   // 6.6: never title a thread by its selection tag
+            ?.trim()?.replace("\n", " ")
 }

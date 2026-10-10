@@ -6,7 +6,10 @@
   function gallery() {
     clearLogUI();
     // stamped prompt (1.30) under a date line — the line is what a day change between turns draws
-    addUserMessage('Dev gallery — show every UI state, starting from @src/components/App.tsx.', [], Date.now());
+    addUserMessage('Dev gallery — show every UI state, starting from @src/components/App.tsx.', [], Date.now(),
+      { path: '/home/dev/Sites/sample-project/src/components/App.tsx', start: 12, end: 18 });   // 6.6: the selection pill
+    addUserMessage('And with the whole file attached.', [], Date.now(),
+      { path: '/home/dev/Sites/sample-project/src/components/App.tsx', start: 7, end: 7, file: true });   // 6.6: the · file pill
     log.insertBefore(daySep(dayKey(Date.now())), log.querySelector('.turn'));
 
     // assistant text block (markdown + code), stamped as the turn's first reply text (1.30)

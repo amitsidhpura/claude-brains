@@ -136,11 +136,12 @@
     items.forEach(function (it) {
       switch (it.role) {
         case 'user':
-          addUserMessage(it.text || '', it.images || [], it.ts);   // ts: SessionStore's record timestamp
+          addUserMessage(it.text || '', it.images || [], it.ts, it.selection || null);   // ts: SessionStore's record timestamp; selection (6.6): the parsed tag
           replyStamped = false;
           // seed Retry: without this a resumed failed turn had no way back. Replayed attachments
           // past IMAGE_BUDGET carry no data and are dropped by ChatPanel on resend, so a retry
-          // after a budget trim sends the text and whatever bytes survived.
+          // after a budget trim sends the text and whatever bytes survived. A replayed selection
+          // carries no text, so a retry resends the prompt alone — the live pill covers the rest.
           lastUser = { text: it.text || '', images: it.images || [] };
           break;
         case 'assistant': {

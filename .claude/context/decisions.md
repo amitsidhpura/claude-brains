@@ -4,6 +4,52 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-10 — 6.6 "Include open file": a second switch, highlight wins (VS Code's rule), content read at send time, 50 K cap
+The paperclip's ✓ item became two switch rows in the model menu's idiom (user's screenshot of
+Fast mode / Thinking / Effort): "Include selection" (ON) and "Include open file" (OFF). Matrix:
+selection ON + highlight → the selection alone; nothing highlighted + file ON → the file's CONTENT
+with the cursor line; selection OFF + file ON → the content even over a highlight (a row VS Code
+cannot express — it has ONE setting, `attachOpenFile`, and the selection is always on; its
+selection and opened-file attachment builders are exclusive on the text, so with both on it
+behaves exactly as we do). The page sends only a FLAG; ChatPanel reads the buffer (unsaved first)
+on a pooled thread at send time, capped at `OPEN_FILE_MAX_CHARS` 50,000 with a note, files over
+4 MB not read at all. Pill `File.kt · file`. *Rejected*: content on by default (context cost on
+every message, overlaps @-mentions); pushing content through the tracker (a select-all's worth of
+bytes per caret move); a 20 K cap (too many files cut) and no cap (one message can eat the window).
+
+## 2026-10-10 — 6.6 auto-include selection: the PANEL writes the tag, because the CLI's own route is dead in stream-json mode
+Measured before building (user: "Lets implement it", after the design discussion): a VS Code-shaped
+`selection_changed` notification over the MCP-over-WS "ide" client never reached the model —
+four variants on 2.1.296 (plain, JetBrains terminal marker, `FORCE_CODE_TERMINAL=1`, after a first
+turn), haiku answered NONE, no tag in the transcript. The bundle explains it: the consumer is a
+React hook in the TUI tree and the attachment builder needs an ideName that only `ws-ide` /
+`sse-ide` configs or a detected terminal yield. So `SelectionTracker` → `__selection` → the page's
+pill, and ChatPanel appends `RenderLimits.ideSelectionTag` to the prompt. *Alternatives rejected*:
+`ws-ide` in the mcp-config (filtered from user config by the CLI); `FORCE_CODE_TERMINAL` (measured:
+still nothing, and it would flip other terminal-detection behaviour).
+
+## 2026-10-10 — 6.6 design: LIVE pill, × per message, paperclip entry always visible, selection only (open-file content later, off by default), IDE-level persistence
+Settled one point at a time with the user: a live pill that follows the editor (debounced) rather
+than a snapshot at send — "better is person to know what is going to be sent and not after send";
+the × drops it for the current message only; the "Include selection" entry stays in the
+paperclip menu unticked when off — "or else how user can enable that"; persisted like the model pick
+(application `PropertiesComponent`, global across projects). Nothing highlighted still attaches the
+file + cursor line (the opened-file tag). VS Code's `attachOpenFile` (file CONTENT, default true
+there) is NOT shipped: a later second entry, off by default (backlog). *Rejected*: snapshot at send
+(no way to see or drop what goes); hiding the entry when off; open-file content on by default
+(context cost on every message, overlaps the @-mention chips).
+
+## 2026-10-10 — 6.6 wire shape: ONE text block, prompt first, tag after; a tag-only text is the TUI's record and stays dropped
+The tag goes after the typed text inside the same block (`prompt\n\n<ide_selection>…`), so the
+CLI's titles / `last-prompt` and SessionStore's compact title read the prompt. The wording is the
+CLI's own (`The user selected the lines A to B from PATH:` — it matched the client-parity 37
+record byte for byte, which the 6.3 test caught when my parser suddenly recognised it), so the
+model sees what it sees from VS Code. `splitIdeSelection` parses the tag only after a prompt: a
+text that IS a tag is the TUI's separate injected record (6.3) and `cleanInjected` keeps dropping
+it; the composer never submits with nothing typed, so no case is lost. *Rejected*: a separate
+content block (the CLI's title heuristics would see the tag first); parsing tag-only texts (would
+resurrect the TUI's injected records as bubbles).
+
 ## 2026-10-10 — 0.15.0, a MINOR bump: six features since v0.14.0 make it a feature release; the notes name behaviour only
 "What will the version be?" → 0.15.0, by release.md's progression (patch = fixes with no new
 capability, the 0.13.1 precedent) — timestamps, option previews, task output + Run in background,
