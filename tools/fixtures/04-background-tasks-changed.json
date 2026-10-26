@@ -111,9 +111,9 @@
    ],
    "expect": [
     {
-     "js": "(function(){ var real = window.__bridge; window.__bridge = function(){}; try { sendTurn('what is the status?', []); } finally { window.__bridge = real; } return document.getElementById('bgChip').hidden; })()",
+     "js": "(function(){ var real = window.__bridge; window.__bridge = function(){}; try { sendTurn('what is the status?', []); } finally { window.__bridge = real; setBusy(false); } return document.getElementById('bgChip').hidden; })()",
      "equals": false,
-     "why": "DISCRIMINATING: the chip stays up across a turn boundary (hidden=true pre-fix — sendTurn wiped a level signal it does not own) (bridge stubbed for the call since 2026-10-26: the check is the panel's own sendTurn, and the real bridge sent a REAL prompt to the sandbox CLI every harness run — its reply streamed into later fixtures mid-measure, fixture 102)"
+     "why": "DISCRIMINATING: the chip stays up across a turn boundary (hidden=true pre-fix — sendTurn wiped a level signal it does not own) (bridge stubbed for the call since 2026-10-26: the check is the panel's own sendTurn, and the real bridge sent a REAL prompt to the sandbox CLI every harness run — its reply streamed into later fixtures mid-measure, fixture 102; setBusy(false) ends the turn the stub can never answer, else Send reads Stop and submit() queues for every fixture after this one — __clear does not reset busy)"
     },
     {
      "js": "document.getElementById('bgChip').textContent",

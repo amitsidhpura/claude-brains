@@ -213,13 +213,16 @@
   function copyText(text) { bridge({ kind: 'copy', text: String(text == null ? '' : text) }); }
   // The same route for a picture (ChatPanel "copyImage"): redrawn on a canvas first so Kotlin only
   // ever decodes PNG — a tool can return JPEG, GIF or WebP, and Java's ImageIO cannot read WebP.
-  function copyImage(src) {
+  // `btn` flashes to the check once the picture has gone to the bridge, not on the click: the tick
+  // means "sent", and a picture the page cannot decode shows no tick at all.
+  function copyImage(src, btn) {
     const im = new Image();
     im.onload = function () {
       const c = document.createElement('canvas');
       c.width = im.naturalWidth; c.height = im.naturalHeight;
       c.getContext('2d').drawImage(im, 0, 0);
       bridge({ kind: 'copyImage', data: c.toDataURL('image/png').split(',')[1] });
+      if (btn) flashCopied(btn);
     };
     im.src = src;
   }

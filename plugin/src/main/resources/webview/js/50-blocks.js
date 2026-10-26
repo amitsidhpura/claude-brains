@@ -600,7 +600,7 @@
       const cp = document.createElement('button');
       cp.type = 'button'; cp.className = 'ti-copy'; cp.title = 'Copy image';
       cp.innerHTML = SVG_COPY;
-      cp.onclick = function (e) { e.stopPropagation(); copyImage(img.src); flashCopied(cp); };
+      cp.onclick = function (e) { e.stopPropagation(); copyImage(img.src, cp); };
       img.addEventListener('load', function () { wrap.classList.toggle('small', img.offsetWidth < 64); });
       wrap.appendChild(img); wrap.appendChild(cp);
       box.appendChild(wrap);

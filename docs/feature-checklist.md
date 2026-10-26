@@ -453,8 +453,8 @@ auto-include selection, voice.
       strings / comments / numbers / php-vars; deliberately not a full grammar bundle)
   <!-- --><details><summary>Read more…</summary>
   The copy button (and every other copy control on the page — Copy response, the export popup's
-  row, 15.4) writes through Kotlin's `CopyPasteManager` (`bridge{kind:'copy', text}`, since
-  2026-10-10), not `navigator.clipboard`: Chromium's API needs a focused document and a user
+  row, 15.4; the image buttons of 1.19 as `bridge{kind:'copyImage'}`) writes through Kotlin's
+  `CopyPasteManager` (`bridge{kind:'copy', text}`, since 2026-10-10), not `navigator.clipboard`: Chromium's API needs a focused document and a user
   activation, which the tool-window webview does not always hold (a programmatic click rejected
   the write, measured 2026-10-10), and the IDE clipboard can be read back by the harness's live
   check (xclip).
@@ -487,7 +487,9 @@ auto-include selection, voice.
       to the generic label
 - **1.18** ✅ **Hook activity** — blocked tools + `informational` hook output rendered
 - **1.19** ✅ **Server-side tool blocks** — web search; tool-returned images (`isImage` Bash
-      results) open in the lightbox
+      results) open in the lightbox; Copy image (2026-10-26) — a hover button on the picture's
+      corner (beside it under 64px wide) and a round Copy beside the lightbox's ×, PNG through
+      Kotlin's `CopyPasteManager` (1.11's fold)
 - **1.20** ✅ **Local-command output** — `<local-command-stdout>` / `-stderr>` rendered as markdown
 - **1.21** ✅ **`redacted_thinking` placeholder** — a non-expandable "Thought (redacted)" line, live
   and on replay. The shape is the API's and has never been seen on this wire.

@@ -9,9 +9,11 @@
 /* 1.30 date line between turns on a day change ("Today" / "Yesterday" / "8 Oct 2026"): a #log
    child, never inside .turn — there it would scroll under the sticky bubble and sit inside the
    containment. #log's flex gap spaces it like any other block; the lines take the slack.
-   The lines are a soft wave (user's pick G, 2026-10-26: 2px amplitude, 24px period — the tighter,
-   flatter candidates read as stitching): --border painted through a repeating SVG mask, so the
-   colour stays a token. The px values live in the SVG; 6px is the tile height, wave plus stroke. */
+   The lines are a soft wave (user's pick G, 2026-10-26: 2px peak to peak — the quadratic's control
+   point sits 2px off the centre line, so the curve itself reaches 1px — on a 24px period; the
+   tighter, flatter candidates read as stitching): --border painted through a repeating SVG mask,
+   so the colour stays a token. The px values live in the SVG; 6px is the tile height, wave plus
+   stroke. */
 .day-sep { display: flex; align-items: center; gap: var(--attach-gap); color: var(--muted); font-size: var(--fs-xs); }
 .day-sep::before, .day-sep::after { content: ''; flex: 1; height: 6px; background: var(--border);
   -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='6'><path d='M0 3 Q6 1 12 3 T24 3' fill='none' stroke='black' stroke-width='1'/></svg>") repeat-x left center; }

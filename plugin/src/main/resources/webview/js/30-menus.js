@@ -152,7 +152,7 @@
   lightbox.addEventListener('click', function (e) {
     if (e.target === lightbox || e.target.closest('.lb-x')) lightbox.classList.remove('show');
     const cp = e.target.closest('.lb-copy');   // copies what the popup shows; the popup stays open
-    if (cp) { copyImage(document.getElementById('lbImg').src); flashCopied(cp); }
+    if (cp) copyImage(document.getElementById('lbImg').src, cp);
   });
   function openLB(src, name) {
     document.getElementById('lbImg').src = src;
