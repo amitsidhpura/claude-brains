@@ -187,6 +187,7 @@
   replaced). Harmless — the new process gets a new reader — but a stack trace per New in the IDE
   log. Fix = catch the close in the reader loop (`cli/ClaudeCli.kt`) when the process is being torn
   down.
+- **Ask-card previews looked unfolded in the user's real IDE** (10 lines, Windows screenshot 2026-10-26) while the sandbox folds them to 3 lines (`3lh` cap) — check the fold there; harmless to the steady-height fix.
 
 ## Someday / conditional
 - **Fold the pinned previous-version roster rows** (2.1.28x lists `claude-opus-5`/`-4-8`/`-4-7`/`-4-6`,
@@ -215,6 +216,7 @@
   sinceBuild 242 and the current branch only; ~20 GB first run). Full matrix (~80 GB, 2–4 h/run)
   rejected as redundant. `docs/verifier-matrix.md` deleted 2026-08-28 — its four DSL traps are in
   gotchas.md § Build; config sketch via `git show 9bd1683:docs/verifier-matrix.md`.
+- **Copy image on the user's own attachment chips** — a right-click "Copy image" item (nothing drawn on the chip) offered 2026-10-26, not asked for; the chip already opens the popup with its Copy button.
 
 ## Not happening (decided 2026-08-07)
 - Light theme / configurable colours — `docs/colors.md` and `design/colors.html` (the

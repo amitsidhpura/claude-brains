@@ -3,6 +3,33 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-26 (thirtieth) — wavy date line, copy image, steady ask-preview box, menu hover fix; fixture 04's real sendTurn found and stubbed; harness 1172→1207; four commits pushed
+- `/context load`, then four user asks, each rendered as candidates in the REAL sandbox panel
+  (injected DOM/CSS over CDP) before building: date line (wave G of B-G, 2px/24px), copy image
+  (T2 hover corner button + P1 round button beside the lightbox ×; the user declined a chip button
+  for their own attachments — the popup covers them).
+- Copy image: canvas-redraw to PNG in JS (ImageIO cannot read WebP) → `copyImage` route →
+  `ImageSelection` Transferable on `CopyPasteManager`. xclip showed `image/png` 921×892 after each
+  button; the user pasted into the composer from both.
+- Ask preview jitter REPRODUCED first (list 365→328→365→346 px, box 37→74→37→55): invisible
+  fold-capped sizers in one grid cell hold the box at the tallest preview. User tested with a real
+  Haiku AskUserQuestion: "Perfect!".
+- Slash menu: REPRODUCED with a parked CDP pointer + real key events — each redraw fires mouseover
+  with no mousemove, so hover stole the cursor (/goal over /context). Fix: keydown disarms hover,
+  a mousemove at new coords re-arms. User then saw TWO identical highlights (cursor + :hover) →
+  `:hover` paint removed; only `.sel` is painted. User: "just great!".
+- Harness noise traced: fixture 102 failed intermittently in full runs only; a MutationObserver tape
+  showed a git-status reply streaming in mid-sweep — fixture 04's `sendTurn('what is the status?')`
+  went through the REAL bridge every run (also the source of the "Session status inquiry"
+  conversations in the testing repo). Stubbed → 1207/1207.
+- Own slips: probe parked the pointer on a row scrolled out of the popup (still has a rect);
+  `Input.insertText` fires no keydown; a 1500px spacer in #log shrank to 0 (flex item, needs
+  `flex:none`); a `git stash` of four files briefly pulled the copy-image work — popped at once.
+  All in gotchas § Testing.
+- Committed as four commits via a hunk-splitting helper (`git apply --cached` on chosen hunks —
+  `git add -p` is interactive): `089b3e4`, `d7466db`, `2cfa121`, `fccc30b`; pushed with this save.
+- Next: release 0.17.0 only when asked; Windows paste check for copy image.
+
 ## 2026-10-11 (twenty-ninth) — the Copy response control re-placed (float, hover by opacity, no plate; fixture 96 54 asserts), then 0.16.0 RELEASED after a halt at the gate
 - "Lets release it" → steps 1-5 from one script (0.16.0, notes entry added / 0.13.1 dropped, feed),
   `test buildPlugin verifyPlugin` green (176, 8/8 Compatible, 7 jars, baked notes re-read from an
@@ -249,27 +276,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Shell traps on this box: `grep` is ugrep, `ls` is eza (hung a background chain), `comm` wants
   `LC_ALL=C sort`; Bash output over ~30 KB is persisted with a 2 KB preview.
 
-## 2026-10-10 (twentieth) — spaced-mention fix hand-tested; zip built; MCP popup and push-line questions answered, no code
-- Set up the hand test: sandbox `runIde` on the testing project, three files with spaces/brackets in
-  their paths (distinct secret words), `buildPlugin` for the real PhpStorm. The user: "Working
-  great!". No code changed this session.
-- Trap: the panel's @-picker list is pushed ONCE at page load (`seedUi()` → `listProjectFiles()`
-  over `ProjectFileIndex`); files created while the IDE was closed were absent (and a deleted probe
-  path still listed) until `location.reload()` over CDP re-ran `seedUi()`. Backlog § Housekeeping.
-- PhpStorm 2026.2 "MCP Server" popup with its button row clipped: the IDE's own Compose widget;
-  idea.log shows `[SKIKO] Fallback to next API — RenderException: Cannot create OpenGL context` at
-  each first open (10:31, 11:17) on this Wayland session. The plugin registers no status-bar widget
-  and the CLI connects to OUR WebSocket bridge, so "No active connections" there is expected.
-- Same log: `Exception in thread "claude-stdout" java.io.IOException: Stream closed` at 10:58:37,
-  the moment a New conversation replaced the CLI process — harmless, noisy. Backlog § Housekeeping.
-- Push status line question (two screenshots: four identical "Pushed main", one bare "Pushed"):
-  explored, not built — the user left it. The CLI's `vcs_state_changed` carries `{kind, branch?,
-  cwd}` only, the branch is PARSED FROM GIT'S OUTPUT (a `-q` push → bare "Pushed"), the frame is
-  never persisted, and `gitOperation.push` on the tool result has only `branch` too. The remote URL
-  and commit range exist solely in the Bash OUT text. Findings in backlog § Deferred.
-- Plan mode was entered for that question and exited with nothing written.
-
 ## Digest
+- **2026-10-10 (twentieth)** — spaced-mention fix hand-tested by the user ("Working great!"), zip built, no code; PhpStorm 2026.2's own "MCP Server" popup clipped by a SKIKO OpenGL fallback (IDE widget, not ours); push status line explored and left (branch parsed from git output — backlog § Deferred); @-picker list is one-shot at load (backlog § Housekeeping).
 - **2026-10-10 (nineteenth)** — spaced @-mention paths: the composer inserts `@"path with spaces"` (quoted when the path holds whitespace/colon/trailing punctuation) and `mentionHtml` reads the quoted form back as one chip; fixture 91, harness 914. Committed + pushed on the user's ask.
 - **2026-10-10 (eighteenth)** — bold wrapping italic (`**_x_**` / `***x***`) rendered raw: `inlineMd`'s bold regex refused a single `*` inside the run → admitted; fixture 90 (control on the unchanged build), harness 905. Committed + pushed on the user's ask.
 - **2026-10-08 (seventeenth)** — opened-thought trailing gap: 13/13 persisted `thinking` blocks end with `\n\n` and `.think .body` is the one `pre-wrap` block → `thinkBlock()` trims (live, replay, gallery, redacted share the builder); fixture 89 written on the UNCHANGED sandbox first (3 discriminating fail → 6/6), harness 893; traps → gotchas § Testing (`pgrep | xargs -r kill`, a CDP eval right after the harness sees an empty panel). Committed + pushed on the user's ask.

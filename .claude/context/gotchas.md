@@ -862,6 +862,16 @@ re-read those before trusting memory here.
   that re-renders must `e.stopPropagation()`. Diagnosed by wrapping `menu.classList.remove` to
   capture a stack over CDP — the fastest way to find "who closed this".
 
+- **A popup that opens or redraws under a RESTING pointer gets `mouseover` per redraw and NO
+  `mousemove`** (measured 2026-10-26 over CDP: parked pointer on `/goal`'s row, typing `/con` → six
+  mouseovers, zero mousemoves). A hover handler on mouseover therefore fires without the user moving
+  the mouse; gate hover-driven state on a mousemove at NEW screen coordinates (`ptrLive` in
+  `js/30-menus.js`). CSS `:hover` has the same effect visually — it is why the panel paints only `.sel`.
+- **A box whose height follows the hovered item jitters when its container is bottom-anchored**: a
+  shorter box clamps the scroll, the list slides under the pointer, the next item takes the hover.
+  Reserve the tallest state in layout (invisible sizers in one grid cell, `askPrevHtml`) rather than
+  measuring in JS.
+
 ## Testing, probes and sandboxes
 - **A kill → wait → relaunch chain run in the BACKGROUND races a foreground "wait for :9222"
   loop**: the loop saw the OLD sandbox's port still open ("port up after 1s") twice on
@@ -1285,6 +1295,25 @@ re-read those before trusting memory here.
 - **Reading a minified bundle: a python `str.find` loop, not `grep -o '.\{0,300\}needle…'`** —
   the 2.1.296 extension (3.4 MB) + webview (5.5 MB) answered six needles with ±400-char windows in
   under a second (2026-10-10); the equivalent grep took minutes last session.
+
+- **`Input.insertText` over CDP fires NO keydown** — a probe typing with it skips every keydown
+  handler (the menu hover disarm looked broken); use `Input.dispatchKeyEvent` keyDown(text)/keyUp to
+  type like a user. `Input.dispatchMouseEvent` does reach the JCEF page (real `:hover`, real
+  mouseover/mousemove). `tools/cdp.py` only evaluates — open the panel target's websocket yourself.
+- **A popup row scrolled out of the list still reports a `getBoundingClientRect`** — parking the
+  pointer on it lands on whatever is drawn there (the textarea). Check `elementFromPoint` first.
+- **A tall spacer `div` inserted into `#log` shrinks to nothing** — `#log` is a flex column and an
+  empty item's min-height is 0; give it `flex: none` (fixture 102's guard went vacuous without it,
+  depending on which fixture ran before).
+- **Fixture 04 used to send a REAL prompt every full run** (`sendTurn('what is the status?')` through
+  the real bridge, until 2026-10-26): its reply streamed into whichever fixture was running (fixture
+  102's list moved with the box height green). A full-run-only failure that passes alone → tape
+  `#log` with a MutationObserver (fixture 102 keeps one as `window.__mut102`) before suspecting the fix.
+- **`git add -p` is interactive (unavailable here)** — to split one file across commits, cut the
+  `git diff -U2` output into hunks and `git apply --cached --recount` the chosen ones. Never
+  `git stash` a subset to "see the old build": the stash takes every hunk of those files, other
+  work included (2026-10-26, popped at once) — a restart of the sandbox on the old tree is not needed
+  when the negative control already ran before the edit.
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with

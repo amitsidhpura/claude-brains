@@ -61,6 +61,9 @@ live in `gotchas.md` (grep the section named) and `decisions.md`.
 - **Open visual choices: render the candidates side by side**, in the REAL panel and real ancestor
   (the mockup and headless Chrome get glyph sizes wrong under `#inputbar svg{18px}`), and expect
   the pick to be provisional — the chip-label candidates ended with no label at all (2026-08-26).
+- **Hand tests in the sandbox go ONE step at a time** (user, 2026-10-26: "help me test this 1 step
+  at a time"): reset the panel first (`bridge({kind:'new'})`), give one step with what to look for,
+  wait for the result; check the clipboard / DOM on our side between steps where it can be measured.
 - **Ship the safest candidate FIRST, then build the probe against it**, so each column varies one
   live token (`--attach-gap`, `--pulse-name`, 2026-08-13).
 - **Sequence a fix so its negative control is free**: land the state-creating half, run the

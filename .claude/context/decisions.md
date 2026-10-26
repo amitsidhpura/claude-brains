@@ -4,6 +4,49 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-26 — Popup menus paint ONE highlight (the cursor `.sel`); hover moves it only after a real pointer move
+**Decision:** a capture `keydown` disarms hover; a `mousemove` at new screen coordinates re-arms it
+and selects the row under the pointer; `mouseover` selects only while armed. The `:hover` background
+is removed from `.popup-item` and `.card-menu .popup-item` — the pointer still lights the row it
+points at because a real move puts `.sel` there. **Why:** a menu redrawing under a resting pointer
+gets a mouseover per keystroke and NO mousemove (measured over CDP), so `/con` with the mouse parked
+selected `/goal`; then the user saw two identical highlights (cursor + :hover) and could not tell
+which one Enter would run. **Rejected:** a separate dimmer :hover tint (still two highlighted rows);
+ignoring hover for a fixed time after typing (a timer guesses, a move is the real signal);
+`pointer-events:none` on the list until a move (breaks the first click).
+
+## 2026-10-26 — The ask card's preview box holds the TALLEST option preview (invisible sizers in one grid cell)
+**Decision:** `askPrevHtml()` adds every option's preview and the no-preview sentence as
+`visibility:hidden` fold-capped `pre.ask-prev-sz` in the same grid cell as the painted `pre`, which
+stretches to the cell; live and replay share it. **Why:** the box resized per hovered option and,
+with the card anchored to the log's bottom, the list slid under the pointer and the hover flipped
+(reproduced: list 365→328→365→346 px). Pure layout — follows panel width and the fold contract with
+no JS measuring. **Rejected:** measuring heights in JS and setting `min-height` (re-measure on every
+resize/fold change); pinning the box to a fixed line count (clips or wastes); scroll-anchoring the log
+(the card still changes height, only the jump moves).
+
+## 2026-10-26 — Copy image: a hover corner button on tool-returned images + a round Copy beside the lightbox ×; PNG through Kotlin
+**Decision:** user's picks T2 (hover button on the image's top-right; beside the picture when it is
+under 64px wide) and P1 (round button beside ×, popup stays open), chosen from candidates rendered in
+the real panel. JS redraws the image on a canvas and sends PNG base64 (`copyImage`), Kotlin decodes
+with ImageIO and sets an image Transferable on `CopyPasteManager` — the same single clipboard route as
+text (decision 2026-10-10). **Why:** a tool can return JPEG/GIF/WebP and ImageIO has no WebP;
+`navigator.clipboard` is out for the same reasons as text. **Rejected:** a right-click menu (T1,
+offered, not picked); a caption-row text button (P2); a copy button on the user's own attachment
+chips (too small, would sit beside the composer's ×, and the chip already opens the popup — user
+agreed 2026-10-26; a right-click item stays on offer).
+
+## 2026-10-26 — The date line is a soft wave (pick G: 2px amplitude, 24px period)
+--border painted through a repeating SVG mask so the colour stays a token. Chosen from seven rendered
+candidates (B-G); the first round was "very aggressive curls, have it subtle". **Rejected:** a
+straight hairline (the old look), tighter periods (read as stitching).
+
+## 2026-10-26 — Harness fixtures never send a real prompt unless the CLI's answer is what they test
+Fixture 04's chip check called `sendTurn` through the REAL bridge, so every full run cost a turn and
+its reply streamed into later fixtures (fixture 102's intermittent failure; the "Session status
+inquiry" conversations). The bridge is stubbed around the call (fixture 96's tape pattern).
+**Rejected:** loosening fixture 102 to tolerate log growth (would hide a real regression).
+
 ## 2026-10-11 — 0.16.0, a MINOR bump; a halted release restarts from step 1, with the bump and feed kept OUT of git until the asset exists
 One feature (6.6 + Include open file) plus two fixes since v0.15.0 → minor. When the user halted
 at the gate for a styling fix, the prep stayed in the working tree uncommitted and the fix was
@@ -261,58 +304,11 @@ mis-pairing the control measured on the old regex (`)** and **C**` → bold " an
 "inline code is not opaque to emphasis" backlog item in the same change — a different mechanism
 (placeholders), separate control.
 
-## 2026-10-08 — The thinking body is trimmed in `thinkBlock()`, not rendered as markdown or padded away in CSS
-The CLI's thinking text ends with `\n\n` (13/13 persisted blocks, 2.1.270–2.1.293) and `.think .body` is
-the panel's one `pre-wrap` block, so an opened thought carried one empty line below it. One `trim()` at
-the top of the shared builder fixes live, replay, gallery and redacted paths together (fixture 89).
-**Why trim, not markdown:** the official webview avoids the gap by rendering thinking as markdown, but
-thinking is prose with the model's own line breaks; pre-wrap plain text is the faithful dress and has
-been since 2026-08-07, and a markdown pass would add a second renderer path to keep in parity.
-**Why not CSS:** a negative margin on `.body` would hide a symptom of the data and break the day the
-CLI stops emitting the newlines. **Rejected:** `trimEnd()` only (leading whitespace never measured,
-but a leading blank line would be the same defect mirrored); trimming in Kotlin for replay (the
-builder is where live and replay meet — a second copy drifts).
-
-## 2026-10-08 — The Default selection follows the model the CLI actually serves; only Default is relabelled
-**Decision:** `system/init.model` (first turn) and each assistant frame's `message.model` are
-compared with the roster's `default` row `resolvedModel`. A mismatch relabels the chip
-("Default (Fable 5.1)") and the Default row's description ("Fable 5.1 · from your settings");
-the selection stays `default`, the Default row keeps its tick, no `set_model` is sent, nothing is
-persisted. The remembered override survives a roster push (a CLI restart re-reads the same
-settings; the first turn corrects it either way). A NAMED selection is never relabelled. The gauge
-matches `result.modelUsage` by the effective id, so Default + a 1M model gets the real denominator.
-**Why:** the roster row is the CLI's built-in default and never reflects a settings `model`,
-`ANTHROPIC_MODEL` or a terminal `/model` pick (measured 2.1.283 + 2.1.293); the user burned a
-Fable allowance under a chip that said Opus. The panel's rule is to FOLLOW the CLI, never to push.
-**Rejected:** switching the tick to the real model's row (the user did not choose it — it would
-misreport their selection and a `set_model` to "re-sync" would silently override settings);
-relabelling named rows on a `message.model` mismatch (that is `model_fallback`'s business, 9.7
-watch, and `opus` vs `claude-opus-5-5[1m]` spellings make the compare unsafe); clearing the
-override on every roster push (the chip would flip back to the roster's lie at each restart until
-the first turn). Known gap, documented: nothing on the wire names the override before the first
-turn. Checklist 9.1, protocol doc § models, fixture 88.
-
-## 2026-09-27 — The `claude` executable is resolved on the SHELL PATH, the same layer the CLI is spawned under
-**Why**: the panel had been running the VS Code extension's bundled 2.1.270 for weeks while the
-terminal ran 2.1.283 — the user noticed only because Opus 5.5 was missing from the picker.
-`resolveExecutable()` searched the IDE's bare `System.getenv("PATH")` (a snap PhpStorm has no
-`~/.local/bin`) while `ClaudeCli` spawned the child under the `EnvironmentUtil` + `ShellEnv`
-overlay; the lookup and the spawn disagreed about what PATH is. Now ONE `ShellEnv.overlay()` feeds
-both, `ShellEnv.path()` is the PATH searched, `ShellEnv.which()` is the walk (4 tests). Proven with a
-negative control: `runIde` with `~/.local/bin` stripped → pre-fix build spawns
-`.vscode/extensions/…/native-binary/claude`, fixed build spawns `versions/2.1.283`.
-**Alternatives rejected**: preferring the NEWEST binary across all sources (hides which one runs and
-still drifts when the extension leads); documenting `-Dclaude.executable` as the answer (per-machine,
-silent, leaves every other user on the fallback); dropping the VS Code fallback (still the only
-route when nothing is on any PATH — kept, and now named as the trap it is in README/overview).
-
-## 2026-09-27 — The picker shows the CLI's whole roster, pinned previous versions included; no folding
-**Why**: 2.1.28x's `initialize` roster has 11 rows (aliases + `claude-opus-5`, `-4-8`, `-4-7`,
-`-4-6`, `claude-fable-5`, `claude-sonnet-4-6`) with no flag separating them, and 2.1.283's own
-TUI `/model` lists all 11 (measured through a pty). The panel passes the list through verbatim, so
-the two clients agree on the same CLI; the user's 6-row terminal screenshot was an older binary.
-**Not taken** (offered, no ask): folding the pinned `claude-*-N-N` rows under a "Previous versions"
-divider keyed off the value shape — backlog § Someday.
+## Digest — decisions 2026-09-27 → 2026-10-08 (compressed 2026-10-26; full text via `git show fccc30b:.claude/context/decisions.md`)
+- **2026-10-08 — The thinking body is trimmed in `thinkBlock()`** · the CLI's thinking ends `\n\n` (13/13) and `.think .body` is the one pre-wrap block; one trim in the shared builder fixes live/replay/gallery/redacted (fixture 89) · rejected rendering thinking as markdown (second renderer path), a CSS negative margin (hides the data), trimEnd only, a Kotlin-side trim.
+- **2026-10-08 — The Default selection follows the model the CLI actually serves; only Default is relabelled** (chip "Default (Fable 5.1)", no `set_model`, nothing persisted; named selections never relabelled; gauge matches the effective id) · the roster's default row never reflects a settings `model` / `ANTHROPIC_MODEL` / terminal `/model` (measured 2.1.283 + 2.1.293), the user burned Fable under a chip saying Opus; FOLLOW the CLI, never push · rejected moving the tick to the real row, relabelling named rows on mismatch, clearing the override per roster push. Fixture 88, checklist 9.1.
+- **2026-09-27 — `claude` is resolved on the SHELL PATH (`ShellEnv.path()/which()`), the same overlay the CLI is spawned under** · the panel ran the VS Code extension's bundled 2.1.270 for weeks while the terminal ran 2.1.283 (lookup used the IDE's bare PATH, spawn used the shell overlay); negative control proved it · rejected newest-binary-wins, documenting `-Dclaude.executable`, dropping the VS Code fallback.
+- **2026-09-27 — The picker shows the CLI's whole roster, pinned versions included, no folding** · the TUI's own `/model` lists all 11 rows on the same CLI · folding under "Previous versions" offered, not asked → backlog § Someday.
 
 ## Digest — decisions 2026-09-13 (compressed 2026-10-08; full text via `git show efa89aa:.claude/context/decisions.md`)
 - **2026-09-13 — The ordinary card's reject note sits ABOVE the buttons, placeholder "Tell Claude what to do instead · applies to Reject"** (supersedes the 2026-09-05 inline placement) · the 34px field as a flex item stretched every 26px button on Bash/Write cards while the plan card kept 26px — two heights for one control family (user's screenshot); above the buttons, three cards are one structure · rejected shrinking only the inline field (inconsistent with plan/ask fields), 34px footers everywhere, `align-items: center` (uneven row).
