@@ -94,8 +94,21 @@
       if (s) { e.preventDefault(); s.click(); }
     }
   });
-  document.addEventListener('mouseover', function (e) {
-    const item = e.target.closest('.popup-item');
+  // Hover moves the cursor only once the pointer has REALLY moved since the last key. A menu that
+  // opens or redraws under a resting pointer (typing `/con` with the mouse parked above the
+  // composer) gets a mouseover per keystroke and no mousemove at all — measured 2026-10-26 over
+  // CDP — and that hover stole the cursor from the first match (user, 2026-10-26: /goal instead of
+  // /context). Same coordinates count as no move, so a synthetic same-spot event cannot re-arm it.
+  let ptrX = -1, ptrY = -1, ptrLive = false;
+  document.addEventListener('keydown', function () { ptrLive = false; }, true);
+  document.addEventListener('mousemove', function (e) {
+    if (e.screenX === ptrX && e.screenY === ptrY) return;
+    ptrX = e.screenX; ptrY = e.screenY; ptrLive = true;
+    hoverSel(e.target);
+  });
+  document.addEventListener('mouseover', function (e) { if (ptrLive) hoverSel(e.target); });
+  function hoverSel(target) {
+    const item = target.closest && target.closest('.popup-item');
     if (!item) return;
     const p = item.closest('.popup');
     if (!p || !p.classList.contains('show') || item.classList.contains('sel')) return;
@@ -106,7 +119,7 @@
     if (p.classList.contains('nosel')) return;
     p.querySelectorAll('.popup-item').forEach(function (x) { x.classList.remove('sel'); });
     item.classList.add('sel');
-  });
+  }
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#histPanel') && !e.target.closest('#histBtn')) histPanel.classList.remove('show');
     // Clicks into the textarea RE-EVALUATE both text-driven menus (button popups close like

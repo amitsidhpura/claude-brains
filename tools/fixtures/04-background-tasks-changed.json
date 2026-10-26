@@ -111,9 +111,9 @@
    ],
    "expect": [
     {
-     "js": "(function(){ sendTurn('what is the status?', []); return document.getElementById('bgChip').hidden; })()",
+     "js": "(function(){ var real = window.__bridge; window.__bridge = function(){}; try { sendTurn('what is the status?', []); } finally { window.__bridge = real; } return document.getElementById('bgChip').hidden; })()",
      "equals": false,
-     "why": "DISCRIMINATING: the chip stays up across a turn boundary (hidden=true pre-fix — sendTurn wiped a level signal it does not own)"
+     "why": "DISCRIMINATING: the chip stays up across a turn boundary (hidden=true pre-fix — sendTurn wiped a level signal it does not own) (bridge stubbed for the call since 2026-10-26: the check is the panel's own sendTurn, and the real bridge sent a REAL prompt to the sandbox CLI every harness run — its reply streamed into later fixtures mid-measure, fixture 102)"
     },
     {
      "js": "document.getElementById('bgChip').textContent",
@@ -201,9 +201,9 @@
    "note": "GUARD — the slash menu's cursor is a real keyboard cursor and MUST still follow the pointer",
    "expect": [
     {
-     "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'compact',description:'a'},{name:'reload-skills',description:'b'}]})); renderSlash(''); var m=document.getElementById('slashMenu'); m.classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it[1].dispatchEvent(new MouseEvent('mouseover',{bubbles:true})); var n=document.querySelectorAll('#slashList .popup-item.sel').length; var second=it[1].classList.contains('sel'); m.classList.remove('show'); return n + ':' + second; })()",
+     "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'compact',description:'a'},{name:'reload-skills',description:'b'}]})); renderSlash(''); var m=document.getElementById('slashMenu'); m.classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it[1].dispatchEvent(new MouseEvent('mousemove',{bubbles:true,screenX:4040,screenY:4040})); var n=document.querySelectorAll('#slashList .popup-item.sel').length; var second=it[1].classList.contains('sel'); m.classList.remove('show'); return n + ':' + second; })()",
      "equals": "1:true",
-     "why": "GUARD (both phases): hovering the slash list still moves the single cursor onto the hovered row — this is what stops the fix from becoming 'delete the mouseover handler'"
+     "why": "GUARD (both phases): hovering the slash list still moves the single cursor onto the hovered row — this is what stops the fix from becoming 'delete the mouseover handler' (2026-10-26: a REAL pointer move — hover follows only after the pointer moved since the last key, fixture 103; a bare mouseover is what a menu redrawing under a resting pointer gets)"
     }
    ]
   },

@@ -44,7 +44,12 @@
 /* A row the panel displays but never offers (the Don't-ask mode, 4.7): the flex display above
    beats the UA stylesheet's [hidden] rule, so the attribute needs its own. */
 .popup-item[hidden] { display: none; }
-.popup-item:hover, .popup-item.sel { background: var(--user-raised-hover); }
+/* ONE highlight: the cursor (.sel) — the row Enter acts on. No :hover paint beside it: a menu that
+   opened under a resting pointer showed two identical rows, the cursor and the hovered one, and
+   which one Enter would pick was a guess (user, 2026-10-26). The pointer still lights the row it
+   points at — a real move puts .sel there (js/30-menus.js hoverSel). The one popup with no cursor
+   (.nosel, the background roster) opts its rows out of hover paint anyway (60-composer.css). */
+.popup-item.sel { background: var(--user-raised-hover); }
 /* A row that is not (yet) actionable — the export popup's Copy / Save while the CLI prepares the
    text, or when there is nothing to export (15.4). Dimmed, no hover plate, cursor plain; the click
    handler ignores it. aria-disabled rides along for the same rows. */

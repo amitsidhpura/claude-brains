@@ -57,7 +57,7 @@
    LATER in this file and would otherwise win overflow on equal specificity. */
 .popup.card-menu { width: 310px; min-width: 0; top: calc(100% + 6px); bottom: auto;
   overflow-y: auto; background: var(--ok); border-color: var(--ok-hover); }
-.card-menu .popup-item:hover, .card-menu .popup-item.sel { background: var(--ok-hover); }
+.card-menu .popup-item.sel { background: var(--ok-hover); }   /* the cursor only — 70-popups.css */
 .card-menu .pi-title { color: #fff; }
 /* Same double-check the button wears, placed exactly like the history list's delete control:
    on the RIGHT, only while the row is hovered — and stable for the same reason the history

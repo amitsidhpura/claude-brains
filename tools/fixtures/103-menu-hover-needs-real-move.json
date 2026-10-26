@@ -1,0 +1,82 @@
+{
+ "item": "slash / popup menus: a menu that opens or redraws under a resting pointer keeps its cursor on the first match; hover moves it only after a real pointer move; and only the cursor is painted, so one row is ever highlighted",
+ "branch": "js/30-menus.js: a capture keydown clears ptrLive; a mousemove at new screen coordinates sets it and selects the row under the pointer; the document mouseover painter (hoverSel) acts only while ptrLive",
+ "provenance": "Measured 2026-10-26 in the sandbox over CDP (Input.dispatchMouseEvent to park the pointer on /goal's row, Input.insertText '/con'): every keystroke's redraw produced a mouseover at the parked coordinates and NO mousemove, and the cursor landed on /goal instead of /context — the user's report the same day. The events here are that sequence, synthetic; the command list is a shortened copy of the real menu.",
+ "steps": [
+  {
+   "note": "1 — the pointer rests (it moved, then a key was typed) and the menu redraws under it: the redraw's mouseover must NOT move the cursor off the first match",
+   "setup": "document.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,screenX:1103,screenY:1103})); window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'context',description:'a'},{name:'code-review',description:'b'},{name:'run',description:'c'},{name:'compact',description:'d'},{name:'goal',description:'e'}]})); renderSlash(''); document.getElementById('slashMenu').classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it.forEach(function(x,n){ x.classList.toggle('sel', n===0); }); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Shift',bubbles:true})); document.querySelectorAll('#slashList .popup-item')[4].dispatchEvent(new MouseEvent('mouseover',{bubbles:true,screenX:1103,screenY:1103}));",
+   "expect": [
+    {
+     "js": "[].slice.call(document.querySelectorAll('#slashList .popup-item .pi-title'),0,5).map(function(x){return x.textContent}).join(' ')",
+     "equals": "/context /code-review /run /compact /goal",
+     "why": "GUARD: the five commands drawn in order (the built-in /btw follows them)"
+    },
+    {
+     "js": "(function(){ var s=document.querySelector('#slashList .popup-item.sel'); return s ? s.querySelector('.pi-title').textContent : 'none'; })()",
+     "equals": "/context",
+     "why": "DISCRIMINATING: the cursor stays on the first match (pre-fix: the row under the resting pointer, /goal)"
+    }
+   ]
+  },
+  {
+   "note": "2 — an event at the SAME spot is not a move: a same-coordinate mousemove does not re-arm the hover",
+   "setup": "document.querySelectorAll('#slashList .popup-item')[4].dispatchEvent(new MouseEvent('mousemove',{bubbles:true,screenX:1103,screenY:1103}));",
+   "expect": [
+    {
+     "js": "(function(){ var s=document.querySelector('#slashList .popup-item.sel'); return s ? s.querySelector('.pi-title').textContent : 'none'; })()",
+     "equals": "/context",
+     "why": "DISCRIMINATING: still on the first match"
+    }
+   ]
+  },
+  {
+   "note": "3 — the pointer really moves onto a row: the cursor follows it (hover still picks)",
+   "setup": "document.querySelectorAll('#slashList .popup-item')[4].dispatchEvent(new MouseEvent('mousemove',{bubbles:true,screenX:1110,screenY:1103}));",
+   "expect": [
+    {
+     "js": "(function(){ var s=document.querySelector('#slashList .popup-item.sel'); return s ? s.querySelector('.pi-title').textContent : 'none'; })()",
+     "equals": "/goal",
+     "why": "a real move selects the row under the pointer"
+    }
+   ]
+  },
+  {
+   "note": "4 — after that move, crossing to another row is an ordinary hover again",
+   "setup": "document.querySelectorAll('#slashList .popup-item')[2].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));",
+   "expect": [
+    {
+     "js": "(function(){ var s=document.querySelector('#slashList .popup-item.sel'); return s ? s.querySelector('.pi-title').textContent : 'none'; })()",
+     "equals": "/run",
+     "why": "mouseover moves the cursor while the pointer is live"
+    }
+   ]
+  },
+  {
+   "note": "4b — ONE highlight: no stylesheet rule paints a popup row's background on :hover (the cursor .sel is the only paint, so a resting pointer cannot light a second row beside it — user, 2026-10-26, measured: /context and the parked-on /goal both rgb(44, 57, 76))",
+   "expect": [
+    {
+     "js": "document.styleSheets.length > 0 && [].some.call(document.styleSheets, function(sh){ try { return [].some.call(sh.cssRules, function(r){ return (r.selectorText||'').indexOf('.popup-item.sel') >= 0; }); } catch (e) { return false; } })",
+     "equals": true,
+     "why": "GUARD: the scan can see the popup rules (the cursor's own rule is found)"
+    },
+    {
+     "js": "(function(){ var bad=[]; [].forEach.call(document.styleSheets, function(sh){ var rs; try { rs = sh.cssRules; } catch (e) { return; } (function walk(list){ [].forEach.call(list, function(r){ if (r.cssRules && !r.selectorText) { walk(r.cssRules); return; } var sel = r.selectorText || ''; sel.split(',').forEach(function(one){ if (one.indexOf('popup-item') >= 0 && one.indexOf(':hover') >= 0 && one.indexOf(' ') < 0 || (one.indexOf('popup-item') >= 0 && /popup-item(\\.[\\w-]+)*:hover\\s*$/.test(one.trim()))) { var bg = r.style.backgroundColor || r.style.background; if (bg && bg !== 'transparent') bad.push(one.trim() + ' { ' + bg + ' }'); } }); }); })(rs); }); return JSON.stringify(bad); })()",
+     "equals": "[]",
+     "why": "DISCRIMINATING: no popup-item :hover background paint left (pre-fix: .popup-item:hover and .card-menu .popup-item:hover)"
+    }
+   ]
+  },
+  {
+   "note": "5 — cleanup",
+   "setup": "document.getElementById('slashMenu').classList.remove('show');",
+   "expect": [
+    {
+     "js": "document.getElementById('slashMenu').classList.contains('show')",
+     "equals": false,
+     "why": "menu closed"
+    }
+   ]
+  }
+ ]
+}
