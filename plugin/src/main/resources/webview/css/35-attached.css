@@ -98,6 +98,20 @@
 .tool-imgs .ti { max-width: 100%; width: auto; height: auto; max-height: 120px; object-fit: contain;
   object-position: left top; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 4px; background: var(--code-bg); cursor: zoom-in; display: block; }
+/* Copy image (user's pick T2, 2026-10-26): a hover button on the picture's top-right corner, hidden
+   by opacity like Copy response so nothing reflows. The wrapper is the positioning box and carries
+   the width cap, so the image's own max-width:100% still resolves against the column. 24px button,
+   13px glyph: the size rendered and picked in the real panel; 8px insets clear the 4px padding and
+   the border. .small (set after decode, under 64px wide): the button would cover the picture, so it
+   sits just beside it instead. */
+.tool-imgs .ti-wrap { position: relative; display: block; max-width: 100%; }
+.tool-imgs .ti-copy { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; padding: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: var(--radius);
+  background: var(--raised); border: 1px solid var(--border-strong); color: var(--fg); cursor: pointer; opacity: 0; }
+.tool-imgs .ti-wrap.small .ti-copy { top: 0; right: auto; left: calc(100% + 6px); }
+.tool-imgs .ti-wrap:hover .ti-copy, .tool-imgs .ti-copy:focus-visible { opacity: 1; }
+.tool-imgs .ti-copy:hover { background: var(--raised-hover); }
+.tool-imgs .ti-copy svg { width: 13px; height: 13px; display: block; }
 .tool-imgs .ti-missing { color: var(--muted); font-size: var(--fs-xs); }
 .io-cut, .io-note { display: block; padding: 0 10px 8px 42px; color: var(--muted); font-size: var(--fs-xs);
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }

@@ -1,0 +1,177 @@
+{
+ "item": "copy image (thread + popup): a hover copy button on every image a tool returned, and a Copy button beside the popup's ×; both send the image to the IDE clipboard through Kotlin",
+ "branch": "toolImages() (js/50-blocks.js) wraps each .ti in a .ti-wrap with a .ti-copy button (marked .small when the image is too narrow to carry it); the click and the lightbox's .lb-copy (chat.html, js/30-menus.js) go through copyImage() (js/20-markdown.js), which redraws the image on a canvas and sends bridge{kind:'copyImage', data:<PNG base64>}; ChatPanel.kt decodes it with ImageIO and sets an image Transferable on CopyPasteManager",
+ "provenance": "The tool_result image block {type:'image', source:{type:'base64', media_type, data}} is the live shape documented on toolImages (taken from a real record, client-parity item 8); the PNGs are generated solid-colour 64x40 and 12x12 images. Nothing new is claimed about the CLI: this is page behaviour plus the bridge ask. The Kotlin half (clipboard really holds an image) is checked by hand with xclip -t image/png, not here.",
+ "steps": [
+  {
+   "note": "1 — live: Read returns two images → each sits in its own .ti-wrap with ONE copy button; the 12px one is marked small (button beside it, not over it)",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('look', [], Date.now()); if (!window.__realBridge101) { window.__realBridge101 = window.__bridge; } window.__tape101 = []; window.__bridge = function(j){ window.__tape101.push(JSON.parse(j)); };",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "tool_use",
+       "id": "toolu_fx101",
+       "name": "Read"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "input_json_delta",
+       "partial_json": "{\"file_path\": \"/tmp/shot.png\"}"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "user",
+     "message": {
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "toolu_fx101",
+        "content": [
+         {
+          "type": "image",
+          "source": {
+           "type": "base64",
+           "media_type": "image/png",
+           "data": "iVBORw0KGgoAAAANSUhEUgAAAEAAAAAoCAIAAADBrGu+AAAAWUlEQVR4nO3PUQkAIBTAwBfJSNa2jSH8OITBAtzm7PV1wwUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWPHYBNqUa0ye8nJ0AAAAASUVORK5CYII="
+          }
+         },
+         {
+          "type": "image",
+          "source": {
+           "type": "base64",
+           "media_type": "image/png",
+           "data": "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAIAAADZF8uwAAAAE0lEQVR4nGOQizpBEDGMKhqMigDDMbQB0da97AAAAABJRU5ErkJggg=="
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .tool-imgs .ti').length",
+     "equals": 2,
+     "why": "GUARD: both images drawn"
+    },
+    {
+     "js": "document.querySelectorAll('#log .tool-imgs > .ti-wrap').length",
+     "equals": 2,
+     "why": "one wrapper per image"
+    },
+    {
+     "js": "JSON.stringify([].map.call(document.querySelectorAll('#log .ti-wrap'),function(w){return w.querySelectorAll(':scope > .ti-copy').length}))",
+     "equals": "[1,1]",
+     "why": "exactly one copy button per image"
+    },
+    {
+     "js": "new Promise(function(r){setTimeout(function(){r(JSON.stringify([].map.call(document.querySelectorAll('#log .ti-wrap'),function(w){return w.classList.contains('small')})))},400)})",
+     "equals": "[false,true]",
+     "why": "only the image narrower than the button's room is marked small"
+    },
+    {
+     "js": "(function(b){return b ? getComputedStyle(b).opacity : 'missing'})(document.querySelector('#log .ti-copy'))",
+     "equals": "0",
+     "why": "hidden until the image is hovered"
+    },
+    {
+     "js": "(document.querySelector('#log .ti-copy')||{}).title",
+     "equals": "Copy image",
+     "why": "tooltip names the action"
+    }
+   ]
+  },
+  {
+   "note": "2 — click the thread button: the image goes to Kotlin as PNG base64 (bridge{kind:'copyImage'}), the glyph flashes to the check, the lightbox does NOT open",
+   "setup": "window.__tape101 = []; var b=document.querySelector('#log .ti-copy'); if (b) b.click();",
+   "expect": [
+    {
+     "js": "new Promise(function(r){setTimeout(function(){r(JSON.stringify(window.__tape101.map(function(o){return o.kind})))},400)})",
+     "equals": "[\"copyImage\"]",
+     "why": "one copyImage ask, nothing else"
+    },
+    {
+     "js": "(window.__tape101[0] ? ((function(d){return new Promise(function(r){var i=new Image();i.onload=function(){r(i.naturalWidth+'x'+i.naturalHeight)};i.onerror=function(){r('bad')};i.src='data:image/png;base64,'+d;});}))(window.__tape101[0].data) : 'none')",
+     "equals": "64x40",
+     "why": "the payload decodes to the clicked image at its natural size"
+    },
+    {
+     "js": "(document.querySelector('#log .ti-copy')||{innerHTML:''}).innerHTML.indexOf('M20 6 9 17l-5-5') >= 0",
+     "equals": true,
+     "why": "check glyph while the flash lasts"
+    },
+    {
+     "js": "document.getElementById('lightbox').classList.contains('show')",
+     "equals": false,
+     "why": "the copy click is not an open click"
+    }
+   ]
+  },
+  {
+   "note": "3 — the popup: clicking the image opens it with a Copy button beside ×; Copy sends the shown image and leaves the popup open",
+   "setup": "window.__tape101 = []; document.querySelectorAll('#log .ti')[1].click();",
+   "expect": [
+    {
+     "js": "document.getElementById('lightbox').classList.contains('show')",
+     "equals": true,
+     "why": "GUARD: popup open"
+    },
+    {
+     "js": "document.querySelectorAll('#lightbox .lb-copy').length",
+     "equals": 1,
+     "why": "one copy button in the popup"
+    },
+    {
+     "js": "(document.querySelector('#lightbox .lb-copy')||{}).title",
+     "equals": "Copy image",
+     "why": "tooltip names the action"
+    },
+    {
+     "js": "new Promise(function(r){ var b=document.querySelector('#lightbox .lb-copy'); if (b) b.click(); setTimeout(function(){ r(JSON.stringify(window.__tape101.map(function(o){return o.kind}))) }, 400); })",
+     "equals": "[\"copyImage\"]",
+     "why": "one copyImage ask"
+    },
+    {
+     "js": "(window.__tape101[0] ? ((function(d){return new Promise(function(r){var i=new Image();i.onload=function(){r(i.naturalWidth+'x'+i.naturalHeight)};i.onerror=function(){r('bad')};i.src='data:image/png;base64,'+d;});}))(window.__tape101[0].data) : 'none')",
+     "equals": "12x12",
+     "why": "the payload is the image the popup shows"
+    },
+    {
+     "js": "document.getElementById('lightbox').classList.contains('show')",
+     "equals": true,
+     "why": "copy does not close the popup"
+    }
+   ]
+  },
+  {
+   "note": "4 — cleanup: close the popup, restore the real bridge",
+   "setup": "document.getElementById('lightbox').classList.remove('show'); if (window.__realBridge101) { window.__bridge = window.__realBridge101; }",
+   "expect": [
+    {
+     "js": "document.getElementById('lightbox').classList.contains('show')",
+     "equals": false,
+     "why": "popup closed"
+    }
+   ]
+  }
+ ]
+}

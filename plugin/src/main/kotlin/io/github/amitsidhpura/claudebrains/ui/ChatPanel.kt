@@ -252,6 +252,16 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                         .setContents(java.awt.datatransfer.StringSelection(text))
                 }
             }
+            // Copy image (thread hover button, the lightbox's Copy): the page always sends PNG
+            // (copyImage redraws on a canvas), so ImageIO never meets a format it cannot read.
+            "copyImage" -> msg["data"]?.jsonPrimitive?.content?.let { data ->
+                val image = runCatching {
+                    javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(java.util.Base64.getDecoder().decode(data)))
+                }.getOrNull() ?: return
+                ApplicationManager.getApplication().invokeLater {
+                    com.intellij.openapi.ide.CopyPasteManager.getInstance().setContents(ImageSelection(image))
+                }
+            }
             "perm" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val allow = msg["allow"]?.jsonPrimitive?.content == "true"
@@ -1079,5 +1089,16 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         /** The project's live panel, stashed by ClaudeToolWindowFactory so actions can reach it. */
         val PANEL_KEY: com.intellij.openapi.util.Key<ChatPanel> =
             com.intellij.openapi.util.Key.create("claude-brains.chatPanel")
+    }
+}
+
+/** An image on the clipboard — AWT ships StringSelection but no image counterpart. */
+private class ImageSelection(private val image: java.awt.Image) : java.awt.datatransfer.Transferable {
+    override fun getTransferDataFlavors() = arrayOf(java.awt.datatransfer.DataFlavor.imageFlavor)
+    override fun isDataFlavorSupported(flavor: java.awt.datatransfer.DataFlavor) =
+        flavor == java.awt.datatransfer.DataFlavor.imageFlavor
+    override fun getTransferData(flavor: java.awt.datatransfer.DataFlavor): Any {
+        if (!isDataFlavorSupported(flavor)) throw java.awt.datatransfer.UnsupportedFlavorException(flavor)
+        return image
     }
 }

@@ -592,7 +592,18 @@
       if (w && h) { img.width = w; img.height = h; }
       img.src = 'data:' + (im.media_type || 'image/png') + ';base64,' + im.data;
       img.onclick = function () { openLB(img.src, name); };
-      box.appendChild(img);
+      // Copy image: a hover button on the picture's corner (user's pick, 2026-10-26). An image too
+      // narrow to carry it (a favicon, a 12px dot) gets it beside the picture instead — measured
+      // after decode, since the reserved width can be the original, not the 120px-capped one.
+      const wrap = document.createElement('span');
+      wrap.className = 'ti-wrap';
+      const cp = document.createElement('button');
+      cp.type = 'button'; cp.className = 'ti-copy'; cp.title = 'Copy image';
+      cp.innerHTML = SVG_COPY;
+      cp.onclick = function (e) { e.stopPropagation(); copyImage(img.src); flashCopied(cp); };
+      img.addEventListener('load', function () { wrap.classList.toggle('small', img.offsetWidth < 64); });
+      wrap.appendChild(img); wrap.appendChild(cp);
+      box.appendChild(wrap);
     });
     return box.childNodes.length ? box : null;
   }

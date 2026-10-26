@@ -81,10 +81,13 @@
 .lb-img .ph-img { display: block; width: 320px; height: 200px; }   /* mockup placeholder keeps a size */
 .lb-img img { display: block; max-width: 86vw; max-height: 78vh; }
 .lb-cap { text-align: center; color: var(--muted); font-size: var(--fs-sm); margin-top: 8px; }
-.lb-x { position: absolute; top: -12px; right: -12px; width: 26px; height: 26px; border-radius: 50%; background: var(--raised);
+.lb-x, .lb-copy { position: absolute; top: -12px; right: -12px; width: 26px; height: 26px; border-radius: 50%; background: var(--raised);
   border: 1px solid var(--border-strong); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
-.lb-x:hover { background: var(--raised-hover); }
-.lb-x svg { width: 14px; height: 14px; }
+.lb-x:hover, .lb-copy:hover { background: var(--raised-hover); }
+.lb-x svg, .lb-copy svg { width: 14px; height: 14px; }
+/* Copy image sits beside × (user's pick, 2026-10-26): the same round button, one button-width plus
+   an 8px gap to its left — × hangs 12px outside the box, so 26 - 12 + 8 = 22px from the edge. */
+.lb-copy { right: 22px; }
 
 /* command preview in permission card (Bash) */
 .card .cmd { margin: 0; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;

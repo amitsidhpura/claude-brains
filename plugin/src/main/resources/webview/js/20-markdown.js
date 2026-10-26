@@ -211,14 +211,30 @@
   // does not always hold (a programmatic click rejected the write, 2026-10-10), and it cannot be
   // read back by the harness; the IDE's clipboard can (xclip).
   function copyText(text) { bridge({ kind: 'copy', text: String(text == null ? '' : text) }); }
+  // The same route for a picture (ChatPanel "copyImage"): redrawn on a canvas first so Kotlin only
+  // ever decodes PNG — a tool can return JPEG, GIF or WebP, and Java's ImageIO cannot read WebP.
+  function copyImage(src) {
+    const im = new Image();
+    im.onload = function () {
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      c.getContext('2d').drawImage(im, 0, 0);
+      bridge({ kind: 'copyImage', data: c.toDataURL('image/png').split(',')[1] });
+    };
+    im.src = src;
+  }
+  // the copy controls' shared feedback: the glyph flashes to the check
+  function flashCopied(btn) {
+    btn.innerHTML = SVG_CHECK;
+    setTimeout(function () { btn.innerHTML = SVG_COPY; }, 1200);
+  }
   // delegate copy-button clicks (codeblock header icon)
   log.addEventListener('click', (e) => {
     const btn = e.target.closest('.copy');
     if (!btn) return;
     const pre = btn.closest('.codeblock').querySelector('pre');
     if (pre) copyText(pre.textContent);
-    btn.innerHTML = SVG_CHECK;
-    setTimeout(() => { btn.innerHTML = SVG_COPY; }, 1200);
+    flashCopied(btn);
   });
 
   /* Copy response (15.4). mdBlock paints a FINAL assistant text block in one step: render, keep
@@ -244,7 +260,6 @@
     const k = btn.parentNode;
     // the source when the block kept it (every assistant text block does), else what is on screen
     copyText(typeof k.__md === 'string' ? k.__md : k.textContent);
-    btn.innerHTML = SVG_CHECK;
-    setTimeout(function () { btn.innerHTML = SVG_COPY; }, 1200);
+    flashCopied(btn);
   });
 
