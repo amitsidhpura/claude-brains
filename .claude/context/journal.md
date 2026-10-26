@@ -3,6 +3,18 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-26 (thirty-first) — review of the thirtieth session's four commits; four follow-ups, harness 1207, committed + pushed
+- User asked for a review of the day's updates (Fable): all four hold up — live/replay share builders,
+  mockup mirrored, no hardcoded colours. Reviewed by reading the diffs plus the OTHER readers of each
+  touched hook (`openLB` callers, `.fold` CSS, `toolImages` callers, `.nosel`).
+- Found: fixture 04's stubbed `sendTurn` left `busy` true for all later fixtures (gotchas § Testing);
+  copy image flashed its check on click, before the canvas decode; checklist 1.19/1.11 lacked Copy
+  image; date-line comment said "2px amplitude" (the curve is ±1px, 2px peak to peak).
+- All four fixed in `2e71907`; fixture 04 verified (Send reads "Send" afterwards), full harness
+  1207/1207, `./gradlew test` 176, sandbox restarted on the new build first.
+- User preference restated: replies easy and concise.
+- Next: release 0.17.0 only when asked; Windows paste check for copy image.
+
 ## 2026-10-26 (thirtieth) — wavy date line, copy image, steady ask-preview box, menu hover fix; fixture 04's real sendTurn found and stubbed; harness 1172→1207; four commits pushed
 - `/context load`, then four user asks, each rendered as candidates in the REAL sandbox panel
   (injected DOM/CSS over CDP) before building: date line (wave G of B-G, 2px/24px), copy image

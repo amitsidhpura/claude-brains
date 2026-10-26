@@ -4,6 +4,12 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-26 — Copy image's check flashes on SEND (after decode), not on click
+**Decision:** `copyImage(src, btn)` calls `flashCopied(btn)` from the canvas `onload`, after the
+`copyImage` bridge frame; callers pass the button. **Why:** the tick should mean "sent"; an undecodable
+picture shows no tick. **Rejected:** keeping the flash on the click (simpler, but claims success
+before the work happened).
+
 ## 2026-10-26 — Popup menus paint ONE highlight (the cursor `.sel`); hover moves it only after a real pointer move
 **Decision:** a capture `keydown` disarms hover; a `mousemove` at new screen coordinates re-arms it
 and selects the row under the pointer; `mouseover` selects only while armed. The `:hover` background

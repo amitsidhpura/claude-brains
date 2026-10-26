@@ -17,6 +17,10 @@ the sandbox, committed and pushed** (journal thirtieth for the detail):
   from `.popup-item` (`css/70-popups.css`) and `.card-menu` rows. Fixture 103; fixture 04 now stubs
   the bridge around its `sendTurn` (it sent a REAL prompt every harness run — gotchas § Testing).
 
+**Follow-up `2e71907` (review of the four, pushed):** fixture 04 ends its stubbed turn
+(`setBusy(false)`), copy image flashes after decode, checklist 1.19/1.11 name Copy image, date-line
+comment fixed. Harness 1207/1207, test 176; sandbox on the new build.
+
 **Released version: 0.16.0 (2026-10-11), Approved on the Marketplace.** Unreleased since `v0.16.0`:
 the four commits above — one feature (copy image) → **0.17.0** if the user asks for a release
 (feature → minor; 0.16.1 only for fixes-only). A release starts only when the user asks.
@@ -71,6 +75,7 @@ session); the user's own copy-image paste on Windows is untested (Windows AWT cl
 ## Next steps
 - [x] Wavy date line, copy image, ask preview steady height, menu hover — built, fixtures 101-103,
       harness 1207, hand-tested by the user in the sandbox, committed + pushed (2026-10-26).
+- [x] Review of the four (2026-10-26): four follow-ups fixed in `2e71907`.
 - [ ] Release 0.17.0 when the user asks (notes: copy image as the feature; steady preview box,
       menu one-highlight / no hover steal, wavy date line as polish).
 - [ ] Copy image on WINDOWS: paste once into another app (AWT image clipboard path untested there).

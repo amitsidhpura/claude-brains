@@ -873,6 +873,11 @@ re-read those before trusting memory here.
   measuring in JS.
 
 ## Testing, probes and sandboxes
+- **A fixture that calls `sendTurn` with a stubbed bridge must end the turn itself**: `sendTurn`
+  ends in `setBusy(true)`, the stub can never be answered, and the harness's per-fixture `reset()`
+  (`__clear` → `clearLogUI`) does NOT clear `busy` — only a result frame, `__exit`, a retraction or a
+  session switch does. Send then reads Stop and `submit()` queues for every later fixture (found in
+  review 2026-10-26 on fixture 04; fixed with `setBusy(false)` in the step's `finally`).
 - **A kill → wait → relaunch chain run in the BACKGROUND races a foreground "wait for :9222"
   loop**: the loop saw the OLD sandbox's port still open ("port up after 1s") twice on
   2026-10-10. It worked out only because the relaunch was faster than the 25 s sleep that
