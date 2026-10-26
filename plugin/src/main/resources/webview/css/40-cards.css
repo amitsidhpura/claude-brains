@@ -237,6 +237,14 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .ask-prev pre.fold { --fold-fade: var(--code-bg); --fold-pad: 18px; --fold-bpad: 9px; }
 .ask-prev pre.fold:not(.open) { overflow: hidden; }
 .ask-prev pre.ask-noprev { font-family: inherit; white-space: normal; }
+/* One cell, every option's preview stacked in it (askPrevHtml): the invisible sizers hold the box
+   at the tallest one, folded or not, and the painted box stretches to fill the cell, so a hover
+   never changes the height (user, 2026-10-26: the list moved under the pointer). minmax(0, 1fr)
+   keeps a wide preview from widening the column. Opening a folded preview still grows the box —
+   that is a click, not a hover. */
+.ask-prev { display: grid; grid-template-columns: minmax(0, 1fr); }
+.ask-prev > pre { grid-area: 1 / 1; }
+.ask-prev > pre.ask-prev-sz { visibility: hidden; pointer-events: none; }
 /* 1.31 answered record: one row per question under the panels — the card and its tabs stay
    (user's pick 2026-10-10); a hairline in the card's warm border separates it from the options */
 .ask-sum { margin: 4px 12px 0; padding-top: 8px; border-top: 1px solid var(--warn-border);

@@ -106,7 +106,7 @@
         '<span class="q-body"><span class="q-t">Other</span></span></div>';
       html += '<div class="ask-other"' + (free.length ? '' : ' hidden') +
         '><input type="text" disabled></div>';
-      html += '</div>' + (hasPrev ? '<div class="ask-prev"><pre></pre></div>' : '') + '</div>';
+      html += '</div>' + (hasPrev ? askPrevHtml(q) : '') + '</div>';
     });
     // the answered record (1.31) sits between the panels and the result line, as resolveAsk puts it
     card.innerHTML = html + (it.denied ? '' : askSummaryHtml(qs, answers)) + '<div class="ask-b">' + (it.denied

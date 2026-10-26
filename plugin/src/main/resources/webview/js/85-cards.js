@@ -292,7 +292,7 @@
       html += '<label class="ask-opt ask-opt-other"><input type="' + type + '" name="aq' + i + '" data-oi="-1">' +
         '<span class="ask-ind"></span><span class="q-body"><span class="q-t">Other</span></span></label>';
       html += '<div class="ask-other" hidden><input type="text" placeholder="Type your answer…"></div>';
-      html += '</div>' + (hasPrev ? '<div class="ask-prev"><pre></pre></div>' : '') + '</div>';
+      html += '</div>' + (hasPrev ? askPrevHtml(q) : '') + '</div>';
     });
     html += '<div class="ask-b"><button class="ask-go ok">' + SVG_CHECK + 'Submit answers</button>' +
       '<button class="no">' + SVG_X + 'Cancel</button></div>';

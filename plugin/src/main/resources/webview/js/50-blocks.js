@@ -929,10 +929,23 @@
     return m ? m[1] : s;
   }
   const NO_PREVIEW = 'No preview for this option';   // the official webview's copy
+  // The box under a question's options. Every option's preview (and the no-preview sentence the
+  // Other row shows) is also laid out in it, invisible, in the same grid cell as the painted one,
+  // each capped at the fold height, so the box always holds the TALLEST of them: hovering down the
+  // list repaints it without changing its height. A box that changed height moved the list under
+  // the pointer (the log anchors to its bottom), the next option took the hover, and the card
+  // jittered (user, 2026-10-26). Live and replay build it here.
+  function askPrevHtml(q) {
+    let h = '<div class="ask-prev"><pre></pre>';
+    (q.options || []).forEach(function (o) {
+      if (o.preview) h += '<pre class="ask-prev-sz fold" aria-hidden="true">' + esc(previewText(o.preview)) + '</pre>';
+    });
+    return h + '<pre class="ask-prev-sz fold ask-noprev" aria-hidden="true">' + NO_PREVIEW + '</pre></div>';
+  }
   // Paint one panel's preview box for option `oi` (-1 = the Other row, null = none). An option
   // without a preview shows the no-preview sentence in the card's warm muted tone.
   function paintPreview(panel, q, oi) {
-    const pre = panel.querySelector('.ask-prev pre'); if (!pre) return;
+    const pre = panel.querySelector('.ask-prev > pre:not(.ask-prev-sz)'); if (!pre) return;
     const p = oi != null && oi >= 0 ? ((q.options || [])[oi] || {}).preview : null;
     pre.classList.toggle('ask-noprev', !p);
     pre.textContent = p ? previewText(p) : NO_PREVIEW;
@@ -950,7 +963,7 @@
     });
   }
   function wirePreviewFold(card) {
-    card.querySelectorAll('.ask-prev pre').forEach(function (pre) {
+    card.querySelectorAll('.ask-prev > pre:not(.ask-prev-sz)').forEach(function (pre) {
       pre.addEventListener('click', function () {
         if (window.getSelection && String(window.getSelection())) return;   // a selection is not a toggle
         if (pre.classList.contains('fold')) pre.classList.toggle('open');

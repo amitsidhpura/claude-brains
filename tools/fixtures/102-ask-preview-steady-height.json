@@ -1,0 +1,83 @@
+{
+ "item": "1.31 ask-card preview box keeps one height while hovering the options",
+ "branch": "askPrevHtml() (js/50-blocks.js) lays every option's preview plus the no-preview sentence into the box as invisible, fold-capped sizers in one grid cell (css/40-cards.css .ask-prev); paintPreview fills the visible pre, which stretches to the cell. Live (85-cards.js) and replay (55-replay.js) both build the box through it.",
+ "provenance": "The permission_request / AskUserQuestion shape is fixture 92's (the preview field is real, CLI 2.1.220 replay-sample.jsonl); the option previews here are synthetic, chosen for three different heights plus none. Reproduced before the fix in the sandbox panel 2026-10-26: hovering 0→1→2→3 moved the list 365→328→365→346 px as the box went 37→74→37→55 px.",
+ "steps": [
+  {
+   "note": "1 — a question whose options carry previews of different heights (one line, folded ten lines, none, two lines) sits at the bottom of a scrolled log (after a 1.5 s settle, so an earlier fixture's late timer cannot land mid-measure)",
+   "setup": "new Promise(function(r){ setTimeout(r, 1500); }).then(function(){ window.onClaudeEvent(JSON.stringify({type:'__clear'})); var pad=document.createElement('div'); pad.style.height='1500px'; pad.style.flex='none'; log.insertBefore(pad, log.firstChild); addUserMessage('ask me', []); })",
+   "frames": [
+    {
+     "type": "permission_request",
+     "id": "p102",
+     "tool": "AskUserQuestion",
+     "input": "{\"questions\": [{\"question\": \"Where should the badge sit?\", \"header\": \"Position\", \"multiSelect\": false, \"options\": [{\"label\": \"Top-right\", \"description\": \"Under the heart.\", \"preview\": \"one line only\"}, {\"label\": \"Bottom-left\", \"description\": \"Image corner.\", \"preview\": \"+-----+\\n| a   |\\n| b   |\\n| c   |\\n| d   |\\n| e   |\\n+-----+\\nSKU\\nName\\n$412\"}, {\"label\": \"Next to price\", \"description\": \"After the price.\"}, {\"label\": \"Two lines\", \"description\": \"Short.\", \"preview\": \"line 1\\nline 2\"}]}]}"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .ask-panel[data-q=\"0\"] .ask-opt').length",
+     "equals": 5,
+     "why": "GUARD: four options plus Other"
+    },
+    {
+     "js": "(log.scrollTop = log.scrollHeight, log.scrollTop > 0)",
+     "equals": true,
+     "why": "GUARD: the log scrolls and sits at its bottom"
+    },
+    {
+     "js": "document.querySelectorAll('#log .ask-prev > pre:not(.ask-prev-sz)').length",
+     "equals": 1,
+     "why": "one painted preview box"
+    }
+   ]
+  },
+  {
+   "note": "2 — hover down the list and back (0,1,2,3,Other,0,1): the box height and the list's position never change — each sample also records log.scrollTop / scrollHeight / child count, and a MutationObserver tapes #log into window.__mut102 for the sweep only: two full-suite runs saw the list jump 76-155 px with the box height unchanged (something else growing the log mid-sweep, not reproduced alone or in a subset), so a recurrence names its cause. NAMED 2026-10-26 (third recurrence): a live CLI reply streamed into a .turn-body mid-sweep (a git-status answer, the sandbox's real CLI sharing the page) while the box stayed 82 px — harness noise, not this fix — its source was fixture 04's sendTurn('what is the status?') going through the REAL bridge, stubbed the same day; if the list check fails with the box-height check green, read window.__mut102 before suspecting the box",
+   "setup": "window.__m102 = null; window.__mut102 = []; if (window.__mo102) window.__mo102.disconnect(); window.__mo102 = new MutationObserver(function(ms){ ms.forEach(function(m){ [].forEach.call(m.addedNodes, function(n){ if (n.nodeType === 1) window.__mut102.push((m.target.className||m.target.id||m.target.tagName) + ' <- ' + n.tagName + '.' + n.className + ' ' + String(n.textContent).slice(0,60)); }); if (m.type === 'attributes') window.__mut102.push('attr ' + m.attributeName + ' on ' + (m.target.className||m.target.id)); }); }); window.__mo102.observe(log, {childList:true, subtree:true, attributes:true, attributeFilter:['class','hidden','style']});",
+   "expect": [
+    {
+     "js": "(new Promise(function(done){\n  var opts=document.querySelectorAll('#log .ask-panel[data-q=\"0\"] .ask-opt'), seq=[0,1,2,3,4,0,1], out=[], i=0;\n  function step(){\n    if(i>=seq.length){ done(JSON.stringify(out)); return; }\n    opts[seq[i]].dispatchEvent(new MouseEvent('mouseenter'));\n    requestAnimationFrame(function(){ requestAnimationFrame(function(){\n      out.push([Math.round(document.querySelector('#log .ask-list').getBoundingClientRect().top), document.querySelector('#log .ask-prev').offsetHeight, Math.round(log.scrollTop), log.scrollHeight, log.children.length]);\n      i++; step(); }); });\n  }\n  step();\n})).then(function(r){ window.__m102 = r; return JSON.parse(r).length; })",
+     "equals": 7,
+     "why": "GUARD: seven hovers measured"
+    },
+    {
+     "js": "(function(a){return a.every(function(x){return x[1]===a[0][1]})})(JSON.parse(window.__m102))",
+     "equals": true,
+     "why": "DISCRIMINATING: the preview box keeps one height on every hover"
+    },
+    {
+     "js": "(function(a){return a.every(function(x){return x[0]===a[0][0]})})(JSON.parse(window.__m102))",
+     "equals": true,
+     "why": "DISCRIMINATING: the option list does not move under the pointer"
+    },
+    {
+     "js": "document.querySelector('#log .ask-prev > pre:not(.ask-prev-sz)').textContent",
+     "equals": "+-----+\n| a   |\n| b   |\n| c   |\n| d   |\n| e   |\n+-----+\nSKU\nName\n$412",
+     "why": "the box still paints the hovered option's preview"
+    },
+    {
+     "js": "document.querySelector('#log .ask-prev > pre:not(.ask-prev-sz)').classList.contains('fold')",
+     "equals": true,
+     "why": "a long preview still folds"
+    }
+   ]
+  },
+  {
+   "note": "3 — clicking the folded preview still opens it (a click may grow the box; a hover may not)",
+   "setup": "if (window.__mo102) { window.__mo102.disconnect(); window.__mo102 = null; } window.__h102 = document.querySelector('#log .ask-prev').offsetHeight; document.querySelector('#log .ask-prev > pre:not(.ask-prev-sz)').click();",
+   "expect": [
+    {
+     "js": "document.querySelector('#log .ask-prev > pre:not(.ask-prev-sz)').classList.contains('open')",
+     "equals": true,
+     "why": "the click opened it"
+    },
+    {
+     "js": "document.querySelector('#log .ask-prev').offsetHeight > window.__h102",
+     "equals": true,
+     "why": "and the open preview shows its whole text"
+    }
+   ]
+  }
+ ]
+}
