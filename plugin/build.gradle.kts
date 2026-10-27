@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.16.0"
+version = "0.17.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,24 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.17.0</b>
+            <ul>
+              <li>Bookmarks: a bookmark button beside Copy response on every reply; the header
+                  button opens a card above the composer listing them with their age — open one to
+                  read the reply, jump to it in the conversation, or remove it. Kept per
+                  conversation across restarts</li>
+              <li>Save as command: hover a message you sent and save it as a /command for all
+                  projects or this one — an ordinary command file, so the terminal and VS Code
+                  have it too; ${'$'}ARGUMENTS takes the text typed after the name</li>
+              <li>The / menu puts the commands you sent most recently first</li>
+              <li>Copy image: images a tool returned (a screenshot, a PNG it read) get a copy
+                  button on hover, and the image popup has one beside ×</li>
+              <li>A question card's preview box keeps one height while you hover the options —
+                  the list used to slide under the pointer</li>
+              <li>Menus keep the cursor on the first match while you type with the mouse resting
+                  over them, and show one highlight — typing /con could pick /goal</li>
+              <li>Date lines are drawn as a soft wave</li>
+            </ul>
             <b>0.16.0</b>
             <ul>
               <li>The editor's selection rides every prompt: a live pill in the composer follows
@@ -146,24 +164,6 @@ val changeNotesHtml = """
               <li>The model menu fits the panel — the list scrolls instead of running under the
                   header; bold wrapping an italic renders; @-mentions of paths with spaces attach;
                   thinking text no longer ends with blank lines</li>
-            </ul>
-            <b>0.14.0</b>
-            <ul>
-              <li>A Bash command that edits files shows a diff card per changed file under its
-                  IN/OUT box — the same card an accepted edit gets — live and on resume. The CLI
-                  sends the diff in Auto and Bypass modes by default; in Manual, Accept-edits and
-                  Plan modes add <code>"bashEditDiffEnabled": true</code> to
-                  <code>~/.claude/settings.json</code> (CLI 2.1.269 or newer)</li>
-              <li>"Mention in Claude Brains" is also the first entry of an editor tab's right-click
-                  menu, beside the editor and Project-view menus</li>
-              <li>Plan comments: selecting another passage while a comment is still being typed
-                  adds that comment (or discards it if empty) and offers the Comment pill for the
-                  new selection — it used to do nothing until Enter was pressed; the field's
-                  placeholder now says "Enter adds, Esc cancels"</li>
-              <li>The "Tell Claude what to do instead" field on Bash and Write permission cards
-                  sits on its own line above the buttons, so Accept, Always allow and Reject keep
-                  one height; the placeholder adds "applies to Reject", since a note before
-                  Accept is not sent</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
