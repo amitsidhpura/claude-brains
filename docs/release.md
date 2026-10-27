@@ -206,7 +206,9 @@ hard way:
   `python3 tools/marketplace_shots.py` (headless Chrome over the spliced chat.html; scenes are
   scripts against the real builders — edit them there, never retouch a PNG). Reshot 2026-08-29:
   01 conversation · 02 plan + questions · 03 control · 04 commands/agents/side question · 05
-  sessions + models. Uploading them is a MANUAL step on the Marketplace edit page — the zip carries
+  sessions + models. Reshot 2026-10-28 on the 2.1.293 roster (10:42 AM stamps, 420px panels) and
+  three added: 06 bookmarks + saved commands · 07 selection pill, @-files, date lines, copy · 08
+  background output pane + Run in background. Uploading them is a MANUAL step on the Marketplace edit page — the zip carries
   no screenshots. Originally composed from the real
   renderer by driving chat.html state-by-state.
 - Uploads are automatic since 2026-08-12 (step 10): the `marketplace-upload` workflow re-posts the

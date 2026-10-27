@@ -2,7 +2,8 @@
 """Compose the Marketplace screenshots (design/marketplace/*.png) from the REAL renderer.
 
 Each frame is 1200x760 CSS px at device scale 2 (2400x1520): a headline, a sub-line, and two
-panels side by side. A panel is the spliced chat.html (chat.html + webview/css/*.css +
+420px panels side by side (394 until 2026-10-28, when the 'Default (Opus 5.5)' chip wrapped
+beside the gauge). A panel is the spliced chat.html (chat.html + webview/css/*.css +
 window.LIMITS + webview/js/*.js, both in manifest order — exactly what WebviewAssets/loadUi
 build for the IDE) loaded
 in an iframe and driven by a scene script through the same builders and frames the live panel
@@ -12,7 +13,7 @@ the plugin does not produce.
 Headless Chrome, not JCEF: JCEF-OSR tiles multiple paints into one capture under an emulated
 viewport (gotchas § JCEF). Animations are frozen by injected CSS.
 
-Usage:  python3 tools/marketplace_shots.py [scene-number ...]     (default: all five)
+Usage:  python3 tools/marketplace_shots.py [scene-number ...]     (default: all of them)
 Needs:  google-chrome on PATH.  Writes design/marketplace/NN-*.png and the intermediate pages
         under $SCRATCH (default: /tmp/claude-brains-shots).
 """
@@ -26,7 +27,7 @@ SCRATCH = pathlib.Path(os.environ.get("SCRATCH", "/tmp/claude-brains-shots"))
 CHROME = os.environ.get("CHROME", "google-chrome")
 
 W, H = 1200, 760          # CSS px; captured at scale 2
-PANEL_W, PANEL_H = 394, 600
+PANEL_W, PANEL_H = 420, 600
 
 
 def kotlin_list(name: str) -> list:
@@ -80,12 +81,12 @@ def panel_html() -> str:
 
 COMMON = r"""
 window.onClaudeEvent(JSON.stringify({type:'__project', root:'/home/you/shop'}));
+// the roster as CLI 2.1.293 sends it (fixture 97 rows; Default resolved as fixture 67 measured it)
 window.onClaudeEvent(JSON.stringify({type:'__models', selected:'default', items:[
-  {value:'default', resolvedModel:'claude-opus-5[1m]', displayName:'Default (recommended)', description:'Opus 5 with 1M context · Best for everyday, complex tasks', supportsEffort:true, supportsFastMode:true},
-  {value:'opus[1m]', resolvedModel:'claude-opus-5[1m]', displayName:'Opus (1M context)', description:'Opus 5 with 1M context · Best for everyday, complex tasks', supportsEffort:true, supportsFastMode:true},
-  {value:'claude-fable-5[1m]', resolvedModel:'claude-fable-5', displayName:'Fable', description:'Fable 5 · Most capable for your hardest and longest-running tasks', supportsEffort:true},
-  {value:'sonnet', resolvedModel:'claude-sonnet-5', displayName:'Sonnet', description:'Sonnet 5 · Efficient for routine tasks', supportsEffort:true},
-  {value:'haiku', resolvedModel:'claude-haiku-4-5-20251001', displayName:'Haiku', description:'Haiku 4.5 · Fastest for quick answers'}]}));
+  {value:'default', resolvedModel:'claude-opus-5-5', displayName:'Default (recommended)', description:'Opus 5.5 · Best for everyday, complex tasks', supportsEffort:true, supportsFastMode:true},
+  {value:'fable', resolvedModel:'claude-fable-5-1', displayName:'Fable 5.1', description:'For your toughest challenges', supportsEffort:true},
+  {value:'sonnet', resolvedModel:'claude-sonnet-5-5', displayName:'Sonnet 5.5', description:'Most efficient for simpler tasks', supportsEffort:true},
+  {value:'haiku', resolvedModel:'claude-haiku-5-5', displayName:'Haiku 5.5', description:'Fastest for quick answers'}]}));
 window.onClaudeEvent(JSON.stringify({type:'__mode', mode:'default'}));
 window.onClaudeEvent(JSON.stringify({type:'__commands', items:[
   {name:'compact', description:'Free up context by summarizing the conversation so far', argumentHint:'<optional custom summarization instructions>'},
@@ -97,7 +98,9 @@ window.onClaudeEvent(JSON.stringify({type:'__commands', items:[
   {name:'deploy', description:'Build, tag and push the release image (project)', argumentHint:'<env>'},
   {name:'standup', description:'Summarise what changed since yesterday (user)'},
   {name:'mcp__github__pr', description:'Draft a pull-request description from the branch'}]}));
-function user(t){ addUserMessage(t, []); }
+// every prompt at 10:42 AM today, so the 1.30 timestamp line shows as it does live
+function at(h, m){ const d = new Date(); d.setHours(h, m, 0, 0); return +d; }
+function user(t, sel){ return addUserMessage(t, [], at(10, 42), sel || null); }
 function md(t){ const b = el('blk',''); b.innerHTML = renderMd(t); foldCode(b); return b; }
 function tool(name, desc, isPath){ const t = toolLine(name); const d = t.querySelector('.t-desc'); if (isPath) fillPath(d, desc); else d.textContent = desc; return t; }
 function done(ms, tok){ const d = el('done',''); d.innerHTML = doneHtml(ms, tok, 's1'); return d; }
@@ -117,7 +120,7 @@ done(41000, 1200);
 window.onClaudeEvent(JSON.stringify({type:'__files_changed', turn:1, files:[
   {path:'/home/you/shop/src/api/router.js', added:9, removed:1, isNew:false},
   {path:'/home/you/shop/src/api/limiter.js', added:24, removed:0, isNew:true}]}));
-idle(); setContext(162000);
+idle(); setContext(52000);
 """
 
 S1_RIGHT = COMMON + r"""
@@ -134,7 +137,7 @@ tool('Read', '/home/you/shop/src/api/export.js', true);
   toolsById['tu-agent'] = { el: tg2, name: 'Agent', io: null }; taskProg = {};
   taskLine({task_id:'tk1', tool_use_id:'tu-agent', description:'Scanning src/api', subagent_type:'Explore', usage:{total_tokens:8063, tool_uses:4}}, false); }
 { const tr = track(toolLine('Bash')); tr.classList.add('run'); tr.querySelector('.t-desc').textContent = 'npm test — re-running the suite'; }
-working('Simmering…', '12s', '412'); setContext(181000);
+working('Simmering…', '12s', '412'); setContext(64000);
 """
 
 S2_LEFT = COMMON + r"""
@@ -154,12 +157,10 @@ window.onClaudeEvent(JSON.stringify({type:'__title', text:'Add CSV export'}));
 user('Approved — go ahead.');
 renderPermission({ tool:'AskUserQuestion', id:'ask-1', input: JSON.stringify({ questions: [
   { header:'Delimiter', question:'Which CSV dialect should the export use?', options:[
-    {label:'Comma (RFC 4180)', description:'The safe default — opens everywhere.'},
-    {label:'Semicolon', description:'Excel-friendly in European locales.'}]},
+    {label:'Comma (RFC 4180)', description:'The safe default — opens everywhere.', preview:'id,name,total\n42,"Acme, Inc.",19.90'},
+    {label:'Semicolon', description:'Excel-friendly in European locales.', preview:'id;name;total\n42;Acme, Inc.;19,90'}]},
   { header:'Headers', question:'Include a header row?', options:[{label:'Yes'},{label:'No'}]}]}) });
 idle();
-{ const r = document.querySelector('.ask-opt-other input'); if (r) { r.checked = true; r.dispatchEvent(new Event('change', {bubbles:true})); }
-  const o = document.querySelector('.ask-other input'); if (o) o.value = 'Pipe-separated (|)'; }
 """
 
 S3_LEFT = COMMON + r"""
@@ -190,7 +191,7 @@ user('Approved — go ahead with the plan.');
 window.onClaudeEvent(JSON.stringify({type:'__files_changed', turn:1, files:[
   {path:'/home/you/shop/src/api/reports.js', added:1, removed:0, isNew:false},
   {path:'/home/you/shop/src/api/csv.js', added:38, removed:0, isNew:true}]}));
-working('Wiring…', '9s', '304'); setContext(210000);
+working('Wiring…', '9s', '304'); setContext(78000);
 """
 
 S4_LEFT = COMMON + r"""
@@ -225,18 +226,18 @@ done(41000, 1200);
 idle();
 const now = Date.now();
 window.onClaudeEvent(JSON.stringify({type:'sessions', current:'s-cur', items:[
-  {id:'s-cur', title:'Rate limiting for the API', time: now - 5*60000, size: 48000, tokens: 12400},
-  {id:'s-2', title:'Add CSV export', time: now - 3*3600000, size: 121000, tokens: 38200},
-  {id:'s-3', title:'Fix the flaky checkout test', time: now - 26*3600000, size: 23000, tokens: 6100},
-  {id:'s-4', title:'Migrate the cart to TypeScript', time: now - 3*86400000, size: 402000, tokens: 96000},
-  {id:'s-5', title:'Why does the build take 4 minutes?', time: now - 9*86400000, size: 15000, tokens: 4200}]}));
+  {id:'s-cur', title:'Rate limiting for the API', time: at(10, 47), size: 48000, tokens: 12400},
+  {id:'s-2', title:'Add CSV export', time: at(10, 47) - 19*3600000, size: 121000, tokens: 38200},
+  {id:'s-3', title:'Fix the flaky checkout test', time: at(10, 47) - 44*3600000, size: 23000, tokens: 6100},
+  {id:'s-4', title:'Migrate the cart to TypeScript', time: at(10, 47) - 3*86400000, size: 402000, tokens: 96000},
+  {id:'s-5', title:'Why does the build take 4 minutes?', time: at(10, 47) - 9*86400000, size: 15000, tokens: 4200}]}));
 histWanted = true;
 window.onClaudeEvent(JSON.stringify({type:'sessions', current:'s-cur', items:[
-  {id:'s-cur', title:'Rate limiting for the API', time: now - 5*60000, size: 48000, tokens: 12400},
-  {id:'s-2', title:'Add CSV export', time: now - 3*3600000, size: 121000, tokens: 38200},
-  {id:'s-3', title:'Fix the flaky checkout test', time: now - 26*3600000, size: 23000, tokens: 6100},
-  {id:'s-4', title:'Migrate the cart to TypeScript', time: now - 3*86400000, size: 402000, tokens: 96000},
-  {id:'s-5', title:'Why does the build take 4 minutes?', time: now - 9*86400000, size: 15000, tokens: 4200}]}));
+  {id:'s-cur', title:'Rate limiting for the API', time: at(10, 47), size: 48000, tokens: 12400},
+  {id:'s-2', title:'Add CSV export', time: at(10, 47) - 19*3600000, size: 121000, tokens: 38200},
+  {id:'s-3', title:'Fix the flaky checkout test', time: at(10, 47) - 44*3600000, size: 23000, tokens: 6100},
+  {id:'s-4', title:'Migrate the cart to TypeScript', time: at(10, 47) - 3*86400000, size: 402000, tokens: 96000},
+  {id:'s-5', title:'Why does the build take 4 minutes?', time: at(10, 47) - 9*86400000, size: 15000, tokens: 4200}]}));
 """
 
 S5_RIGHT = COMMON + r"""
@@ -245,8 +246,84 @@ user('Rate-limit /api/search to 60 requests per minute.');
 md('Done — the limiter is in and the tests pass.');
 done(41000, 1200);
 idle(); clampPopups();
-models = models.filter(function (m) { return m.value !== 'opus[1m]'; });   // fit the capture height
 tg('modelMenu');
+"""
+
+S6_LEFT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Release 2.4'}));
+user('How do we roll back a bad deploy?');
+function reply(uuid, text){ const b = el('blk',''); mdBlock(b, text); b.dataset.uuid = uuid; return b; }
+reply('r1', 'Roll back in two steps:\n\n1. `kubectl rollout undo deploy/shop`\n2. Re-run the smoke tests against the old image.');
+done(14000, 380);
+idle();
+bmSet([
+  {uuid:'r1', addedAt: Date.now() - 2*60000, text:'Roll back in two steps:\n\n1. `kubectl rollout undo deploy/shop`\n2. Re-run the smoke tests against the old image.'},
+  {uuid:'r0', addedAt: Date.now() - 3*3600000, text:'Staging secrets live in the vault under `shop/staging`.'}]);
+bmSel = 'r1'; bmRender(); bmOpen();
+"""
+
+S6_RIGHT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Release 2.4'}));
+{ const st = document.createElement('style'); st.textContent = '.msg-user .msg-save{opacity:1!important;color:var(--fg)!important}'; document.head.appendChild(st); }
+user('Lint, run the full suite and check the diff is clean before I tag a release.');
+md('Lint is clean, **214 tests** pass and the diff has no stray debug output.');
+done(26000, 540);
+idle();
+onCmdSaved({name:'pre-tag', scope:'user', description:'Lint, test and diff-check before tagging'});
+cmdRecent = {'pre-tag': Date.now(), 'code-review': Date.now() - 3600000};
+input.value = '/';
+tg('slashMenu');
+"""
+
+S7_LEFT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Cart totals'}));
+user('Why does @src/cart/total.ts round twice? Compare with @src/cart/tax.ts.',
+  {path:'/home/you/shop/src/cart/total.ts', start:12, end:18});
+md('`subtotal()` rounds each line **and** `total()` rounds the sum — two roundings drift by a cent on large carts. Round once, at the end.');
+done(18000, 460);
+idle();
+setSelIncluded(true, false);
+setIdeSelection({path:'/home/you/shop/src/cart/total.ts', start:24, end:31, text:'export function total(lines) {'});
+input.value = 'Fix it in this function.'; autoGrow();
+"""
+
+S7_RIGHT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Cart totals'}));
+addUserMessage('Which tests cover the cart?', [], at(17, 5) - 86400000, null);
+md('`cart.spec.ts` and `checkout.e2e.ts` — 38 cases between them.');
+user('Add one for a 200-line cart.');
+const last = md('Added **cart-large.spec.ts**: 200 lines at 0.333 each must total 66.60.');
+done(9000, 210);
+idle(); placeDaySeps(); copyable(last); last.classList.add('shot-copy');
+{ const st = document.createElement('style'); st.textContent = '.shot-copy .blk-copy{opacity:1!important;color:var(--fg)!important}'; document.head.appendChild(st); }
+"""
+
+S8_LEFT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Release 2.4'}));
+user('Start the dev server and the build watcher, then keep going.');
+tool('Bash', 'Start the dev server');
+tool('Bash', 'Watch the build');
+md('Both are running in the background — I will keep an eye on the build output.');
+done(12000, 300);
+idle();
+window.onClaudeEvent(JSON.stringify({type:'system', subtype:'background_tasks_changed', tasks:[
+  {task_id:'bg_a', task_type:'local_bash', description:'npm run dev'},
+  {task_id:'bg_b', task_type:'local_bash', description:'npm run build -- --watch'}]}));
+bgOut = { bg_b: { open: true, got: true, truncated: false, total: 0, err: null, pinned: true, askedAt: Date.now() + 1e9,
+  text: '> vite build --watch\n\nvite v5.4.2 building for production...\n✓ 412 modules transformed.\ndist/index.html   0.46 kB\ndist/assets/app.js  148.2 kB\n✓ built in 2.31s\nwatching for file changes...' } };
+renderBgTasks();
+tg('bgMenu');
+"""
+
+S8_RIGHT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Release 2.4'}));
+user('Run the full e2e suite.');
+{ const tb = track(toolLine('Bash')); tb.classList.add('run');
+  tb.querySelector('.t-desc').textContent = 'Run the e2e suite';
+  toolsById['tu-e2e'] = { el: tb, name: 'Bash', io: null };
+  tb.after(ioBox([['IN', 'npx playwright test --project=chromium']]));
+  offerBackground({ task_id: 'tk-e2e', tool_use_id: 'tu-e2e', is_backgrounded: false }); }
+working('Testing…', '1m 12s', '96');
 """
 
 SCENES = [
@@ -254,7 +331,7 @@ SCENES = [
      "The official claude CLI streaming into a JetBrains tool window — thinking, tools, todos, sub-agents, live progress.",
      [S1_LEFT, S1_RIGHT]),
     ("02-plan-and-questions", "Plans you can push back on",
-     "Approve a plan with notes, or let Claude's questions become real forms — no free-text guessing.",
+     "Approve a plan with notes; Claude's questions become real forms, each option previewed.",
      [S2_LEFT, S2_RIGHT]),
     ("03-control", "You stay in control",
      "Inline diffs, one-click always-allow, and a per-turn review of every file that changed.",
@@ -263,8 +340,17 @@ SCENES = [
      "Verified slash commands with source badges, a roster of what runs in the background, and /btw for a quick aside.",
      [S4_LEFT, S4_RIGHT]),
     ("05-sessions-models", "Every conversation, every model",
-     "Resume any past conversation; pick the model, 1M context, fast mode, thinking and effort from one menu.",
+     "Resume any past conversation; pick the model, fast mode, thinking and effort from one menu.",
      [S5_LEFT, S5_RIGHT]),
+    ("06-keep-at-hand", "Keep what you reach for",
+     "Bookmark the replies you come back to; save a prompt you send every day as a /command — recent ones first.",
+     [S6_LEFT, S6_RIGHT]),
+    ("07-context-in-out", "Your editor rides along",
+     "The selection and @-files go with each prompt; every message is timed and dated; copy any reply.",
+     [S7_LEFT, S7_RIGHT]),
+    ("08-background", "Long jobs, out of the way",
+     "Watch a background task's output live, or send a slow command to the background mid-run.",
+     [S8_LEFT, S8_RIGHT]),
 ]
 
 
@@ -277,7 +363,7 @@ p{{position:absolute;left:84px;top:88px;margin:0;font-size:17px;color:#9aa0a9}}
 .panel{{position:absolute;top:139px;width:{PW}px;height:{PH}px;border:1px solid #2c2f34;border-radius:8px;
   overflow:hidden;background:#1a1a1a}}
 .panel iframe{{border:0;width:{PW}px;height:{PH}px;display:block}}
-#l{{left:187px}} #r{{left:617px}}
+#l{{left:167px}} #r{{left:613px}}
 </style></head><body>
 <h1>{title}</h1><p>{sub}</p>
 <div class="panel" id="l"><iframe src="panel.html"></iframe></div>
