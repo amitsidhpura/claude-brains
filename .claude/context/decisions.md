@@ -4,6 +4,35 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-28 — Saved messages (7.11) are ordinary CLI command files, written by a native dialog from a hover control on the sent prompt
+**Decision:** "Save as command" on a sent prompt's bubble → `SaveCommandDialog` (name, optional
+description, All projects / This project, the text editable) → `<name>.md` in `$CLAUDE_CONFIG_DIR`
+(else `~/.claude`)`/commands` or `<project>/.claude/commands`; frontmatter only for what is set, plus
+`argument-hint "[text]"` when the text holds `$ARGUMENTS`/`$1`-`$9`. Names `[a-z][a-z0-9_-]{0,63}`
+(what submit()'s regex can route); built-ins/aliases/`/btw` refused (the page sends them as `taken`).
+**Why:** the CLI already has saved prompts — the panel's / menu lists custom commands (7.3) — so the
+gap was only creating one; the same file works in the terminal and VS Code and the CLI does the
+expanding. The user picked hover button + native dialog from AskUserQuestion. **Rejected:** a
+panel-only snippet store (a second list that drifts, terminal can't use it — the Philosophy); a
+right-click menu (the panel has none, less findable); an inline card form (more webview code);
+subfolder `sub:name` names (submit()'s `/name` regex excludes `:`).
+
+## 2026-10-28 — Recent first (7.12): recency breaks ties INSIDE each match tier; app-level store fed by the page
+**Decision:** `renderSlash` sorts by score, then last-sent time desc (stable, so never-sent keep the
+CLI's order). The page reports `cmdUsed` (canonical name, aliases resolved, refused commands not
+counted, `/btw` counted) and updates its own copy at once; Kotlin keeps `{name: epochMs}` newest 100
+in `claudeCode.commandRecents` (application `PropertiesComponent`), seeded as `__cmdRecent`.
+**Why:** an exact name must still win (user's pick "Recent first in every list"); app-level because
+user commands span projects. **Rejected:** a separate "Recent" group on a bare `/`; most-used
+(frequency) ranking — slow to adapt; webview `localStorage` (no origin under `loadHTML`).
+
+## 2026-10-28 — Marketplace screenshots: 420px panels, the measured roster, fixed 10:42 AM stamps; eight scenes
+Panels widened 394 → 420 because "Default (Opus 5.5)" wrapped beside the gauge; the roster is
+fixture 97's 2.1.293 rows (no stale "Opus 5 / 1M"); every prompt stamped `at(10, 42)` with 05's
+history on the same clock; context sizes for a 200K window. New 06 bookmarks + saved commands, 07
+selection pill / @-files / date lines / copy, 08 background pane + Run in background; 02 shows option
+previews. **Rejected:** the export popup in 07 (covered the date lines it was there to show).
+
 ## 2026-10-28 — Bookmarks (8.15): VS Code's parts, drawn as a card above the composer
 **Decision:** a card riding the composer (the side card's shell) with minimize/maximize, rows +
 age, a second click on the open row closes it (list only), detail with Show in conversation /
@@ -95,233 +124,25 @@ drawn: it names a task this panel session never showed, so a status line would b
 kind (agreed with the user). *Rejected*: hiding the summary by `duration_ms` (a real 0-token turn
 can be fast); drawing the notification as an 11.7 roster event (nothing to open, no row to end).
 
-## 2026-10-10 — 6.6 "Include open file": a second switch, highlight wins (VS Code's rule), content read at send time, 50 K cap
-The paperclip's ✓ item became two switch rows in the model menu's idiom (user's screenshot of
-Fast mode / Thinking / Effort): "Include selection" (ON) and "Include open file" (OFF). Matrix:
-selection ON + highlight → the selection alone; nothing highlighted + file ON → the file's CONTENT
-with the cursor line; selection OFF + file ON → the content even over a highlight (a row VS Code
-cannot express — it has ONE setting, `attachOpenFile`, and the selection is always on; its
-selection and opened-file attachment builders are exclusive on the text, so with both on it
-behaves exactly as we do). The page sends only a FLAG; ChatPanel reads the buffer (unsaved first)
-on a pooled thread at send time, capped at `OPEN_FILE_MAX_CHARS` 50,000 with a note, files over
-4 MB not read at all. Pill `File.kt · file`. *Rejected*: content on by default (context cost on
-every message, overlaps @-mentions); pushing content through the tracker (a select-all's worth of
-bytes per caret move); a 20 K cap (too many files cut) and no cap (one message can eat the window).
-
-## 2026-10-10 — 6.6 auto-include selection: the PANEL writes the tag, because the CLI's own route is dead in stream-json mode
-Measured before building (user: "Lets implement it", after the design discussion): a VS Code-shaped
-`selection_changed` notification over the MCP-over-WS "ide" client never reached the model —
-four variants on 2.1.296 (plain, JetBrains terminal marker, `FORCE_CODE_TERMINAL=1`, after a first
-turn), haiku answered NONE, no tag in the transcript. The bundle explains it: the consumer is a
-React hook in the TUI tree and the attachment builder needs an ideName that only `ws-ide` /
-`sse-ide` configs or a detected terminal yield. So `SelectionTracker` → `__selection` → the page's
-pill, and ChatPanel appends `RenderLimits.ideSelectionTag` to the prompt. *Alternatives rejected*:
-`ws-ide` in the mcp-config (filtered from user config by the CLI); `FORCE_CODE_TERMINAL` (measured:
-still nothing, and it would flip other terminal-detection behaviour).
-
-## 2026-10-10 — 6.6 design: LIVE pill, × per message, paperclip entry always visible, selection only (open-file content later, off by default), IDE-level persistence
-Settled one point at a time with the user: a live pill that follows the editor (debounced) rather
-than a snapshot at send — "better is person to know what is going to be sent and not after send";
-the × drops it for the current message only; the "Include selection" entry stays in the
-paperclip menu unticked when off — "or else how user can enable that"; persisted like the model pick
-(application `PropertiesComponent`, global across projects). Nothing highlighted still attaches the
-file + cursor line (the opened-file tag). VS Code's `attachOpenFile` (file CONTENT, default true
-there) is NOT shipped: a later second entry, off by default (backlog). *Rejected*: snapshot at send
-(no way to see or drop what goes); hiding the entry when off; open-file content on by default
-(context cost on every message, overlaps the @-mention chips).
-
-## 2026-10-10 — 6.6 wire shape: ONE text block, prompt first, tag after; a tag-only text is the TUI's record and stays dropped
-The tag goes after the typed text inside the same block (`prompt\n\n<ide_selection>…`), so the
-CLI's titles / `last-prompt` and SessionStore's compact title read the prompt. The wording is the
-CLI's own (`The user selected the lines A to B from PATH:` — it matched the client-parity 37
-record byte for byte, which the 6.3 test caught when my parser suddenly recognised it), so the
-model sees what it sees from VS Code. `splitIdeSelection` parses the tag only after a prompt: a
-text that IS a tag is the TUI's separate injected record (6.3) and `cleanInjected` keeps dropping
-it; the composer never submits with nothing typed, so no case is lost. *Rejected*: a separate
-content block (the CLI's title heuristics would see the tag first); parsing tag-only texts (would
-resurrect the TUI's injected records as bubbles).
-
-## 2026-10-10 — 0.15.0, a MINOR bump: six features since v0.14.0 make it a feature release; the notes name behaviour only
-"What will the version be?" → 0.15.0, by release.md's progression (patch = fixes with no new
-capability, the 0.13.1 precedent) — timestamps, option previews, task output + Run in background,
-export / copy response and the auto-mode card are capabilities. The GitHub notes keep the update
-structure (theme, two punchy lines, one paragraph, New / Fixes / Install / Notes) and the
-Marketplace notes (`changeNotesHtml`) keep exactly three versions. Internal work (the re-audit,
-fixtures, probes, the clipboard route's mechanics) stays out; the 1M switch's removal is listed
-as a fix because users could see the switch. *Rejected:* 0.14.1 (the state file had floated it
-while only fixes were pending — the day's features changed that); listing the retired switch
-under New (nothing new to use).
-
-## 2026-10-10 — 9.9: the 1M switch is RETIRED (not hidden); the gauge follows the CLI's reported window for any pick
-Decided by the user after a step-by-step hand test in the real PhpStorm. **Why retire:** the CLI
-serves a 1,000,000 window with or without the `[1m]` tag (measured over stdio for untagged
-`sonnet`, `sonnet[1m]`, `opus`, `opus[1m]`), so the switch could not change the model; what it DID
-change was the gauge denominator (OFF pinned 200K → 20% shown for 4% used), and the reconcile
-that should have corrected it never matched an alias pick. A control that cannot change the model
-has nothing to come back for. A `[1m]` tag on a persisted or typed value stays accepted (the CLI
-echoes it; the ✓ ignores it). *Rejected:* hiding it while no roster value carries `[1m]` (keeps
-dead code and a dead denominator path alive for a hypothetical); keeping it with only the lookup
-fix (the switch would snap back ON after every turn — a toggle that undoes itself).
-
-## 2026-10-10 — The model list is capped by MEASURED fit, not a row count; the cap helper measures the popup
-The 13-row 2.1.296 roster made the popup taller than the panel. **Fit, not rows:** the roster is
-shown whole (2026-09-27 decision), so the list takes whatever height the panel leaves between the
-header and the composer and scrolls, ✓ row in view — a five-row cap like the slash menu's would
-hide the newer models behind a scrollbar on every open. **The helper measures the popup:** a list
-cap that clamps by the list's own box misses the header / search / footer around it; `capToRows`
-now clamps by the popup's overflow past `#head`'s bottom (+4px, the history panel's gap) and the
-viewport. *Rejected:* a fixed row count; folding the roster (decided against 2026-09-27); a CSS
-max-height (follows the IDE font, the trap capToRows exists for).
-
-## 2026-10-10 — 15.4: export rides a HEADER popup fed by the CLI's own `/export` text; Copy response is per block and copies the SOURCE; no typed `/copy` / `/export`
-"Lets do 15.4". **Where:** a popup hanging from the header (the conversation's own controls live
-there: reload, history, new), anchored to `.actions` so it shares #histPanel's right edge and 310px
-width — the conversations-list idiom whole. **What text:** the CLI's `export_conversation` answer,
-verbatim, so the panel's export IS what `/export` in the terminal writes. **When asked:** once per
-OPEN (the conversation may have grown); the rows stay off until the text lands; a late answer to a
-closed popup is dropped; `__clear` and a CLI exit settle it. **Save:** the shown text rides back on
-the click — not re-asked in Kotlin — so a turn that ran meanwhile cannot change what the footer
-counted. **Copy response:** one hover control per finished text block (the unit the user looks at;
-a message with tools is several blocks), copying the markdown source like the reference client.
-*Rejected:* an actions row under the message (VS Code's hover row — reflows the turn); building the
-export from the DOM (drifts from the terminal's text and loses tool lines); Kotlin re-asking on
-Save (race with a running turn); typed `/copy` / `/export` (the slash menu is the CLI's own command
-list — host widgets live on buttons, the chip / New rule); a per-message copy (our blocks are per
-content block; no single element is "the message").
-
-## 2026-10-10 — EVERY copy control goes through Kotlin's `CopyPasteManager`, never `navigator.clipboard`
-A CDP-driven click on the new control and on the export row left the real clipboard untouched:
-Chromium's clipboard API needs a focused document AND a transient user activation, neither of
-which a tool-window webview reliably holds, and nothing in the harness can read it back. The IDE's
-clipboard manager has no such conditions, is what Ctrl+C uses, and `xclip -o` reads it (XWayland)
-— all three controls (code block 1.11, response and export 15.4) measured verbatim. One route,
-`bridge{kind:'copy', text}`. *Rejected:* `navigator.clipboard` with an `execCommand('copy')`
-fallback (both gesture-gated; unverifiable); keeping the code block on the old path (two
-mechanisms for one gesture drift).
-
-## 2026-10-10 — Day labels relay at local midnight on ONE timer; labels stay relative
-The 1.30 gap ("Today" stale past midnight in a page left open). One `setTimeout` re-armed for the
-next local midnight (+1 s slack) calls `placeDaySeps`, a pure function of the DOM and today's key.
-*Rejected:* a minute timer (the backlog's first idea — 1440 wake-ups for one change a day);
-absolute dates (the 1.30 decision chose relative labels); relabelling only on resume (the gap as
-it stood).
-
-## 2026-10-10 — 11.7: task output lives on the ROSTER ROW and polls; "Run in background" is gated by the foreground `task_started`; a pane dies with its row
-"Lets do it" on 11.7, after the probe. **Where the output goes:** the roster row (the `bg` chip's
-popup), not the timeline. The reference client shows it on agent-map cards, which our roster IS;
-the timeline's Bash line already carries the launch ack and the task line says how it ended, so a
-second output surface there would be a copy that drifts. Every row toggles — which task kinds keep
-a stream is the CLI's to say, and it says so on the first ask ("no shell or Monitor task" → "Output
-is not available.", polling ends) — rather than gating rows on `task_type`, whose Monitor value is
-unmeasured. **Polling, not pushing:** `get_task_output` is request/response; the reference client
-polls at 1000 ms while visible, so do we, with one ask in flight per task and nothing while the
-popup is hidden. **The offer's gate:** `task_started{is_backgrounded:false, tool_use_id}` — measured
-to arrive ~3 s into a foreground Bash — is the CLI saying it registered a foreground task, i.e. the
-one moment `background_tasks{tool_use_id}` is known to find something; offering on every running
-tool line would mostly answer "not found". **The pane goes when the roster drops the task:** the
-alternative (keep ended panes) means a second task store with its own lifecycle in the webview for
-a question the timeline already answers. *Rejected:* output under the Bash tool line (drift, and a
-background shell's line is the launch ack — the result is elsewhere); a `task_type` allowlist for
-the toggle (Monitor's type string unmeasured); the reference client's long "Could not move this to
-the background…" sentences on a one-line flex row (ours are shorter, same meaning); keeping panes
-after the task ends.
-
-## 2026-10-10 — 4.10 built from the schema without a real frame; the panel declares exactly `auto_mode_server_fallback`; undeclared kinds are left unanswered; answer tokens allowlisted in Kotlin
-"Can we implement 4.10?" — yes. **Why building without a frame is not "fixing what you cannot
-reproduce":** the row is a feature, and everything the card depends on IS measured — the payload,
-result enum and answer shape from the 2.1.296 binary's dialog definition, the render rules from the
-2.1.296 VS Code webview, and 2.1.296 accepting the declaration on `initialize` (stdio). The frame
-itself cannot be staged (it needs the server classifier down), and it can only ever arrive AFTER
-the kind is declared — so "wait for a real frame first" is circular; the `window.__dialogSeen`
-watch is the audit the first real frame will get. Undeclared, the user never sees the billing
-notice at all (the CLI "continues in auto mode" silently).
-**Declare one kind, not VS Code's two:** `fable_overage_consent_prompt` (9.7) has no card, and the
-CLI's own rule is "declare exactly the kinds you can render" — a declared kind without a renderer
-parks the turn until the dialog deadline.
-**An undeclared kind is logged and left unanswered**, not acked `{}` like the sdk-mcp catch-all:
-the schema says a host "must not answer" a kind it did not declare and that `{behavior:"cancelled"}`
-is a real settlement; a `{}` success is an undefined shape. A kind can only reach us declared, so
-the branch is a drift alarm, not a feature.
-**ChatPanel allowlists `continue|interrupt`** so nothing the page could be coaxed into sending
-reaches the wire as a settlement; `cancelled` is the CLI's own default, never a host's answer.
-**Copied the 500 ms disabled buttons** (`armInputGrace`): cheap, measured reference behaviour, and
-the card lands under wherever the user was about to click.
-**Paragraphs are plain text, not `renderMd`:** the reference renders them as text and splits only
-on the help URL; markdown would invent structure the payload does not carry.
-*Rejected:* building the card only after a real frame (impossible without declaring); replay
-support (nothing known to be persisted — live-only, like the task frames); a Learn more link for
-any https URL (the reference filters to claude.com / anthropic.com, so do we).
-
-## 2026-10-10 — 1.31: the answered ask card keeps its tabs and adds a summary; previews are text, follow hover > pick > option 0, and a pick no longer auto-advances
-The user chose "B — full card + summary" from a side-by-side render of both candidates (real
-stylesheets, served from the scratchpad, Playwright screenshot) — the compact replacement (A) was
-a quarter of the height but lost the checked options and the picked preview. The preview box shows
-the text as written (newlines kept, one wrapping ``` fence stripped), NOT through `renderMd`: the
-tool's wording is "monospace box" and both real samples (the 2.1.220 fixture, the 2026-10-10 live
-call) are indented trees that paragraphing would flatten. Precedence hover > checked > option 0
-because the TUI's cursor starts at the top and a radio group gives no separate "highlight"; the
-single-select auto-advance is suppressed on a panel with previews because it hid the preview the
-pick had just chosen. Folding is its own `refoldPreview` (foldBlock is one-shot). Replay of a
-cancelled card rests on option 0 (the live resting state), not "No preview". *Rejected:* markdown
-rendering of previews; a compact answered card; hover-only previews (keyboard users would never
-see one); hiding the box on cancelled replays.
-
-## 2026-10-10 — 1.30: a time above the prompt and above the turn's FIRST reply text; date lines between turns; always on
-User's choices: prompt + first reply text (not every assistant message — a tool loop would stamp
-many times; not prompt-only), no on/off switch (no settings page by design; add later if noise).
-Live stamps are the page clock (the typed prompt has no wire frame and the reply's `assistant`
-frame arrives after its text streamed); replay stamps are the record timestamp, which
-`SessionStore` now serialises as `ts` on user/assistant items only. Date lines live in `#log`,
-never inside `.turn` (sticky bubble, containment), and are re-laid from `data-day` by a pure DOM
-pass after every replay chunk so the `renderEarlier` seam is right; the first stamped turn gets a
-line only when its day is not today. Day labels reuse `fmtWhen`'s relative wording (stale across
-midnight — accepted, the history list has the same property). *Rejected:* a tooltip (never shows
-on Linux JCEF); `toLocale…` formatting (the webview's locale would reorder the date); a stamp per
-API message; a preference switch.
-
-## 2026-10-10 — Re-audit scope rules: skip the changelog's `[Cloud sessions]` / `[Claude Tag]` / `[Code Review]` lines; open [DECIDE] rows instead of deciding; probe cleanup the user cannot be worked around
-Those three tags are other Anthropic products, never this panel's clients — 200 of 2,032 lines.
-The 1M switch (9.9) was RE-OPENED with the measurement rather than retired on my own judgement.
-When the session's permission classifier refuses to delete probe transcripts or restore
-`lastSessionId`, the cleanup is listed for the user (ids in state.md / the audit block) — no
-scripted workaround, by conventions. *Rejected:* retiring 9.9 unasked; deleting the transcripts
-through a different tool.
-
-## 2026-10-10 — The push status line stays "Pushed <branch>"; richer detail LEFT by the user
-Asked what the transcript holds for a push and whether the line could say more. Measured/read:
-`vcs_state_changed {kind, branch?, cwd}` is the whole frame, never persisted; the branch is parsed
-from git's OUTPUT by the CLI, so a `-q` push yields a bare "Pushed"; `gitOperation.push` (tool-result
-sidecar, 2.1.295 schema) carries only `branch`; remote URL and commit range live only in the Bash OUT
-text the panel already draws. Three options were drafted (command-derived remote/repo; plus
-output-parsed range with a repo link; frame `cwd` only) — the user said "leave this requirement"
-before choosing. **Status:** declined for now, findings in backlog § Deferred; nothing built.
-
-## 2026-10-10 — Spaced mention paths are QUOTED (`@"a b/c.txt"`) at insert time, in the webview, by the official rule
-`mentionToken()` (50-blocks.js) writes `@"path"` when the path holds whitespace or a colon or ends in
-a non-word character, else bare `@path`; both insert surfaces (the @-menu, the IDE context menu) use
-it and `mentionHtml` reads the quoted form back as one chip (fixture 91). **Why quoting:** measured
-on 2.1.295 — a bare spaced mention attaches nothing and says nothing; the quoted form attaches; the
-official webview quotes by the same rule (`OL0()`), so the panel's prompts read the same as VS Code's.
-**Why in the webview, not Kotlin:** the token shape is a prompt-text concern shared by the picker
-(whose list arrives as bare paths in a `files` frame) and `MentionPaths.tokens` (bare paths in a
-`__mention` frame) — one function next to the reader that must parse it back. **Rejected:**
-backslash escaping (`@a\ b`) — the binary carries a regex for it, but the measured result is no
-attachment; sending the file as an image-style attachment instead of a mention — the CLI's
-`file` attachment is what the mention produces anyway, and the chip/copy-paste contract wants the
-prompt text to carry it; quoting EVERY mention — the user's existing prompts and fixture 74's bare
-chips would change shape for nothing.
-
-## 2026-10-10 — Bold admits single `*` inside the pair and stops at the first `**`; no delimiter-run parser
-`inlineMd()`'s bold regex became `\*\*((?:[^*]|\*(?!\*))+)\*\*` so `**Garlic (*Allium sativum*)**`
-renders as a bold with the italic inside (fixture 90). **Why this shape:** the bold pass runs before
-the italic pass, so once the `<b>` is in place the existing italic regex pairs the inner asterisks
-unchanged; the reverse nesting (`*a **b** c*`) already worked for the same ordering reason and is now a
-guard. **Rejected:** a CommonMark delimiter-run algorithm (left/right-flanking rules) — correct, but a
-second renderer to keep in parity for a panel whose markdown is three regexes; `**` as a lazy
-`[\s\S]+?` — would let a bold run across an unclosed `**` to the next phrase's closer, the same
-mis-pairing the control measured on the old regex (`)** and **C**` → bold " and "); fixing the
-"inline code is not opaque to emphasis" backlog item in the same change — a different mechanism
-(placeholders), separate control.
+## Digest — decisions 2026-10-10 (compressed 2026-10-28; full text via `git show d86a9c7:.claude/context/decisions.md`)
+- **6.6 "Include open file"** — a second switch (OFF) beside "Include selection" (ON); highlight wins, selection OFF + file ON sends content over a highlight; the page sends a FLAG, ChatPanel reads the buffer at send time, 50,000-char cap, >4 MB not read · rejected content on by default, pushing content through the tracker, 20 K / no cap.
+- **6.6 the PANEL writes the selection tag** · the CLI's own `selection_changed` route is dead in stream-json (4 variants on 2.1.296, haiku saw nothing; consumer is a TUI hook needing `ws-ide`/`sse-ide`) · rejected `ws-ide` in the mcp-config (filtered), `FORCE_CODE_TERMINAL`.
+- **6.6 design** — LIVE pill following the editor, × per message, paperclip entry always visible, app-level persistence · user: "know what is going to be sent and not after send" · rejected snapshot at send, hiding the entry when off.
+- **6.6 wire shape** — one text block, prompt first then the CLI's own tag wording; a tag-only text stays the TUI's dropped record · titles / `last-prompt` read the prompt · rejected a separate content block, parsing tag-only texts.
+- **0.15.0 minor bump** — six capabilities since v0.14.0; notes name behaviour only, the 1M switch's removal listed as a fix · rejected 0.14.1.
+- **9.9 the 1M switch RETIRED** — the CLI serves 1M with or without `[1m]` (measured 4 picks), the switch only broke the gauge denominator; the gauge follows the CLI's window · rejected hiding it, keeping it with a lookup fix (snaps back every turn).
+- **Model list capped by MEASURED fit** — the whole roster, scrolling between header and composer, `capToRows` clamps by the popup's overflow · rejected a row count, folding, CSS max-height.
+- **15.4 export** — a header popup with the CLI's own `export_conversation` text, asked once per open, Save sends back the shown text; Copy response per text block, markdown source · rejected an actions row, a DOM-built export, Kotlin re-asking on Save, typed `/copy` `/export`.
+- **Every copy through Kotlin's `CopyPasteManager`** · `navigator.clipboard` needs focus + user activation a tool-window webview lacks; `xclip -o` verifies · rejected an `execCommand` fallback, two mechanisms.
+- **Day labels relay at local midnight on ONE timer** (`placeDaySeps`, pure DOM) · rejected a minute timer, absolute dates.
+- **11.7 task output on the ROSTER ROW, polled 1 s while visible; "Run in background" gated by `task_started{is_backgrounded:false}`; a pane dies with its row** · the timeline already says how a task ended · rejected output under the Bash line, a `task_type` allowlist, keeping ended panes.
+- **4.10 built from the schema without a real frame; declare exactly `auto_mode_server_fallback`; undeclared kinds logged and unanswered; `continue|interrupt` allowlisted in Kotlin** · the frame can only arrive after declaring, so waiting is circular · rejected waiting for a frame, replay support, any-URL Learn more.
+- **1.31 answered ask card keeps tabs + adds a summary; previews are plain text, hover > pick > option 0; no auto-advance on a panel with previews** (user picked B from a render) · rejected markdown previews, a compact answered card, hover-only previews.
+- **1.30 timestamps** above the prompt and the turn's FIRST reply text; date lines in `#log` between turns; always on; relative labels · rejected a tooltip (never shows on Linux JCEF), `toLocale…`, a stamp per API message, a switch.
+- **Re-audit scope** — skip the changelog's `[Cloud sessions]`/`[Claude Tag]`/`[Code Review]`; open [DECIDE] rows rather than deciding; probe cleanup the classifier refuses goes to the user, never worked around.
+- **Push status line stays "Pushed <branch>"** — the frame carries only kind/branch/cwd; richer detail declined by the user (backlog § Deferred).
+- **Spaced mention paths QUOTED (`@"a b/c.txt"`) in the webview by the official `OL0()` rule** · a bare spaced mention attaches nothing (2.1.295) · rejected backslash escaping (measured: no attachment), quoting every mention.
+- **Bold admits single `*` inside and stops at the first `**`** (fixture 90) · rejected a CommonMark delimiter-run parser, a lazy `[\s\S]+?`.
 
 ## Digest — decisions 2026-09-27 → 2026-10-08 (compressed 2026-10-26; full text via `git show fccc30b:.claude/context/decisions.md`)
 - **2026-10-08 — The thinking body is trimmed in `thinkBlock()`** · the CLI's thinking ends `\n\n` (13/13) and `.think .body` is the one pre-wrap block; one trim in the shared builder fixes live/replay/gallery/redacted (fixture 89) · rejected rendering thinking as markdown (second renderer path), a CSS negative margin (hides the data), trimEnd only, a Kotlin-side trim.

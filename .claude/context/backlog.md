@@ -148,6 +148,8 @@
 - Voice input
 
 ## Housekeeping (one line each, do opportunistically)
+- The model chip "Default (Opus 5.5)" wraps to two lines beside the context gauge at a ~394px panel (seen in the Marketplace renderer 2026-10-28; shots now use 420px) — likely in a narrow real tool window too; nowrap + ellipsis on the chip label, check in the real panel first.
+- Save as command dialog: live validation (`initValidation()`, one line) offered 2026-10-28, not taken — errors show on Save.
 - **Indented code blocks (4+ spaces, no fence) render as paragraphs** (`20-markdown.js` has no
   indented-code branch): seen 2026-09-09 in the live list check — asked for "a two-line bash code
   block under item 2" the model wrote `       composer install` (7 spaces under a `2. ` item), which

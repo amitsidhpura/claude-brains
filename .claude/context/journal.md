@@ -3,6 +3,28 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-28 (thirty-third) — saved messages: 7.11 Save as command + 7.12 Recent first built, hand-tested, committed `fc0dd74`; Marketplace screenshots reshot + three new (`d86a9c7`); harness 1264
+- User asked for "saved messages selectable like slash commands". They already exist as CLI command
+  files (7.3 lists them); suggested building only what is missing: a "Save as command" control and
+  recent-first ordering, and checked 7.5 (a hint-less command sends on pick — no change needed).
+  User picked hover button + native dialog + recency inside each tier (AskUserQuestion).
+- Built: `.msg-save` on the prompt bubble → `SaveCommandDialog` (first `DialogWrapper` in the
+  plugin) → `SavedCommands` writes the `.md`; `cmdUsed` / `__cmdRecent` / `__cmdSaved` frames.
+  Fixture 105 (control: 13 discriminating fails on the old sandbox); 50/66/103 adjusted for the new
+  bridge kind and leaked recency (gotchas § Testing). Harness 1264/1264, test 183.
+- The scratch-config probe for the user-dir watch was REFUSED by the classifier (credential copy);
+  answered in the hand test instead: on CLI 2.1.311 `~/.claude/commands` IS watched — `/reply-pong`
+  expanded with no `/reload-skills` (docs/slash-commands.md + gotchas corrected).
+- Hand test, four steps, all pass: user-scope save, expansion, `/` and `/co` ordering, `/compact`
+  refused with Save disabled, project-scope `/echo-word` with `$ARGUMENTS` → "Amit". Test command
+  files deleted afterwards on the user's ask. Validation is on Save, not live (`initValidation()`
+  offered, not taken).
+- Screenshots: five reshot (2.1.293 roster, 10:42 stamps, 420px panels, previews on 02) and three
+  added (06 bookmarks + saved commands, 07 selection/@-files/date lines/copy, 08 background pane).
+  Found: the model chip wraps beside the gauge in a ~394px panel — real-panel issue, not fixed.
+- Next: release 0.17.0 only when asked (three features now: copy image, Bookmarks, saved messages);
+  upload the eight PNGs by hand on the Marketplace edit page after the release.
+
 ## 2026-10-28 (thirty-second) — 8.15 Bookmarks: VS Code's feature found missing, built as a card, hand-tested, committed `872c4d9`; harness 1246
 - User asked for a sticky "pin reply". Found VS Code 2.1.310 already ships it as **Bookmarks**
   (header toggle, side panel, rows + age, Show in conversation, per-session store keyed by record
@@ -219,36 +241,8 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   user's call). Totals: fixture 96 15/48, harness 1073/0, test 169. Three commits + the save,
   then pushed on the user's "save / commit and push".
 
-## 2026-10-10 (twenty-third) — 11.7 background task output + Run in background: probed live, built, fixture 95; harness 1025
-- "What is 11.7?" → "Lets do it." The row's own note said probe first, so the session opened
-  with a stdio probe under a scratch `CLAUDE_CONFIG_DIR` (credentials copy, `.claude.json` with
-  only the scratch cwd trusted, haiku, mode default): a `run_in_background` shell polled with
-  `get_task_output` six times running + once ended + a bogus id, then a FOREGROUND `sleep` loop
-  hit with `background_tasks{tool_use_id}` 4 s in. Everything landed in one 40 s run; the real
-  `~/.claude` got no transcript (the scratch dir was deleted after).
-- Measured: `{output, total_bytes, truncated}`; the ended tail `\n\n[exited with code 0]\n`;
-  roster frame BEFORE `task_started` for a background launch; a foreground Bash gets
-  `task_started{is_backgrounded:false}` ~3 s in (the gate for the offer); `background_tasks` →
-  `{backgrounded:true}` + roster + `task_updated{is_backgrounded:true}` + the "manually
-  backgrounded" tool_result + the turn's result; a completed shell WAKES the model (extra result
-  with `origin`). The extension's mapping read with a python `str.find` loop (instant, vs the
-  minutes a wide `grep -o` took last session); the binary's `strings` gave the disabled text.
-- Design: output on the ROSTER ROW (the agent-map analogy; the timeline's task line already
-  says how a task ended), every row toggles, errors end polling; the offer on the tool line
-  gated by the measured foreground `task_started`; VS Code's wording shortened.
-- Sandbox launched on the pre-change tree first → negative control free: first assert failed,
-  step aborted on the missing button. First run on the changed build 40/44: the row click
-  closed the popup (the list is rebuilt before the click bubbles, so the document handler's
-  `closest('.popup')` test fails on a detached row) — diagnosed over CDP with a stack captured
-  on `classList.remove`, fixed with stopPropagation like the ✕, assert added. Then 45/45.
-- Full harness 1024/1 the first time: fixture 40's path negative control failed because the
-  fresh IDE's own `__project` frame landed mid-run; alone 19/19, warm rerun 1025/0. Test 169.
-- Real-panel render (gallery + roster open, CDP screenshot): offer in `--blue`, note muted, pane
-  with chevrons and the size note. Not hand-tested against a live shell in the sandbox panel.
-- Two assertion mistakes of mine the control run exposed: `JSON.stringify(count)` is a string
-  (fails `atLeast`), and "only one line still in flight" forgot two never-settled lines.
-
 ## Digest
+- **2026-10-10 (twenty-third)** — 11.7 background task output + Run in background: stdio probe under a scratch `CLAUDE_CONFIG_DIR` measured `get_task_output` / `background_tasks` / the foreground `task_started` gate in one run; output on the ROSTER ROW, polled; negative control free (old build first); a rebuilt list detaches the clicked row so the document handler closed the popup → stopPropagation; fixture 95, harness 1025.
 - **2026-10-10 (twenty-second)** — 4.10 auto-mode server-fallback dialog built from the 2.1.296 binary's schema + VS Code's renderer (the reference extraction lagged — read `~/.vscode/extensions/` directly); negative control free by launching the old build first (three `[].every()` asserts passed vacuously → lengths pinned); undeclared dialog kinds left unanswered; fixture 94, harness 980.
 - **2026-10-10 (twenty-first)** — re-audit 2.1.270 → 2.1.296 (baseline binary from the 2.1.270 vsix); six [DECIDE] rows, 1.30 + 1.31 built the same day from a side-by-side render; fixtures 92/93 written first (26 discriminating fails); `foldBlock` is one-shot → `refoldPreview`; probe-transcript cleanup refused by the classifier, left to the user.
 - **2026-10-10 (twentieth)** — spaced-mention fix hand-tested by the user ("Working great!"), zip built, no code; PhpStorm 2026.2's own "MCP Server" popup clipped by a SKIKO OpenGL fallback (IDE widget, not ours); push status line explored and left (branch parsed from git output — backlog § Deferred); @-picker list is one-shot at load (backlog § Housekeeping).

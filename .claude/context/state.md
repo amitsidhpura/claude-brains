@@ -1,23 +1,21 @@
 # State
 
 ## Current focus
-**2026-10-28 (thirty-second session, Linux): 8.15 Bookmarks built, hand-tested by the user in the
-sandbox, committed (`872c4d9`) and pushed.** The user asked for a "pin reply" feature; VS Code
-already ships it as Bookmarks (missed by the 2.1.296 audit — its RPCs were filed under 15.3, a row
-that never named them). Built as VS Code's parts in a card above the composer (user pick):
-- `js/68-bookmarks.js` (card, toggle, jump, ages), `#bmCard`/`#bmBtn` in `chat.html`, `.blk-mark`
-  added by `copyable()` (`js/20-markdown.js`) beside Copy response, `css/50-side.css` § bookmarks.
-- Keyed by the assistant record's `uuid`: replay now ships `Item.uuid` (`SessionStore.toJson`) and
-  stamps `data-uuid` (`js/55-replay.js`); texts read back via `SessionStore.textsByUuid`.
-- `session/BookmarkStore.kt`: VS Code's file shape per conversation under
-  `PathManager.getConfigPath()/claude-brains/session-bookmarks/`; `ChatPanel` `bookmark` kind →
-  `__bookmarks` frame (after every change and every `pushTranscript`).
-- Fixed on the way: a whole-message reply inherited the previous message's uuid (`js/70-events.js`).
-- Fixture 104 (39 asserts), harness **1246/1246**, `./gradlew test` **179**.
+**2026-10-28 (thirty-third session, Linux): saved messages built, hand-tested by the user in the
+sandbox, committed (`fc0dd74`); Marketplace screenshots reshot + three new (`d86a9c7`); pushed.**
+- 7.11 Save as command: `.msg-save` hover control on a sent prompt (`addUserMessage`,
+  `js/60-composer.js`) → `ui/SaveCommandDialog.kt` → `session/SavedCommands.kt` writes
+  `~/.claude/commands/<name>.md` (`$CLAUDE_CONFIG_DIR` honoured) or `<project>/.claude/commands/`.
+- 7.12 Recent first: `renderSlash` sorts score, then last-sent (`js/65-slash.js`); `cmdUsed` →
+  `ClaudeSessionService.noteCommandUsed` → property `claudeCode.commandRecents`, seeded `__cmdRecent`.
+- CLI 2.1.311 watches `~/.claude/commands` too — no `/reload-skills` needed (corrected 2026-10-28).
+- Screenshots: `design/marketplace/01…08`, `tools/marketplace_shots.py` (420px panels, 2.1.293 roster).
+- Fixture 105; harness **1264/1264**, `./gradlew test` **183**.
 
 **Released version: 0.16.0 (2026-10-11), Approved on the Marketplace.** Unreleased since `v0.16.0`:
-copy image (`d7466db`) and Bookmarks (`872c4d9`) — two features — plus the 2026-10-26 polish
-(wavy date line, steady ask preview, menu hover) → **0.17.0** if the user asks for a release.
+copy image (`d7466db`), Bookmarks (`872c4d9`) and saved messages (`fc0dd74`) — three features —
+plus the 2026-10-26 polish (wavy date line, steady ask preview, menu hover) → **0.17.0** if the user
+asks for a release.
 A release starts only when the user asks. **Pending in the real PhpStorm:** none of the
 post-0.16.0 work is installed there; Windows untested for copy image and bookmarks.
 
@@ -36,8 +34,9 @@ post-0.16.0 work is installed there; Windows untested for copy image and bookmar
   sandbox folds previews to 3 lines — not investigated; the steady-height fix holds either way.
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **1246** (fixtures to **104**, 1246/1246 on 2026-10-28);
-  `./gradlew test` **179**.
+- `python3 tools/live_harness.py` baseline **1264** (fixtures to **105**, 1264/1264 on 2026-10-28);
+  `./gradlew test` **183**. A new bridge kind breaks fixtures that tape and count the bridge;
+  every assert must be null-safe or a throw aborts the run with the bridge stubbed (gotchas § Testing).
 - Sandbox PhpStorm 2024.2.6: `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"` (background, from the repo root). Stop it with
   `pgrep -f 'transformed/PhpStorm-2024.2.[6]' | xargs -r kill` (never `pgrep -x claude`), wait for
@@ -67,10 +66,14 @@ post-0.16.0 work is installed there; Windows untested for copy image and bookmar
   background run, the step-6 gate with the FULL notes before commit/tag/push (gotchas § Build).
 
 ## Next steps
-- [x] 8.15 Bookmarks — built, fixture 104, hand-tested by the user (add, minimize/maximize/close,
-      Show in conversation, reopen, remove, row toggle, ticking ages), committed + pushed 2026-10-28.
-- [ ] Release 0.17.0 when the user asks (notes: copy image + Bookmarks as features; steady preview
-      box, menu one-highlight / no hover steal, wavy date line as polish; the whole-message uuid fix).
+- [x] 7.11 Save as command + 7.12 Recent first — fixture 105, hand-tested (4 steps), committed +
+      pushed 2026-10-28 (`fc0dd74`). Marketplace screenshots reshot + 06/07/08 (`d86a9c7`).
+- [ ] Release 0.17.0 when the user asks (notes: copy image, Bookmarks, saved messages (Save as
+      command + recent-first /) as features; steady preview box, menu one-highlight / no hover
+      steal, wavy date line as polish; the whole-message uuid fix).
+- [ ] After that release: upload `design/marketplace/01…08.png` by hand on the Marketplace edit
+      page (the zip carries no screenshots) — eight now, three of them new.
+- [ ] WINDOWS: Save as command (`$CLAUDE_CONFIG_DIR`/`%USERPROFILE%\.claude\commands`, dialog look).
 - [ ] WINDOWS: copy image (paste once into another app) and Bookmarks (config-path store file).
 - [ ] Compaction vs bookmarks: does a compacted transcript keep the old assistant records? If not,
       a pre-compaction bookmark reads "can't be found" (by design, matches VS Code) — measure once.
@@ -94,6 +97,9 @@ post-0.16.0 work is installed there; Windows untested for copy image and bookmar
 - **Copy image** is on tool-returned images only; an image attached to the user's own message is
   copied from the popup its chip opens (user agreed 2026-10-26 — no chip button, a right-click item
   was offered if wanted).
+- **Saved messages** save the text only (no images / selection pill); names have no `sub:` folders;
+  the dialog validates on Save, not live (`initValidation()` offered, not taken); no in-panel edit
+  or delete of a saved command — the file is the terminal's.
 - **Bookmarks** are per text BLOCK (a text → tool → text reply is several records), no typed
   `/bookmarks`, the card is above the composer rather than VS Code's side panel (user pick).
   "Show in conversation" hides when the block is above the replayed window (no load-more jump).

@@ -75,10 +75,12 @@ Two consequences worth knowing:
   2026-08-15 with a 45s quiet wait) - the menu follows automatically. An earlier same-day
   probe concluded "nothing fires on a file drop"; that was a measurement error (the
   `/reload-skills` turn was sent inside the watcher's debounce window, so its push and the
-  watcher's were conflated). **The watch covers the PROJECT dir only**: a file added under
-  `~/.claude/commands/` produced no push (user manual pass, 2026-08-15) — user-level changes
-  need `/reload-skills` (headless-safe, verified, Enabled), which also remains the manual
-  re-sync lever if a project watcher event is ever missed.
+  watcher's were conflated). On 2.1.228 the watch covered the PROJECT dir only (a file added
+  under `~/.claude/commands/` produced no push, user manual pass 2026-08-15). **On 2.1.311 the
+  user dir is watched too**: a `~/.claude/commands/reply-pong.md` written mid-session reached the
+  CLI's own roster (its description was the CLI's first-line fallback) and expanded with no
+  `/reload-skills` (hand test, 2026-10-28). `/reload-skills` (headless-safe, verified, Enabled)
+  stays the manual re-sync lever if a watcher event is ever missed.
 - **`aliases` are first-class (2026-08-17).** The menu filter scores an alias like the name it
   stands for (`/review` surfaces `/code-review` at rank 0, `/peers` → `/list-agents`), rows show
   aliases muted beside the name, and a TYPED alias is resolved to its command before the allowlist

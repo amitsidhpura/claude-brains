@@ -171,8 +171,11 @@ re-read those before trusting memory here.
   " (project)"/" (user)" (2.1.228, zero false positives across 107 built-ins). On disk the wrapper has
   TWO shapes: built-ins persist name→message→args, an arg-less custom one message→name with NO
   `<command-args>`. Match name and args independently or one shape leaks raw XML.
-- **The CLI watches the PROJECT commands dir only**, not `~/.claude/commands` (drop → `commands_changed`
-  ≈2.5s, delete ≈1s, no turn between). User-level needs `/reload-skills`. Sequence such probes with a
+- **The CLI watches the commands dirs** (drop → `commands_changed` ≈2.5s, delete ≈1s, no turn
+  between). On 2.1.228 only the PROJECT dir; on 2.1.311 `~/.claude/commands` too (a user file written
+  mid-session expanded with no `/reload-skills`, 2026-10-28). Tell the CLI's entry from the page's
+  own `__cmdSaved` echo by its description: the CLI fills a missing one from the file's first line,
+  the echo leaves it empty. Sequence such probes with a
   QUIET WAIT (45s, no turns) before concluding an event never fires on its own — a `/reload-skills`
   sent straight after a file drop lands in the watcher's debounce and conflates the two.
 - **A user message written to stdin mid-turn is read at the NEXT model call.** It races the model call
@@ -1329,6 +1332,23 @@ re-read those before trusting memory here.
   `git stash` a subset to "see the old build": the stash takes every hunk of those files, other
   work included (2026-10-26, popped at once) — a restart of the sandbox on the old tree is not needed
   when the negative control already ran before the edit.
+- **A new panel→Kotlin bridge kind breaks every fixture that tapes the bridge and counts or indexes
+  it** (2026-10-28: `cmdUsed` failed fixture 50's "exactly one message" and fixture 66's `[0].kind`).
+  Filter the new kind out of those tapes (one line, noted in the fixture's provenance) and assert it
+  in its own fixture; never loosen the count. Likewise any page-lifetime state a fixture feeds
+  (`cmdRecent`) leaks into later ones in a full run — a fixture that pins an ORDER saves, empties and
+  restores it (fixture 103).
+- **An expectation that THROWS aborts the whole harness run with the bridge still stubbed** (a
+  `getComputedStyle(null)` on the pre-feature build, 2026-10-28). Write every assert null-safe
+  (`el ? … : 'absent'`) so the negative control FAILS instead of aborting, and after any abort restore
+  `window.__bridge` from the fixture's `__realBridgeNN` by hand before anything else.
+- **The auto-mode classifier refuses the scratch-`CLAUDE_CONFIG_DIR` probe** (2026-10-28, "Credential
+  Leakage": the recipe copies `~/.claude/.credentials.json`). Do not work around it — answer the
+  question in the user's sandbox hand test instead (that is how 7.11's user-dir watch was settled).
+- **Marketplace shots after a roster change** (`tools/marketplace_shots.py`, 2026-10-28): the gauge's
+  denominator follows the resolved model, so context figures chosen for a 1M window read 81–91%
+  orange on a 200K one; a longer chip label ("Default (Opus 5.5)") wraps beside the gauge at 394px
+  (panels now 420). Re-read every PNG after changing COMMON, not only the scene you touched.
 
 ## Docs (markdown rendering)
 - **A blank line inside a list item turns the whole list loose** — every row gets a `<p>` with
