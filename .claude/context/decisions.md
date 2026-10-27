@@ -4,6 +4,17 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-28 — Editor tabs open through `OpenFileDescriptor.navigate`, editors taken from `fileOpened`
+**Decision:** `openInEditor(project, file, onEditor?)` (bridge/DiffReview.kt) replaces
+`FileEditorManager.openFile(file, focus)` at all three call sites. **Why:** on 263 every synchronous
+FileEditorManager open (openFile ×3, openEditor, openFileEditor, openTextEditor) is deprecated for
+suspend functions that do not exist on 242 (javap of both IDEs' jars); `navigate` is clean on both.
+The verdict bar needs the FileEditors, and 263 may open the tab after `navigate` returns, so a
+`fileOpened` subscription made BEFORE navigating supplies them, with a `getEditors` lookup after for
+the synchronous case. **Rejected:** `openFile(file, focus, searchForOpen)` / `openFileEditor` (also
+deprecated on 263); calling the suspend API by reflection on 263+ (two code paths, a coroutine scope
+to own); reading `getEditors` right after `navigate` only (an async open would silently drop the bar).
+
 ## 2026-10-28 — 0.17.0, a MINOR bump, shipped WITH PS-263's three deprecation warnings
 Three features since v0.16.0 (Bookmarks, saved messages, copy image) → minor. The verifier's PS-263
 verdict "Compatible. 3 usages of deprecated API" (`FileEditorManager.openFile(VirtualFile, boolean)`)

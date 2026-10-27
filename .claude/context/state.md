@@ -10,13 +10,15 @@
 - CLI 2.1.311 watches `~/.claude/commands` too — no `/reload-skills` needed (corrected 2026-10-28).
 - Screenshots: `design/marketplace/01…08`, `tools/marketplace_shots.py` (420px panels, 2.1.293 roster).
 - Fixture 105; harness **1264/1264**, `./gradlew test` **183**.
-- **Next candidate: 0.17.1** — PS-263 (2026.3 EAP) flags 3 usages of deprecated
-  `FileEditorManager.openFile(VirtualFile, boolean)`: `ClaudeSessionService.openText`,
-  `DiffReview.open`, `DiffReview.openChain`. Compatible + live IDE run clean; carried since 0.16.0.
-  The replacement must exist on 242 too — not yet looked up (gotchas § Build).
+- **PS-263 deprecations FIXED, committed `1c22236`, NOT released**: the three
+  `FileEditorManager.openFile(file, focus)` calls go through `openInEditor()` in
+  `bridge/DiffReview.kt` (`OpenFileDescriptor.navigate` + `fileOpened` for the verdict bar's editors).
+  Verifier 8/8 plain Compatible; hand-tested in the 242 sandbox (open-as-text, edit diff + bar,
+  Files changed Review). 263 not hand-tested — the Marketplace's live IDE run will be the check.
 
 **Released version: 0.17.0 (2026-10-28), Approved on the Marketplace** (all 9 checks green
-except PS-263's deprecation warnings). Unreleased since `v0.17.0`: nothing.
+except PS-263's deprecation warnings). Unreleased since `v0.17.0`: the deprecation fix (`1c22236`)
+→ **0.17.1** if the user asks for a release.
 A release starts only when the user asks. **Pending in the real PhpStorm:** 0.17.0 not yet
 confirmed installed there; Windows untested for copy image, bookmarks and Save as command.
 
@@ -71,9 +73,12 @@ confirmed installed there; Windows untested for copy image, bookmarks and Save a
       pushed 2026-10-28 (`fc0dd74`). Marketplace screenshots reshot + 06/07/08 (`d86a9c7`).
 - [x] 0.17.0 released 2026-10-28 (`237fa09`): verifier 8/8 Compatible, asset `cmp`-equal, feed
       0.17.0, marketplace-upload green, Approved; screenshots 01…08 uploaded by the user.
-- [ ] 0.17.1 when the user asks: replace the three deprecated `FileEditorManager.openFile(file,
-      focus)` calls with an API present on 242 AND not deprecated on 263; verifier must read plain
-      Compatible on PS-263 (`deprecated-usages.txt` empty).
+- [x] PS-263 deprecations fixed (`1c22236`), verifier clean, hand-tested on 242.
+- [ ] Release 0.17.1 when the user asks — notes: opening files and diffs from the panel no longer
+      uses an API deprecated in IntelliJ 2026.3. After upload, read PS-263's Marketplace rows (static
+      verdict plain Compatible, live IDE run clean).
+- [ ] Testing repo: `hand_test.txt` gained "checked in 0.17.1" in the 2026-10-28 hand test — the user's
+      call whether to drop it (with the other leftovers below).
 - [ ] WINDOWS: Save as command (`$CLAUDE_CONFIG_DIR`/`%USERPROFILE%\.claude\commands`, dialog look).
 - [ ] WINDOWS: copy image (paste once into another app) and Bookmarks (config-path store file).
 - [ ] Compaction vs bookmarks: does a compacted transcript keep the old assistant records? If not,

@@ -3,7 +3,7 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
-## 2026-10-28 (thirty-third) — saved messages: 7.11 Save as command + 7.12 Recent first built, hand-tested, committed `fc0dd74`; Marketplace screenshots reshot + three new (`d86a9c7`); **0.17.0 released + Approved**; harness 1264
+## 2026-10-28 (thirty-third) — saved messages: 7.11 Save as command + 7.12 Recent first built, hand-tested, committed `fc0dd74`; Marketplace screenshots reshot + three new (`d86a9c7`); **0.17.0 released + Approved**; 263 deprecations fixed (`1c22236`); harness 1264
 - User asked for "saved messages selectable like slash commands". They already exist as CLI command
   files (7.3 lists them); suggested building only what is missing: a "Save as command" control and
   recent-first ordering, and checked 7.5 (a hint-less command sends on pick — no change needed).
@@ -32,7 +32,12 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
   Shipped with the warnings (non-blocking; the live 263 IDE run was clean).
 - Trap hit: `$ARGUMENTS` in `changeNotesHtml` (a Kotlin raw string) is a template — escaped as
   `${'$'}ARGUMENTS` before the build.
-- Next: 0.17.1 for the deprecation, only when asked.
+- Deprecation fixed on the user's ask (`1c22236`): javap of FileEditorManager from the 242 and 263
+  IDE jars (python `zipfile` — a `unzip -l | grep` loop missed the class) showed 263 deprecates EVERY
+  synchronous open; `OpenFileDescriptor.navigate` + `fileOpened` instead. Verifier 8/8 clean in 35s
+  (cached); my report loop's zsh no-match glob turned the success into "exit 1" and the user stopped
+  the wait. Hand test in the sandbox, three paths, all pass.
+- Next: 0.17.1 only when asked.
 
 ## 2026-10-28 (thirty-second) — 8.15 Bookmarks: VS Code's feature found missing, built as a card, hand-tested, committed `872c4d9`; harness 1246
 - User asked for a sticky "pin reply". Found VS Code 2.1.310 already ships it as **Bookmarks**

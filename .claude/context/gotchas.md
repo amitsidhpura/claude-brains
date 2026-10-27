@@ -531,6 +531,15 @@ re-read those before trusting memory here.
   clean — the JVM truststore/SNI is what's failing, so "the network is fine" clears nothing.
 - **`$` in `changeNotesHtml` is a Kotlin string template** (raw `"""` strings interpolate too):
   `$ARGUMENTS` in the 0.17.0 notes would have failed the build script — write `${'$'}ARGUMENTS`.
+- **Comparing a platform API across IDE versions: javap the class out of BOTH IDEs' jars** (the
+  verifier's IDEs live under `~/.gradle/caches/8.10.2/transforms/*/transformed/PhpStorm-<ver>/`;
+  find the jar with python `zipfile`, a `unzip -l | grep` loop missed it). `javap -v` + awk on
+  `Deprecated: true` per method gives the exact list — 2026-10-28 it showed 263 deprecates ALL
+  synchronous FileEditorManager opens, which no web page had said.
+- **A report loop's zsh glob can turn a green build into "exit 1"**: `for f in …/deprecated-usages.txt`
+  with no match aborts under zsh ("no matches found") — the verifier had passed and the file was
+  ABSENT because there was nothing to report. Read Gradle's own exit/BUILD line before believing a
+  wrapper's exit code; use `find` or `setopt nullglob` for optional files.
 - **The verifier writes WHICH deprecated APIs it found** to
   `plugin/build/reports/pluginVerifier/PS-<build>/plugins/<id>/<ver>/deprecated-usages.txt` (call site
   + method), beside the verdict file. `recommended()` DOES include the current EAP (PS-263.x on
