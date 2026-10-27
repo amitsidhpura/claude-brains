@@ -61,6 +61,14 @@
   border: 1px solid var(--user-border); border-radius: var(--radius); color: var(--fg);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; cursor: pointer; }
 .msg-user .mention:hover { background: var(--user-raised-hover); }
+/* Save as command (7.11): the reply's Copy-response idiom on the prompt bubble — floated top-right,
+   hover-only, the icon brightens with no plate. The float sits in the bubble's first line, so the
+   text wraps around it instead of running under it. */
+.msg-user .msg-save { display: inline-flex; float: right; margin: 0 0 4px 10px; padding: 2px; border: 0;
+  background: none; color: var(--muted); cursor: pointer; opacity: 0; }
+.msg-user:hover .msg-save, .msg-user .msg-save:focus-visible { opacity: 1; }
+.msg-user .msg-save:hover { color: var(--fg); }
+.msg-user .msg-save svg { width: 14px; height: 14px; display: block; }
 
 /* Over-long blocks FOLD rather than getting their own scrollbar (a nested vertical scroll area
    inside #log traps the wheel): collapsed shows 2 full lines with the 3rd fading out, and the

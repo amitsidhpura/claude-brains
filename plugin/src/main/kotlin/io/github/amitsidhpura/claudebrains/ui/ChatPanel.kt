@@ -378,6 +378,25 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                     pushBookmarks(id)
                 }
             }
+            // 7.12: a slash command was sent; the store keeps its time for the / menu's order.
+            "cmdUsed" -> msg["name"]?.jsonPrimitive?.contentOrNull?.takeIf { CMD_NAME.matches(it) }
+                ?.let { session.noteCommandUsed(it) }
+            // 7.11 Save as command: the bubble's text into the native dialog, which writes the file;
+            // the page hears the result so the menu has it before the CLI's watcher reports it.
+            "saveCommand" -> {
+                val text = msg["text"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return
+                val taken = (msg["taken"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
+                ApplicationManager.getApplication().invokeLater {
+                    val dialog = SaveCommandDialog(project, text, taken)
+                    if (!dialog.showAndGet()) return@invokeLater
+                    val s = dialog.saved ?: return@invokeLater
+                    pushFrame(buildJsonObject {
+                        put("type", "__cmdSaved")
+                        put("name", s.name); put("scope", s.scope); put("description", s.description)
+                        s.argumentHint?.let { put("argumentHint", it) }
+                    })
+                }
+            }
             "side" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val question = msg["question"]?.jsonPrimitive?.content ?: return
@@ -1020,6 +1039,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         pushFrame(buildJsonObject { put("type", "__selPref"); put("on", session.includeSelection()); put("file", session.includeOpenFile()) })
         pushSelection(selectionTracker.current())
         lastCommandsChanged?.let { pushEvent(it) }   // after the seed: it REPLACES the init roster
+        pushFrame(buildJsonObject { put("type", "__cmdRecent"); put("recent", json.parseToJsonElement(session.commandRecents())) })   // 7.12
 
         lastTitle = null; titleProbed = false
         pushTitle(session.currentSessionId())
@@ -1117,6 +1137,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
          *  paste path (which the browser caps naturally at clipboard size). */
         private const val MAX_DROP_BYTES = 25L * 1024 * 1024
         private const val MORE_BLOCKS = 500
+        /** A roster name as the page sends it (7.12): built-ins, custom files, `mcp__server__prompt`. */
+        private val CMD_NAME = Regex("[A-Za-z0-9:._-]{1,120}")
         private val log = Logger.getInstance(ChatPanel::class.java)
 
         /** The project's live panel, stashed by ClaudeToolWindowFactory so actions can reach it. */

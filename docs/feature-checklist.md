@@ -17,7 +17,7 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 100 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (145 rows) — no open rows, no [DECIDE] tags
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 102 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (147 rows) — no open rows, no [DECIDE] tags
 - **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools). 6.6 (auto-include selection) left the deferred list and shipped 2026-10-10.
 - **Awaiting a decision ([DECIDE]):** none — 9.9 (the 1M switch) was decided 2026-10-10 after a
   hand test: retired, and the gauge lookup it was masking fixed. The 2.1.296 audit's other rows
@@ -1246,6 +1246,36 @@ auto-include selection, voice.
   `ChatPanel` keeps the newest `commands_changed` frame from the current CLI and replays it after
   the init seed on every page load (cleared on a fresh `initialize`); driven live over CDP
   2026-08-17, a mid-session command survived `location.reload()`.
+  </details>
+- **7.11** ✅ **Save as command** — a hover control on a sent prompt opens a native dialog (name,
+  description, all projects / this project, the text editable) and writes an ordinary command file.
+  <!-- --><details><summary>Read more…</summary>
+  Panel-only (VS Code has no equivalent; asked for 2026-10-28 as "saved messages"). The file is the
+  CLI's own format — `~/.claude/commands/<name>.md` (`$CLAUDE_CONFIG_DIR` honoured) or
+  `<project>/.claude/commands/<name>.md` — so the terminal and VS Code get the same command and the CLI
+  does the expanding. Frontmatter only for what is set: `description`, and `argument-hint: "[text]"`
+  when the text holds `$ARGUMENTS` / `$1`…`$9` (else the 7.5 pick rule would send it on click with the
+  placeholder empty). Refused names: anything outside `[a-z][a-z0-9_-]{0,63}` and every built-in,
+  alias or `/btw` the panel resolves first (the page sends them as `taken`); an existing file asks
+  before it is replaced. The page adds the entry itself on the `__cmdSaved` echo so it is pickable at
+  once; a project file then arrives through the CLI's watcher (7.2). Not on a prompt that already is a
+  `/command`; only the text is saved (images and the selection pill are not). Scope choice remembered.
+  Fixture 105 (live + replay share `addUserMessage`), `SavedCommandsTest`. Hand-tested by the user
+  2026-10-28 (sandbox, CLI 2.1.311): a user-level `/reply-pong` written mid-session reached the
+  CLI's OWN roster (its description was the CLI's first-line fallback, not the page's empty echo)
+  and expanded to "PONG" with no `/reload-skills` — on 2.1.311 the user commands dir IS watched,
+  unlike 7.2's 2026-08-15 measurement; `/compact` refused with Save disabled; a project-scope
+  `/echo-word` with `$ARGUMENTS` got the hint, inserted-and-waited on pick, `/echo-word Amit` → "Amit".
+  </details>
+- **7.12** ✅ **Recent first in the / menu** — inside each match tier (exact / prefix / substring /
+  description) the most recently sent command leads; an exact name still wins.
+  <!-- --><details><summary>Read more…</summary>
+  Every sent `/command` that the panel does not refuse is recorded under its canonical name (aliases
+  resolved) — click, Enter and typed alike; `/btw` counts. Kotlin keeps `{name: epochMs}` in one
+  application-level property (`claudeCode.commandRecents`, newest 100), seeded on every load as
+  `__cmdRecent`; the page updates its own copy at send time. Never-sent commands keep the CLI's order
+  (stable sort). Fixture 105. Hand-tested 2026-10-28: `/` put the just-sent `/reply-pong` first;
+  `/co` led with the used `/code-review`, then `/compact` `/context` in the CLI's order.
   </details>
 
 ## 8. ✅ Sessions / history

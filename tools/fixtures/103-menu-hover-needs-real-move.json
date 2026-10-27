@@ -1,11 +1,11 @@
 {
  "item": "slash / popup menus: a menu that opens or redraws under a resting pointer keeps its cursor on the first match; hover moves it only after a real pointer move; and only the cursor is painted, so one row is ever highlighted",
  "branch": "js/30-menus.js: a capture keydown clears ptrLive; a mousemove at new screen coordinates sets it and selects the row under the pointer; the document mouseover painter (hoverSel) acts only while ptrLive",
- "provenance": "Measured 2026-10-26 in the sandbox over CDP (Input.dispatchMouseEvent to park the pointer on /goal's row, Input.insertText '/con'): every keystroke's redraw produced a mouseover at the parked coordinates and NO mousemove, and the cursor landed on /goal instead of /context — the user's report the same day. The events here are that sequence, synthetic; the command list is a shortened copy of the real menu.",
+ "provenance": "Measured 2026-10-26 in the sandbox over CDP (Input.dispatchMouseEvent to park the pointer on /goal's row, Input.insertText '/con'): every keystroke's redraw produced a mouseover at the parked coordinates and NO mousemove, and the cursor landed on /goal instead of /context — the user's report the same day. The events here are that sequence, synthetic; the command list is a shortened copy of the real menu. The roster order is pinned with an EMPTY recency map (7.12, 2026-10-28): commands earlier fixtures sent would otherwise lead the menu; the last step restores it.",
  "steps": [
   {
    "note": "1 — the pointer rests (it moved, then a key was typed) and the menu redraws under it: the redraw's mouseover must NOT move the cursor off the first match",
-   "setup": "document.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,screenX:1103,screenY:1103})); window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'context',description:'a'},{name:'code-review',description:'b'},{name:'run',description:'c'},{name:'compact',description:'d'},{name:'goal',description:'e'}]})); renderSlash(''); document.getElementById('slashMenu').classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it.forEach(function(x,n){ x.classList.toggle('sel', n===0); }); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Shift',bubbles:true})); document.querySelectorAll('#slashList .popup-item')[4].dispatchEvent(new MouseEvent('mouseover',{bubbles:true,screenX:1103,screenY:1103}));",
+   "setup": "window.__recent103 = cmdRecent; cmdRecent = {}; document.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,screenX:1103,screenY:1103})); window.onClaudeEvent(JSON.stringify({type:'__commands',items:[{name:'context',description:'a'},{name:'code-review',description:'b'},{name:'run',description:'c'},{name:'compact',description:'d'},{name:'goal',description:'e'}]})); renderSlash(''); document.getElementById('slashMenu').classList.add('show'); var it=document.querySelectorAll('#slashList .popup-item'); it.forEach(function(x,n){ x.classList.toggle('sel', n===0); }); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Shift',bubbles:true})); document.querySelectorAll('#slashList .popup-item')[4].dispatchEvent(new MouseEvent('mouseover',{bubbles:true,screenX:1103,screenY:1103}));",
    "expect": [
     {
      "js": "[].slice.call(document.querySelectorAll('#slashList .popup-item .pi-title'),0,5).map(function(x){return x.textContent}).join(' ')",
@@ -68,8 +68,8 @@
    ]
   },
   {
-   "note": "5 — cleanup",
-   "setup": "document.getElementById('slashMenu').classList.remove('show');",
+   "note": "5 — cleanup (the page's own recency back, 7.12)",
+   "setup": "document.getElementById('slashMenu').classList.remove('show'); cmdRecent = window.__recent103 || {};",
    "expect": [
     {
      "js": "document.getElementById('slashMenu').classList.contains('show')",

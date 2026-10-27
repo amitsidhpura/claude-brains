@@ -12,6 +12,8 @@ turn. Consequences:
 - **Enabled - custom (automatic)**: project/user command files, project/user skills, and
   MCP-server prompts — detected from the wire (below), shown with a muted source badge
   ("project" / "user" / "mcp"), and sent as a turn. Never hand-listed.
+  A sent prompt's hover control writes one (checklist 7.11, "Save as command"), and the menu
+  ranks recently sent commands first inside each match tier (7.12).
 - **Hidden**: not shown in the slash menu at all, and refused if typed. A built-in that is
   either local/display/settings/harness-only with no headless effect, or simply **not yet
   verified**.

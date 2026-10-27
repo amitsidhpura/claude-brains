@@ -82,6 +82,41 @@
   // completes it into the prompt and you decide when to send.
   function cmdTakesArg(c) { return !!((c && c.argumentHint) || '').trim(); }
 
+  // 7.12 Recent first: name (lowercased, canonical) -> epoch ms of its last send. Kotlin owns the
+  // store (application-level, so it survives restarts and spans projects) and seeds it on every
+  // load as __cmdRecent; a send updates the local copy at once so the next menu already ranks it.
+  let cmdRecent = {};
+  function noteCmdUsed(name) {
+    cmdRecent[name] = Date.now();
+    bridge({ kind: 'cmdUsed', name: name });
+  }
+
+  // 7.11 Save as command: Kotlin owns the dialog and the file. `taken` is every name the panel
+  // resolves BEFORE a custom file (built-ins, aliases, the panel's own /btw) — a file under one of
+  // those would never run, so the dialog refuses the name instead of writing a dead command.
+  function saveAsCommand(text) {
+    const taken = [];
+    slashCommands.concat(CMD_LOCAL).forEach(function (c) {
+      if (c.src || (c.name || '').indexOf('mcp__') === 0) return;
+      taken.push((c.name || '').toLowerCase());
+      if (Array.isArray(c.aliases)) c.aliases.forEach(function (a) { taken.push(String(a).toLowerCase()); });
+    });
+    bridge({ kind: 'saveCommand', text: text, taken: taken });
+  }
+  // The file is written. A project file reaches the roster through the CLI's own watcher
+  // (commands_changed, ~2.5s); the entry added here makes the command pickable before that, and
+  // the watcher's roster REPLACE then supersedes it.
+  function onCmdSaved(ev) {
+    const name = (ev.name || '').toLowerCase();
+    if (!name) return;
+    if (!slashCommands.some(function (c) { return (c.name || '').toLowerCase() === name; })) {
+      slashCommands.push({ name: name, description: ev.description || '', argumentHint: ev.argumentHint || '', src: ev.scope });
+    }
+    customCmds[name] = ev.scope;
+    statusLine('Saved /' + name + ' for ' + (ev.scope === 'user' ? 'all projects' : 'this project') +
+      ' · type / to send it', SVG_CHECK);
+  }
+
   function renderSlash(q) {
     const ql = (q || '').toLowerCase();
     // rank: exact name (0) → name prefix (1) → name substring (2) → description-only (3), so an
@@ -107,7 +142,11 @@
       if (score < 0 && desc.indexOf(ql) !== -1) score = 3;
       return { c: c, score: score };
     }).filter(function (x) { return x.score >= 0 && cmdKind(x.c.name) !== 'tui'; })  // hide unconfirmed
-      .sort(function (a, b) { return a.score - b.score; })
+      // 7.12: inside a tier the most recently sent command leads; never-sent ones keep the CLI's order
+      .sort(function (a, b) {
+        return a.score - b.score ||
+          (cmdRecent[(b.c.name || '').toLowerCase()] || 0) - (cmdRecent[(a.c.name || '').toLowerCase()] || 0);
+      })
       .map(function (x) { return x.c; }).slice(0, 40);
     if (!hits.length) { slashList.innerHTML = '<div class="popup-empty">No matching commands</div>'; return 0; }
     slashList.innerHTML = hits.map(function (c, i) {

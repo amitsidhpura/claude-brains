@@ -300,6 +300,16 @@
       const t = document.createElement('span');
       t.innerHTML = mentionHtml(text);   // escaped text + @-mention chips (6.9); textContent === text
       d.appendChild(t);
+      // 7.11: keep this prompt as a /command. Not on a prompt that already IS one. First child, so
+      // the float takes the bubble's top line; its own listener, because the bubble's fold toggle
+      // would otherwise take the click too.
+      if (!/^\/[a-z]/i.test(text.trim())) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'msg-save'; b.title = 'Save as command';
+        b.innerHTML = SVG_SAVE_CMD;
+        b.onclick = function (e) { e.stopPropagation(); saveAsCommand(text); };
+        d.insertBefore(b, d.firstChild);
+      }
     }
     turnEl.prepend(d); maybeScroll();   // before .turn-body, and outside its containment
     foldBlock(d);   // long prompts fold to 2 lines + fade; the box itself toggles
@@ -457,6 +467,7 @@
       // `/code-review`, and a typed alias must reach the same branch as the name it stands for. The turn is sent under the canonical name too.
       const name = canonicalCmd(sc[1]);
       if (name !== sc[1].toLowerCase()) t = '/' + name + (sc[2] != null ? ' ' + sc[2] : '');
+      if (cmdKind(name) !== 'tui') noteCmdUsed(name);   // 7.12: a refused command is not a use
       if (name === 'btw') { clearComposer(); sideOpen(sc[2] || ''); return; }             // side question (8.11)
       if (cmdKind(name) === 'tui') {
         clearComposer();

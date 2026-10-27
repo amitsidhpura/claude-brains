@@ -404,6 +404,8 @@
       case '__selection':        setIdeSelection(ev); return;              // 6.6: the editor's live selection (bare = none)
       case '__selPref':          setSelIncluded(ev.on, false); if ('file' in ev) setFileIncluded(ev.file, false); return;   // 6.6: both switches, seeded on every load
       case '__commands':         slashCommands = markCustom(ev.items || []); return;
+      case '__cmdRecent':        cmdRecent = ev.recent || {}; return;      // 7.12: seeded on every load
+      case '__cmdSaved':         onCmdSaved(ev); return;                    // 7.11: the dialog wrote the file
       case '__customModels':
         customModels = ev.items || [];   // pushed before __models so a restored custom selection resolves
         renderModels();

@@ -227,7 +227,9 @@
            .msg-user — outside the containment; it scrolls away as the bubble pins) and, below,
            one above the turn's FIRST text block. Live = page clock; replay = the record's ts. -->
       <div class="ts">10:42 AM</div>
-      <div class="msg-user">Print some text with inline code</div>
+      <!-- 7.11 Save as command: hover-only control floated top-right (addUserMessage); hover the
+           bubble to see it -->
+      <div class="msg-user"><button type="button" class="msg-save" title="Save as command"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" x2="15" y1="15" y2="9"/></svg></button>Print some text with inline code</div>
       <!-- 6.9: @-mentions render as inline chips (mentionHtml in js/50-blocks.js); the text is the typed prompt -->
       <div class="msg-user">Refactor <span class="mention" data-path="src/components/App.tsx" title="src/components/App.tsx">@src/components/App.tsx</span> to use the hook from <span class="mention" data-path="src/hooks/useAuth.ts" title="src/hooks/useAuth.ts">@src/hooks/useAuth.ts</span>, see <span class="mention" data-path="docs/Design Notes (draft).md" title="docs/Design Notes (draft).md">@"docs/Design Notes (draft).md"</span>.</div>
 

@@ -1,0 +1,133 @@
+{
+ "item": "7.11 Save as command (a hover control on the prompt bubble asks Kotlin's dialog to keep the text as a /command; the saved echo makes it pickable at once) + 7.12 Recent first (inside a match tier the most recently sent command leads; a sent command is recorded, a refused one is not)",
+ "branch": "addUserMessage() in js/60-composer.js adds .msg-save; saveAsCommand/onCmdSaved/noteCmdUsed + renderSlash's sort in js/65-slash.js; submit() calls noteCmdUsed; js/70-events.js routes __cmdRecent/__cmdSaved",
+ "provenance": "`__commands` is ChatPanel's own roster frame (fixture 46's shape; the ' (project)' suffix is the CLI's measured custom marker, 2.1.228); `__cmdRecent` / `__cmdSaved` are ChatPanel.seedUi's and the saveCommand handler's own frames. The bridge is stubbed: nothing here reaches Kotlin or the CLI. Live and replay draw the bubble through the same addUserMessage, so one path stands for both.",
+ "steps": [
+  {
+   "note": "0 — a sent prompt gets the save control; a prompt that already is a /command does not",
+   "setup": "if (!window.__realBridge105) { window.__realBridge105 = window.__bridge; } window.__tape105 = []; window.__bridge = function(j){ window.__tape105.push(JSON.parse(j)); }; window.__cmds105 = slashCommands.slice(); window.__recent105 = (typeof cmdRecent !== 'undefined') ? cmdRecent : null; window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__commands', items:[{name:'compact', description:'Clear history but keep a summary', argumentHint:'<instructions>'}, {name:'code-review', description:'Review the diff', argumentHint:'', aliases:['review']}, {name:'mine', description:'My routine (project)', argumentHint:''}]})); addUserMessage('Run the tests and fix failures', [], Date.now(), null); addUserMessage('/compact keep the plan', [], Date.now(), null);",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.msg-user').length",
+     "equals": 2,
+     "why": "GUARD: two bubbles drawn"
+    },
+    {
+     "js": "document.querySelectorAll('.msg-user')[0].querySelectorAll(':scope > .msg-save').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the plain prompt carries the control (pre-feature: none)"
+    },
+    {
+     "js": "(function(){ var f = document.querySelectorAll('.msg-user')[0].firstElementChild; return f ? String(f.classList.contains('msg-save')) : 'no child'; })()",
+     "equals": "true",
+     "why": "first child, so the float takes the bubble's top line"
+    },
+    {
+     "js": "(function(){ var b = document.querySelector('.msg-user .msg-save'); return b ? getComputedStyle(b).float : 'no control'; })()",
+     "equals": "right",
+     "why": "DISCRIMINATING: styled as the Copy-response idiom (pre-feature: no rule)"
+    },
+    {
+     "js": "document.querySelectorAll('.msg-user')[1].querySelectorAll('.msg-save').length",
+     "equals": 0,
+     "why": "a /command prompt has nothing to save"
+    }
+   ]
+  },
+  {
+   "note": "1 — clicking asks Kotlin with the bubble's text and the names a file could never shadow; the bubble does not fold-toggle",
+   "setup": "window.__tape105 = []; var b105 = document.querySelector('.msg-user .msg-save'); if (b105) b105.click();",
+   "expect": [
+    {
+     "js": "(function(){ var m = window.__tape105.filter(function(x){ return x.kind === 'saveCommand'; }); return m.length ? m[0].text : 'no request'; })()",
+     "equals": "Run the tests and fix failures",
+     "why": "DISCRIMINATING: the request carries the prompt as typed"
+    },
+    {
+     "js": "(function(){ var m = window.__tape105.filter(function(x){ return x.kind === 'saveCommand'; })[0]; return m ? m.taken.slice().sort().join(',') : 'no request'; })()",
+     "equals": "btw,code-review,compact,review",
+     "why": "built-ins, their aliases and the panel's own /btw — not the custom /mine"
+    },
+    {
+     "js": "String(document.querySelector('.msg-user').classList.contains('open'))",
+     "equals": "false",
+     "why": "the click stayed on the control"
+    }
+   ]
+  },
+  {
+   "note": "2 — the saved echo: the command is in the menu at once with its source badge, and the panel says where it went",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__cmdSaved', name:'run-the-tests', scope:'user', description:'Tests, then fixes'})); renderSlash('run');",
+   "expect": [
+    {
+     "js": "(function(){ var r = slashList.querySelector('.popup-item'); return r ? r.dataset.cmd : 'none'; })()",
+     "equals": "/run-the-tests",
+     "why": "DISCRIMINATING: pickable before the CLI's watcher reports it"
+    },
+    {
+     "js": "(function(){ var s = slashList.querySelector('.popup-item .pi-src'); return s ? s.textContent : 'none'; })()",
+     "equals": "user",
+     "why": "badged like any user command"
+    },
+    {
+     "js": "(function(){ var r = slashList.querySelector('.popup-item'); return r ? String(!!r.dataset.takesarg) : 'none'; })()",
+     "equals": "false",
+     "why": "no placeholder → no hint → a pick sends it straight away (7.5)"
+    },
+    {
+     "js": "(function(){ var s = document.querySelectorAll('.status'); return s.length ? s[s.length-1].textContent : 'none'; })()",
+     "contains": "Saved /run-the-tests for all projects",
+     "why": "the panel says where it went"
+    }
+   ]
+  },
+  {
+   "note": "3 — recency: with nothing typed the most recent leads; inside a tier recency decides; an exact name still wins",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__cmdRecent', recent:{'mine': 2000, 'code-review': 1000}}));",
+   "expect": [
+    {
+     "js": "(renderSlash(''), Array.prototype.map.call(slashList.querySelectorAll('.popup-item'), function(r){ return r.dataset.cmd; }).slice(0, 2).join(' '))",
+     "equals": "/mine /code-review",
+     "why": "DISCRIMINATING: newest first (pre-feature: roster order /compact /code-review)"
+    },
+    {
+     "js": "(renderSlash('co'), Array.prototype.map.call(slashList.querySelectorAll('.popup-item'), function(r){ return r.dataset.cmd; }).slice(0, 2).join(' '))",
+     "equals": "/code-review /compact",
+     "why": "DISCRIMINATING: two prefix matches, the used one first"
+    },
+    {
+     "js": "(renderSlash('compact'), (slashList.querySelector('.popup-item') || {dataset:{cmd:'none'}}).dataset.cmd)",
+     "equals": "/compact",
+     "why": "an exact name beats any recency"
+    }
+   ]
+  },
+  {
+   "note": "4 — sending records the use (canonical name, alias resolved); a refused command records nothing",
+   "setup": "window.__tape105 = []; input.value = '/review'; submit(); setBusy(false); input.value = '/login'; submit(); setBusy(false); renderSlash('');",
+   "expect": [
+    {
+     "js": "window.__tape105.filter(function(x){ return x.kind === 'cmdUsed'; }).map(function(x){ return x.name; }).join(',')",
+     "equals": "code-review",
+     "why": "DISCRIMINATING: one use, under the name the alias stands for; /login (refused) is not one"
+    },
+    {
+     "js": "(slashList.querySelector('.popup-item') || {dataset:{cmd:'none'}}).dataset.cmd",
+     "equals": "/code-review",
+     "why": "the local copy updated at once, so the next menu already ranks it"
+    }
+   ]
+  },
+  {
+   "note": "5 — cleanup: real bridge, the page's own roster and recency back",
+   "setup": "setBusy(false); window.__bridge = window.__realBridge105; slashCommands = markCustom(window.__cmds105.map(function(c){ var o = Object.assign({}, c); if (o.src) { o.description = (o.description || '') + ' (' + o.src + ')'; delete o.src; } return o; })); if (window.__recent105 !== null) { cmdRecent = window.__recent105; } window.onClaudeEvent(JSON.stringify({type:'__clear'})); input.value = ''; menuEl('slashMenu').classList.remove('show');",
+   "expect": [
+    {
+     "js": "String(window.__bridge === window.__realBridge105)",
+     "equals": "true",
+     "why": "GUARD: the real bridge is back"
+    }
+   ]
+  }
+ ]
+}

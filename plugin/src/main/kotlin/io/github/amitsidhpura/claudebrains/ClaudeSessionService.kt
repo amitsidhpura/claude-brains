@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains
 
+import io.github.amitsidhpura.claudebrains.session.SavedCommands
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
@@ -129,6 +130,12 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      *  restarts, seeded to the page on every load (ChatPanel.seedUi). Default ON. */
     fun includeSelection(): Boolean = props.getBoolean(SELECTION_KEY, true)
     fun setIncludeSelection(on: Boolean) = props.setValue(SELECTION_KEY, on, true)
+
+    /** 7.12: when each slash command was last sent ({name: epochMs}, JSON). Application-level like
+     *  the model pick, so the / menu's recent-first order spans projects and restarts. */
+    fun commandRecents(): String = SavedCommands.encodeRecent(SavedCommands.parseRecent(props.getValue(RECENT_CMDS_KEY)))
+    fun noteCommandUsed(name: String) =
+        props.setValue(RECENT_CMDS_KEY, SavedCommands.bumpRecent(props.getValue(RECENT_CMDS_KEY), name, System.currentTimeMillis()))
 
     /** 6.6: "Include open file" — the active file's content rides the prompt when nothing is
      *  highlighted (the highlight always wins). Same persistence as the selection switch. Default OFF. */
@@ -637,5 +644,6 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         const val THINKING_OFF_KEY = "claudeCode.thinkingOff"
         const val SELECTION_KEY = "claudeCode.includeSelection"
         const val OPEN_FILE_KEY = "claudeCode.includeOpenFile"
+        const val RECENT_CMDS_KEY = "claudeCode.commandRecents"
     }
 }

@@ -119,6 +119,8 @@ this cap was future-proofing rather than a live fix.
 | what | limit | where | says so? |
 |---|---|---|---|
 | diff rows | 400 | `MAX_DIFF_ROWS`, live + replay | ✅ "… diff truncated" |
+| slash-command recency (7.12) | 100 names | `SavedCommands.MAX_RECENT` (Kotlin, one application-level property) — the least recently sent name goes first; a dropped name simply ranks like a never-sent one | ❌ — invisible by design: it only orders ties |
+| saved command name (7.11) | 64 chars, `[a-z][a-z0-9_-]*` | `SavedCommands.NAME` — what submit()'s `/name` regex can route; the dialog refuses anything else | ✅ the dialog's validation line |
 | bookmarks per conversation (8.15) | 200 | `BookmarkStore.MAX` (Kotlin) — the oldest goes when the 201st is added | ❌ — not reachable by hand (one click per bookmark); the file is the only thing it protects |
 | Bash edit-diff files | 10 | `MAX_BASH_DIFF_FILES` (`appendBashDiff`, live + replay, 1.29); the CLI caps first and reports the rest as `moreFiles` — both remainders add up in one note. Above us the CLI drops the WHOLE diff past 400 lines / 64 000 chars (2.1.270 binary constants), and attaches one at all only in auto / bypassPermissions or with `bashEditDiffEnabled: true` (measured 2026-09-13) | ✅ `.t-note` "+N more files changed — diff not shown"; ❌ nothing marks a diff the CLI dropped |
 | Bash command | 4000 chars | `RenderLimits.CMD_MAX` — card preview, IN box and replay, one number | ✅ `.io-cut` |
