@@ -146,7 +146,8 @@
           break;
         case 'assistant': {
           if (!replyStamped && it.ts != null) { replyStamped = true; el('ts', fmtClock(new Date(it.ts))); }
-          mdBlock(el('blk', ''), it.text);
+          const k = mdBlock(el('blk', ''), it.text);
+          if (it.uuid) { k.dataset.uuid = it.uuid; bmMarkOne(k); }   // 8.15: bookmarks find it, as live blocks
           break;
         }
         // API errors are persisted as assistant records flagged isApiErrorMessage; live draws the

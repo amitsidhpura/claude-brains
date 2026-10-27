@@ -64,6 +64,7 @@
   <button onclick="tgState('histEmpty', 'histFull')">no history</button>
   <button onclick="startRename(event)">rename</button>
   <button onclick="tgSide(event)">btw</button>
+  <button onclick="tgBm(event)">bookmarks</button>
   <button onclick="document.getElementById('convTitle').classList.toggle('unnamed')">unnamed</button>
   <!-- fast mode has three states: off, on, and cooling down (.on.cooldown — half-strength track) -->
   <button onclick="(function(b){var s=b.classList.contains('cooldown')?'off':b.classList.contains('on')?'cooldown':'on';
@@ -103,6 +104,8 @@
         <div class="popup-f" id="exportStatus">The whole conversation as plain text, 4,812 characters.</div>
       </div>
       <button class="icon-btn" title="Reload this conversation"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
+      <!-- Bookmarks (8.15): toggles #bmCard; .on while the card is open. devbar → bookmarks -->
+      <button class="icon-btn" id="bmBtn" title="Bookmarks" onclick="tgBm(event)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button>
       <button class="icon-btn" title="Past conversations" onclick="tgHist(event)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
       <button class="icon-btn" title="New conversation" onclick="newConversation()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></button>
     </span>
@@ -169,6 +172,47 @@
     </div>
   </div>
 
+  <!-- Bookmarks card (8.15): VS Code's bookmarks panel as a card above the composer — the
+       #sidePanel shell. Rows = first line + age (the selected row raised); the detail box shows
+       "Show in conversation", remove, and the rendered reply (a gutterless .blk that scrolls
+       inside the 40vh cap). ▾ minimizes to the header line (.min), ✕ closes. Empty: .bm-empty.
+       A reply whose record is gone from the transcript shows .bm-gone instead of the text. -->
+  <div id="bmCard">
+    <div class="bm-h">
+      <span class="bm-title"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>Bookmarks</span>
+      <span class="bm-count" id="bmCount">2</span>
+      <button class="icon-btn" id="bmMin" title="Minimize" onclick="event.stopPropagation(); document.getElementById('bmCard').classList.toggle('min')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button class="icon-btn" id="bmClose" title="Close" onclick="tgBm(event)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <div class="bm-body">
+      <div class="bm-empty" hidden>Bookmark a response with its bookmark button to keep it here.</div>
+      <div class="bm-list">
+        <div class="bm-row" onclick="bmSel(this)"><span class="bm-t">In PHP, declare(strict_types=1) must be the very first statement in a file — even a blank line…</span><span class="bm-age">5m ago</span></div>
+        <div class="bm-row sel" onclick="bmSel(this)"><span class="bm-t">A goat is a medium-sized, hardy mammal domesticated by humans over 10,000 years ago.</span><span class="bm-age">2m ago</span></div>
+      </div>
+      <div class="bm-detail">
+        <div class="bm-dh"><span class="bm-jump">Show in conversation</span><button class="icon-btn bm-rm" title="Remove bookmark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></div>
+        <div class="blk bm-text">
+          <ol>
+            <li>A goat is a medium-sized, hardy mammal domesticated by humans over 10,000 years ago.</li>
+            <li>It has a lean, agile body covered in coarse hair, in colors like white, black, brown, or patched.</li>
+            <li>Goats typically have curved horns, a short tail, and many males grow a distinctive beard.</li>
+            <li>Their rectangular, horizontal pupils give them a wide field of vision to spot predators.</li>
+            <li>Goats are excellent climbers, able to scale steep cliffs and even trees with ease.</li>
+            <li>They are curious, browsing animals that eat leaves, shrubs, bark, and weeds, not just grass.</li>
+            <li>As ruminants, goats chew cud and digest tough plant matter in a four-chambered stomach.</li>
+            <li>Goats are raised for milk, meat, and fibers like cashmere and mohair.</li>
+            <li>They are intelligent, playful, and social, living in herds and communicating through bleats.</li>
+            <li>Adaptable to harsh climates, goats thrive in mountains, deserts, and farms worldwide.</li>
+          </ol>
+        </div>
+        <!-- with no row open the card is the rows alone (a second click on the open row closes it);
+             a record gone from the transcript shows .bm-gone in place of the text -->
+        <div class="bm-gone" hidden>This response can't be found in the conversation's history.</div>
+      </div>
+    </div>
+  </div>
+
   <div id="log">
     <!-- first-run state: shown until the first turn arrives (devbar → welcome) -->
     <div id="welcome" style="display:none">
@@ -203,7 +247,8 @@
       <div class="ts">10:42 AM</div>
       <div class="msg-user fold" title="Show more" onclick="this.classList.toggle('open')">Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline. Let me explain the whole pipeline.</div>
 
-      <div class="blk"><button type="button" class="blk-copy" title="Copy response"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+      <!-- .bm-flash: what "Show in conversation" plays on the block it scrolled to -->
+      <div class="blk bm-flash" data-uuid="mock-1"><button type="button" class="blk-copy" title="Copy response"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button><button type="button" class="blk-mark on" title="Remove bookmark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button>
         <p>In PHP, <code>declare(strict_types=1)</code> must be the very first statement in a file — even a blank line before <code>&lt;?php</code> will trigger a fatal error. Once enabled, passing <code>"5"</code> to a function typed <code>int $qty</code> throws a <code>TypeError</code> instead of silently coercing to <code>5</code>.</p>
         <p>A few related notes:</p>
         <ul>
@@ -1300,6 +1345,18 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
     if (p.classList.contains('show')) document.getElementById('sideInput').focus();
   }
   document.getElementById('sideClose').onclick = function (e) { tgSide(e); };
+  // bookmarks card (8.15): the side card's placement, plus the header button's .on
+  function tgBm(e) {
+    if (e) e.stopPropagation();
+    var p = document.getElementById('bmCard');
+    p.style.bottom = (document.getElementById('composer').offsetHeight + 8) + 'px';
+    p.style.right = composerEl.style.paddingRight || '14px';
+    p.classList.toggle('show');
+    document.getElementById('bmBtn').classList.toggle('on', p.classList.contains('show'));
+  }
+  function bmSel(row) {
+    row.parentNode.querySelectorAll('.bm-row').forEach(function (r) { r.classList.toggle('sel', r === row); });
+  }
   document.getElementById('sideClear').onclick = function (e) {
     e.stopPropagation();
     document.getElementById('sideList').innerHTML = '<div class="side-empty">Ask a quick question without interrupting the conversation.</div>';

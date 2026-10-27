@@ -76,6 +76,7 @@
       if (m) { if (m.id === 'slashMenu') slashEscaped = true; m.classList.remove('show'); return; }
       if (histPanel.classList.contains('show')) { histPanel.classList.remove('show'); return; }
       if (sidePanel.classList.contains('show')) { sideClose(); return; }
+      if (bmCard.classList.contains('show')) { bmClose(); return; }   // 8.15
       if (activeAsk) { cancelAsk(); return; }
       return;
     }

@@ -20,6 +20,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -365,6 +366,18 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             // Side question (8.11): the page's own row id rides the request and comes back on the
             // `__side` frame, so the answer lands on the row that asked — order is not assumed.
+            // Bookmarks (8.15): the page toggled one; the store answers with the whole list, texts
+            // read from the transcript. Off the EDT: both the store and the transcript are files.
+            "bookmark" -> {
+                val uuid = msg["uuid"]?.jsonPrimitive?.contentOrNull ?: return
+                val on = msg["on"]?.jsonPrimitive?.contentOrNull == "true"
+                val id = session.currentSessionId() ?: return
+                ApplicationManager.getApplication().executeOnPooledThread {
+                    val writtenAt = if (on) session.bookmarkTexts(id, setOf(uuid))[uuid]?.second else null
+                    bookmarkStore.update(id, uuid, on, writtenAt)
+                    pushBookmarks(id)
+                }
+            }
             "side" -> {
                 val id = msg["id"]?.jsonPrimitive?.content ?: return
                 val question = msg["question"]?.jsonPrimitive?.content ?: return
@@ -412,7 +425,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             // that record one reload LATE (a pending plan card replayed "Approved", then flipped
             // to the recorded denial on the next reload — user report 2026-08-23).
             "resume" -> msg["id"]?.jsonPrimitive?.content?.let { id ->
-                clearLog(); session.stopForReplay(); pushTranscript(id); session.resumeSession(id); pushTitle(id)
+                clearLog(); session.stopForReplay(); pushTranscript(id); session.resumeSession(id); pushTitle(id); pushBookmarks(id)
             }
             // Reload the current conversation from disk — same path as picking it in history, so
             // out-of-band edits (and a CLI that died) come back as a clean replay. An id with no
@@ -421,7 +434,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 val id = session.currentSessionId()?.takeIf { session.sessionExists(it) }
                 transcriptItems = emptyList(); transcriptFrom = 0
                 clearLog()
-                if (id != null) { session.stopForReplay(); pushTranscript(id); session.resumeSession(id) }
+                if (id != null) { session.stopForReplay(); pushTranscript(id); session.resumeSession(id); pushBookmarks(id) }
                 else session.newConversation()
                 pushTitle(id)
             }
@@ -522,6 +535,26 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))
 
     private fun clearLog() = pushEvent("""{"type":"__clear"}""")
+
+    private val bookmarkStore = io.github.amitsidhpura.claudebrains.session.BookmarkStore.default()
+
+    /** 8.15: `__bookmarks` — the conversation's list with each reply's text (null when its record is gone). */
+    private fun pushBookmarks(id: String) {
+        val list = bookmarkStore.list(id)
+        val texts = if (list.isEmpty()) emptyMap() else session.bookmarkTexts(id, list.map { it.uuid }.toSet())
+        pushFrame(buildJsonObject {
+            put("type", "__bookmarks")
+            put("bookmarks", buildJsonArray {
+                list.forEach { b ->
+                    add(buildJsonObject {
+                        put("uuid", b.uuid); put("addedAt", b.addedAt)
+                        b.writtenAt?.let { put("writtenAt", it) }
+                        texts[b.uuid]?.first?.let { put("text", it) }
+                    })
+                }
+            })
+        })
+    }
 
     /** Last title shipped, so the per-turn re-check only pushes when the CLI renames the thread. */
     private var lastTitle: String? = null

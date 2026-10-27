@@ -362,6 +362,11 @@
         // cleared only at result / sendTurn / clearLogUI. A local command's turn never streams at
         // all, which is exactly what leaves it false and lets its whole message draw itself.
         if (!msgStreamed) {
+          // This frame IS this message's stamp, so the blocks it draws must wait for ITS uuid:
+          // without the reset track() pre-stamps them with the previous message's (a second
+          // local built-in in a row, or one after a streamed turn, carried the earlier uuid —
+          // reproduced over CDP 2026-10-27 while building 8.15; message_start resets the same way).
+          curMsgUuid = null; curMsgEls = [];
           ((ev.message || {}).content || []).forEach(function (b) {
             if (b && b.type === 'text' && b.text) {
               // the CLI's API-error echo — stash for the result, never draw as prose (see
@@ -685,7 +690,8 @@
       case 'sessions':           return renderHistory(ev.items || [], ev.current);
       case '__transcript':       setContext(ev.context || 0); return renderTranscript(ev.items || [], ev.more || 0);
       case '__transcript_more':  return renderEarlier(ev.items || [], ev.more || 0);
-      case '__clear':            sideReset(); return clearLogUI();
+      case '__clear':            sideReset(); bmReset(); return clearLogUI();
+      case '__bookmarks':        return bmSet(ev.bookmarks || []);   // the store's list, texts read from the transcript (8.15)
       case '__side':             return sideAnswer(ev);   // side-question answer (8.11)
       case '__export':           return exportAnswer(ev); // the CLI's /export text for the header popup (15.4)
       case '__taskOutput': {     // a roster pane's poll answered (11.7); keyed by task_id

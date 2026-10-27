@@ -255,6 +255,12 @@
     b.type = 'button'; b.className = 'blk-copy'; b.title = 'Copy response';
     b.innerHTML = SVG_COPY;
     k.insertBefore(b, k.firstChild);
+    // 8.15: its bookmark twin, right after it (copy keeps the rightmost float); hidden by css
+    // until the block carries a uuid, filled by bmMarkOne once it does and is bookmarked
+    const m = document.createElement('button');
+    m.type = 'button'; m.className = 'blk-mark'; m.title = 'Bookmark response';
+    m.innerHTML = SVG_BM;
+    k.insertBefore(m, b.nextSibling);
   }
   log.addEventListener('click', function (e) {
     const btn = e.target.closest('.blk-copy');

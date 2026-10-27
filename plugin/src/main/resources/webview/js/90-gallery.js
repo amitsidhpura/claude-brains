@@ -383,6 +383,15 @@
       text: '\n❯ Dev gallery — show every UI state.\n\n● An assistant text block with inline code, a link, a list…' };
     renderExport();
 
+    // Bookmarks (8.15): the first text block bookmarked (its mark filled, Show in conversation
+    // live) plus one whose record is gone from the transcript; the card opens over the composer.
+    b.dataset.uuid = 'gallery-blk-1';
+    bmSet([
+      { uuid: 'gallery-blk-1', addedAt: Date.now() - 5 * 60000, writtenAt: Date.now() - 5 * 60000, text: b.__md },
+      { uuid: 'gallery-gone', addedAt: Date.now() - 2 * 3600000, writtenAt: null, text: null },
+    ]);
+    bmSel = 'gallery-blk-1'; bmRender(); bmOpen();
+
     awaitingUser = false; // clear the flag the permission/ask cards set, so real input isn't blocked
     maybeScroll();
   }

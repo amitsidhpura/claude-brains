@@ -51,7 +51,7 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30, 1.31, 4.10, 11.7 and 15.4 were built the same day) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30, 1.31, 4.10, 11.7 and 15.4 were built the same day; 8.15 added 2026-10-27 — an RPC the 2.1.296 audit saw but never gave a row) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Row shape** — `**id** mark [effort] **Name** [tags] — gist`, the gist one to two lines of what
@@ -118,7 +118,7 @@ file rides every message — 6.6), `continueAfterReload` (8.14), `lockEditorGrou
 `scrollToBottomOnSend` (1.14), `showMessageTimestamps` (default ON since 2.1.290 — 1.30),
 `spinnerVerbs` (1.13). Three new gates (`tengu_per_turn_effort`, `tengu_ccr_v2_session_crud_cli`,
 `tengu_staged_ladybug`). ~150 new `case` labels, all host RPC for dialogs or internals: Bookmarks
-(`get_session_bookmarks` / `update_session_bookmark` / `get_bookmarked_responses` — 15.3), Export
+(`get_session_bookmarks` / `update_session_bookmark` / `get_bookmarked_responses` — 8.15, a row it only got on 2026-10-27), Export
 (`export_conversation` / `open_export_document` — 15.4), Status (`get_status`), Sandbox / Chrome /
 Skills / Memory dialogs (`get_sandbox_dialog` + `set_sandbox_setting`; `get_chrome_dialog` +
 `get_chrome_browsers` / `select_chrome_browser` / `set_chrome_setting`; `get_skills_dialog` +
@@ -1334,6 +1334,46 @@ auto-include selection, voice.
   restores the conversation.
   </details>
 
+- **8.15** ✅ [MD] **Bookmarks** [NEW] — built 2026-10-27: keep chosen replies at hand while working through them:
+  a bookmark control on every finished assistant text block, a header button that opens a
+  Bookmarks card above the composer (minimize / maximize / close), rows showing each reply's first
+  line and its age, a detail box with "Show in conversation" (scrolls to the block and flashes
+  it), remove, and the rendered reply. Per conversation, kept across resume and IDE restart.
+  <!-- --><details><summary>Read more…</summary>
+  MISSED by the 2.1.296 audit (2026-10-10): its three host RPCs were listed in the audit
+  paragraph under 15.3 "Small chrome", whose text never names them; given this row 2026-10-27
+  after the user asked for a "pin reply" feature. VS Code 2.1.310 (measured in the installed
+  extension + the user's screenshot): header bookmark button toggles a side panel beside the
+  conversation; rows = first line (ellipsised) + relative time; selected row highlighted; detail
+  = "Show in conversation" link, bookmark icon (removes), the rendered reply; a bookmark icon at
+  the bottom-left of every reply; typed `/bookmarks` opens the panel. Store:
+  `<globalStorage>/anthropic.claude-code/session-bookmarks/<sessionId>.json` =
+  `{updatedAt, projects, bookmarks:[{uuid, addedAt, writtenAt}]}` — identity is the assistant
+  record's `uuid`, text is read back from the transcript (`get_bookmarked_responses`), so a
+  bookmark whose record is gone reads "can't be found in the conversation's history". Ours: the
+  same file shape under `PathManager.getConfigPath()/claude-brains/session-bookmarks/` (own
+  folder, never VS Code's), the card above the composer instead of a side panel (user pick
+  2026-10-27: the chat keeps its width), no typed `/bookmarks` (chip / header rule). Per BLOCK,
+  as VS Code's is: a text → tool → text reply is several records, each its own uuid.
+  BUILT 2026-10-27: `js/68-bookmarks.js` + `#bmCard` / `#bmBtn` (chat.html), the `.blk-mark`
+  control added by `copyable()` (hidden by css until the block carries `data-uuid`), replay now
+  stamps `data-uuid` (`SessionStore.Item.toJson` ships `uuid`), `padLog()` adds the card's height
+  to the log's bottom padding, `evictUuids` drops the withdrawn record's bookmark, `__clear`
+  resets the card. Kotlin: `BookmarkStore` (file per conversation under
+  `PathManager.getConfigPath()/claude-brains/session-bookmarks/`, atomic replace, gone with the
+  last bookmark; `BookmarkStoreTest`), `SessionStore.textsByUuid` (through `readTranscript`,
+  uncapped), `ChatPanel` `bookmark` kind → `__bookmarks` frame after every change and after each
+  `pushTranscript`. Found while building: a reply drawn from a WHOLE-MESSAGE frame with no
+  stream before it (a local built-in, or two in a row) was pre-stamped by `track()` with the
+  PREVIOUS message's uuid — reproduced over CDP (two frames → both blocks `p-1`); the
+  whole-message path now resets the tracker as `message_start` does (`js/70-events.js`).
+  Fixture 104 (10 steps, 39 asserts; negative control on the pre-change sandbox: step 0's
+  discriminating assert failed and the run aborted at the next, which had no element to
+  measure); fixture 96's "first paragraph" probe repointed past the new control (it read the
+  element after `.blk-copy`). Harness 1246, `./gradlew test` 179. Hand-tested by the user in the
+  sandbox 2026-10-28 (add, minimize/maximize/close, Show in conversation, reopen, remove, row
+  toggle, ticking ages); a second click on the open row closes it (user, 2026-10-28). Windows untested.
+  </details>
 ## 9. ✅ Model, effort, usage
 - **9.1** ✅ **Model chip** — the roster from the CLI, search plus a custom id; persisted and
   re-applied on every restart; the CLI's own "Set model to …" echo draws as a confirmation line.

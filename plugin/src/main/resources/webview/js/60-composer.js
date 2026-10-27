@@ -503,15 +503,18 @@
     // box, which the scrollbar narrows — without this they sit sb/2 apart.
     if (scrollBtn) scrollBtn.style.left = sb ? 'calc(50% - ' + (sb / 2) + 'px)' : '50%';
   }
-  new ResizeObserver(function () {
-    const h = composerEl.offsetHeight;
+  // Re-run whenever the composer or the bookmarks card (8.15, which rides it and must not cover
+  // the newest output) changes height: the card's height is simply added to the composer's.
+  function padLog() {
+    const h = composerEl.offsetHeight + bmExtra();
     const wasAtBottom = atBottom();
     log.style.paddingBottom = (h + 12) + 'px';
     fadeEl.style.height = (h + 18) + 'px';
     if (scrollBtn) scrollBtn.style.bottom = (h + 20) + 'px'; // float just above the composer
     if (wasAtBottom) log.scrollTop = log.scrollHeight;   // stay pinned while typing
     syncGutter(); updateScrollBtn();
-  }).observe(composerEl);
+  }
+  new ResizeObserver(function () { padLog(); }).observe(composerEl);
   new ResizeObserver(syncGutter).observe(log);
   syncGutter();
   // keep the top fade pinned just under the header (header height can change with the title/actions)

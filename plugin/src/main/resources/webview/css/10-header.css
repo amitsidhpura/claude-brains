@@ -53,6 +53,7 @@
    --hover rectangle while the composer's attach/slash icons did not; same control, two
    behaviours. Colour-only everywhere now. */
 .icon-btn:hover { color: var(--fg); }
+.icon-btn.on { color: var(--fg); }      /* a header control whose surface is open (8.15 bookmarks) */
 .icon-btn svg { width: 19px; height: 19px; display: block; }
 /* Export popup (15.4): the one popup hanging from the HEADER, so it opens DOWNWARD — the composer
    popups' bottom anchor is overridden. Anchored to .actions (not its button) so it shares

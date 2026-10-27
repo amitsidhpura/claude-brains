@@ -37,6 +37,7 @@ object WebviewAssets {
         "60-composer.js",      // attachments, queue, send/stop/retry, auto-grow
         "65-slash.js",         // slash menu + @-mentions, JCEF Delete-key workaround
         "67-side.js",          // side question panel (/btw): off-thread answers, never in the log
+        "68-bookmarks.js",     // bookmarks card (8.15): uuid-keyed, texts from the transcript
         "70-events.js",        // Kotlin -> page: the onClaudeEvent switchboard
         "75-retraction.js",    // uuid stamping + eviction, status/result lines
         "80-gauge.js",         // context gauge

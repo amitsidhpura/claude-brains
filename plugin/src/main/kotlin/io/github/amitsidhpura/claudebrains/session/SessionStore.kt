@@ -535,6 +535,7 @@ object SessionStore {
             put("role", role)
             put("text", text)
             ts?.let { put("ts", it) }
+            uuid?.let { put("uuid", it) }   // 8.15: what a bookmark names; replay stamps it as data-uuid
             plan?.let { put("plan", it) }
             planFeedback?.let { put("planFeedback", it) }
             planComments?.let { cs ->
@@ -1380,6 +1381,25 @@ object SessionStore {
      * substring pre-check, not [readTranscript]: one record is wanted and parsing is the expensive
      * half. Null when the file, the block or the text is not there.
      */
+    /**
+     * 8.15: the assistant text behind each of [uuids], with the record's timestamp — through the
+     * replay parser, so what the bookmarks card shows is exactly what the log replays for that
+     * block. A record with several text blocks (never measured, allowed by the API) joins them.
+     * Uncapped: a bookmark may sit far above the replayed window.
+     */
+    fun textsByUuid(cwd: String, id: String, uuids: Set<String>): Map<String, Pair<String, Long?>> {
+        if (uuids.isEmpty()) return emptyMap()
+        val out = LinkedHashMap<String, Pair<String, Long?>>()
+        for (b in readTranscript(cwd, id, max = 1_000_000)) {
+            if (b["role"]?.jsonPrimitive?.contentOrNull != "assistant") continue
+            val u = b["uuid"]?.jsonPrimitive?.contentOrNull?.takeIf { it in uuids } ?: continue
+            val text = b["text"]?.jsonPrimitive?.contentOrNull ?: continue
+            val ts = b["ts"]?.jsonPrimitive?.longOrNull
+            out[u] = out[u]?.let { (prev, pts) -> (prev + "\n\n" + text) to pts } ?: (text to ts)
+        }
+        return out
+    }
+
     fun toolText(cwd: String, id: String, toolId: String, which: String): String? {
         val f = File(projectDir(cwd), "$id.jsonl")
         if (!f.isFile || toolId.isBlank()) return null

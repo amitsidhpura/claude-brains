@@ -30,16 +30,21 @@
    jumping it. Transparent like the header icons. Copies the markdown SOURCE. Block children that
    carry their own right-side control clear it, so a reply that opens with a code block never
    puts two copy buttons on one line. */
-.blk .blk-copy { display: inline-flex; float: right; margin: 0 0 4px 10px; padding: 2px; border: 0;
+.blk .blk-copy, .blk .blk-mark { display: inline-flex; float: right; margin: 0 0 4px 10px; padding: 2px; border: 0;
   background: transparent; color: var(--muted); border-radius: var(--radius); cursor: pointer;
   opacity: 0; transition: opacity .12s; }
-.blk:hover .blk-copy, .blk .blk-copy:focus-visible { opacity: 1; }
-.blk .blk-copy:hover { color: var(--fg); }   /* the icon brightens, no plate (user, 2026-10-11) */
-.blk .blk-copy svg { width: 14px; height: 14px; display: block; }
+.blk:hover .blk-copy, .blk .blk-copy:focus-visible, .blk:hover .blk-mark, .blk .blk-mark:focus-visible { opacity: 1; }
+.blk .blk-copy:hover, .blk .blk-mark:hover { color: var(--fg); }   /* the icon brightens, no plate (user, 2026-10-11) */
+.blk .blk-copy svg, .blk .blk-mark svg { width: 14px; height: 14px; display: block; }
+/* Bookmark (8.15): the Copy control's twin, DOM order copy → mark → content so copy keeps the
+   rightmost spot (floats stack leftwards). A bookmarked block shows its mark filled, always. */
+.blk .blk-mark.on { opacity: 1; color: var(--accent); }
+.blk .blk-mark.on svg { fill: currentColor; }
+.blk:not([data-uuid]) .blk-mark { display: none; }   /* nothing to bookmark until the record has a uuid */
 .blk .codeblock, .blk .diff { clear: right; }
-/* the control is the block's first child now, so the real first element must give up its top
-   margin the way :first-child used to — or the first line sits below the dot (user, 2026-10-11) */
-.blk > .blk-copy + * { margin-top: 0; }
+/* the controls are the block's first children now, so the real first element must give up its
+   top margin the way :first-child used to — or the first line sits below the dot (user, 2026-10-11) */
+.blk > :is(.blk-copy, .blk-mark) + :not(.blk-copy, .blk-mark) { margin-top: 0; }
 .blk code { background: var(--raised); color: var(--amber); padding: 1px 5px; border-radius: 3px;
   font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-sm); }
 

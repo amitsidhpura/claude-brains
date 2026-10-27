@@ -1,0 +1,262 @@
+{
+ "item": "8.15 Bookmarks: a bookmark control on every finished assistant text block (live and replayed), the card above the composer (rows, detail, Show in conversation, remove, minimize), the store's list as truth, a withdrawn record dropping its bookmark, __clear resetting the card",
+ "branch": "js/68-bookmarks.js (the card, bmToggle/bmSet/bmDrop/bmJump); copyable() in js/20-markdown.js adds .blk-mark; replay stamps data-uuid (js/55-replay.js); stampMessage/evictUuids in js/75-retraction.js call bmMarkOne/bmDrop; padLog() in js/60-composer.js adds the card's height; js/70-events.js: the whole-message path resets the uuid tracker before drawing (its own frame is the stamp)",
+ "provenance": "Wire shapes: `assistant` frames carry `uuid` (measured on real transcripts 2026-10-27: unique per record, one text block per record); `__transcript` items are SessionStore.Item.toJson (uuid added 2026-10-27); `__bookmarks` is ChatPanel.pushBookmarks' own frame; the refusal-fallback frame is fixture 56's shape. The bridge is stubbed: nothing here reaches Kotlin.",
+ "steps": [
+  {
+   "note": "0 — a live reply gets its bookmark control once its uuid is stamped; the card is closed",
+   "setup": "if (!window.__realBridge104) { window.__realBridge104 = window.__bridge; } window.__tape104 = []; window.__bridge = function(j){ window.__tape104.push(JSON.parse(j)); }; window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'assistant', uuid:'bm-u1', message:{id:'msg_bm1', role:'assistant', model:'<fixture>', content:[{type:'text', text:'1. First thing\\n2. Second thing'}]}, session_id:'fixture-104'}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.blk[data-uuid=\"bm-u1\"] > .blk-mark').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the control exists (pre-feature: no .blk-mark anywhere)"
+    },
+    {
+     "js": "getComputedStyle(document.querySelector('.blk[data-uuid=\"bm-u1\"] > .blk-mark')).display",
+     "equals": "flex",
+     "why": "shown (hover-only by opacity) once the block carries a uuid; a float is blockified, so inline-flex reads flex"
+    },
+    {
+     "js": "(function(){ var m=document.querySelector('.blk[data-uuid=\"bm-u1\"] > .blk-mark'); return m ? String(m.classList.contains('on')) : 'no mark'; })()",
+     "equals": "false",
+     "why": "not bookmarked yet"
+    },
+    {
+     "js": "getComputedStyle(document.getElementById('bmCard')).display",
+     "equals": "none",
+     "why": "GUARD: card closed"
+    }
+   ]
+  },
+  {
+   "note": "1 — clicking the control bookmarks the reply: the card opens with one row, the detail box shows the reply, Kotlin is told",
+   "setup": "document.querySelector('.blk[data-uuid=\"bm-u1\"] > .blk-mark').click();",
+   "expect": [
+    {
+     "js": "getComputedStyle(document.getElementById('bmCard')).display",
+     "equals": "flex",
+     "why": "the first bookmark opens the card"
+    },
+    {
+     "js": "String(document.getElementById('bmBtn').classList.contains('on'))",
+     "equals": "true",
+     "why": "header button lit while open"
+    },
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-row').length",
+     "equals": 1,
+     "why": "one row"
+    },
+    {
+     "js": "(function(){ var s=document.querySelector('#bmCard .bm-row.sel .bm-t'); return s ? s.textContent : 'none'; })()",
+     "equals": "First thing",
+     "why": "the new bookmark is selected; its label is the first line, list marker stripped"
+    },
+    {
+     "js": "document.getElementById('bmCount').textContent",
+     "equals": "1",
+     "why": "count"
+    },
+    {
+     "js": "(function(){ var m=document.querySelector('.blk[data-uuid=\"bm-u1\"] > .blk-mark'); return m ? String(m.classList.contains('on')) : 'no mark'; })()",
+     "equals": "true",
+     "why": "the block's control is filled"
+    },
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-text ol li').length",
+     "equals": 2,
+     "why": "the detail box renders the reply's markdown"
+    },
+    {
+     "js": "String(getComputedStyle(document.querySelector('#bmCard .bm-jump')).display !== 'none')",
+     "equals": "true",
+     "why": "Show in conversation offered — the block is on screen"
+    },
+    {
+     "js": "JSON.stringify(window.__tape104.filter(function(m){ return m.kind === 'bookmark'; }))",
+     "equals": "[{\"kind\":\"bookmark\",\"uuid\":\"bm-u1\",\"on\":true}]",
+     "why": "Kotlin told once, by uuid"
+    },
+    {
+     "js": "String((parseInt(document.getElementById('log').style.paddingBottom) || 0) - document.getElementById('composer').offsetHeight - 12 >= document.getElementById('bmCard').offsetHeight)",
+     "equals": "true",
+     "why": "the log's bottom padding grew by the card, so the newest output is never under it"
+    }
+   ]
+  },
+  {
+   "note": "2 — a second whole-message reply gets ITS OWN uuid (pre-fix: track() pre-stamped it with the first one's) and bookmarks as a second row, the newer selected",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'assistant', uuid:'bm-u2', message:{id:'msg_bm2', role:'assistant', model:'<fixture>', content:[{type:'text', text:'Second reply'}]}, session_id:'fixture-104'})); document.querySelector('.blk[data-uuid=\"bm-u2\"] > .blk-mark').click();",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.blk[data-uuid=\"bm-u2\"]').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the second frame's block carries bm-u2 (pre-fix both blocks read bm-u1)"
+    },
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-row').length",
+     "equals": 2,
+     "why": "two rows"
+    },
+    {
+     "js": "(function(){ var s=document.querySelector('#bmCard .bm-row.sel .bm-t'); return s ? s.textContent : 'none'; })()",
+     "equals": "Second reply",
+     "why": "the newest is selected"
+    },
+    {
+     "js": "document.getElementById('bmCount').textContent",
+     "equals": "2",
+     "why": "count"
+    }
+   ]
+  },
+  {
+   "note": "3 — minimize keeps the header only; again restores the body",
+   "setup": "document.getElementById('bmMin').click();",
+   "expect": [
+    {
+     "js": "String(document.getElementById('bmCard').classList.contains('min'))",
+     "equals": "true",
+     "why": "minimized"
+    },
+    {
+     "js": "getComputedStyle(document.querySelector('#bmCard .bm-body')).display",
+     "equals": "none",
+     "why": "body hidden"
+    },
+    {
+     "js": "(function(){ document.getElementById('bmMin').click(); return getComputedStyle(document.querySelector('#bmCard .bm-body')).display; })()",
+     "equals": "flex",
+     "why": "maximized again"
+    }
+   ]
+  },
+  {
+   "note": "4 — Kotlin's list is the truth: a text it could not read keeps the page's copy; a uuid it dropped goes",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__bookmarks', bookmarks:[{uuid:'bm-u1', addedAt:1700000000000, writtenAt:1699999999000, text:'1. First thing\\n2. Second thing'}, {uuid:'bm-u2', addedAt:1700000001000}]}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-row').length",
+     "equals": 2,
+     "why": "both rows"
+    },
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-row')[1].querySelector('.bm-t').textContent",
+     "equals": "Second reply",
+     "why": "the store sent no text for bm-u2 (record not flushed yet): the page's own copy stays"
+    },
+    {
+     "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__bookmarks', bookmarks:[{uuid:'bm-u1', addedAt:1700000000000, text:'1. First thing\\n2. Second thing'}]})); return document.querySelectorAll('#bmCard .bm-row').length; })()",
+     "equals": 1,
+     "why": "the store's list wins"
+    },
+    {
+     "js": "(function(){ var m=document.querySelector('.blk[data-uuid=\"bm-u2\"] > .blk-mark'); return m ? String(m.classList.contains('on')) : 'no mark'; })()",
+     "equals": "false",
+     "why": "the dropped reply's control is hollow again"
+    }
+   ]
+  },
+  {
+   "note": "5 — Show in conversation flashes the block",
+   "setup": "document.querySelector('#bmCard .bm-row').click(); document.querySelector('#bmCard .bm-jump').click();",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.blk[data-uuid=\"bm-u1\"].bm-flash').length",
+     "equals": 1,
+     "why": "the block carries the flash class"
+    }
+   ]
+  },
+  {
+   "note": "5b — the open row closes on a second click (user, 2026-10-28: complete toggle): the card is the rows alone; a click opens it again",
+   "setup": "document.querySelector('#bmCard .bm-row.sel').click();",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-row.sel').length + '|' + document.querySelectorAll('#bmCard .bm-detail').length + '|' + document.querySelectorAll('#bmCard .bm-row').length",
+     "equals": "0|0|1",
+     "why": "DISCRIMINATING: no row open, no detail box, the row still listed (pre-fix the second click re-selected it)"
+    },
+    {
+     "js": "(function(){ document.querySelector('#bmCard .bm-row').click(); return document.querySelectorAll('#bmCard .bm-row.sel').length + '|' + document.querySelectorAll('#bmCard .bm-detail').length; })()",
+     "equals": "1|1",
+     "why": "a click opens it again"
+    }
+   ]
+  },
+  {
+   "note": "6 — __clear resets the card; a REPLAYED block carries its uuid and a control; the store's list fills the control and the card",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__bm104 = { card: getComputedStyle(document.getElementById('bmCard')).display, btn: document.getElementById('bmBtn').classList.contains('on'), count: document.getElementById('bmCount').textContent }; window.onClaudeEvent(JSON.stringify({type:'__transcript', context:0, more:0, items:[{role:'user', text:'a question'}, {role:'assistant', text:'Replayed reply', uuid:'bm-r1', ts:1700000000000}]}));",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__bm104)",
+     "equals": "{\"card\":\"none\",\"btn\":false,\"count\":\"\"}",
+     "why": "__clear closed and emptied the card"
+    },
+    {
+     "js": "document.querySelectorAll('.blk[data-uuid=\"bm-r1\"] > .blk-mark').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the replayed block carries data-uuid and its control (pre-change: replay stamped no uuid)"
+    },
+    {
+     "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__bookmarks', bookmarks:[{uuid:'bm-r1', addedAt:1700000000000, writtenAt:1700000000000, text:'Replayed reply'}]})); return (function(){ var m=document.querySelector('.blk[data-uuid=\"bm-r1\"] > .blk-mark'); return m ? String(m.classList.contains('on')) : 'no mark'; })(); })()",
+     "equals": "true",
+     "why": "the store's list fills the replayed block's control"
+    },
+    {
+     "js": "getComputedStyle(document.getElementById('bmCard')).display",
+     "equals": "none",
+     "why": "a list arriving on resume does not open the card by itself"
+    },
+    {
+     "js": "(function(){ document.getElementById('bmBtn').click(); document.querySelector('#bmCard .bm-row').click(); return getComputedStyle(document.getElementById('bmCard')).display + ' ' + (getComputedStyle(document.querySelector('#bmCard .bm-jump')).display !== 'none'); })()",
+     "equals": "flex true",
+     "why": "the header button opens it; Show in conversation finds the replayed block"
+    }
+   ]
+  },
+  {
+   "note": "7 — a withdrawn record takes its bookmark with it",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'system', subtype:'model_refusal_fallback', original_model:'claude-opus-5', fallback_model:'claude-sonnet-5', content:'Safeguards flagged this message.', retracted_message_uuids:['bm-r1']}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.blk[data-uuid=\"bm-r1\"]').length",
+     "equals": 0,
+     "why": "GUARD: the block was evicted"
+    },
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-row').length",
+     "equals": 0,
+     "why": "its bookmark went with it"
+    },
+    {
+     "js": "document.querySelectorAll('#bmCard .bm-empty').length",
+     "equals": 1,
+     "why": "the empty state"
+    },
+    {
+     "js": "JSON.stringify(window.__tape104.filter(function(m){ return m.kind === 'bookmark' && m.uuid === 'bm-r1'; }))",
+     "equals": "[{\"kind\":\"bookmark\",\"uuid\":\"bm-r1\",\"on\":false}]",
+     "why": "Kotlin told to forget it"
+    }
+   ]
+  },
+  {
+   "note": "8 — remove from the card, then restore the bridge",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'assistant', uuid:'bm-u1', message:{id:'msg_bm1', role:'assistant', model:'<fixture>', content:[{type:'text', text:'1. First thing\\n2. Second thing'}]}, session_id:'fixture-104'})); document.querySelector('.blk[data-uuid=\"bm-u1\"] > .blk-mark').click(); document.querySelector('#bmCard .bm-rm').click(); window.__bm104b = { rows: document.querySelectorAll('#bmCard .bm-row').length, on: (function(){ var m=document.querySelector('.blk[data-uuid=\"bm-u1\"] > .blk-mark'); return m ? String(m.classList.contains('on')) : 'no mark'; })() }; window.onClaudeEvent(JSON.stringify({type:'__clear'})); if (window.__realBridge104) { window.__bridge = window.__realBridge104; }",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__bm104b)",
+     "equals": "{\"rows\":0,\"on\":\"false\"}",
+     "why": "the detail box's remove control unbookmarks the selected reply"
+    },
+    {
+     "js": "String(window.__bridge === window.__realBridge104)",
+     "equals": "true",
+     "why": "GUARD: the real bridge is back"
+    }
+   ]
+  }
+ ]
+}

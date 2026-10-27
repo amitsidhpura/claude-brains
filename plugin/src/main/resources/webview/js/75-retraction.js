@@ -21,7 +21,7 @@
   function stampMessage(uuid) {
     if (!uuid) return;
     curMsgUuid = uuid;
-    curMsgEls.forEach(function (n) { n.dataset.uuid = uuid; });
+    curMsgEls.forEach(function (n) { n.dataset.uuid = uuid; bmMarkOne(n); });
     if (evictedUuids.has(uuid)) curMsgEls.forEach(function (n) { n.remove(); });
     curMsgEls = [];
   }
@@ -44,6 +44,7 @@
         if (n.classList.contains('msg-user') || n.closest('.msg-user')) return;
         n.remove(); gone++;
       });
+      bmDrop(u);   // 8.15: no block to show, no bookmark
     });
     if (gone) statusLine(gone + (gone === 1 ? ' message' : ' messages') + ' withdrawn' +
       (reason ? ' (' + reason + ')' : ''), SVG_ALERT);

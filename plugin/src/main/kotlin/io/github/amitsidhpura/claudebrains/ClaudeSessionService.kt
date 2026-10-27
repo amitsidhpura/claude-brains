@@ -396,6 +396,10 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun readTranscript(id: String): List<kotlinx.serialization.json.JsonObject> =
         io.github.amitsidhpura.claudebrains.session.SessionStore.readTranscript(cwd.path, id)
 
+    /** 8.15: the text (and record time) behind bookmarked replies, read back from the transcript. */
+    fun bookmarkTexts(id: String, uuids: Set<String>): Map<String, Pair<String, Long?>> =
+        io.github.amitsidhpura.claudebrains.session.SessionStore.textsByUuid(cwd.path, id, uuids)
+
 
     /** Recent CLI stderr, so a non-zero exit can report why instead of only a code. */
     fun stderrTail(): List<String> = cli?.stderrTail().orEmpty()
