@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.17.0"
+version = "0.17.1"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,13 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.17.1</b>
+            <ul>
+              <li>Opening a file, an edit's review diff and the "Files changed · Review" diff from
+                  the panel no longer uses an editor API that IntelliJ 2026.3 deprecates, so the
+                  plugin stays ready for the next IDE versions. Nothing changes in how they look
+                  or behave</li>
+            </ul>
             <b>0.17.0</b>
             <ul>
               <li>Bookmarks: a bookmark button beside Copy response on every reply; the header
@@ -137,33 +144,6 @@ val changeNotesHtml = """
               <li>The Copy response control appears at the end of a reply's first line when the
                   reply is hovered, with the text wrapping around it — it used to sit over the text
                   and could cover the end of a long first line</li>
-            </ul>
-            <b>0.15.0</b>
-            <ul>
-              <li>Message timestamps: a small time above each prompt and above the first reply
-                  text, date lines between turns when the day changes, relabelled at midnight</li>
-              <li>Question cards show an option's preview in a monospace box, and an answered
-                  question stays on its card with a summary of the picks</li>
-              <li>Background tasks: every row of the Background tasks popup opens a live output
-                  pane for that command, and a running command's line offers "Run in background" —
-                  the terminal's Ctrl+B</li>
-              <li>Export conversation (header button): copy the whole conversation as plain text
-                  or save it to a file, the same text the CLI's /export writes</li>
-              <li>Copy response: a hover control on each reply block copies its markdown</li>
-              <li>In Auto mode, the CLI's "built-in classifier" notice is shown as a Continue /
-                  Stop card instead of being left unanswered</li>
-              <li>The <code>claude</code> executable is resolved on the shell PATH, the same place
-                  the CLI runs from — the panel could silently run the older CLI bundled with the
-                  VS Code extension</li>
-              <li>The model chip's Default label follows the model the CLI actually serves</li>
-              <li>Copy buttons write through the IDE clipboard — they used to fail silently when the
-                  panel did not hold focus</li>
-              <li>The 1M-context switch is gone: the CLI serves the 1M window with or without it,
-                  and the switch only miscounted the context gauge; the gauge now follows the
-                  window the CLI reports for any model</li>
-              <li>The model menu fits the panel — the list scrolls instead of running under the
-                  header; bold wrapping an italic renders; @-mentions of paths with spaces attach;
-                  thinking text no longer ends with blank lines</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
