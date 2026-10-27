@@ -3,7 +3,7 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
-## 2026-10-28 (thirty-third) — saved messages: 7.11 Save as command + 7.12 Recent first built, hand-tested, committed `fc0dd74`; Marketplace screenshots reshot + three new (`d86a9c7`); harness 1264
+## 2026-10-28 (thirty-third) — saved messages: 7.11 Save as command + 7.12 Recent first built, hand-tested, committed `fc0dd74`; Marketplace screenshots reshot + three new (`d86a9c7`); **0.17.0 released + Approved**; harness 1264
 - User asked for "saved messages selectable like slash commands". They already exist as CLI command
   files (7.3 lists them); suggested building only what is missing: a "Save as command" control and
   recent-first ordering, and checked 7.5 (a hint-less command sends on pick — no change needed).
@@ -22,8 +22,17 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Screenshots: five reshot (2.1.293 roster, 10:42 stamps, 420px panels, previews on 02) and three
   added (06 bookmarks + saved commands, 07 selection/@-files/date lines/copy, 08 background pane).
   Found: the model chip wraps beside the gauge in a ~394px panel — real-panel issue, not fixed.
-- Next: release 0.17.0 only when asked (three features now: copy image, Bookmarks, saved messages);
-  upload the eight PNGs by hand on the Marketplace edit page after the release.
+- Then, on the user's ask, **0.17.0 released** (`237fa09`, tag `v0.17.0`): release.md end to end,
+  `test buildPlugin verifyPlugin` one background run (183/0, 8 verdicts Compatible), gate held with
+  the full notes, asset `cmp`-equal, feed 0.17.0, marketplace-upload green in 9s, "Under review" →
+  Approved within the hour. Screenshots uploaded by the user.
+- PS-263 (2026.3 EAP) reads "Compatible. 3 usages of deprecated API" — all
+  `FileEditorManager.openFile(VirtualFile, boolean)`; the user's 0.16.0 page shows the same since the
+  Marketplace added 263 on 13 Oct. I first said `recommended()` lacked 263 — wrong, it has PS-263.
+  Shipped with the warnings (non-blocking; the live 263 IDE run was clean).
+- Trap hit: `$ARGUMENTS` in `changeNotesHtml` (a Kotlin raw string) is a template — escaped as
+  `${'$'}ARGUMENTS` before the build.
+- Next: 0.17.1 for the deprecation, only when asked.
 
 ## 2026-10-28 (thirty-second) — 8.15 Bookmarks: VS Code's feature found missing, built as a card, hand-tested, committed `872c4d9`; harness 1246
 - User asked for a sticky "pin reply". Found VS Code 2.1.310 already ships it as **Bookmarks**

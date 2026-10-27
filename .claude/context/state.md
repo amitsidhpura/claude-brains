@@ -1,23 +1,24 @@
 # State
 
 ## Current focus
-**2026-10-28 (thirty-third session, Linux): saved messages built, hand-tested by the user in the
-sandbox, committed (`fc0dd74`); Marketplace screenshots reshot + three new (`d86a9c7`); pushed.**
-- 7.11 Save as command: `.msg-save` hover control on a sent prompt (`addUserMessage`,
-  `js/60-composer.js`) → `ui/SaveCommandDialog.kt` → `session/SavedCommands.kt` writes
-  `~/.claude/commands/<name>.md` (`$CLAUDE_CONFIG_DIR` honoured) or `<project>/.claude/commands/`.
-- 7.12 Recent first: `renderSlash` sorts score, then last-sent (`js/65-slash.js`); `cmdUsed` →
-  `ClaudeSessionService.noteCommandUsed` → property `claudeCode.commandRecents`, seeded `__cmdRecent`.
+**2026-10-28 (thirty-third session, Linux): 0.17.0 RELEASED and Approved on the Marketplace**
+(`237fa09`, tag `v0.17.0`); the eight screenshots uploaded by the user. Nothing in progress.
+- In 0.17.0: saved messages — 7.11 Save as command (`.msg-save` → `ui/SaveCommandDialog.kt` →
+  `session/SavedCommands.kt`) and 7.12 Recent first (`renderSlash`, property
+  `claudeCode.commandRecents`), `fc0dd74` — plus Bookmarks (`872c4d9`), copy image (`d7466db`)
+  and the 2026-10-26 polish.
 - CLI 2.1.311 watches `~/.claude/commands` too — no `/reload-skills` needed (corrected 2026-10-28).
 - Screenshots: `design/marketplace/01…08`, `tools/marketplace_shots.py` (420px panels, 2.1.293 roster).
 - Fixture 105; harness **1264/1264**, `./gradlew test` **183**.
+- **Next candidate: 0.17.1** — PS-263 (2026.3 EAP) flags 3 usages of deprecated
+  `FileEditorManager.openFile(VirtualFile, boolean)`: `ClaudeSessionService.openText`,
+  `DiffReview.open`, `DiffReview.openChain`. Compatible + live IDE run clean; carried since 0.16.0.
+  The replacement must exist on 242 too — not yet looked up (gotchas § Build).
 
-**Released version: 0.16.0 (2026-10-11), Approved on the Marketplace.** Unreleased since `v0.16.0`:
-copy image (`d7466db`), Bookmarks (`872c4d9`) and saved messages (`fc0dd74`) — three features —
-plus the 2026-10-26 polish (wavy date line, steady ask preview, menu hover) → **0.17.0** if the user
-asks for a release.
-A release starts only when the user asks. **Pending in the real PhpStorm:** none of the
-post-0.16.0 work is installed there; Windows untested for copy image and bookmarks.
+**Released version: 0.17.0 (2026-10-28), Approved on the Marketplace** (all 9 checks green
+except PS-263's deprecation warnings). Unreleased since `v0.17.0`: nothing.
+A release starts only when the user asks. **Pending in the real PhpStorm:** 0.17.0 not yet
+confirmed installed there; Windows untested for copy image, bookmarks and Save as command.
 
 **[DECIDE] rows:** none.
 
@@ -68,16 +69,16 @@ post-0.16.0 work is installed there; Windows untested for copy image and bookmar
 ## Next steps
 - [x] 7.11 Save as command + 7.12 Recent first — fixture 105, hand-tested (4 steps), committed +
       pushed 2026-10-28 (`fc0dd74`). Marketplace screenshots reshot + 06/07/08 (`d86a9c7`).
-- [ ] Release 0.17.0 when the user asks (notes: copy image, Bookmarks, saved messages (Save as
-      command + recent-first /) as features; steady preview box, menu one-highlight / no hover
-      steal, wavy date line as polish; the whole-message uuid fix).
-- [ ] After that release: upload `design/marketplace/01…08.png` by hand on the Marketplace edit
-      page (the zip carries no screenshots) — eight now, three of them new.
+- [x] 0.17.0 released 2026-10-28 (`237fa09`): verifier 8/8 Compatible, asset `cmp`-equal, feed
+      0.17.0, marketplace-upload green, Approved; screenshots 01…08 uploaded by the user.
+- [ ] 0.17.1 when the user asks: replace the three deprecated `FileEditorManager.openFile(file,
+      focus)` calls with an API present on 242 AND not deprecated on 263; verifier must read plain
+      Compatible on PS-263 (`deprecated-usages.txt` empty).
 - [ ] WINDOWS: Save as command (`$CLAUDE_CONFIG_DIR`/`%USERPROFILE%\.claude\commands`, dialog look).
 - [ ] WINDOWS: copy image (paste once into another app) and Bookmarks (config-path store file).
 - [ ] Compaction vs bookmarks: does a compacted transcript keep the old assistant records? If not,
       a pre-compaction bookmark reads "can't be found" (by design, matches VS Code) — measure once.
-- [ ] Confirm in the real PhpStorm that it took 0.16.0 and the Marketplace Overview still reads
+- [ ] Confirm in the real PhpStorm that it took 0.17.0 and the Marketplace Overview still reads
       plugin.xml's description (user errand, standing).
 - [ ] When a real `auto_mode_server_fallback` frame lands, compare with fixture 94; fix the card if
       they differ.

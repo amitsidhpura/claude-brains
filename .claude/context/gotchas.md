@@ -529,6 +529,12 @@ re-read those before trusting memory here.
   outage; `verifyPlugin` REFUSES to run under it, and release.md says never to release with it. Same host
   chain can also fail on TLS (`SSLHandshakeException` for teamcity) while `curl` from the same machine is
   clean — the JVM truststore/SNI is what's failing, so "the network is fine" clears nothing.
+- **`$` in `changeNotesHtml` is a Kotlin string template** (raw `"""` strings interpolate too):
+  `$ARGUMENTS` in the 0.17.0 notes would have failed the build script — write `${'$'}ARGUMENTS`.
+- **The verifier writes WHICH deprecated APIs it found** to
+  `plugin/build/reports/pluginVerifier/PS-<build>/plugins/<id>/<ver>/deprecated-usages.txt` (call site
+  + method), beside the verdict file. `recommended()` DOES include the current EAP (PS-263.x on
+  2026-10-28) — the Marketplace's EAP warnings reproduce locally, no extra IDE needed.
 - **`./gradlew verifyPlugin` is MANDATORY on every release** (standing instruction 2026-08-23,
   `docs/release.md` step 3b). The Marketplace runs its own verifier on upload, but that verdict lands
   AFTER the version number is spent — it confirms, it does not gate. Do not reason about whether a diff

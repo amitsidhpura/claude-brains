@@ -4,6 +4,14 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-28 — 0.17.0, a MINOR bump, shipped WITH PS-263's three deprecation warnings
+Three features since v0.16.0 (Bookmarks, saved messages, copy image) → minor. The verifier's PS-263
+verdict "Compatible. 3 usages of deprecated API" (`FileEditorManager.openFile(VirtualFile, boolean)`)
+was presented at the gate and shipped: warnings do not block publication, the method still runs on
+263 (the Marketplace's live IDE run was clean), 0.16.0 already carried them, and changing platform
+calls at the gate would have needed a fresh verify against 242 too. Fix is 0.17.1, on ask.
+**Rejected:** fixing at the gate (unverified replacement on the 242 baseline); 0.16.1 (features in it).
+
 ## 2026-10-28 — Saved messages (7.11) are ordinary CLI command files, written by a native dialog from a hover control on the sent prompt
 **Decision:** "Save as command" on a sent prompt's bubble → `SaveCommandDialog` (name, optional
 description, All projects / This project, the text editable) → `<name>.md` in `$CLAUDE_CONFIG_DIR`
