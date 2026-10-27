@@ -337,7 +337,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             val vf = com.intellij.testFramework.LightVirtualFile(
                 title, com.intellij.openapi.fileTypes.PlainTextFileType.INSTANCE, text)
             vf.isWritable = false
-            com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openFile(vf, true)
+            io.github.amitsidhpura.claudebrains.bridge.openInEditor(project, vf)
         }
     }
 

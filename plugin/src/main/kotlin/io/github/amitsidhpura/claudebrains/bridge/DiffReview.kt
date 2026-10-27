@@ -9,10 +9,14 @@ import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.util.DiffUserDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
@@ -149,7 +153,7 @@ class DiffReview(private val project: Project) {
                 val diffFile = ChainDiffVirtualFile(SimpleDiffRequestChain(request), title)
                 files[future] = diffFile
                 val fem = FileEditorManager.getInstance(project)
-                fem.openFile(diffFile, true).forEach { editor ->
+                openInEditor(project, diffFile) { editor ->
                     fem.addBottomComponent(editor, verdictBar(
                         onAccept = {
                             if (!future.isDone) {
@@ -200,7 +204,7 @@ class DiffReview(private val project: Project) {
                 req
             }
             val diffFile = ChainDiffVirtualFile(SimpleDiffRequestChain(requests), title)
-            FileEditorManager.getInstance(project).openFile(diffFile, true)
+            openInEditor(project, diffFile)
         }
     }
 
@@ -311,4 +315,37 @@ class DiffReview(private val project: Project) {
             }
         }
     }
+}
+
+/**
+ * Open [file] in a focused editor tab; with [onEditor], hand it each of the tab's FileEditors.
+ *
+ * Not `FileEditorManager.openFile`: from 263 every synchronous open on FileEditorManager is
+ * deprecated (openFile ×3, openEditor, openFileEditor, openTextEditor) in favour of suspend
+ * functions that 242 does not have — the verifier flagged our three calls on PS-263 (0.17.0).
+ * `OpenFileDescriptor.navigate` is clean on both. It may open the tab after it returns, though,
+ * so the editors come from the `fileOpened` event rather than from the call; the lookup after
+ * `navigate` covers a synchronous open whose event fired inside it. Either path runs [onEditor]
+ * once. A tab that never opens (the user closed the project mid-open) drops the subscription
+ * after 30 s.
+ */
+internal fun openInEditor(project: Project, file: VirtualFile, onEditor: ((FileEditor) -> Unit)? = null) {
+    if (onEditor == null) { OpenFileDescriptor(project, file).navigate(true); return }
+    val conn = project.messageBus.connect()
+    val taken = AtomicBoolean(false)
+    fun take(editors: Array<FileEditor>) {
+        if (editors.isEmpty() || !taken.compareAndSet(false, true)) return
+        conn.disconnect()
+        editors.forEach(onEditor)
+    }
+    conn.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
+        override fun fileOpened(source: FileEditorManager, opened: VirtualFile) {
+            if (opened == file) take(source.getEditors(file))
+        }
+    })
+    OpenFileDescriptor(project, file).navigate(true)
+    take(FileEditorManager.getInstance(project).getEditors(file))
+    AppExecutorUtil.getAppScheduledExecutorService().schedule({
+        if (taken.compareAndSet(false, true)) conn.disconnect()
+    }, 30, TimeUnit.SECONDS)
 }
