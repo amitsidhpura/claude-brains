@@ -4,6 +4,12 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-28 — 0.17.1, a PATCH: the deprecation fix alone, shipped the same day
+One user-invisible fix since v0.17.0 → patch, by release.md's progression. Shipped promptly rather
+than held for the next feature so the Marketplace's 263 warning stops showing on the current version.
+Notes say plainly that nothing visible changes. **Rejected:** folding it into a later feature release
+(the warning would sit on the listing meanwhile).
+
 ## 2026-10-28 — Editor tabs open through `OpenFileDescriptor.navigate`, editors taken from `fileOpened`
 **Decision:** `openInEditor(project, file, onEditor?)` (bridge/DiffReview.kt) replaces
 `FileEditorManager.openFile(file, focus)` at all three call sites. **Why:** on 263 every synchronous

@@ -1,24 +1,19 @@
 # State
 
 ## Current focus
-**2026-10-28 (thirty-third session, Linux): 0.17.0 RELEASED and Approved on the Marketplace**
-(`237fa09`, tag `v0.17.0`); the eight screenshots uploaded by the user. Nothing in progress.
-- In 0.17.0: saved messages — 7.11 Save as command (`.msg-save` → `ui/SaveCommandDialog.kt` →
-  `session/SavedCommands.kt`) and 7.12 Recent first (`renderSlash`, property
-  `claudeCode.commandRecents`), `fc0dd74` — plus Bookmarks (`872c4d9`), copy image (`d7466db`)
-  and the 2026-10-26 polish.
-- CLI 2.1.311 watches `~/.claude/commands` too — no `/reload-skills` needed (corrected 2026-10-28).
-- Screenshots: `design/marketplace/01…08`, `tools/marketplace_shots.py` (420px panels, 2.1.293 roster).
+**2026-10-28 (thirty-third session, Linux): 0.17.0 and 0.17.1 released, both Approved on the
+Marketplace.** Nothing in progress; working tree clean.
+- 0.17.0 (`237fa09`): saved messages — 7.11 Save as command (`.msg-save` → `ui/SaveCommandDialog.kt`
+  → `session/SavedCommands.kt`) + 7.12 Recent first (`renderSlash`, property
+  `claudeCode.commandRecents`) — plus Bookmarks, copy image and the 2026-10-26 polish.
+- 0.17.1 (`fc43cee`): `openInEditor()` in `bridge/DiffReview.kt` replaced the three
+  `FileEditorManager.openFile` calls deprecated on 263; Marketplace 263 rows plain Compatible, live run clean.
+- CLI 2.1.311 watches `~/.claude/commands` too — no `/reload-skills` needed.
+- Screenshots: `design/marketplace/01…08` (uploaded), `tools/marketplace_shots.py`.
 - Fixture 105; harness **1264/1264**, `./gradlew test` **183**.
-- **PS-263 deprecations FIXED, committed `1c22236`, NOT released**: the three
-  `FileEditorManager.openFile(file, focus)` calls go through `openInEditor()` in
-  `bridge/DiffReview.kt` (`OpenFileDescriptor.navigate` + `fileOpened` for the verdict bar's editors).
-  Verifier 8/8 plain Compatible; hand-tested in the 242 sandbox (open-as-text, edit diff + bar,
-  Files changed Review). 263 not hand-tested — the Marketplace's live IDE run will be the check.
 
-**Released version: 0.17.0 (2026-10-28), Approved on the Marketplace** (all 9 checks green
-except PS-263's deprecation warnings). Unreleased since `v0.17.0`: the deprecation fix (`1c22236`)
-→ **0.17.1** if the user asks for a release.
+**Released version: 0.17.1 (2026-10-28), Approved on the Marketplace** (all 9 checks green,
+PS-263 included). Unreleased since `v0.17.1`: nothing.
 A release starts only when the user asks. **Pending in the real PhpStorm:** 0.17.0 not yet
 confirmed installed there; Windows untested for copy image, bookmarks and Save as command.
 
@@ -74,16 +69,14 @@ confirmed installed there; Windows untested for copy image, bookmarks and Save a
 - [x] 0.17.0 released 2026-10-28 (`237fa09`): verifier 8/8 Compatible, asset `cmp`-equal, feed
       0.17.0, marketplace-upload green, Approved; screenshots 01…08 uploaded by the user.
 - [x] PS-263 deprecations fixed (`1c22236`), verifier clean, hand-tested on 242.
-- [ ] Release 0.17.1 when the user asks — notes: opening files and diffs from the panel no longer
-      uses an API deprecated in IntelliJ 2026.3. After upload, read PS-263's Marketplace rows (static
-      verdict plain Compatible, live IDE run clean).
+- [x] 0.17.1 released + Approved 2026-10-28 (`fc43cee`); 263 rows clean.
 - [ ] Testing repo: `hand_test.txt` gained "checked in 0.17.1" in the 2026-10-28 hand test — the user's
       call whether to drop it (with the other leftovers below).
 - [ ] WINDOWS: Save as command (`$CLAUDE_CONFIG_DIR`/`%USERPROFILE%\.claude\commands`, dialog look).
 - [ ] WINDOWS: copy image (paste once into another app) and Bookmarks (config-path store file).
 - [ ] Compaction vs bookmarks: does a compacted transcript keep the old assistant records? If not,
       a pre-compaction bookmark reads "can't be found" (by design, matches VS Code) — measure once.
-- [ ] Confirm in the real PhpStorm that it took 0.17.0 and the Marketplace Overview still reads
+- [ ] Confirm in the real PhpStorm that it took 0.17.1 and the Marketplace Overview still reads
       plugin.xml's description (user errand, standing).
 - [ ] When a real `auto_mode_server_fallback` frame lands, compare with fixture 94; fix the card if
       they differ.

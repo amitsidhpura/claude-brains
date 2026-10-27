@@ -3,41 +3,25 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
-## 2026-10-28 (thirty-third) — saved messages: 7.11 Save as command + 7.12 Recent first built, hand-tested, committed `fc0dd74`; Marketplace screenshots reshot + three new (`d86a9c7`); **0.17.0 released + Approved**; 263 deprecations fixed (`1c22236`); harness 1264
-- User asked for "saved messages selectable like slash commands". They already exist as CLI command
-  files (7.3 lists them); suggested building only what is missing: a "Save as command" control and
-  recent-first ordering, and checked 7.5 (a hint-less command sends on pick — no change needed).
-  User picked hover button + native dialog + recency inside each tier (AskUserQuestion).
-- Built: `.msg-save` on the prompt bubble → `SaveCommandDialog` (first `DialogWrapper` in the
-  plugin) → `SavedCommands` writes the `.md`; `cmdUsed` / `__cmdRecent` / `__cmdSaved` frames.
-  Fixture 105 (control: 13 discriminating fails on the old sandbox); 50/66/103 adjusted for the new
-  bridge kind and leaked recency (gotchas § Testing). Harness 1264/1264, test 183.
-- The scratch-config probe for the user-dir watch was REFUSED by the classifier (credential copy);
-  answered in the hand test instead: on CLI 2.1.311 `~/.claude/commands` IS watched — `/reply-pong`
-  expanded with no `/reload-skills` (docs/slash-commands.md + gotchas corrected).
-- Hand test, four steps, all pass: user-scope save, expansion, `/` and `/co` ordering, `/compact`
-  refused with Save disabled, project-scope `/echo-word` with `$ARGUMENTS` → "Amit". Test command
-  files deleted afterwards on the user's ask. Validation is on Save, not live (`initValidation()`
-  offered, not taken).
-- Screenshots: five reshot (2.1.293 roster, 10:42 stamps, 420px panels, previews on 02) and three
-  added (06 bookmarks + saved commands, 07 selection/@-files/date lines/copy, 08 background pane).
-  Found: the model chip wraps beside the gauge in a ~394px panel — real-panel issue, not fixed.
-- Then, on the user's ask, **0.17.0 released** (`237fa09`, tag `v0.17.0`): release.md end to end,
-  `test buildPlugin verifyPlugin` one background run (183/0, 8 verdicts Compatible), gate held with
-  the full notes, asset `cmp`-equal, feed 0.17.0, marketplace-upload green in 9s, "Under review" →
-  Approved within the hour. Screenshots uploaded by the user.
-- PS-263 (2026.3 EAP) reads "Compatible. 3 usages of deprecated API" — all
-  `FileEditorManager.openFile(VirtualFile, boolean)`; the user's 0.16.0 page shows the same since the
-  Marketplace added 263 on 13 Oct. I first said `recommended()` lacked 263 — wrong, it has PS-263.
-  Shipped with the warnings (non-blocking; the live 263 IDE run was clean).
-- Trap hit: `$ARGUMENTS` in `changeNotesHtml` (a Kotlin raw string) is a template — escaped as
-  `${'$'}ARGUMENTS` before the build.
-- Deprecation fixed on the user's ask (`1c22236`): javap of FileEditorManager from the 242 and 263
-  IDE jars (python `zipfile` — a `unzip -l | grep` loop missed the class) showed 263 deprecates EVERY
-  synchronous open; `OpenFileDescriptor.navigate` + `fileOpened` instead. Verifier 8/8 clean in 35s
-  (cached); my report loop's zsh no-match glob turned the success into "exit 1" and the user stopped
-  the wait. Hand test in the sandbox, three paths, all pass.
-- Next: 0.17.1 only when asked.
+## 2026-10-28 (thirty-third) — saved messages (7.11/7.12) built + hand-tested (`fc0dd74`); screenshots reshot + 3 new (`d86a9c7`); **0.17.0 and 0.17.1 released, both Approved**; harness 1264
+- "Saved messages like slash commands" already exist as CLI command files (7.3); built only the gap:
+  Save as command (hover control → `SaveCommandDialog` → `SavedCommands` writes the `.md`) and
+  recent-first ordering inside each match tier. Fixture 105 (control: 13 discriminating fails);
+  fixtures 50/66/103 adjusted for the new `cmdUsed` bridge kind. Harness 1264, test 183.
+- Scratch-config probe REFUSED by the classifier (credential copy) → settled in the hand test: CLI
+  2.1.311 watches `~/.claude/commands` too. Four-step hand test all pass; test commands deleted.
+- Marketplace shots: 2.1.293 roster, 10:42 stamps, 420px panels (the Opus 5.5 chip wrapped at 394),
+  new 06/07/08. Uploaded by the user.
+- **0.17.0** (`237fa09`): release.md end to end, gate held, Approved within the hour. PS-263 showed
+  "3 usages of deprecated API" — I first claimed `recommended()` lacked 263; wrong, it has PS-263.
+  Trap: `$ARGUMENTS` in `changeNotesHtml` is a Kotlin template → `${'$'}ARGUMENTS`.
+- Deprecation fix (`1c22236`): javap of both IDEs' FileEditorManager showed 263 deprecates EVERY
+  synchronous open → `openInEditor()` = `OpenFileDescriptor.navigate` + `fileOpened` for the verdict
+  bar. A zsh no-match glob in my report loop faked "exit 1" on a green verify; the user stopped the
+  wait. Hand-tested three paths on 242.
+- **0.17.1** (`fc43cee`, patch): verifier 8/8 plain Compatible; Marketplace Approved, its 263 static
+  row plain Compatible and the live 263 IDE run clean — the async-open concern did not bite.
+- Next: nothing in flight; standing items in state.md.
 
 ## 2026-10-28 (thirty-second) — 8.15 Bookmarks: VS Code's feature found missing, built as a card, hand-tested, committed `872c4d9`; harness 1246
 - User asked for a sticky "pin reply". Found VS Code 2.1.310 already ships it as **Bookmarks**
