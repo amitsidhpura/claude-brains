@@ -4,6 +4,19 @@ Format: `## YYYY-MM-DD — <decision>`, newest first, with *why* and *alternativ
 Entries older than ~2 weeks are compressed into the **Digest** at the bottom — outcome, why, and the
 key rejection, one entry each. Never delete; mark superseded.
 
+## 2026-10-28 — Bookmarks (8.15): VS Code's parts, drawn as a card above the composer
+**Decision:** a card riding the composer (the side card's shell) with minimize/maximize, rows +
+age, a second click on the open row closes it (list only), detail with Show in conversation /
+remove / the reply. Keyed by the assistant record's uuid; text read back from the transcript;
+store = VS Code's file shape `{updatedAt, bookmarks:[{uuid, addedAt, writtenAt}]}` per
+conversation in OUR folder under `PathManager.getConfigPath()`. **Why:** the user works through a
+reply's parts one at a time; a side panel would halve a narrow tool window; a copied text goes
+stale and duplicates the transcript; config (not system) survives Invalidate Caches.
+**Rejected:** VS Code's side panel (cramped); sharing VS Code's `globalStorage` folder (private
+format); `PropertiesComponent` with a markdown snapshot (the first plan — stale copy, settings
+store not meant for growing data); tick-off checkboxes in the pinned copy (offered, not picked);
+auto-selecting the newest row on reopen (made moot by the toggle — list only is the rest state).
+
 ## 2026-10-26 — Copy image's check flashes on SEND (after decode), not on click
 **Decision:** `copyImage(src, btn)` calls `flashCopied(btn)` from the canvas `onload`, after the
 `copyImage` bridge frame; callers pass the button. **Why:** the tick should mean "sent"; an undecodable

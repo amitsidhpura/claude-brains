@@ -4,6 +4,10 @@
 Used 2026-08-17 (2.1.222→233), 2026-08-23 (233→241), 2026-08-28 (246→250), 2026-08-30 (250→251). Every MARK is measured;
 the public changelog (step 3b) supplies LEADS only — a note never changes a row on its own. Gotchas § "Testing, probes and
 sandboxes" has the traps (extraction is the only extension diff base; whitelist Sets don't prove acceptance).
+**Every new host-RPC group gets its OWN row id or an explicit "none — <why>"** in the audit block,
+never a pointer to a loosely related row: the 2.1.296 audit filed Bookmarks' three RPCs under 15.3
+"Small chrome", whose text never named them, and the feature went unseen until the user asked for
+it (2026-10-28 → row 8.15).
 
 1. **Versions on disk**: `claude --version`; `ls ~/.local/share/claude/versions/`;
    `ls ~/.vscode/extensions/ | grep claude`.

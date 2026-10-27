@@ -387,6 +387,13 @@ re-read those before trusting memory here.
   duplicated-checklist bug looked like live over-rendering and was live UNDER-rendering. Replay is
   usually the reference. Windowed replay also means browser find only sees loaded blocks.
 
+- **A whole-message `assistant` frame with no stream before it inherited the PREVIOUS message's
+  uuid** (found building 8.15, 2026-10-28): `track()` pre-stamps new blocks with `curMsgUuid`, which
+  only `message_start` reset — so a local built-in's reply, or two such frames in a row, carried
+  the earlier uuid (CDP: two frames → both blocks `p-1`), and a bookmark or a retraction would hit
+  the wrong block. The whole-message path in `js/70-events.js` now resets the tracker first.
+  Pinned by fixture 104 step 2.
+
 ## IDE platform / VFS
 - **`ClaudeSessionService.openFile(path, line)` with a line and NO endLine SELECTS that line** —
   the 6.6 tracker then reports a one-line selection WITH text, not a cursor. A pure cursor-only
@@ -873,6 +880,9 @@ re-read those before trusting memory here.
   measuring in JS.
 
 ## Testing, probes and sandboxes
+- **A floated `inline-flex` element computes as `display: flex`** (floats are blockified) —
+  fixture 104 first asserted `inline-flex` and failed on correct code. Assert visibility as
+  `!== 'none'`, not an exact display value.
 - **A fixture that calls `sendTurn` with a stubbed bridge must end the turn itself**: `sendTurn`
   ends in `setBusy(true)`, the stub can never be answered, and the harness's per-fixture `reset()`
   (`__clear` → `clearLogUI`) does NOT clear `busy` — only a result frame, `__exit`, a retraction or a

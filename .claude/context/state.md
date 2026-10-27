@@ -1,31 +1,25 @@
 # State
 
 ## Current focus
-**2026-10-26 (thirtieth session, Linux): four post-0.16.0 changes built, hand-tested by the user in
-the sandbox, committed and pushed** (journal thirtieth for the detail):
-- `089b3e4` **wavy date line** — `.day-sep` rules are a 2px/24px SVG-mask wave (`css/20-log.css`).
-- `d7466db` **copy image** — hover copy button on every tool-returned image (`.ti-wrap`/`.ti-copy`,
-  `toolImages()` in `js/50-blocks.js`; `.small` puts it beside an image under 64px) + a round
-  `.lb-copy` beside the lightbox × (`chat.html`, `js/30-menus.js`); `copyImage()` (`js/20-markdown.js`)
-  canvas-redraws to PNG → `bridge{kind:'copyImage'}` → `ChatPanel.kt` `ImageSelection` on
-  `CopyPasteManager`. Fixture 101.
-- `2cfa121` **ask-card preview steady height** — `askPrevHtml()` (`js/50-blocks.js`) stacks every
-  option's preview as invisible fold-capped sizers in one grid cell (`css/40-cards.css .ask-prev`);
-  live + replay. Fixture 102.
-- `fccc30b` **popup menus: hover needs a real move; one highlight** — `hoverSel` + `ptrLive` in
-  `js/30-menus.js` (keydown disarms, mousemove at new coords re-arms); `:hover` background removed
-  from `.popup-item` (`css/70-popups.css`) and `.card-menu` rows. Fixture 103; fixture 04 now stubs
-  the bridge around its `sendTurn` (it sent a REAL prompt every harness run — gotchas § Testing).
-
-**Follow-up `2e71907` (review of the four, pushed):** fixture 04 ends its stubbed turn
-(`setBusy(false)`), copy image flashes after decode, checklist 1.19/1.11 name Copy image, date-line
-comment fixed. Harness 1207/1207, test 176; sandbox on the new build.
+**2026-10-28 (thirty-second session, Linux): 8.15 Bookmarks built, hand-tested by the user in the
+sandbox, committed (`872c4d9`) and pushed.** The user asked for a "pin reply" feature; VS Code
+already ships it as Bookmarks (missed by the 2.1.296 audit — its RPCs were filed under 15.3, a row
+that never named them). Built as VS Code's parts in a card above the composer (user pick):
+- `js/68-bookmarks.js` (card, toggle, jump, ages), `#bmCard`/`#bmBtn` in `chat.html`, `.blk-mark`
+  added by `copyable()` (`js/20-markdown.js`) beside Copy response, `css/50-side.css` § bookmarks.
+- Keyed by the assistant record's `uuid`: replay now ships `Item.uuid` (`SessionStore.toJson`) and
+  stamps `data-uuid` (`js/55-replay.js`); texts read back via `SessionStore.textsByUuid`.
+- `session/BookmarkStore.kt`: VS Code's file shape per conversation under
+  `PathManager.getConfigPath()/claude-brains/session-bookmarks/`; `ChatPanel` `bookmark` kind →
+  `__bookmarks` frame (after every change and every `pushTranscript`).
+- Fixed on the way: a whole-message reply inherited the previous message's uuid (`js/70-events.js`).
+- Fixture 104 (39 asserts), harness **1246/1246**, `./gradlew test` **179**.
 
 **Released version: 0.16.0 (2026-10-11), Approved on the Marketplace.** Unreleased since `v0.16.0`:
-the four commits above — one feature (copy image) → **0.17.0** if the user asks for a release
-(feature → minor; 0.16.1 only for fixes-only). A release starts only when the user asks.
-**Pending in the real PhpStorm:** none of today's work has been installed there (no zip built this
-session); the user's own copy-image paste on Windows is untested (Windows AWT clipboard path).
+copy image (`d7466db`) and Bookmarks (`872c4d9`) — two features — plus the 2026-10-26 polish
+(wavy date line, steady ask preview, menu hover) → **0.17.0** if the user asks for a release.
+A release starts only when the user asks. **Pending in the real PhpStorm:** none of the
+post-0.16.0 work is installed there; Windows untested for copy image and bookmarks.
 
 **[DECIDE] rows:** none.
 
@@ -42,8 +36,8 @@ session); the user's own copy-image paste on Windows is untested (Windows AWT cl
   sandbox folds previews to 3 lines — not investigated; the steady-height fix holds either way.
 
 ## Testing — the standing setup
-- `python3 tools/live_harness.py` baseline **1207** (fixtures to **103**, 1207/1207 on 2026-10-26);
-  `./gradlew test` **176**.
+- `python3 tools/live_harness.py` baseline **1246** (fixtures to **104**, 1246/1246 on 2026-10-28);
+  `./gradlew test` **179**.
 - Sandbox PhpStorm 2024.2.6: `cd plugin && ./gradlew runIde -PskipVerifierIdes -PjcefDebugPort=9222
   --args="$HOME/Sites/claude-brains-testing"` (background, from the repo root). Stop it with
   `pgrep -f 'transformed/PhpStorm-2024.2.[6]' | xargs -r kill` (never `pgrep -x claude`), wait for
@@ -73,12 +67,13 @@ session); the user's own copy-image paste on Windows is untested (Windows AWT cl
   background run, the step-6 gate with the FULL notes before commit/tag/push (gotchas § Build).
 
 ## Next steps
-- [x] Wavy date line, copy image, ask preview steady height, menu hover — built, fixtures 101-103,
-      harness 1207, hand-tested by the user in the sandbox, committed + pushed (2026-10-26).
-- [x] Review of the four (2026-10-26): four follow-ups fixed in `2e71907`.
-- [ ] Release 0.17.0 when the user asks (notes: copy image as the feature; steady preview box,
-      menu one-highlight / no hover steal, wavy date line as polish).
-- [ ] Copy image on WINDOWS: paste once into another app (AWT image clipboard path untested there).
+- [x] 8.15 Bookmarks — built, fixture 104, hand-tested by the user (add, minimize/maximize/close,
+      Show in conversation, reopen, remove, row toggle, ticking ages), committed + pushed 2026-10-28.
+- [ ] Release 0.17.0 when the user asks (notes: copy image + Bookmarks as features; steady preview
+      box, menu one-highlight / no hover steal, wavy date line as polish; the whole-message uuid fix).
+- [ ] WINDOWS: copy image (paste once into another app) and Bookmarks (config-path store file).
+- [ ] Compaction vs bookmarks: does a compacted transcript keep the old assistant records? If not,
+      a pre-compaction bookmark reads "can't be found" (by design, matches VS Code) — measure once.
 - [ ] Confirm in the real PhpStorm that it took 0.16.0 and the Marketplace Overview still reads
       plugin.xml's description (user errand, standing).
 - [ ] When a real `auto_mode_server_fallback` frame lands, compare with fixture 94; fix the card if
@@ -99,6 +94,9 @@ session); the user's own copy-image paste on Windows is untested (Windows AWT cl
 - **Copy image** is on tool-returned images only; an image attached to the user's own message is
   copied from the popup its chip opens (user agreed 2026-10-26 — no chip button, a right-click item
   was offered if wanted).
+- **Bookmarks** are per text BLOCK (a text → tool → text reply is several records), no typed
+  `/bookmarks`, the card is above the composer rather than VS Code's side panel (user pick).
+  "Show in conversation" hides when the block is above the replayed window (no load-more jump).
 - **Ask preview box** holds the tallest option's (fold-capped) preview, so a short preview sits in
   empty space; opening a folded preview by click still grows it.
 - **Menus**: after a keystroke the pointer selects nothing until it moves; the background roster
@@ -118,6 +116,6 @@ session); the user's own copy-image paste on Windows is untested (Windows AWT cl
 - plugin.xml "Not there yet" list: dark UI only, one conversation, selection-not-whole-file.
 
 ## Which machine — check FIRST, both are real
-2026-08-26 → 2026-10-26 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`); the user's
+2026-08-26 → 2026-10-28 sessions ran on **Linux** (`/home/syncroze/Sites/claude-brains`); the user's
 screenshots this session came from the Windows real IDE (`D:\sites\…` paths). Paths for both boxes in
 overview.md § External references.

@@ -3,6 +3,22 @@
 Dated session log, newest first. One compact entry per session: what was done, what was
 learned, what's next. Entries older than ~10 sessions get digested (lessons promoted first).
 
+## 2026-10-28 (thirty-second) — 8.15 Bookmarks: VS Code's feature found missing, built as a card, hand-tested, committed `872c4d9`; harness 1246
+- User asked for a sticky "pin reply". Found VS Code 2.1.310 already ships it as **Bookmarks**
+  (header toggle, side panel, rows + age, Show in conversation, per-session store keyed by record
+  uuid, text from the transcript). The 2.1.296 audit had listed its RPCs under 15.3 "Small chrome",
+  a row whose text never names them → new row 8.15 (runbook note added).
+- User picked VS Code's parts drawn as a card above the composer, minimize/maximize, several,
+  surviving reopen; storage our own folder in VS Code's file shape (config path, not system/cache).
+- Plan reviewed against code + two real transcripts before building: uuids unique per record, one
+  text block per record; replay did not ship `Item.uuid` (now does).
+- Mockup render approved first; negative control on the old build (step 0 discriminating fail).
+- Found while building: a whole-message reply (no stream before it) inherited the PREVIOUS
+  message's uuid through `track()` — reproduced over CDP, fixed (gotchas § Replay / transcript).
+- Hand test, one step at a time: all passed. User then asked for a complete row toggle (second
+  click closes the open row → list only); ages now tick every 30s; empty-state wording fixed.
+- Next: release 0.17.0 only when asked; Windows check; compaction vs bookmarks.
+
 ## 2026-10-26 (thirty-first) — review of the thirtieth session's four commits; four follow-ups, harness 1207, committed + pushed
 - User asked for a review of the day's updates (Fable): all four hold up — live/replay share builders,
   mockup mirrored, no hardcoded colours. Reviewed by reading the diffs plus the OTHER readers of each
@@ -232,63 +248,9 @@ learned, what's next. Entries older than ~10 sessions get digested (lessons prom
 - Two assertion mistakes of mine the control run exposed: `JSON.stringify(count)` is a string
   (fails `atLeast`), and "only one line still in flight" forgot two never-settled lines.
 
-## 2026-10-10 (twenty-second) — 4.10 auto-mode server-fallback dialog built from the schema; fixture 94; harness 980; committed `d26f670`
-- "Can we implement 4.10?" → yes, with the CLI side fully measured and the frame itself not:
-  the 2.1.296 binary's dialog definition gives the payload `{gatewayHost?, title, paragraphs[],
-  helpUrl}`, the result enum `continue|interrupt|cancelled` and the host answer
-  `{behavior:"completed"|"cancelled", result}`; the gate is `sdkHost && supportedDialogKinds
-  .includes(kind)`, else "no dialog surface to warn on, continuing in auto mode". The 2.1.296
-  VS Code `webview/index.js` renderer (`auto-mode-server-fallback-prompt`) gave every render
-  rule, including the https-on-claude.com/anthropic.com link filter and the 500 ms disabled
-  buttons. The reference extraction is still 2.1.270 (declares two kinds) — read the 2.1.296
-  extension from `~/.vscode/extensions/` directly.
-- A bare `initialize` with `supportedDialogKinds:["auto_mode_server_fallback"]` answered
-  `success` on 2.1.296 over stdio (scratchpad probe, `python3 -I`, no transcript written).
-- Order that made the negative control free: sandbox launched on the pre-change tree FIRST,
-  fixture 94 written, run (7 discriminating fails, step 2 aborted on the missing card, three
-  `[].every()` asserts passed vacuously → lengths pinned), THEN the code. After: 27/27, full
-  harness 979/0, `./gradlew test` 169.
-- The real-panel render (harness `Panel` + screenshot) showed the "Learn more" link in the
-  browser's default blue — the only link rule is `.blk a`, and the card's paragraphs sit outside
-  `.blk`. `.card.dlg .dlg-p a { color: var(--blue) }` + a 28th assert comparing computed colours
-  against a throwaway `.blk a`; sandbox restarted (resource change), 28/28, harness 980/0.
-- Gaps measured over CDP: header→paragraph 8, paragraph→paragraph 18, paragraph→buttons 10 — the
-  attach / block / card-b tokens, as designed.
-- Undeclared dialog kinds are now LEFT UNANSWERED in `handleControlRequest` (the schema's rule),
-  not acked with `{}` like the catch-all arm — a kind can only reach us if we declared it, so a
-  miss there is a list drift between `ClaudeCli.DIALOG_KINDS` and `renderDialog`.
-- Checklist: 4.10 ✅, §4 ✅, 97 ✅ · 2 ⬜ · 46 ➖; protocol doc § 9c carries the declaration and the
-  answer shape. Committed on the user's "commit and push" — one feature commit, one context commit.
-
-## 2026-10-10 (twenty-first) — re-audit 2.1.270 → 2.1.296 (26 versions, all measured); 1.30 + 1.31 built and hand-tested live + replay; harness 952
-- Audit mechanics: the CLI had auto-updated to 2.1.296 that morning (extension too), so the
-  baseline binary came from the 2.1.270 vsix (runbook step 3, 104 MB). Control subtypes 103 → 155:
-  28 Mods `ui_*` (surface enum has no JetBrains), dialog feeders (`get_status`, `export_conversation`,
-  `get_skills/sandbox/chrome_dialog`, `get_task_output`) all probed `success` over stdio;
-  `list_directory` refused. Roster 5 → 13 rows, NO `[1m]`; three one-turn probes showed
-  `set_model "opus[1m]"` echoed as `claude-opus-5-5[1m]` with `contextWindow` 1,000,000 either way
-  → 9.9 re-opened. `update_settings` allowlist grew `userSettings:[effortLevel]`. The extension
-  declares `supportedDialogKinds:["fable_overage_consent_prompt","auto_mode_server_fallback"]`.
-- Six [DECIDE] rows opened (1.30, 1.31, 4.10, 11.7 new; 9.9, 15.4 re-opened); the user took 1.30
-  and 1.31 the same day. Changelog lines tagged Cloud sessions / Claude Tag / Code Review skipped.
-- Cleanup trap: the auto-mode classifier refused deleting the three probe transcripts and restoring
-  `lastSessionId` ("Session Transcript Tampering"), and the `rm` with shell variables tripped the
-  built-in check — left to the user, recorded in the audit block (gotchas § Testing).
-- 1.31's answered-card choice was made from a side-by-side render (both candidates with the real
-  stylesheets, served from the scratchpad, Playwright screenshot): "full card + summary" (B) won.
-- Fixtures 92/93 written FIRST and run on the old-build sandbox: 26 discriminating fails / 12
-  guard passes (one guard mis-counted the Other row). After the edit: 38/38, full harness 952/0,
-  `./gradlew test` 169 (the shared `replay-sample.jsonl` has no assistant prose — the ts test
-  synthesises a two-record transcript).
-- `foldBlock` is one-shot (`data-folded`), so the preview box got `refoldPreview` +
-  `wirePreviewFold`. Real-panel gap measurements over CDP: 8/8/18 px as designed.
-- Hand test (one Haiku turn in the sandbox): a real `can_use_tool` carried `preview` on all three
-  options — the field is live on 2.1.296; hover/pick/Submit/reply stamp, then Refresh replayed
-  the card with pick, preview, summary and both stamps.
-- Shell traps on this box: `grep` is ugrep, `ls` is eza (hung a background chain), `comm` wants
-  `LC_ALL=C sort`; Bash output over ~30 KB is persisted with a 2 KB preview.
-
 ## Digest
+- **2026-10-10 (twenty-second)** — 4.10 auto-mode server-fallback dialog built from the 2.1.296 binary's schema + VS Code's renderer (the reference extraction lagged — read `~/.vscode/extensions/` directly); negative control free by launching the old build first (three `[].every()` asserts passed vacuously → lengths pinned); undeclared dialog kinds left unanswered; fixture 94, harness 980.
+- **2026-10-10 (twenty-first)** — re-audit 2.1.270 → 2.1.296 (baseline binary from the 2.1.270 vsix); six [DECIDE] rows, 1.30 + 1.31 built the same day from a side-by-side render; fixtures 92/93 written first (26 discriminating fails); `foldBlock` is one-shot → `refoldPreview`; probe-transcript cleanup refused by the classifier, left to the user.
 - **2026-10-10 (twentieth)** — spaced-mention fix hand-tested by the user ("Working great!"), zip built, no code; PhpStorm 2026.2's own "MCP Server" popup clipped by a SKIKO OpenGL fallback (IDE widget, not ours); push status line explored and left (branch parsed from git output — backlog § Deferred); @-picker list is one-shot at load (backlog § Housekeeping).
 - **2026-10-10 (nineteenth)** — spaced @-mention paths: the composer inserts `@"path with spaces"` (quoted when the path holds whitespace/colon/trailing punctuation) and `mentionHtml` reads the quoted form back as one chip; fixture 91, harness 914. Committed + pushed on the user's ask.
 - **2026-10-10 (eighteenth)** — bold wrapping italic (`**_x_**` / `***x***`) rendered raw: `inlineMd`'s bold regex refused a single `*` inside the run → admitted; fixture 90 (control on the unchanged build), harness 905. Committed + pushed on the user's ask.
