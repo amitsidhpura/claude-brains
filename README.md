@@ -143,9 +143,10 @@ as you scroll.
 - [`docs/slash-commands.md`](docs/slash-commands.md) — which slash commands work headless, and why
 - [`docs/limits.md`](docs/limits.md) — every size cap and where it is set
 - [`docs/release.md`](docs/release.md) — how a release is cut
-- [`.claude/context/`](.claude/context/) — the project's own memory: architecture and philosophy
-  (`overview.md`), decisions with their rationale (`decisions.md`), and hard-won traps
-  (`gotchas.md`). Replaced the old root `CLAUDE.md`.
+- Project memory (architecture and philosophy, decisions with their rationale, hard-won traps) is a
+  [cxtify](https://cxtify.com) topic, `claude-brains`, pulled into the git-ignored `.cxtify/` folder
+  with `cxtify link claude-brains && cxtify pull`. It replaced the committed `.claude/context/` on
+  2026-10-31 and the root `CLAUDE.md` before that.
 
 ## Status
 

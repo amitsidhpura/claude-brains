@@ -17,14 +17,15 @@ plugin/.intellijPlatform/
 # Playwright MCP browser-session artifacts (snapshots/console logs from design checks)
 /.playwright-mcp/
 
-# Claude Code local settings (per-machine permission grants) — but the portable
-# project memory in .claude/context/ IS committed so it travels with the repo.
-.claude/*
-!.claude/context/
-!.claude/skills/
+# Claude Code local settings (per-machine permission grants) — never tracked. Project memory
+# lives in .cxtify/ (cxtify topic claude-brains, server storage — ignored below, synced by `cxtify`).
+.claude/
 
 # Personal scratch space — notes, throwaway files. Never part of the plugin.
 /_local/
 
 # Python bytecode from tools/ (live_harness imports cdp)
 __pycache__/
+
+# cxtify
+.cxtify/

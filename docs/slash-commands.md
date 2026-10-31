@@ -25,7 +25,7 @@ argument can be typed before sending; this matches the terminal, where picking a
 it into the prompt and you decide when to send. The rule is `cmdTakesArg()` in chat.html: any
 non-empty hint inserts. It used to ask whether an argument was REQUIRED, which fired `/context`
 bare when the hint `[init | load | save]` was really a menu of sub-modes (user report 2026-08-16;
-rationale in .claude/context/decisions.md, pinned by fixture 50).
+rationale in `.cxtify/decisions.md` (2026-08-16), pinned by fixture 50).
 
 Which of the enabled commands that actually means, measured off the wire 2026-08-17 (a bare
 `initialize` control request to CLI 2.1.233 — the roster's keys are exactly `{name, description,

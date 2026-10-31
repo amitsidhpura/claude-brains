@@ -18,7 +18,7 @@ one row per feature, measured against both reference clients.
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
 **At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 102 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (147 rows) — no open rows, no [DECIDE] tags
-- **Next up (🟥):** none — the deferred rows live in `.claude/context/backlog.md` (worktrees, tabs, debugger tools). 6.6 (auto-include selection) left the deferred list and shipped 2026-10-10.
+- **Next up (🟥):** none — the deferred rows live in `.cxtify/backlog.md` (worktrees, tabs, debugger tools). 6.6 (auto-include selection) left the deferred list and shipped 2026-10-10.
 - **Awaiting a decision ([DECIDE]):** none — 9.9 (the 1M switch) was decided 2026-10-10 after a
   hand test: retired, and the gauge lookup it was masking fixed. The 2.1.296 audit's other rows
   were taken and built the same day: 1.30 (message timestamps), 1.31 (question option previews),
@@ -36,7 +36,7 @@ one row per feature, measured against both reference clients.
 | 🟥 | open — high: next up, or the strongest candidates awaiting a decision |
 | 🟧 | open — medium: roadmap, worth a pass when its turn comes |
 | ⬜ | open — low: watch / probe first / polish; some lean ➖ |
-| ➖ | not implemented — the row says which: the terminal's half / N/A in JetBrains, declined by the user, or deferred. Any of them can be revisited later (decisions in `.claude/context/`) |
+| ➖ | not implemented — the row says which: the terminal's half / N/A in JetBrains, declined by the user, or deferred. Any of them can be revisited later (decisions in `.cxtify/decisions.md`) |
 
 **Numbering** — rows are `section.row` (`8.5`); refer to them by that id. Numbers are stable
 between audits: retire a row by striking it, not by deleting it, so ids never shift. Section
@@ -402,7 +402,7 @@ optional `[name]` hint (7.6). Probe transcripts in the 2026-08-23 session scratc
 
 </details>
 
-**Work order** (from `.claude/context/backlog.md`): plan-card shortcuts (if un-deferred) →
+**Work order** (from `.cxtify/backlog.md`): plan-card shortcuts (if un-deferred) →
 reloaded-webview log replay → kill-background-process → editor accept/reject v2 tweak-travel →
 @-symbol mentions → worktrees → extensibility status view. Last, by the user's choice: tabs,
 auto-include selection, voice.

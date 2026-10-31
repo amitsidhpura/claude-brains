@@ -179,8 +179,9 @@ only read about behaviour they can see.
 - Display name: **Claude Brains**.
 - Slogan: **"Develop in the IDE. Configure in the Terminal."** — opens the description
   everywhere (plugin.xml, README, updatePlugins.xml, Marketplace) and renders in-product on the
-  welcome screen (`.w-slogan`). It is also the scope rule — see `.claude/context/overview.md`
-  § Philosophy (the root `CLAUDE.md` it used to live in was migrated there 2026-08-07).
+  welcome screen (`.w-slogan`). It is also the scope rule — see `.cxtify/overview.md`
+  § Philosophy (cxtify topic `claude-brains`; it lived in `.claude/context/` 2026-08-07 → 2026-10-31,
+  and in the root `CLAUDE.md` before that).
 - Descriptive tagline, one line under it: "Claude Code for JetBrains IDEs (unofficial)".
 - No syncroze references in the plugin (renamed 2026-07-31; packages are
   `io.github.amitsidhpura.claudebrains.*`).
