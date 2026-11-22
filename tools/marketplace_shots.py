@@ -94,12 +94,13 @@ def panel_html() -> str:
 
 COMMON = r"""
 window.onClaudeEvent(JSON.stringify({type:'__project', root:'/home/you/shop'}));
-// the roster as CLI 2.1.293 sends it (fixture 97 rows; Default resolved as fixture 67 measured it)
+// four of the roster's rows as CLI 2.1.330 sends them (taped 2026-11-22; the Opus 5.5 row and
+// the nine pinned older versions are left out so the menu fits the panel). supportsThinkingOff:false locks the Thinking switch (9.10)
 window.onClaudeEvent(JSON.stringify({type:'__models', selected:'default', items:[
-  {value:'default', resolvedModel:'claude-opus-5-5', displayName:'Default (recommended)', description:'Opus 5.5 · Best for everyday, complex tasks', supportsEffort:true, supportsFastMode:true},
-  {value:'fable', resolvedModel:'claude-fable-5-1', displayName:'Fable 5.1', description:'For your toughest challenges', supportsEffort:true},
-  {value:'sonnet', resolvedModel:'claude-sonnet-5-5', displayName:'Sonnet 5.5', description:'Most efficient for simpler tasks', supportsEffort:true},
-  {value:'haiku', resolvedModel:'claude-haiku-5-5', displayName:'Haiku 5.5', description:'Fastest for quick answers'}]}));
+  {value:'default', resolvedModel:'claude-opus-5-5', displayName:'Default (recommended)', description:'Opus 5.5 · Best for everyday, complex tasks', supportsEffort:true, supportsFastMode:true, supportsThinkingOff:false},
+  {value:'fable', resolvedModel:'claude-fable-5-2', displayName:'Fable 5.2', description:'For your toughest challenges', supportsEffort:true, supportsFastMode:true, supportsThinkingOff:false},
+  {value:'sonnet', resolvedModel:'claude-sonnet-5-5', displayName:'Sonnet 5.5', description:'Most efficient for simpler tasks', supportsEffort:true, supportsThinkingOff:false},
+  {value:'haiku', resolvedModel:'claude-haiku-5-5', displayName:'Haiku 5.5', description:'Fastest for quick answers', supportsEffort:true, supportsThinkingOff:false}]}));
 window.onClaudeEvent(JSON.stringify({type:'__mode', mode:'default'}));
 window.onClaudeEvent(JSON.stringify({type:'__commands', items:[
   {name:'compact', description:'Free up context by summarizing the conversation so far', argumentHint:'<optional custom summarization instructions>'},
@@ -339,6 +340,59 @@ user('Run the full e2e suite.');
 working('Testing…', '1m 12s', '96');
 """
 
+# 7.13 pinned commands + 1.32 prompt suggestion. The scene's own roster: short descriptions, since a
+# chip is labelled with the command's description.
+S9_COMMON = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__commands', items:[
+  {name:'compact', description:'Free up context by summarizing the conversation so far', argumentHint:'<optional custom summarization instructions>'},
+  {name:'code-review', description:'Review the current diff for bugs and cleanups', argumentHint:'[target]', aliases:['review']},
+  {name:'commit', description:'Commit it (user)'},
+  {name:'pre-tag', description:'Lint, test, diff-check (user)'},
+  {name:'deploy', description:'Deploy to… (project)', argumentHint:'<env>'},
+  {name:'standup', description:'Summarise what changed since yesterday (user)'}]}));
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Release 2.4'}));
+user('Bump the version and update the changelog.');
+tool('Edit', '/home/you/shop/package.json', true);
+tool('Edit', '/home/you/shop/CHANGELOG.md', true);
+md('Version is **2.4.0** and the changelog lists the three fixes. Nothing is committed yet.');
+done(17000, 420);
+idle();
+window.onClaudeEvent(JSON.stringify({type:'__cmdPins', pins:['commit','pre-tag','deploy']}));
+"""
+
+S9_LEFT = S9_COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'prompt_suggestion', suggestion:'commit this and tag v2.4.0', uuid:'ps1', session_id:'s1'}));
+"""
+
+S9_RIGHT = S9_COMMON + r"""
+input.value = '/';
+tg('slashMenu');
+"""
+
+# 1.33 live output of a running command, through the real road: task_started arms the poll, the
+# __taskOutput answer paints the row.
+S10_LEFT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Staging migration'}));
+user('Run the pending migrations on staging.');
+{ const tb = track(toolLine('Bash')); tb.classList.add('run');
+  tb.querySelector('.t-desc').textContent = 'Migrate the staging database';
+  const io = ioBox([['IN', 'npm run migrate -- --env staging']]); tb.after(io);
+  toolsById['tu-mig'] = { el: tb, name: 'Bash', io: io };
+  startLiveOut({ task_id: 'tk-mig', tool_use_id: 'tu-mig', is_backgrounded: false });
+  window.onClaudeEvent(JSON.stringify({type:'__taskOutput', id:'tk-mig', truncated:false, total_bytes:0, output:
+    'Using environment: staging\n[1/6] add_orders_index ... done (0.8s)\n[2/6] split_customer_name ... done (2.1s)\n[3/6] backfill_tax_region ... 41%\n[3/6] backfill_tax_region ... 78%\n[3/6] backfill_tax_region ... done (9.4s)\n[4/6] drop_legacy_carts ... done (0.3s)\n[5/6] add_export_jobs ...'})); }
+working('Migrating…', '24s', '118'); setContext(41000);
+"""
+
+# 1.34 math, drawn by the vendored KaTeX.
+S10_RIGHT = COMMON + r"""
+window.onClaudeEvent(JSON.stringify({type:'__title', text:'Retry policy'}));
+user('How long can the retries take in total?');
+md('Retry $n$ waits $d_n = \\min(c,\\ b \\cdot 2^{n})$, so without the cap $k$ retries add up to\n\n$$\\sum_{n=0}^{k-1} b \\cdot 2^{n} = b\\,(2^{k} - 1)$$\n\nWith $b = 0.5$ s and $k = 5$ that is **15.5 s** — under the 30 s gateway timeout, so the cap $c$ never applies.');
+done(8000, 190);
+idle(); setContext(23000);
+"""
+
 SCENES = [
     ("01-conversation", "Claude Code, native in your IDE",
      "The official claude CLI streaming into a JetBrains tool window — thinking, tools, todos, sub-agents, live progress.",
@@ -364,6 +418,12 @@ SCENES = [
     ("08-background", "Long jobs, out of the way",
      "Watch a background task's output live, or send a slow command to the background mid-run.",
      [S8_LEFT, S8_RIGHT]),
+    ("09-pinned-and-suggested", "The next step, one click away",
+     "Pin a command in the / menu and it sits above the composer; Claude Code's suggested next prompt waits in the box.",
+     [S9_LEFT, S9_RIGHT]),
+    ("10-live-output-math", "See it as it happens",
+     "A running command shows what it has printed so far; math in a reply is drawn as formulas.",
+     [S10_LEFT, S10_RIGHT]),
 ]
 
 
