@@ -413,7 +413,7 @@ auto-include selection, voice.
 - **1.1** ✅ **Send a prompt** — reply streams token-by-token (`stream_event` deltas)
 - **1.2** ✅ **User / assistant bubbles** — Ctrl+Enter sends, Enter = newline (VS Code's
       `useCtrlEnterToSend` behaviour, fixed on, no toggle)
-- **1.3** ✅ **Prompt history** — ArrowUp on the first line recalls earlier prompts
+- **1.3** ✅ **Prompt history** — ArrowUp on the first line goes to the first character, then recalls earlier prompts (fixture 106)
 - **1.4** ✅ **Tool-use lines** — shared description chain (`DESC_KEYS`/`IN_KEYS` in
       `RenderLimits.kt`), project-relative middle-ellipsised paths, click-to-open with line ranges
 - **1.5** ✅ **IN/OUT boxes** — tool input/output in the diff's geometry; size caps and

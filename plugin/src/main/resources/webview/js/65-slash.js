@@ -285,12 +285,22 @@
     const caret = input.selectionStart;
     const onFirstLine = input.value.slice(0, caret).indexOf('\n') === -1;
     const onLastLine = input.value.indexOf('\n', caret) === -1;
-    if (e.key === 'ArrowUp' && onFirstLine && histIdx > 0) {
+    // ↑ goes to the FIRST CHARACTER before it recalls anything (user, 2026-11-22): on the first line
+    // with the caret inside the text, a plain ↑ only moves the caret to offset 0, and the recall
+    // needs a second ↑ from there — so a half-edited line is never swapped out by a stray ↑. The
+    // caret is moved here, not left to the browser, so the rule holds whatever the platform's own
+    // first-line ↑ does. A selection, or Shift (extending one), is the browser's business. After a
+    // recall the caret STAYS at 0: walking further back is then one press per prompt. Fixture 106.
+    const plainUp = e.key === 'ArrowUp' && !e.shiftKey && caret === input.selectionEnd;
+    if (plainUp && onFirstLine && histIdx > 0 && caret > 0) {
+      e.preventDefault();
+      input.setSelectionRange(0, 0);
+    } else if (plainUp && histIdx > 0 && caret === 0) {
       e.preventDefault();
       if (histIdx === history.length) histDraft = input.value; // stash the in-progress draft
       histIdx--;
       input.value = history[histIdx]; autoGrow();
-      const end = input.value.length; input.setSelectionRange(end, end);
+      input.setSelectionRange(0, 0);
     } else if (e.key === 'ArrowDown' && onLastLine && histIdx < history.length) {
       e.preventDefault();
       histIdx++;

@@ -1,0 +1,108 @@
+{
+ "item": "1.3 Prompt history — ArrowUp first takes the caret to the first character; only from there does it recall the previous prompt (2026-11-22)",
+ "branch": "The composer's keydown handler in js/65-slash.js. On the first line with a collapsed caret that is NOT at offset 0, a plain ArrowUp moves the caret to offset 0 and recalls nothing; at offset 0 it recalls the previous prompt and leaves the caret at offset 0, so walking further back stays one press per prompt. A selection, or Shift held, is left to the browser. ArrowDown is unchanged: on the last line it steps forward and puts the caret at the end.",
+ "provenance": "No wire frames: this is composer key handling, driven with synthetic keydown events on #input (a synthetic event runs our handler but not the browser's default caret move, which is why the handler moves the caret itself). `history` / `histIdx` / `histDraft` are the composer's own state, set directly and restored in the last step. USER REQUEST 2026-11-22: 'clicking up key to go to first character before going to previous message' — before the change ArrowUp anywhere on the first line recalled at once and replaced a half-edited line. NEGATIVE CONTROL RUN 2026-11-22 against the 242 sandbox still serving the pre-change webview: 6 passed, 7 failed — both step-1 asserts (it recalled 'second prompt' at once), steps 2-3 (one prompt further along than expected, caret at the end) and both step-5 asserts (a selection was recalled over); step 0, the step-1 'consumed' assert, step 3's text, the ArrowDown asserts and the restore are GUARDs or pass on both builds.",
+ "steps": [
+  {
+   "note": "0 — two sent prompts in history, a half-typed draft in the composer with the caret at its end",
+   "setup": "window.__h106 = { history: history.slice(), idx: histIdx, draft: histDraft, value: input.value }; closeMenus(); history = ['first prompt', 'second prompt']; histIdx = 2; histDraft = ''; input.value = 'draft text'; input.focus(); input.setSelectionRange(10, 10); window.__k106 = (function(k){ var e = new KeyboardEvent('keydown', {key:k, bubbles:true, cancelable:true}); input.dispatchEvent(e); return e.defaultPrevented; });",
+   "expect": [
+    {
+     "js": "input.value + '|' + input.selectionStart",
+     "equals": "draft text|10",
+     "why": "GUARD: the starting state"
+    }
+   ]
+  },
+  {
+   "note": "1 — ArrowUp with the caret inside the line goes to the first character and recalls nothing",
+   "setup": "window.__r106 = window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "expect": [
+    {
+     "js": "window.__s106.v",
+     "equals": "draft text",
+     "why": "the draft is still in the composer (pre-fix: 'second prompt')"
+    },
+    {
+     "js": "window.__s106.s + ',' + window.__s106.e",
+     "equals": "0,0",
+     "why": "the caret is at the first character"
+    },
+    {
+     "js": "window.__r106",
+     "equals": true,
+     "why": "we moved the caret ourselves, so the key is consumed"
+    }
+   ]
+  },
+  {
+   "note": "2 — ArrowUp again, now at the first character, recalls the previous prompt and keeps the caret at the start",
+   "setup": "window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "expect": [
+    {
+     "js": "window.__s106.v",
+     "equals": "second prompt",
+     "why": "the most recent sent prompt"
+    },
+    {
+     "js": "window.__s106.s + ',' + window.__s106.e",
+     "equals": "0,0",
+     "why": "caret at the start, so the next ArrowUp steps back at once (pre-fix: 13,13)"
+    }
+   ]
+  },
+  {
+   "note": "3 — one more ArrowUp steps straight to the prompt before it: one press per prompt while walking back",
+   "setup": "window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "expect": [
+    {
+     "js": "window.__s106.v",
+     "equals": "first prompt",
+     "why": "one press, no caret detour (the caret was already at the start)"
+    },
+    {
+     "js": "window.__s106.s",
+     "equals": 0,
+     "why": "caret at the start again"
+    }
+   ]
+  },
+  {
+   "note": "4 — ArrowDown is unchanged: forward one prompt with the caret at the end, then back to the stashed draft",
+   "setup": "window.__k106('ArrowDown'); window.__a106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; window.__k106('ArrowDown'); window.__b106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "expect": [
+    {
+     "js": "window.__a106.v + '|' + window.__a106.s",
+     "equals": "second prompt|13",
+     "why": "GUARD: forward one, caret at the end"
+    },
+    {
+     "js": "window.__b106.v + '|' + window.__b106.s",
+     "equals": "draft text|10",
+     "why": "GUARD: the half-typed draft survived the round trip"
+    }
+   ]
+  },
+  {
+   "note": "5 — a selection that starts at the first character is not a caret: ArrowUp recalls nothing and is left to the browser; then restore",
+   "setup": "input.setSelectionRange(0, 5); window.__r106 = window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; history = window.__h106.history; histIdx = window.__h106.idx; histDraft = window.__h106.draft; input.value = window.__h106.value; autoGrow();",
+   "expect": [
+    {
+     "js": "window.__s106.v",
+     "equals": "draft text",
+     "why": "nothing recalled over a selection (pre-fix: 'second prompt')"
+    },
+    {
+     "js": "window.__r106",
+     "equals": false,
+     "why": "not consumed — the browser collapses the selection as usual"
+    },
+    {
+     "js": "history.length === window.__h106.history.length && input.value === window.__h106.value",
+     "equals": true,
+     "why": "history and composer restored"
+    }
+   ]
+  }
+ ]
+}
