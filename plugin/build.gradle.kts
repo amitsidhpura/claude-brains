@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.17.1"
+version = "0.18.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,38 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.18.0</b>
+            <ul>
+              <li>Pinned commands: pin a command on its row in the / menu and it becomes a chip
+                  above the composer — one click sends it, or writes its name in front of your
+                  draft when it takes an argument. Drag chips to reorder; pins are shared by all
+                  projects</li>
+              <li>Live output: while a command runs, what it has printed so far shows under it,
+                  following the last lines, until the result replaces it</li>
+              <li>Math: LaTeX in a reply is drawn as formulas, inline and display (KaTeX);
+                  prices and code stay text</li>
+              <li>Prompt suggestions: after a reply, Claude Code's guess at your next prompt
+                  shows in the empty message box, marked "Suggestion" — Tab writes it in, nothing
+                  is sent until you send it</li>
+              <li>Workspace trust: when Claude Code does not trust the folder, a line above the
+                  composer says so and offers Trust folder… with a confirmation</li>
+              <li>The Thinking switch is shown locked on for models that cannot turn thinking
+                  off</li>
+              <li>Default in the model menu names the model Default really resolves to — it
+                  could show the last model you had picked by name</li>
+              <li>Prompt history: Up and Down recall prompts only from the first and last
+                  character of the draft, so a long draft that wraps can be moved through row by
+                  row</li>
+              <li>Markdown: indented code blocks are drawn as code, a * or _ inside inline code
+                  no longer starts italics elsewhere in the line, ~~~ fences work, and a code
+                  fence opened mid-line no longer leaves stray characters</li>
+              <li>The model name in the bar under the composer is cut with an ellipsis in a
+                  narrow panel instead of wrapping onto more lines</li>
+              <li>The @ menu lists files created since the panel opened</li>
+              <li>A popup list that fits no longer shows a scrollbar at some display scales</li>
+              <li>A warning line appears when Claude Code could not save part of the
+                  conversation (disk full or quota used up)</li>
+            </ul>
             <b>0.17.1</b>
             <ul>
               <li>Opening a file, an edit's review diff and the "Files changed · Review" diff from
@@ -128,22 +160,6 @@ val changeNotesHtml = """
               <li>Menus keep the cursor on the first match while you type with the mouse resting
                   over them, and show one highlight — typing /con could pick /goal</li>
               <li>Date lines are drawn as a soft wave</li>
-            </ul>
-            <b>0.16.0</b>
-            <ul>
-              <li>The editor's selection rides every prompt: a live pill in the composer follows
-                  what you highlight (or the cursor line), its × leaves it out of one message, and
-                  the sent message shows the same pill — click it to reopen those lines</li>
-              <li>Include open file: a second switch in the paperclip menu attaches the open file's
-                  content when nothing is highlighted (unsaved edits included, 50,000-character
-                  cap); a highlight always wins, as in VS Code</li>
-              <li>Both live in the paperclip menu as switch rows and persist across restarts;
-                  Include selection is on by default, Include open file off</li>
-              <li>Resuming a conversation after the IDE closed over a running background command
-                  no longer draws a stray "Pondered for 1s" line</li>
-              <li>The Copy response control appears at the end of a reply's first line when the
-                  reply is hovered, with the text wrapping around it — it used to sit over the text
-                  and could cover the end of a long first line</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
