@@ -24,8 +24,18 @@
 
   /* ---------- minimal, safe markdown renderer (canon markup) ---------- */
   function inlineMd(s) {
-    return s
-      .replace(/`([^`]+)`/g, (m, c) => '<code class="ic">' + c + '</code>')
+    // Backlog #34: a code span is OPAQUE to every pass below. Each is swapped for a token (U+0001
+    // C<n> U+0001) and put back last — with the <code> written in place first, a `*` inside
+    // `-*+` paired with a later `*` across the span and a URL inside one became a link. A span
+    // is a backtick run closed by a run of the SAME length (CommonMark), so ``a ` b`` and a
+    // one-line ```x``` are spans too; one space of padding on both sides is dropped.
+    const codes = [];
+    s = s.replace(/(?<!`)(`+)(?!`)([\s\S]*?[^`])\1(?!`)/g, function (m, run, c) {
+      if (/^ [\s\S]* $/.test(c) && /\S/.test(c)) c = c.slice(1, -1);
+      codes.push('<code class="ic">' + c + '</code>');
+      return '\u0001C' + (codes.length - 1) + '\u0001';
+    });
+    s = s
       // Bold admits single `*` inside the pair (`**Garlic (*Allium sativum*)**`), stopping at the
       // first `**`; the italic pass below then pairs the inner asterisks with the <b> already in
       // place. With `[^*]+` here the bold never matched and the user saw the `**` printed
@@ -35,7 +45,8 @@
       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
       // bare URLs autolink too. Not one preceded by `"` or `>` — that is the href, or the text, of
       // a link the line above just made. Trailing sentence punctuation stays outside the link.
-      .replace(/(^|[^"'>\w])(https?:\/\/[^\s<]*[^\s<.,;:!?)\]'"])/g, '$1<a href="$2">$2</a>');
+      .replace(/(^|[^"'>\w])(https?:\/\/[^\s<\u0001]*[^\s<\u0001.,;:!?)\]'"])/g, '$1<a href="$2">$2</a>');
+    return codes.length ? s.replace(/\u0001C(\d+)\u0001/g, function (m, n) { return codes[+n]; }) : s;
   }
   // No target="_blank" on any of these (removed 2026-08-29): the panel is an OFF-SCREEN JCEF
   // browser, and a _blank click asked CEF for a popup window, which under OSR has no surface to
@@ -116,10 +127,18 @@
      (or nothing). The indent is unbounded on purpose — the renderer has no indented-code block,
      so a bullet four spaces in is still a bullet, not code. Groups: indent, marker, gap, text. */
   const LI_RE = /^( *)([-*+]|\d{1,9}[.)])( {1,4}|$)(.*)$/;
+  // A lifted code block's placeholder, alone on its line: U+0001 B<n> U+0001 (backlog #35 — it
+  // was the printable " B<n> ", which a line holding anything else printed as "B0").
+  const CB_LINE = /^ *\u0001B(\d+)\u0001 *$/;
+  function codeBlockHtml(lang, code) {
+    return '<div class="codeblock"><div class="cb-h"><span>' + esc(lang || 'code') +
+      '</span><button class="copy" title="Copy">' + SVG_COPY + '</button></div><pre>' +
+      highlight(code.replace(/\n[ \t]*$/, '')) + '</pre></div>';
+  }
   // A line that would interrupt a paragraph (and so ends a list item's lazy continuation).
   function mdBlockStart(lines, i) {
     const l = lines[i];
-    return /^ B\d+ $/.test(l) || /^(#{1,6})\s/.test(l) || /^\s*(-{3,}|\*{3,})\s*$/.test(l) ||
+    return CB_LINE.test(l) || /^(#{1,6})\s/.test(l) || /^\s*(-{3,}|\*{3,})\s*$/.test(l) ||
       MD_QUOTE.test(l) || LI_RE.test(l) || mdTableAt(lines, i);
   }
   /**
@@ -194,13 +213,31 @@
     // An indented fence (under a list item) drops up to its own indent from every body line, as
     // CommonMark does; the indent itself stays in front of the placeholder so the list parser
     // can claim the line for its item. The trailing strip also eats an indented closer's spaces.
-    src = src.replace(/(`{3,})([^\s`]*)\n?([\s\S]*?)\1`*/g, (m, fence, lang, code, offset, str) => {   // fenced code
+    // Backlog #35: `~~~` is a fence too, at a line start only (a run of tildes in running text
+    // is not one). A match with no line break in it is not a fence at all — ```x``` on one line
+    // is a code span, left for inlineMd. A fence opened MID-LINE ("Run this: ```sh") is still
+    // lifted: its placeholder goes on a line of its own, indented under the text that led into
+    // it so a list item keeps it, and text after the closer drops to the next line. Before, the
+    // placeholder sat inside the line, was never restored, and the block vanished behind "B0".
+    src = src.replace(/(`{3,}|~{3,})([^\s`]*)\n?([\s\S]*?)\1[`~]*/g, (m, fence, lang, code, offset, str) => {   // fenced code
+      if (m.indexOf('\n') < 0) return m;
       const pre = str.slice(str.lastIndexOf('\n', offset - 1) + 1, offset);
-      if (/^ +$/.test(pre)) code = code.replace(new RegExp('^ {1,' + pre.length + '}', 'gm'), '');
-      blocks.push('<div class="codeblock"><div class="cb-h"><span>' + esc(lang || 'code') +
-        '</span><button class="copy" title="Copy">' + SVG_COPY + '</button></div><pre>' +
-        highlight(code.replace(/\n[ \t]*$/, '')) + '</pre></div>');
-      return ' B' + (blocks.length - 1) + ' ';
+      const atStart = /^ *$/.test(pre);
+      if (fence.charAt(0) === '~' && !atStart) return m;
+      // Straight after quote markers ("> ```") the fence stays where it is — the quote branch
+      // strips the markers and finds the placeholder — and its body loses the markers too.
+      const quoted = !atStart && /^(\s*&gt;\s?)+$/.test(pre);
+      const li = atStart || quoted ? null : pre.match(LI_RE);
+      const ind = li ? li[1].length + li[2].length + (li[3].length || 1) : pre.match(/^ */)[0].length;
+      if (atStart && pre) code = code.replace(new RegExp('^ {1,' + pre.length + '}', 'gm'), '');
+      else if (quoted) code = code.replace(/^(\s*&gt;\s?)+/gm, '');
+      else if (li) code = code.replace(new RegExp('^ {1,' + ind + '}', 'gm'), '');   // "- run: ```"
+      blocks.push(codeBlockHtml(lang, code));
+      const token = '\u0001B' + (blocks.length - 1) + '\u0001';
+      const after = str.slice(offset + m.length);
+      const tail = /^[^\S\n]*\S/.test(after) ? '\n' : '';
+      if (atStart || quoted) return token + tail;
+      return '\n' + ' '.repeat(ind) + token + tail;
     });
     // 1.34: math out, once, on the outermost call (nested calls — a quote, a list item — get text
     // that already carries the tokens). `blocks.math` is the token store shared with them.
@@ -210,10 +247,31 @@
     let out = '', i = 0;
     while (i < lines.length) {
       let line = lines[i];
-      const ph = line.match(/^ B(\d+) $/);
+      const ph = line.match(CB_LINE);
       if (ph) { out += blocks[+ph[1]]; i++; continue; }
       if (/^\s*$/.test(line)) { i++; continue; }
       let m;
+      // Backlog #33: indented code (CommonMark) — a block that STARTS four or more spaces in is
+      // code, through to the last such line; blank lines inside it stay. It cannot interrupt a
+      // paragraph (the paragraph branch below takes a deeper line as continuation), and inside a
+      // list item the four spaces count from the item's own content column, which mdList has
+      // already cut away. A list marker is still a list however deep (LI_RE's note): models
+      // indent nested bullets by four all the time.
+      if (/^ {4,}\S/.test(line) && !LI_RE.test(line)) {
+        const buf = [];
+        while (i < lines.length) {
+          if (/^ {4,}\S/.test(lines[i]) && !CB_LINE.test(lines[i])) { buf.push(lines[i].slice(4)); i++; continue; }
+          let j = i;
+          while (j < lines.length && /^\s*$/.test(lines[j])) j++;
+          if (j > i && j < lines.length && /^ {4,}\S/.test(lines[j]) && !LI_RE.test(lines[j]) && !CB_LINE.test(lines[j])) {
+            while (i < j) { buf.push(''); i++; }
+            continue;
+          }
+          break;
+        }
+        out += codeBlockHtml('', buf.join('\n'));
+        continue;
+      }
       if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { out += '<h' + m[1].length + '>' + inlineMd(m[2]) + '</h' + m[1].length + '>'; i++; continue; }
       if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out += '<hr>'; i++; continue; }
       if (MD_QUOTE.test(line)) {

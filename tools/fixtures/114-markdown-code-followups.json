@@ -1,0 +1,146 @@
+{
+ "item": "markdown follow-ups (backlog #33, #34, #35; register 1.11 / 1.12): indented code blocks, inline code opaque to emphasis, fence placeholders that never print and ~~~ fences",
+ "branch": "inlineMd (code-span tokens), the fence lift and CB_LINE in mdBlocks, the indented-code branch in mdBlocks — all in 20-markdown.js; codeBlockHtml is the one builder for fenced and indented code",
+ "provenance": "Renderer-only: each case hands a markdown SOURCE string to renderMd and compares the HTML (code-block header and highlight spans stripped). The shapes are CommonMark's; '2. … / 7-space-indented line' is the user's 2026-09-09 sighting, '-*+' is fixture 86's plan text, 'text ```x``` more' is fixture 85's finding. No wire frame is claimed. NEGATIVE CONTROL computed in Node against HEAD's 20-markdown.js before the sandbox run: 15 of 23 cases differ (marked DISCRIMINATING), 8 are guards equal on both builds SANDBOX CONTROL RUN 2026-11-22 against HEAD's whole webview directory (c5a14b5): 15 FAILED / 8 passed — the same split Node computed; 23/23 after the change.",
+ "steps": [
+  {
+   "note": "inline code is opaque to emphasis and links; a span is a backtick run closed by a run of the same length (#34)",
+   "setup": "window.__m114=(function(){const S=function(h){return h.replace(/<div class=\"cb-h\">.*?<\\/div>/g,'').replace(/<span class=\"hl-[a-z]\">|<\\/span>/g,'');};const C={\"34 star in code\": \"Markers are `-*+` and then *really* so.\", \"34 url in code\": \"Run `curl https://example.com/x` or see https://example.com/y.\", \"34 double backtick\": \"Use ``a ` b`` here and `plain`.\", \"34 bold with code\": \"**bold `x*y`** and *it*\", \"34 no pair across spans\": \"a `x*` b `*y` c\"};const o={};for(const k in C)o[k]=S(renderMd(C[k]));return o;})();",
+   "expect": [
+    {
+     "js": "window.__m114[\"34 star in code\"]",
+     "equals": "<p>Markers are <code class=\"ic\">-*+</code> and then <i>really</i> so.</p>",
+     "why": "DISCRIMINATING: source \"Markers are `-*+` and then *really* so.\""
+    },
+    {
+     "js": "window.__m114[\"34 url in code\"]",
+     "equals": "<p>Run <code class=\"ic\">curl https://example.com/x</code> or see <a href=\"https://example.com/y\">https://example.com/y</a>.</p>",
+     "why": "DISCRIMINATING: source \"Run `curl https://example.com/x` or see https://example.com/y.\""
+    },
+    {
+     "js": "window.__m114[\"34 double backtick\"]",
+     "equals": "<p>Use <code class=\"ic\">a ` b</code> here and <code class=\"ic\">plain</code>.</p>",
+     "why": "DISCRIMINATING: source \"Use ``a ` b`` here and `plain`.\""
+    },
+    {
+     "js": "window.__m114[\"34 bold with code\"]",
+     "equals": "<p><b>bold <code class=\"ic\">x*y</code></b> and <i>it</i></p>",
+     "why": "DISCRIMINATING: source \"**bold `x*y`** and *it*\""
+    },
+    {
+     "js": "window.__m114[\"34 no pair across spans\"]",
+     "equals": "<p>a <code class=\"ic\">x*</code> b <code class=\"ic\">*y</code> c</p>",
+     "why": "DISCRIMINATING: source \"a `x*` b `*y` c\""
+    }
+   ]
+  },
+  {
+   "note": "a fence opened mid-line, text after a closer, ~~~ fences and fences inside a quote all draw their block; the placeholder never prints (#35)",
+   "setup": "window.__m114=(function(){const S=function(h){return h.replace(/<div class=\"cb-h\">.*?<\\/div>/g,'').replace(/<span class=\"hl-[a-z]\">|<\\/span>/g,'');};const C={\"35 one-line triple\": \"text ```x``` more\", \"35 midline fence\": \"Run this: ```sh\\nls -la\\n```\\nthen stop\", \"35 midline in list\": \"- run: ```sh\\n  ls\\n  ```\\n- next\", \"35 tilde\": \"Before\\n~~~py\\nprint(1)\\n~~~\\nAfter\", \"35 tilde midline stays\": \"a ~~~ b\\nc ~~~ d\", \"35 quote fence\": \"> note\\n> ```js\\n> let a = 1;\\n> ```\\n> end\", \"35 text after closer\": \"```js\\na\\n``` trailing words\"};const o={};for(const k in C)o[k]=S(renderMd(C[k]));return o;})();",
+   "expect": [
+    {
+     "js": "window.__m114[\"35 one-line triple\"]",
+     "equals": "<p>text <code class=\"ic\">x</code> more</p>",
+     "why": "DISCRIMINATING: source \"text ```x``` more\""
+    },
+    {
+     "js": "window.__m114[\"35 midline fence\"]",
+     "equals": "<p>Run this: </p><div class=\"codeblock\"><pre>ls -la</pre></div><p>then stop</p>",
+     "why": "DISCRIMINATING: source \"Run this: ```sh\\nls -la\\n```\\nthen stop\""
+    },
+    {
+     "js": "window.__m114[\"35 midline in list\"]",
+     "equals": "<ul><li>run: <div class=\"codeblock\"><pre>ls</pre></div></li><li>next</li></ul>",
+     "why": "DISCRIMINATING: source \"- run: ```sh\\n  ls\\n  ```\\n- next\""
+    },
+    {
+     "js": "window.__m114[\"35 tilde\"]",
+     "equals": "<p>Before</p><div class=\"codeblock\"><pre>print(1)</pre></div><p>After</p>",
+     "why": "DISCRIMINATING: source \"Before\\n~~~py\\nprint(1)\\n~~~\\nAfter\""
+    },
+    {
+     "js": "window.__m114[\"35 tilde midline stays\"]",
+     "equals": "<p>a ~~~ b<br>c ~~~ d</p>",
+     "why": "GUARD (same on the pre-change renderer): source \"a ~~~ b\\nc ~~~ d\""
+    },
+    {
+     "js": "window.__m114[\"35 quote fence\"]",
+     "equals": "<blockquote><p>note</p><div class=\"codeblock\"><pre>let a = 1;</pre></div><p>end</p></blockquote>",
+     "why": "DISCRIMINATING: source \"> note\\n> ```js\\n> let a = 1;\\n> ```\\n> end\""
+    },
+    {
+     "js": "window.__m114[\"35 text after closer\"]",
+     "equals": "<div class=\"codeblock\"><pre>a</pre></div><p> trailing words</p>",
+     "why": "DISCRIMINATING: source \"```js\\na\\n``` trailing words\""
+    }
+   ]
+  },
+  {
+   "note": "GUARD: shapes that must not change — ordinary fences, a four-backtick fence, a table row",
+   "setup": "window.__m114=(function(){const S=function(h){return h.replace(/<div class=\"cb-h\">.*?<\\/div>/g,'').replace(/<span class=\"hl-[a-z]\">|<\\/span>/g,'');};const C={\"fence normal\": \"```js\\nlet a;\\n```\", \"fence in list\": \"1. step\\n   ```sh\\n   composer install\\n   ```\\n2. next\", \"four backticks\": \"````markdown\\n```js\\nx\\n```\\n````\", \"table+code\": \"| a | b |\\n|---|---|\\n| `x|y` | 2 |\"};const o={};for(const k in C)o[k]=S(renderMd(C[k]));return o;})();",
+   "expect": [
+    {
+     "js": "window.__m114[\"fence normal\"]",
+     "equals": "<div class=\"codeblock\"><pre>let a;</pre></div>",
+     "why": "GUARD (same on the pre-change renderer): source \"```js\\nlet a;\\n```\""
+    },
+    {
+     "js": "window.__m114[\"fence in list\"]",
+     "equals": "<ol><li>step<div class=\"codeblock\"><pre>composer install</pre></div></li><li>next</li></ol>",
+     "why": "GUARD (same on the pre-change renderer): source \"1. step\\n   ```sh\\n   composer install\\n   ```\\n2. next\""
+    },
+    {
+     "js": "window.__m114[\"four backticks\"]",
+     "equals": "<div class=\"codeblock\"><pre>```js\nx\n```</pre></div>",
+     "why": "GUARD (same on the pre-change renderer): source \"````markdown\\n```js\\nx\\n```\\n````\""
+    },
+    {
+     "js": "window.__m114[\"table+code\"]",
+     "equals": "<div class=\"tbl\"><table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>`x</td><td>y`</td></tr></tbody></table></div>",
+     "why": "GUARD (same on the pre-change renderer): source \"| a | b |\\n|---|---|\\n| `x|y` | 2 |\""
+    }
+   ]
+  },
+  {
+   "note": "a block that starts four or more spaces in is indented code; lazy continuations and deep list markers are not (#33)",
+   "setup": "window.__m114=(function(){const S=function(h){return h.replace(/<div class=\"cb-h\">.*?<\\/div>/g,'').replace(/<span class=\"hl-[a-z]\">|<\\/span>/g,'');};const C={\"33 indented\": \"Install:\\n\\n    composer install\\n    npm ci\\n\\nDone.\", \"33 in list\": \"1. First\\n2. Install deps:\\n\\n       composer install\\n\\n3. Third\", \"33 lazy stays text\": \"2. Install deps:\\n       composer install\", \"33 after heading\": \"# Title\\n    code here\\n\\npara\", \"33 nested bullets stay\": \"- a\\n    - b\\n    - c\\n\\n    - d\", \"33 blank inside\": \"    a\\n\\n    b\\n\\ntext\", \"33 para continuation\": \"para line\\n    still para\"};const o={};for(const k in C)o[k]=S(renderMd(C[k]));return o;})();",
+   "expect": [
+    {
+     "js": "window.__m114[\"33 indented\"]",
+     "equals": "<p>Install:</p><div class=\"codeblock\"><pre>composer install\nnpm ci</pre></div><p>Done.</p>",
+     "why": "DISCRIMINATING: source \"Install:\\n\\n    composer install\\n    npm ci\\n\\nDone.\""
+    },
+    {
+     "js": "window.__m114[\"33 in list\"]",
+     "equals": "<ol><li><p>First</p></li><li><p>Install deps:</p><div class=\"codeblock\"><pre>composer install</pre></div></li><li><p>Third</p></li></ol>",
+     "why": "DISCRIMINATING: source \"1. First\\n2. Install deps:\\n\\n       composer install\\n\\n3. Third\""
+    },
+    {
+     "js": "window.__m114[\"33 lazy stays text\"]",
+     "equals": "<ol start=\"2\"><li>Install deps:<br>    composer install</li></ol>",
+     "why": "GUARD (same on the pre-change renderer): source \"2. Install deps:\\n       composer install\""
+    },
+    {
+     "js": "window.__m114[\"33 after heading\"]",
+     "equals": "<h1>Title</h1><div class=\"codeblock\"><pre>code here</pre></div><p>para</p>",
+     "why": "DISCRIMINATING: source \"# Title\\n    code here\\n\\npara\""
+    },
+    {
+     "js": "window.__m114[\"33 nested bullets stay\"]",
+     "equals": "<ul><li><p>a</p><ul><li><p>b</p></li><li><p>c</p></li><li><p>d</p></li></ul></li></ul>",
+     "why": "GUARD (same on the pre-change renderer): source \"- a\\n    - b\\n    - c\\n\\n    - d\""
+    },
+    {
+     "js": "window.__m114[\"33 blank inside\"]",
+     "equals": "<div class=\"codeblock\"><pre>a\n\nb</pre></div><p>text</p>",
+     "why": "DISCRIMINATING: source \"    a\\n\\n    b\\n\\ntext\""
+    },
+    {
+     "js": "window.__m114[\"33 para continuation\"]",
+     "equals": "<p>para line<br>    still para</p>",
+     "why": "GUARD (same on the pre-change renderer): source \"para line\\n    still para\""
+    }
+   ]
+  }
+ ]
+}
