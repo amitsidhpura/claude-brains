@@ -60,6 +60,17 @@ def manifest(name: str, ext: str) -> list:
     return re.findall(r'"([^"]+\.%s)"' % ext, body)
 
 
+def vendor_css() -> str:
+    """KaTeX's stylesheet with its woff2 fonts inlined and the woff / ttf fallbacks dropped — the
+    same rewrite as WebviewAssets.vendorCss, so a scene with math draws as the panel draws it."""
+    import base64
+    kx = WEB / "vendor/katex"
+    css = re.sub(r',url\(fonts/[\w-]+\.(?:woff|ttf)\)\s*format\("[a-z]+"\)', "", (kx / "katex.min.css").read_text())
+    return re.sub(r"url\((fonts/[\w-]+\.woff2)\)",
+                  lambda m: "url(data:font/woff2;base64,%s)" % base64.b64encode((kx / m.group(1)).read_bytes()).decode(),
+                  css)
+
+
 def panel_html() -> str:
     html = (WEB / "chat.html").read_text()
     css = "".join("/* ===== file: %s ===== */\n" % n + (WEB / "css" / n).read_text()
@@ -70,6 +81,8 @@ def panel_html() -> str:
               "#log{scrollbar-width:none}#log::-webkit-scrollbar{display:none}</style>")
     version = re.search(r'^version = "([^"]+)"', (ROOT / "plugin/build.gradle.kts").read_text(), re.M).group(1)
     return (html.replace("<!--CSS-->", "<style>\n%s\n</style>%s" % (css, freeze))
+                .replace("<!--VENDOR_CSS-->", "<style>\n%s\n</style>" % vendor_css())
+                .replace("<!--VENDOR_JS-->", "<script>\n%s\n</script>" % (WEB / "vendor/katex/katex.min.js").read_text())
                 .replace("<!--LIMITS-->", "<script>window.LIMITS=%s;window.__bridge=function(){};</script>" % limits_js())
                 .replace("<!--VERSION-->", "v" + version)
                 .replace("<!--JS-->", js.rstrip("\n")))
