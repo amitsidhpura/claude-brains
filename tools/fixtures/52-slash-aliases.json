@@ -1,7 +1,7 @@
 {
  "item": "checklist 7.7",
  "branch": "slash menu — aliases match in the filter, show on the row, and resolve at the gate",
- "provenance": "Entry shape {name, description, argumentHint, aliases?} and the alias values (/code-review→review, /clear→reset,new, /list-agents→peers) are from the initialize roster captured off CLI 2.1.228/2.1.233 (docs/slash-commands.md table). Fix: renderSlash scores aliases like names, rows carry .pi-alias, canonicalCmd() maps an alias to its command before cmdKind/submit (2026-08-17). Negative control RUN 2026-08-17 against eb52eb1's chat.html: 7 DISCRIMINATING rows fail, 5 GUARDs pass. Every expression is null-safe so the pre-fix build reports failures instead of aborting the run (gotchas).",
+ "provenance": "Entry shape {name, description, argumentHint, aliases?} and the alias values (/code-review→review, /clear→reset,new, /list-agents→peers) are from the initialize roster captured off CLI 2.1.228/2.1.233 (cxtify panel/reference.md § Slash commands table). Fix: renderSlash scores aliases like names, rows carry .pi-alias, canonicalCmd() maps an alias to its command before cmdKind/submit (2026-08-17). Negative control RUN 2026-08-17 against eb52eb1's chat.html: 7 DISCRIMINATING rows fail, 5 GUARDs pass. Every expression is null-safe so the pre-fix build reports failures instead of aborting the run (gotchas).",
  "steps": [
   {
    "note": "a roster with aliases arrives; the filter and the row learn them",

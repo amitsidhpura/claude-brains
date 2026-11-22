@@ -142,7 +142,7 @@
     // tool-returned image (item 8) — a Read on a PNG or a Playwright screenshot. THREE states, and
     // all three are needed to review the sizing: over the height cap, under it, and bytes dropped.
     // The 2x2 sample is not a curiosity — it is the state that was broken, rendering full-panel-width
-    // by 320px because a column flex container stretches by default (docs/limits.md).
+    // by 320px because a column flex container stretches by default (cxtify panel/reference.md § Limits).
     { const ti = track(toolLine('Read'));
       fillPath(ti.querySelector('.t-desc'), '/home/you/project/screenshot.png');
       const box = toolImages([

@@ -4,7 +4,7 @@
      version.
      Users add this URL under Settings > Plugins > gear > Manage Plugin Repositories:
        https://raw.githubusercontent.com/amitsidhpura/claude-brains/main/updatePlugins.xml
-     Release process: docs/release.md -->
+     Release process: cxtify runbook.md § Release -->
 <plugins>
     <plugin id="io.github.amitsidhpura.claude-brains"
             version="0.17.1"

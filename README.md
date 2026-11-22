@@ -134,16 +134,12 @@ as you scroll.
 |---|---|
 | `plugin/` | Kotlin source and Gradle build — IntelliJ Platform Gradle Plugin 2.x, JCEF webview UI |
 | `design/` | the icon source and `mockup.html`, a static fixture mirroring the shipped renderer |
-| `docs/` | protocol reference, feature checklist, limits, release process |
 
 ## Docs
 
-- [`docs/ide-mcp-protocol.md`](docs/ide-mcp-protocol.md) — reverse-engineered protocol reference
-- [`docs/feature-checklist.md`](docs/feature-checklist.md) — feature parity status
-- [`docs/slash-commands.md`](docs/slash-commands.md) — which slash commands work headless, and why
-- [`docs/limits.md`](docs/limits.md) — every size cap and where it is set
-- [`docs/release.md`](docs/release.md) — how a release is cut
-- Project memory (architecture and philosophy, decisions with their rationale, hard-won traps) is a
+- Project memory (architecture and philosophy, decisions with their rationale, hard-won traps, and
+  since 2026-11-22 the protocol reference, feature register, size limits and release process that
+  used to live in `docs/`) is a
   [cxtify](https://cxtify.com) topic, `claude-brains`, pulled into the git-ignored `.cxtify/` folder
   with `cxtify link claude-brains && cxtify pull`. It replaced the committed `.claude/context/` on
   2026-10-31 and the root `CLAUDE.md` before that.

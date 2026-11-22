@@ -265,7 +265,7 @@ object SessionStore {
      * what must survive. See the eviction in [readTranscript].
      *
      * 20,000 blocks is ~21 MB once serialized (extrapolated from the 4.29 MB measured at 4,000 in
-     * docs/limits.md), which is affordable because the per-block cost is bounded: `RenderLimits`
+     * cxtify panel/reference.md § Limits), which is affordable because the per-block cost is bounded: `RenderLimits`
      * caps IN/OUT/description, and [IMAGE_BUDGET] is applied to whatever survives the window.
      */
     const val MAX_BLOCKS = 20_000

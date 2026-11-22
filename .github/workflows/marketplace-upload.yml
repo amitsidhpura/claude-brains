@@ -2,11 +2,11 @@
 #
 # This workflow does NOT build. It downloads the asset that `gh release create` just attached and
 # posts THAT to the Marketplace, so the Marketplace copy is byte-identical to the GitHub asset —
-# which docs/release.md step 9 already proves is the zip built and smoke-tested locally. Building in
+# which cxtify runbook.md § Release step 9 already proves is the zip built and smoke-tested locally. Building in
 # CI would publish an artifact nobody ever ran.
 #
 # Everything before the upload stays manual on purpose: the local build, the smoke test, and the
-# release-notes approval gate (docs/release.md step 6).
+# release-notes approval gate (cxtify runbook.md § Release step 6).
 #
 # Secret: JETBRAINS_MARKETPLACE_TOKEN — a permanent token from the "My Tokens" tab of the Marketplace
 # profile (plugins.jetbrains.com/author/me/tokens), set with `gh secret set`.

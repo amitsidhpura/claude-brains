@@ -3,12 +3,11 @@
 Runs Anthropic's official `claude` CLI inside PhpStorm (and any IntelliJ-platform IDE), wired
 to the editor via the same **IDE-MCP bridge** the VS Code extension uses. Opens in a
 **right-side tool window**: streaming chat, permission cards with diffs, plan mode, slash
-commands, @-file mentions, image paste, session history/resume, and more — see
-[`../docs/feature-checklist.md`](../docs/feature-checklist.md) for the full status.
+commands, @-file mentions, image paste, session history/resume, and more.
 
 > ⚠️ **Unofficial, personal project.** Not affiliated with Anthropic or JetBrains. It does not
 > bundle or redistribute any Anthropic code — it only *interoperates* with the `claude` CLI you
-> already installed. Protocol reference: [`../docs/ide-mcp-protocol.md`](../docs/ide-mcp-protocol.md).
+> already installed.
 
 ## Requirements
 

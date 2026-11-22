@@ -149,10 +149,10 @@ val changeNotesHtml = """
         """.trimIndent()
 
 /**
- * A distributable zip must carry notes for the version it IS — docs/release.md step 1b, enforced.
+ * A distributable zip must carry notes for the version it IS — cxtify runbook.md § Release step 1b, enforced.
  *
  * On `buildPlugin` only: a stale entry matters when something is about to be SHIPPED, and failing
- * every `runIde` mid-feature would just teach everyone to ignore it. It fires at release.md step 2,
+ * every `runIde` mid-feature would just teach everyone to ignore it. It fires at the release runbook's step 2,
  * before the tag and before the version number can be spent on a bad upload.
  */
 tasks.named("buildPlugin") {
@@ -168,7 +168,7 @@ tasks.named("buildPlugin") {
         automatic (.github/workflows/marketplace-upload.yml), nothing downstream catches a stale
         one — 0.4.0 and 0.5.0 both shipped 0.3.3's notes that way.
         Add this release's user-visible items to changeNotesHtml in plugin/build.gradle.kts, then
-        build again. See docs/release.md step 1b.
+        build again. See cxtify runbook.md § Release step 1b.
     """.trimIndent()
     doFirst { if (!hasEntry) throw GradleException(problem) }
 }

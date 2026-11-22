@@ -14,7 +14,7 @@ branches it covered are exactly the ones that CANNOT be triggered on demand — 
 sub-agent task, a compaction failure. Prose saying "verified" is not a test.
 
 This is that lane, made reproducible and moved onto real JCEF. Headless Chrome has no compositor,
-so rAF fires ~2.5x/second and ResizeObserver never fires (docs/limits.md): anything touching
+so rAF fires ~2.5x/second and ResizeObserver never fires (cxtify panel/reference.md § Limits): anything touching
 auto-scroll pinning, sticky user boxes or content-visibility was never actually being tested
 there. Here the renderer runs in the browser it ships in.
 

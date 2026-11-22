@@ -29,7 +29,7 @@
   //              built-ins like /compact, /effort, /init) — the CLI expands these as a turn
   // BUILT-INS are enabled by ALLOWLIST, not denylist: the schema has no type field, so rather
   // than guess which built-ins work headlessly we start with only the verified ones and add one
-  // at a time (see docs/slash-commands.md). Everything else stays hidden until confirmed.
+  // at a time (see cxtify panel/reference.md § Slash commands). Everything else stays hidden until confirmed.
   // CUSTOM entries are auto-enabled by two wire signals instead (both measured, CLI 2.1.228):
   //  · customCmds — the " (project)"/" (user)" description suffix parsed off by markCustom();
   //    covers .claude/commands/**.md files and .claude/skills/*/SKILL.md, either base
@@ -45,7 +45,7 @@
   // The hint makes it insert-not-run on click (cmdTakesArg), like every hinted command.
   const CMD_LOCAL = [{ name: 'btw', description: 'Ask a quick side question without interrupting the conversation', argumentHint: '[question]' }];
   // The IDE-development set (user-picked 2026-08-15, each smoke-verified headless: the CLI
-  // accepts and expands every one as a turn — docs/slash-commands.md for the grouping logic).
+  // accepts and expands every one as a turn — cxtify panel/reference.md § Slash commands for the grouping logic).
   const CMD_ALLOWED = new Set([
     'compact', 'reload-skills',
     'context', 'code-review', 'simplify', 'verify', 'run', 'security-review',   // core dev
@@ -71,7 +71,7 @@
     if (CMD_ALLOWED.has(n)) return 'text';
     if (customCmds[n]) return 'text';              // project/user command file or skill
     if (n.indexOf('mcp__') === 0) return 'text';   // MCP prompt
-    return 'tui';   // hidden until verified — see docs/slash-commands.md
+    return 'tui';   // hidden until verified — see cxtify panel/reference.md § Slash commands
   }
   // Does the command take an argument AT ALL? Any non-empty argumentHint counts — required
   // ("<x>") and optional ("[x]") alike. The earlier rule split those two and ran optional-arg

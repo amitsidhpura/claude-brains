@@ -3,7 +3,7 @@
    and containment lives on .turn-body (a block inside .turn), not on the flex item itself.
    gap also beats the margin-rule alternative — a display:none #welcome generates no flex item,
    so no phantom gap above the first turn, and no high-specificity `#log > *` rules to fight
-   #welcome's own margins (both were real regressions; see docs/limits.md). */
+   #welcome's own margins (both were real regressions; see cxtify panel/reference.md § Limits). */
 #log { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 120px;
   display: flex; flex-direction: column; gap: var(--block-gap); }
 /* 1.30 date line between turns on a day change ("Today" / "Yesterday" / "8 Oct 2026"): a #log

@@ -28,7 +28,7 @@
 
   /**
    * Remove blocks the CLI has withdrawn, and SAY SO. Content vanishing without explanation is the
-   * same defect as a silent truncation (docs/limits.md, "no silent caps") — the user would be left
+   * same defect as a silent truncation (cxtify panel/reference.md § Limits, "no silent caps") — the user would be left
    * wondering what they had just read. Two guards, because this is the one path here that can do
    * harm if the wire shape is not what we inferred:
    *   · only exact `data-uuid` matches are touched, so an unexpected uuid removes nothing;

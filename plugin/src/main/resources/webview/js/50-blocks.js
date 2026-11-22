@@ -58,7 +58,7 @@
      reading — the record is that the edit ran. Drawn AFTER the IN/OUT box by both paths (live
      onUserEvent, replay renderBlocks) through this one function, so they cannot drift. The CLI
      already caps what it reports (`moreFiles` counts the rest); MAX_BASH_DIFF_FILES caps what we
-     draw, and both remainders fold into one ↳ note (docs/limits.md). Rows share MAX_DIFF_ROWS. */
+     draw, and both remainders fold into one ↳ note (cxtify panel/reference.md § Limits). Rows share MAX_DIFF_ROWS. */
   const MAX_BASH_DIFF_FILES = 10;
   function appendBashDiff(anchor, bed) {
     if (!anchor || !bed || typeof bed !== 'object') return anchor;

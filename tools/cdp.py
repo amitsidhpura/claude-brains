@@ -13,7 +13,7 @@ The debug port is set by the build (`runIde` passes -Dide.browser.jcef.debug.por
 sandbox Registry edit is needed; a value set by hand in the sandbox still takes precedence.
 
 Why this exists: it is the only way to inspect the renderer under REAL JCEF. The headless-Chrome
-probes in docs/limits.md measure a different browser — no compositor, so rAF fires ~2.5x/second
+probes in cxtify panel/reference.md § Limits measure a different browser — no compositor, so rAF fires ~2.5x/second
 and ResizeObserver never fires — and design/mockup.html is a static fixture with no bridge and no
 CLI behind it. This talks to the actual panel: real frame timing, real LIMITS splice, real state.
 
