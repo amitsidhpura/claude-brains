@@ -798,6 +798,13 @@ README.md
            wears — so the two "still going" signals in a turn move on one heartbeat. The dot goes
            green when the result lands, red if it failed. Every other tool line here is FINISHED. -->
       <div class="tool-line run"><b>Bash</b><span class="t-desc">./gradlew test — still in flight</span><button type="button" class="t-bg" title="Move this command to the background so Claude can continue">Run in background</button></div>
+      <!-- 1.33: a running command's output so far, as its OUT row (.io-live: a nine-line window on
+           the tail, not folded); the settled OUT row replaces it when the result lands. -->
+      <div class="io"><div class="io-row"><span class="io-k">IN</span><span class="io-v">./gradlew test</span></div><div class="io-row io-live"><span class="io-k">OUT</span><span class="io-v">&gt; Task :compileKotlin UP-TO-DATE
+&gt; Task :compileTestKotlin
+&gt; Task :test
+RenderLimitsTest &gt; mockup mirrors the css files PASSED
+WorkspaceTrustTest &gt; a config that cannot say gives null PASSED</span></div></div>
       <!-- 11.7: the same element after the CLI answered backgrounded:false — a muted note on the line -->
       <div class="tool-line run"><b>Bash</b><span class="t-desc">npm run build</span><button type="button" class="t-bg note" disabled>Not moved: it may have just finished or already be in the background.</button></div>
       <!-- MCP tool: one shared rule for every tool name — drop the `mcp_` prefix, Pascal-case the

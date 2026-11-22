@@ -259,6 +259,88 @@
     if (ev.backgrounded === false) { note('Not moved: it may have just finished or already be in the background.'); return; }
     o.el.remove(); delete bgOffers[key];
   }
+  /**
+   * Live output of a running FOREGROUND command (1.33): while a Bash / PowerShell call is still
+   * running, what it has printed so far shows as its OUT row, pinned to the tail; the real OUT
+   * row replaces it when the result lands. Nothing on the wire pushes output — MEASURED
+   * 2026-11-22 on 2.1.330 over stdio (a loop printing a line every 2 s): between the tool_use and
+   * its tool_result the CLI sends only `task_started{is_backgrounded:false, tool_use_id,
+   * task_id}` about 3 s in, and `get_task_output{task_id}` asked from then on answered the bytes
+   * so far each time (14 → 49 bytes over 11 s). So the panel POLLS, on 11.7's road: bridge kind
+   * 'taskOutput' once a second, the answer rides __taskOutput keyed by task_id (one in flight per
+   * task, re-asked after 5 s of silence). A command that ends inside those 3 s never gets a live
+   * row, only its result — the CLI has registered no task to ask about.
+   * liveOut[task_id] = {tool, row, madeIo, askedAt, pinned}. It ends — row removed — when the
+   * line settles (tool_result), the task ends or moves to the background, an ask errors, or the
+   * CLI process changes. No row is drawn before the first printed byte.
+   */
+  let liveOut = {};
+  let liveOutTimer = null;
+  function liveOutRunning(s) {
+    const t = s && toolsById[s.tool];
+    return (t && t.el && t.el.isConnected && t.el.classList.contains('run')) ? t : null;
+  }
+  function endLiveOut(taskId) {
+    const id = String(taskId), s = liveOut[id];
+    if (!s) return;
+    delete liveOut[id];
+    if (s.row) s.row.remove();
+    const t = toolsById[s.tool];
+    // a box this feature made for the row goes with it when nothing else moved in meanwhile
+    if (s.madeIo && t && t.io === s.madeIo && !s.madeIo.children.length) { s.madeIo.remove(); t.io = null; }
+  }
+  function endLiveOutForTool(toolEl) {
+    for (const id in liveOut) { const t = toolsById[liveOut[id].tool]; if (t && t.el === toolEl) endLiveOut(id); }
+  }
+  function liveOutReset() {
+    for (const id in liveOut) endLiveOut(id);
+    if (liveOutTimer) { clearInterval(liveOutTimer); liveOutTimer = null; }
+  }
+  function liveOutTick() {
+    const now = Date.now();
+    let any = false;
+    for (const id in liveOut) {
+      const s = liveOut[id];
+      if (!liveOutRunning(s)) { endLiveOut(id); continue; }
+      any = true;
+      if (s.askedAt && now - s.askedAt < 5000) continue;
+      s.askedAt = now;
+      bridge({ kind: 'taskOutput', id: id });
+    }
+    if (!any && liveOutTimer) { clearInterval(liveOutTimer); liveOutTimer = null; }
+  }
+  function startLiveOut(ev) {
+    if (ev.is_backgrounded !== false || !ev.tool_use_id || !ev.task_id) return;
+    const id = String(ev.task_id);
+    if (liveOut[id]) return;
+    const s = { tool: String(ev.tool_use_id), row: null, madeIo: null, askedAt: 0, pinned: true };
+    if (!liveOutRunning(s)) return;
+    liveOut[id] = s;
+    liveOutTick();
+    if (!liveOutTimer && liveOut[id]) liveOutTimer = setInterval(liveOutTick, 1000);
+  }
+  // A __taskOutput answer for a live row. Returns true when the id was one of ours.
+  function paintLiveOut(ev) {
+    const id = String(ev.id), s = liveOut[id];
+    if (!s) return false;
+    s.askedAt = 0;
+    const t = liveOutRunning(s);
+    if (ev.error || !t) { endLiveOut(id); return true; }
+    const text = taskOutText(ev.output, ev.truncated === true);
+    if (!text) return true;                      // nothing printed yet: no empty row
+    if (!s.row) {
+      if (!t.io) { t.io = ioBox([]); t.el.after(t.io); s.madeIo = t.io; }
+      const row = document.createElement('div'); row.className = 'io-row io-live';
+      row.innerHTML = '<span class="io-k">OUT</span><span class="io-v"></span>';
+      row.onscroll = function () { s.pinned = row.scrollHeight - row.scrollTop - row.clientHeight < 4; };
+      t.io.appendChild(row); s.row = row;
+    }
+    const v = s.row.querySelector('.io-v');
+    if (v.textContent !== text) v.textContent = text;
+    if (s.pinned !== false) s.row.scrollTop = s.row.scrollHeight;
+    maybeScroll();
+    return true;
+  }
   let reqTokens = 0;          // output tokens summed across every result turn in one user request
   // uuid of this request's FIRST assistant record. The CLI writes the very same uuid into the
   // transcript, so seeding the summary verb on it is what makes a turn keep its verb across resumes
@@ -502,10 +584,10 @@
           onRefusalFallback(ev);
         } else if (ev.subtype === 'task_started' || ev.subtype === 'task_progress') {
           taskLine(ev, false);
-          if (ev.subtype === 'task_started') offerBackground(ev);   // 11.7: foreground call → offer
+          if (ev.subtype === 'task_started') { offerBackground(ev); startLiveOut(ev); }   // 11.7 offer, 1.33 live output
         } else if (ev.subtype === 'task_notification') {
           taskLine(ev, true);
-          clearBackgroundOffer(ev.task_id);
+          clearBackgroundOffer(ev.task_id); endLiveOut(ev.task_id);
         } else if (ev.subtype === 'task_updated') {
           // Carries only {task_id, patch:{status,…}} — no tool_use_id and no usage — so it can
           // finalize a line that already exists but can never create one.
@@ -514,7 +596,7 @@
           // "A later move to the background arrives as task_updated patch.is_backgrounded" (the
           // 2.1.296 schema's own words; measured with the roster frame beside it) — the offer
           // has been taken, by the panel or by the terminal's Ctrl+B.
-          if (p.is_backgrounded === true || (p.status && p.status !== 'in_progress')) clearBackgroundOffer(ev.task_id);
+          if (p.is_backgrounded === true || (p.status && p.status !== 'in_progress')) { clearBackgroundOffer(ev.task_id); endLiveOut(ev.task_id); }
           if (p.status && p.status !== 'in_progress' && st) {
             if (st.el) st.el.classList.remove('run');
             // and the Agent tool line above it — this frame has no tool_use_id, which is why
@@ -703,6 +785,7 @@
       case '__side':             return sideAnswer(ev);   // side-question answer (8.11)
       case '__export':           return exportAnswer(ev); // the CLI's /export text for the header popup (15.4)
       case '__taskOutput': {     // a roster pane's poll answered (11.7); keyed by task_id
+        if (ev.id && paintLiveOut(ev)) return;   // 1.33: the id was a running foreground call's
         const s = ev.id && bgOut[String(ev.id)];
         if (!s) return;          // the roster dropped the task meanwhile — nothing to paint on
         s.askedAt = 0;

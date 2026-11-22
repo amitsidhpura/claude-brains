@@ -22,6 +22,12 @@
    its containing block — the row's CONTENT box — so with padding here the label could not reach
    the padding edge, got shoved 10px right, and ate the column gap between it and the value. */
 .io-row { display: flex; gap: 10px; padding: 8px 10px 8px 0; overflow-x: auto; }
+/* 1.33 live output of a running command: the OUT row while the call is still in flight — the
+   same row, but a window on the TAIL (nine lines, the roster pane's height, 11.7) that the
+   script keeps scrolled to the end until the user scrolls up. Not folded: a fold shows the first
+   three lines, and what a running command printed first is the least useful part. The settled
+   OUT row replaces it when the result lands. */
+.io-row.io-live { max-height: calc(9 * 1.5em + 16px); overflow-y: auto; }
 /* NOT `.io-row + .io-row`: a cut marker or note sits between two rows now, so the adjacent
    sibling combinator stopped matching and the IN/OUT divider vanished. */
 .io .io-row:not(:first-child) { border-top: 1px solid var(--border); }

@@ -240,6 +240,7 @@
     // the chip with no frame ever coming to correct it — and the reset used to live in sendTurn,
     // where it wiped shells that were still running.
     bgTasks = []; pendingBgTasks = 0; stoppingBgTasks = {}; renderBgTasks();
+    liveOutReset();   // 1.33: a live row polls a task of the old process
     bgOut = {}; bgOffers = {}; bgRefused = false;   // 11.7: panes, offers and the disabled flag are per CLI process
     lastDoneVerb = null;   // the previous session's last verb must not constrain this one's first
     // The MCP notice was cleared off screen with everything else, so the next init must be free to

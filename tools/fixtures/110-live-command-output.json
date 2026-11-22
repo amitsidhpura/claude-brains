@@ -1,0 +1,171 @@
+{
+ "item": "1.33 — live output of a running foreground command: what it has printed so far shows as its OUT row while the call runs; the settled OUT row replaces it (2026-11-22)",
+ "branch": "js/70-events.js startLiveOut (task_started{is_backgrounded:false, tool_use_id} on a tool line still .run → one 'taskOutput' ask at once, then one a second) · paintLiveOut (the __taskOutput answer draws / updates .io-row.io-live in the line's own .io box; no row before the first byte; an error ends it) · endLiveOut on tool_result (75-retraction.js), task_notification, task_updated{is_backgrounded:true} and at the CLI boundary (liveOutReset) · the roster pane's __taskOutput path (11.7) untouched for other ids",
+ "provenance": "The task_started frame is the CLI's own, copied from a stdio tape of 2026-11-22 (2.1.330, panel flags, haiku, a foreground `for i in 1..7; do echo tick $i; sleep 2; done`): it arrived 3.2 s after the approval with {task_id, run_id, tool_use_id, description, is_backgrounded:false, task_type:'local_bash'}; nothing else arrived until task_notification{status:'completed'} and the tool_result, and get_task_output{task_id} asked once a second in between answered {output:'tick 1\\ntick 2\\n', total_bytes:14, truncated:false} growing to 49 bytes — the output / total_bytes / truncated values in the __taskOutput frames here are those answers. __taskOutput itself is OUR OWN Kotlin->webview frame (11.7, unchanged). The tool lines are built with the real toolLine / ioBox builders and registered in toolsById the way the stream handler registers them (the gallery's idiom); window.__bridge is wrapped while frames that would ask Kotlin are fed, so the sandbox CLI is never asked about these invented task ids. The tool_result is fed as a real user frame through onClaudeEvent. NEGATIVE CONTROL RUN 2026-11-22 against the pre-change webview (the sandbox on f681aea; `typeof startLiveOut` read 'undefined'): 15 passed / 13 failed — the twelve DISCRIMINATING asserts and the guards that need a row or the liveOut map (label, fold, tracked) failed; the fixture is null-safe there (liveOut / liveOutTick / liveOutReset are looked up with typeof).",
+ "steps": [
+  {
+   "note": "task_started for a running foreground call asks for its output at once; the first answer draws the live OUT row in the line's own box, the next one updates it in place",
+   "setup": "window.__l133a=(function(){const mk=function(id){ const el=track(toolLine('Bash')); el.classList.add('run'); const rec={el:el,name:'Bash',io:null}; rec.io=ioBox([['IN','for i in 1 2 3; do echo tick $i; sleep 2; done']]); el.after(rec.io); toolsById[id]=rec; return rec; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const live=function(rec){ const r=rec.io&&rec.io.querySelector('.io-live'); return r?r.querySelector('.io-v').textContent:null; }; const started=function(tid,tu){ return {type:'system',subtype:'task_started',task_id:tid,tool_use_id:tu,description:'Print ticks',is_backgrounded:false,task_type:'local_bash'}; }; const lo=function(){ return (typeof liveOut==='object'&&liveOut)?Object.keys(liveOut).length:null; };  const rec=mk('tu-live1'); window.__l133rec=rec; const sent=tap(function(){ feed(started('tk-live1','tu-live1')); }); const before=live(rec); feed({type:'__taskOutput',id:'tk-live1',output:'',total_bytes:0,truncated:false}); const empty=live(rec); feed({type:'__taskOutput',id:'tk-live1',output:'tick 1\\ntick 2\\n',total_bytes:14,truncated:false}); const first=live(rec); feed({type:'__taskOutput',id:'tk-live1',output:'tick 1\\ntick 2\\ntick 3\\n',total_bytes:21,truncated:false}); const row=rec.io.querySelector('.io-live'); return {asks:sent.filter(function(m){return m.kind==='taskOutput'&&m.id==='tk-live1';}).length, before:before, empty:empty, first:first, second:live(rec), rows:rec.io.querySelectorAll('.io-live').length, ioRows:rec.io.querySelectorAll('.io-row').length, label:row?row.querySelector('.io-k').textContent:null, folded:row?row.classList.contains('fold'):null, tracked:lo()}; })();",
+   "expect": [
+    {
+     "js": "window.__l133a.asks",
+     "equals": 1,
+     "why": "DISCRIMINATING: one taskOutput ask goes to Kotlin the moment the CLI registers the task"
+    },
+    {
+     "js": "window.__l133a.before",
+     "equals": null,
+     "why": "GUARD: no row before any answer"
+    },
+    {
+     "js": "window.__l133a.empty",
+     "equals": null,
+     "why": "GUARD: an empty answer (nothing printed yet) draws no empty row"
+    },
+    {
+     "js": "window.__l133a.first",
+     "equals": "tick 1\ntick 2",
+     "why": "DISCRIMINATING: the bytes so far, trailing newline dropped (taskOutText, 11.7's rules)"
+    },
+    {
+     "js": "window.__l133a.second",
+     "equals": "tick 1\ntick 2\ntick 3",
+     "why": "DISCRIMINATING: the next answer repaints the same row"
+    },
+    {
+     "js": "window.__l133a.rows",
+     "equals": 1,
+     "why": "DISCRIMINATING: one live row, not one per answer"
+    },
+    {
+     "js": "window.__l133a.ioRows",
+     "equals": 2,
+     "why": "DISCRIMINATING: it sits in the line's own box, under IN"
+    },
+    {
+     "js": "window.__l133a.label",
+     "equals": "OUT",
+     "why": "GUARD: labelled like the row it stands in for"
+    },
+    {
+     "js": "window.__l133a.folded",
+     "equals": false,
+     "why": "GUARD: a tail window, never folded to its first three lines"
+    },
+    {
+     "js": "window.__l133a.tracked",
+     "equals": 1,
+     "why": "GUARD: one task is being polled"
+    }
+   ]
+  },
+  {
+   "note": "the tool_result settles the line: the live row goes, the settled OUT row takes its place, polling ends",
+   "setup": "window.__l133b=(function(){const mk=function(id){ const el=track(toolLine('Bash')); el.classList.add('run'); const rec={el:el,name:'Bash',io:null}; rec.io=ioBox([['IN','for i in 1 2 3; do echo tick $i; sleep 2; done']]); el.after(rec.io); toolsById[id]=rec; return rec; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const live=function(rec){ const r=rec.io&&rec.io.querySelector('.io-live'); return r?r.querySelector('.io-v').textContent:null; }; const started=function(tid,tu){ return {type:'system',subtype:'task_started',task_id:tid,tool_use_id:tu,description:'Print ticks',is_backgrounded:false,task_type:'local_bash'}; }; const lo=function(){ return (typeof liveOut==='object'&&liveOut)?Object.keys(liveOut).length:null; };  const rec=window.__l133rec; feed({type:'user',message:{role:'user',content:[{type:'tool_result',tool_use_id:'tu-live1',content:'tick 1\\ntick 2\\ntick 3',is_error:false}]}}); const outs=[].slice.call(rec.io.querySelectorAll('.io-row')).filter(function(r){return r.querySelector('.io-k').textContent==='OUT';}); const sent=tap(function(){ if(typeof liveOutTick==='function') liveOutTick(); feed({type:'__taskOutput',id:'tk-live1',output:'late\\n',total_bytes:5,truncated:false}); }); return {live:rec.io.querySelectorAll('.io-live').length, outs:outs.length, outText:outs.length?outs[0].querySelector('.io-v').textContent:null, run:rec.el.classList.contains('run'), tracked:lo(), asks:sent.length, lateDrawn:rec.io.querySelectorAll('.io-live').length}; })();",
+   "expect": [
+    {
+     "js": "window.__l133b.run",
+     "equals": false,
+     "why": "GUARD: the result settled the line"
+    },
+    {
+     "js": "window.__l133b.live",
+     "equals": 0,
+     "why": "GUARD: no live row once the result is in (none before the change either)"
+    },
+    {
+     "js": "window.__l133b.outs",
+     "equals": 1,
+     "why": "GUARD: exactly one OUT row — the settled one, not the live row beside it (the step-1 row is what would make it two)"
+    },
+    {
+     "js": "window.__l133b.outText",
+     "equals": "tick 1\ntick 2\ntick 3",
+     "why": "GUARD: and it carries the result's text"
+    },
+    {
+     "js": "window.__l133b.tracked",
+     "equals": 0,
+     "why": "DISCRIMINATING: nothing is polled any more"
+    },
+    {
+     "js": "window.__l133b.asks",
+     "equals": 0,
+     "why": "GUARD: a tick after the result asks nothing"
+    },
+    {
+     "js": "window.__l133b.lateDrawn",
+     "equals": 0,
+     "why": "GUARD: an answer that arrives after the result draws nothing"
+    }
+   ]
+  },
+  {
+   "note": "a move to the background, the task's end and an ask's error each end the live row; a line that already settled, and a task that started in the background, never get one",
+   "setup": "window.__l133c=(function(){const mk=function(id){ const el=track(toolLine('Bash')); el.classList.add('run'); const rec={el:el,name:'Bash',io:null}; rec.io=ioBox([['IN','for i in 1 2 3; do echo tick $i; sleep 2; done']]); el.after(rec.io); toolsById[id]=rec; return rec; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const live=function(rec){ const r=rec.io&&rec.io.querySelector('.io-live'); return r?r.querySelector('.io-v').textContent:null; }; const started=function(tid,tu){ return {type:'system',subtype:'task_started',task_id:tid,tool_use_id:tu,description:'Print ticks',is_backgrounded:false,task_type:'local_bash'}; }; const lo=function(){ return (typeof liveOut==='object'&&liveOut)?Object.keys(liveOut).length:null; };  const out={}; const go=function(tid,tu){ const rec=mk(tu); tap(function(){ feed(started(tid,tu)); }); feed({type:'__taskOutput',id:tid,output:'a\\n',total_bytes:2,truncated:false}); return rec; }; const n=function(rec){ return rec.io?rec.io.querySelectorAll('.io-live').length:0; }; let r=go('tk-l2','tu-l2'); out.drawn=n(r); feed({type:'system',subtype:'task_updated',task_id:'tk-l2',patch:{is_backgrounded:true}}); out.afterBg=n(r); r=go('tk-l3','tu-l3'); feed({type:'system',subtype:'task_notification',task_id:'tk-l3',tool_use_id:'tu-l3',status:'completed',summary:'x'}); out.afterEnd=n(r); r=go('tk-l4','tu-l4'); feed({type:'__taskOutput',id:'tk-l4',error:'get_task_output: no shell or Monitor task with that task_id in this session'}); out.afterErr=n(r); const s=mk('tu-l5'); s.el.classList.remove('run'); out.settledAsks=tap(function(){ feed(started('tk-l5','tu-l5')); }).length; const b=mk('tu-l6'); const ev=started('tk-l6','tu-l6'); ev.is_backgrounded=true; out.bgAsks=tap(function(){ feed(ev); }).filter(function(m){return m.kind==='taskOutput';}).length; out.tracked=lo(); return out; })();",
+   "expect": [
+    {
+     "js": "window.__l133c.drawn",
+     "equals": 1,
+     "why": "DISCRIMINATING: the row was there to be removed"
+    },
+    {
+     "js": "window.__l133c.afterBg",
+     "equals": 0,
+     "why": "GUARD: task_updated{is_backgrounded:true} — the roster pane owns the output from here"
+    },
+    {
+     "js": "window.__l133c.afterEnd",
+     "equals": 0,
+     "why": "GUARD: task_notification ends it"
+    },
+    {
+     "js": "window.__l133c.afterErr",
+     "equals": 0,
+     "why": "GUARD: an error answer ends it"
+    },
+    {
+     "js": "window.__l133c.settledAsks",
+     "equals": 0,
+     "why": "GUARD: a line that is no longer running is not polled"
+    },
+    {
+     "js": "window.__l133c.bgAsks",
+     "equals": 0,
+     "why": "GUARD: a task that started in the background is the roster's, not a live row"
+    },
+    {
+     "js": "window.__l133c.tracked",
+     "equals": 0,
+     "why": "DISCRIMINATING: every one of them stopped being polled"
+    }
+   ]
+  },
+  {
+   "note": "the CLI boundary ends every live row; a roster pane's answer (11.7) still reaches its pane",
+   "setup": "window.__l133d=(function(){const mk=function(id){ const el=track(toolLine('Bash')); el.classList.add('run'); const rec={el:el,name:'Bash',io:null}; rec.io=ioBox([['IN','for i in 1 2 3; do echo tick $i; sleep 2; done']]); el.after(rec.io); toolsById[id]=rec; return rec; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const live=function(rec){ const r=rec.io&&rec.io.querySelector('.io-live'); return r?r.querySelector('.io-v').textContent:null; }; const started=function(tid,tu){ return {type:'system',subtype:'task_started',task_id:tid,tool_use_id:tu,description:'Print ticks',is_backgrounded:false,task_type:'local_bash'}; }; const lo=function(){ return (typeof liveOut==='object'&&liveOut)?Object.keys(liveOut).length:null; };  const rec=mk('tu-l7'); tap(function(){ feed(started('tk-l7','tu-l7')); }); feed({type:'__taskOutput',id:'tk-l7',output:'x\\n',total_bytes:2,truncated:false}); const drawn=rec.io.querySelectorAll('.io-live').length; if(typeof liveOutReset==='function') liveOutReset(); const afterReset=rec.io.querySelectorAll('.io-live').length; bgOut['tk-pane']={open:true,got:false,text:'',total:0,truncated:false,err:null,pinned:true,askedAt:1}; feed({type:'__taskOutput',id:'tk-pane',output:'pane text\\n',total_bytes:10,truncated:false}); const pane=bgOut['tk-pane']; const got=pane.got===true&&pane.text==='pane text'; delete bgOut['tk-pane']; rec.el.classList.remove('run'); return {drawn:drawn, afterReset:afterReset, tracked:lo(), pane:got}; })();",
+   "expect": [
+    {
+     "js": "window.__l133d.drawn",
+     "equals": 1,
+     "why": "DISCRIMINATING: a live row to reset"
+    },
+    {
+     "js": "window.__l133d.afterReset",
+     "equals": 0,
+     "why": "GUARD: liveOutReset (the __clear / new-process path) removes it"
+    },
+    {
+     "js": "window.__l133d.tracked",
+     "equals": 0,
+     "why": "DISCRIMINATING: and stops the polling"
+    },
+    {
+     "js": "window.__l133d.pane",
+     "equals": true,
+     "why": "GUARD: a roster pane's __taskOutput answer still lands in bgOut (11.7 unchanged)"
+    }
+   ]
+  }
+ ]
+}
