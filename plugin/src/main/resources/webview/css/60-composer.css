@@ -194,6 +194,20 @@
 #inputbar button { padding: 4px; }
 #inputbar .left button { padding: 4px 0; }   /* icon buttons: no side padding */
 #inputbar .chip-btn { padding: 4px 0; }      /* context / model / mode chips: same, gap does the spacing */
+/* Backlog #31: in a narrow panel the model chip's label wrapped to two (then three) lines and
+   made the whole bar taller — measured in the sandbox 2026-11-22: 'Default (Opus 5.5)' wrapped
+   at a 320px panel with the context gauge showing. The label now stays on one line and cuts with
+   an ellipsis; the model chip is the ONE thing in the bar that gives way (everything else keeps
+   its size), and its tooltip still carries the full name. min-width:0 on each flex ancestor is
+   what lets the span shrink below its text. */
+#inputbar .left { flex: none; }
+#inputbar .right { min-width: 0; }
+#inputbar .right > * { flex: none; }
+#inputbar .right > .menu-anchor:first-child { flex: 0 1 auto; min-width: 0; }
+#modelChip { min-width: 0; max-width: 100%; }
+#modelChip svg { flex: none; }
+.chip-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#modeChip { white-space: nowrap; }
 #send svg { display: block; }   /* size comes from the shared #inputbar svg rule */
 #send.stop { background: #c9403a; color: #fff; }
 #send.stop:hover { background: #d9534d; }

@@ -395,10 +395,22 @@
     menu.style.top = (r.top - Math.min(240, menu.scrollHeight) - 4) + 'px';
     Array.prototype.forEach.call(menu.children, function (c) { c.onclick = function () { pick(+c.dataset.i); }; });
   }
+  // Backlog #38: the file list was pushed once, at page load — a file created since was missing
+  // from the @ menu and a deleted one lingered until the panel reloaded. Ask the IDE for it again
+  // whenever the menu is open, at most once every 5 s; the answer is the same `files` frame,
+  // which redraws the open menu (70-events.js).
+  let filesAskedAt = 0;
+  function askFiles() {
+    const now = Date.now();
+    if (now - filesAskedAt < 5000) return;
+    filesAskedAt = now;
+    bridge({ kind: 'files' });
+  }
   function updateAuto() {
     const men = currentMention();
     if (!men) mentionEscaped = false;           // leaving the @-token re-arms auto-open
     if (men && !mentionEscaped) {
+      askFiles();
       const q = men.q.toLowerCase();
       return openMenu(men.start, files.filter(function (f) { return f.toLowerCase().includes(q); }).slice(0, 20)
         .map(function (f) { return { ins: mentionToken(f).slice(1), disp: f }; }));   // the typed `@` stays; `"a b.txt"` for a spaced path (fixture 91)

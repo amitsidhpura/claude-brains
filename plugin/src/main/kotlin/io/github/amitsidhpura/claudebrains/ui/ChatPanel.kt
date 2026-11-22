@@ -249,6 +249,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             // needs a focused document AND a user activation, which a tool-window webview does not
             // always hold (measured 2026-10-10: a programmatic click rejected the write), while the
             // IDE's clipboard manager has neither condition and is the one Ctrl+C uses.
+            // Backlog #38: the page asks again each time the @ menu opens (at most once every few
+            // seconds), so a file created or deleted since the page loaded is in or out of the list.
+            // The list was a one-shot at page load before.
+            "files" -> ApplicationManager.getApplication().executeOnPooledThread { pushProjectFiles() }
             "copy" -> msg["text"]?.jsonPrimitive?.content?.let { text ->
                 ApplicationManager.getApplication().invokeLater {
                     com.intellij.openapi.ide.CopyPasteManager.getInstance()
@@ -556,6 +560,17 @@ class ChatPanel(private val project: Project, parent: Disposable) {
 
     private fun frameOf(type: String, items: JsonElement): String =
         json.encodeToString(JsonObject.serializer(), buildJsonObject { put("type", type); put("items", items) })
+
+    /** The project's files for the @ menu — at page load, and again when the page asks (bridge `files`). */
+    private fun pushProjectFiles() {
+        runCatching {
+            val files = session.listProjectFiles()
+            pushFrame(buildJsonObject {
+                put("type", "files")
+                put("items", buildJsonArray { files.forEach { add(JsonPrimitive(it)) } })
+            })
+        }
+    }
 
     private fun pushFrame(frame: JsonObject) =
         pushEvent(json.encodeToString(JsonObject.serializer(), frame))
@@ -1076,14 +1091,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         pushTitle(session.currentSessionId())
 
         // Feed the file list for @-mention autocomplete.
-        runCatching {
-            val files = session.listProjectFiles()
-            val frame = buildJsonObject {
-                put("type", "files")
-                put("items", buildJsonArray { files.forEach { add(JsonPrimitive(it)) } })
-            }
-            pushFrame(frame)
-        }
+        pushProjectFiles()
 
         // 6.5: mentions the IDE handed over before the page could take them (first open of the
         // tool window through the context-menu action) go in now, after the seed they belong to.

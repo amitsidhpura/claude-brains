@@ -198,15 +198,28 @@ class ClaudeCli(
         val p = pb.start().also { process = it }
         stdin = OutputStreamWriter(p.outputStream, StandardCharsets.UTF_8)
 
+        // Backlog #39: stop() destroys the process and its pipes while these two readers sit in
+        // a blocking read, which then throws `IOException: Stream closed` — uncaught, it ended
+        // each thread with a stack trace in idea.log on every New conversation (real idea.log,
+        // 2026-10-10). During teardown that is the expected way out; any other time it is worth
+        // a line, and the claude-wait thread reports the exit either way.
+        fun reading(what: String, body: () -> Unit) {
+            try { body() } catch (e: java.io.IOException) {
+                if (!stopped) log.warn("claude $what reader ended: ${e.message}")
+            }
+        }
         val outThread = thread(name = "claude-stdout", isDaemon = true) {
+            reading("stdout") {
             p.inputStream.bufferedReader(StandardCharsets.UTF_8).useLines { lines ->
                 lines.forEach { line ->
                     if (line.isNotBlank()) runCatching { route(line) }
                         .onFailure { log.warn("dropped stream line: ${line.take(200)}", it) }
                 }
             }
+            }
         }
         val errThread = thread(name = "claude-stderr", isDaemon = true) {
+            reading("stderr") {
             p.errorStream.bufferedReader(StandardCharsets.UTF_8).forEachLine {
                 log.info("[claude] $it")
                 // Keep the tail so a non-zero exit can SAY why. The panel used to show
@@ -217,6 +230,7 @@ class ClaudeCli(
                     stderrTail.addLast(it)
                     while (stderrTail.size > STDERR_TAIL) stderrTail.removeFirst()
                 }
+            }
             }
         }
         thread(name = "claude-wait", isDaemon = true) {

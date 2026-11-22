@@ -481,7 +481,7 @@
       case 'result':             return onResult(ev);
       case 'permission_request': return renderPermission(ev);
       case 'dialog_request':     return renderDialog(ev);       // 4.10: a host dialog (request_user_dialog)
-      case 'files':              files = ev.items || []; return;
+      case 'files':              files = ev.items || []; if (currentMention()) updateAuto(); return;   // #38: redraw an open @ menu
       case '__mention':          insertMentions(ev.items || []); return;   // 6.5: IDE context menu → composer
       case '__selection':        setIdeSelection(ev); return;              // 6.6: the editor's live selection (bare = none)
       case '__selPref':          setSelIncluded(ev.on, false); if ('file' in ev) setFileIncluded(ev.file, false); return;   // 6.6: both switches, seeded on every load

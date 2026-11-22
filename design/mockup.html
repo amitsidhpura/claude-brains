@@ -904,6 +904,7 @@ WorkspaceTrustTest &gt; a config that cannot say gives null PASSED</span></div><
       <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v12l-4-3-4 3z"/></svg></span>Saved 2 memories</div>
       <div class="status"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></span>All background agents stopped</div>
       <div class="status err"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>Stop hook failed: .claude/hooks/lint.sh exited with code 1</div>
+      <div class="status err"><span class="s-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>Disk full — part of this conversation was not saved, so resuming it may miss messages</div>
       </div>
     </div>
 
@@ -1250,7 +1251,7 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
         </div>
         <div class="right">
           <span class="menu-anchor">
-          <button class="chip-btn" id="modelChip" onclick="tg('modelMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg> Default (Opus 4.8)</button>
+          <button class="chip-btn" id="modelChip" onclick="tg('modelMenu', event)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg><span class="chip-l">Default (Opus 4.8)</span></button>
           <div id="modelMenu" class="popup">
             <div class="popup-h"><span>Models</span></div>
             <div class="popup-search-wrap"><input id="modelSearch" class="popup-search" type="text" placeholder="Filter, or type any model…" autocomplete="off" spellcheck="false"></div>
@@ -1609,8 +1610,8 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
       /* mirrors SVG_SPARK in chat.html */
       document.querySelectorAll('#modelMenu .popup-item').forEach(function (x) { x.classList.remove('on'); });
       item.classList.add('on');
-      document.getElementById('modelChip').innerHTML = MOCK_SPARK + ' ' +
-        item.querySelector('.pi-title').textContent.replace(/\s*\(.*\)$/, '');
+      document.getElementById('modelChip').innerHTML = MOCK_SPARK + '<span class="chip-l">' +
+        item.querySelector('.pi-title').textContent.replace(/\s*\(.*\)$/, '') + '</span>';
       document.getElementById('modelMenu').classList.remove('show');
     });
   });

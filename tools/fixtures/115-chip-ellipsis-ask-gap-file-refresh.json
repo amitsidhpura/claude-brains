@@ -1,0 +1,100 @@
+{
+ "item": "panel follow-ups (backlog #31, #37, #38): the model chip's label cuts with an ellipsis instead of wrapping; the ask card's button row sits 10px under its body; the @ menu asks the IDE for a fresh file list",
+ "branch": "setModelChip (30-menus.js) + the #31 block in 60-composer.css; .ask-b in 40-cards.css; askFiles / updateAuto in 65-slash.js and case 'files' in 70-events.js (answered by ChatPanel's bridge kind `files`)",
+ "provenance": "Pure DOM / CSS geometry and our own bridge traffic — no CLI frame is claimed. `files` is OUR OWN Kotlin→page frame (ChatPanel.pushProjectFiles). The widths in step 1 are the ones measured in the sandbox 2026-11-22 before the change: 'Default (Opus 5.5)' beside a shown context gauge wrapped to two lines at a 320px panel and three at 280px. NEGATIVE CONTROL RUN 2026-11-22 against the sandbox serving HEAD's whole webview directory (c5a14b5): 10 FAILED / 5 passed (two asserts tagged GUARD also fail there — the bar really did overflow at 280px, and step 3 throws before its last reads); 15/15 after the change.",
+ "steps": [
+  {
+   "note": "#31: at a 280px panel the chip stays one line high, the bar keeps its height, and the label is cut",
+   "setup": "window.__m115a=(function(){const chip=document.getElementById('modelChip'),bar=document.getElementById('inputbar'),ctx=document.getElementById('ctxChip');const keep={html:chip.innerHTML,title:chip.title,w:document.body.style.width,ch:ctx.hidden,ct:ctx.textContent};ctx.hidden=false;if(!ctx.textContent)ctx.textContent='12%';setModelChip('Default (Opus 5.5)','Default (Opus 5.5)');document.body.style.width='460px';const wide={chip:Math.round(chip.getBoundingClientRect().height),bar:Math.round(bar.getBoundingClientRect().height)};document.body.style.width='280px';const l=chip.querySelector('.chip-l');const r={span:!!l,wideChip:wide.chip,wideBar:wide.bar,chip:Math.round(chip.getBoundingClientRect().height),bar:Math.round(bar.getBoundingClientRect().height),cut:l?l.scrollWidth>l.clientWidth:null,text:chip.textContent.trim(),title:chip.title,fits:bar.scrollWidth<=Math.ceil(bar.getBoundingClientRect().width)};chip.innerHTML=keep.html;chip.title=keep.title;document.body.style.width=keep.w;ctx.hidden=keep.ch;ctx.textContent=keep.ct;return r;})();",
+   "expect": [
+    {
+     "js": "window.__m115a.span",
+     "equals": true,
+     "why": "DISCRIMINATING: the label has its own span (a bare text node before)"
+    },
+    {
+     "js": "window.__m115a.chip === window.__m115a.wideChip",
+     "equals": true,
+     "why": "DISCRIMINATING: one line high at 280px, the same as at 460px (44 against 20 before)"
+    },
+    {
+     "js": "window.__m115a.bar === window.__m115a.wideBar",
+     "equals": true,
+     "why": "DISCRIMINATING: the bar did not grow (53 against 35 before)"
+    },
+    {
+     "js": "window.__m115a.cut",
+     "equals": true,
+     "why": "DISCRIMINATING: the label is cut, i.e. the ellipsis is doing the work"
+    },
+    {
+     "js": "window.__m115a.text",
+     "equals": "Default (Opus 5.5)",
+     "why": "GUARD: the full label is still the chip's text"
+    },
+    {
+     "js": "window.__m115a.title",
+     "equals": "Default (Opus 5.5)",
+     "why": "GUARD: and the tooltip carries it"
+    },
+    {
+     "js": "window.__m115a.fits",
+     "equals": true,
+     "why": "GUARD: nothing overflows the bar sideways"
+    }
+   ]
+  },
+  {
+   "note": "#37: the ask card's button row has the same 10px above it as every other card's",
+   "setup": "window.__m115b=(function(){const d=document.createElement('div');d.className='ask-b';document.getElementById('log').appendChild(d);const m=getComputedStyle(d).marginTop;d.remove();return m;})();",
+   "expect": [
+    {
+     "js": "window.__m115b",
+     "equals": "10px",
+     "why": "DISCRIMINATING: 4px before"
+    }
+   ]
+  },
+  {
+   "note": "#38: opening the @ menu asks the IDE for the file list — once, not on every key — and the answer redraws the open menu",
+   "setup": "window.__m115c=(function(){const real=window.__bridge,tape=[];window.__bridge=function(s){try{tape.push(JSON.parse(s).kind);}catch(e){}};const input=document.getElementById('input'),menu=document.getElementById('mention');const keep=input.value;let r={};try{filesAskedAt=0;window.onClaudeEvent(JSON.stringify({type:'files',items:['src/old-one.txt']}));input.value='@';input.setSelectionRange(1,1);updateAuto();r.first=tape.filter(function(k){return k==='files';}).length;r.before=menu.textContent.indexOf('fresh-115.txt')>=0;input.value='@f';input.setSelectionRange(2,2);updateAuto();r.second=tape.filter(function(k){return k==='files';}).length;input.value='@';input.setSelectionRange(1,1);window.onClaudeEvent(JSON.stringify({type:'files',items:['src/old-one.txt','src/fresh-115.txt']}));r.after=menu.textContent.indexOf('fresh-115.txt')>=0;r.open=menu.style.display!=='none';input.value='';input.setSelectionRange(0,0);updateAuto();window.onClaudeEvent(JSON.stringify({type:'files',items:['src/old-one.txt']}));r.closed=menu.style.display==='none';}catch(e){r.err=String(e);}finally{input.value=keep;window.__bridge=real;}return r;})();",
+   "expect": [
+    {
+     "js": "window.__m115c.err === undefined",
+     "equals": true,
+     "why": "GUARD: the step ran to its end"
+    },
+    {
+     "js": "window.__m115c.first",
+     "equals": 1,
+     "why": "DISCRIMINATING: the open menu asked for the list (0 before — one shot at page load)"
+    },
+    {
+     "js": "window.__m115c.second",
+     "equals": 1,
+     "why": "the next key inside 5 s does not ask again"
+    },
+    {
+     "js": "window.__m115c.before",
+     "equals": false,
+     "why": "GUARD: the new file is not listed yet"
+    },
+    {
+     "js": "window.__m115c.after",
+     "equals": true,
+     "why": "DISCRIMINATING: the answering files frame redrew the OPEN menu with the new file"
+    },
+    {
+     "js": "window.__m115c.open",
+     "equals": true,
+     "why": "GUARD: and the menu stayed open"
+    },
+    {
+     "js": "window.__m115c.closed",
+     "equals": true,
+     "why": "GUARD: a files frame with no @ being typed opens nothing"
+    }
+   ]
+  }
+ ]
+}

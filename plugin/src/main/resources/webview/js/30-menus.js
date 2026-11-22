@@ -405,7 +405,8 @@
   // rendered in the real panel and rejected — "better is to hide effort". The chip is one fact
   // wide, and the level is one click away in the popup that owns the slider.
   function setModelChip(label, title) {
-    modelChip.innerHTML = SVG_SPARK + ' ' + esc(label);
+    // The label sits in its own span so it can cut with an ellipsis instead of wrapping (backlog #31).
+    modelChip.innerHTML = SVG_SPARK + '<span class="chip-l">' + esc(label) + '</span>';
     modelChip.title = title;
   }
   // Display half of a model change: selection, chip, gauge denominator, menu, footer — and NO

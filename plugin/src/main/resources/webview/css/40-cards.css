@@ -252,7 +252,7 @@ mark.plan-anchor { background: color-mix(in srgb, var(--warn-border) 60%, transp
 .ask-sum-row { display: flex; flex-direction: column; }
 .ask-sum-q { font-size: var(--fs-xs); }   /* colour from the warm-tone rule below */
 .ask-sum-a { font-size: var(--fs-base); color: var(--fg); }
-.ask-b { display: flex; gap: 8px; margin: 4px 12px 10px; }
+.ask-b { display: flex; gap: 8px; margin: 10px 12px 10px; }   /* top 10px like .card-b (was 4px until 2026-11-22, backlog #37) */
 .ask-go:disabled { opacity: .45; cursor: not-allowed; }
 .ask-foot { padding: 0 12px 12px; font-size: var(--fs-sm); }
 /* warm muted tone for secondary text inside the question card */
