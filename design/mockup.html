@@ -79,6 +79,8 @@
     b.title=l?'Thinking — always on for this model':'Extended thinking';})(document.getElementById('tglThink'))">think lock</button>
   <!-- 15.7: the trust line's two states — the notice, and its own confirm (.asking) -->
   <button onclick="document.getElementById('trust').classList.toggle('asking')">trust ask</button>
+  <!-- 1.32: a prompt suggestion is the message box's placeholder, marked in words -->
+  <button onclick="(function(i){ var on=!i.dataset.ph; if(on){ i.dataset.ph=i.placeholder; i.placeholder='Suggestion: show me the last 5 lines of it   (Tab to use)'; } else { i.placeholder=i.dataset.ph; delete i.dataset.ph; } })(document.getElementById('input'))">suggestion</button>
   <button onclick="(function(t){t.hidden=!t.hidden;})(document.getElementById('trust'))">trust line</button>
   <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>

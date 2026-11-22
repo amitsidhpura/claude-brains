@@ -262,6 +262,15 @@ class ClaudeCli(
                 // Accepted by 2.1.296 (measured over stdio 2026-10-10: a bare initialize carrying
                 // exactly this list answered `success`).
                 put("supportedDialogKinds", buildJsonArray { DIALOG_KINDS.forEach { add(JsonPrimitive(it)) } })
+                // 1.32: ask for prompt suggestions. With this declared the CLI sends
+                // `{type:"prompt_suggestion", suggestion, uuid, session_id}` about a second after a
+                // turn's `result`, when it has one (MEASURED 2026-11-22 on 2.1.330 over stdio, haiku:
+                // 4 of 7 turns with it declared, 0 of 1 without; the `--prompt-suggestions` flag is
+                // not needed). The user's own `promptSuggestionEnabled:false` in settings.json turns
+                // it off (0 of 4 turns under `--settings`) — that setting, in the terminal's half,
+                // is the only switch: the panel has none (user, 2026-11-22). Each suggestion costs
+                // a little usage. The frame is a conversation event and reaches the page as is.
+                put("promptSuggestions", true)
                 // 15.7: the answer comes back on this request's response as `workspace_trust_recorded`.
                 trustDirectory?.let { dir ->
                     put("workspaceTrust", buildJsonObject { put("accepted", true); put("directory", dir) })

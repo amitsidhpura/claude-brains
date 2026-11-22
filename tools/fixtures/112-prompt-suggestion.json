@@ -1,0 +1,156 @@
+{
+ "item": "1.32 — prompt suggestions: the CLI's guess at the next prompt shows as the message box's placeholder, marked 'Suggestion:', and Tab writes it in (2026-11-22)",
+ "branch": "js/70-events.js case 'prompt_suggestion' → js/60-composer.js onPromptSuggestion / setSuggestion (placeholder 'Suggestion: <text>   (Tab to use)', one line, cut at 90 characters for display) · the Tab keydown on #input (empty box only: writes the whole suggestion, sends nothing) · cleared by setBusy(true) and clearLogUI; dropped when it arrives mid-turn",
+ "provenance": "The prompt_suggestion frame is the CLI's own, copied from a stdio tape of 2026-11-22 (2.1.330, panel flags + initialize.promptSuggestions:true, haiku, the prompt 'List the files in this directory'): {type:'prompt_suggestion', suggestion:'show hidden files too', uuid, session_id}, 1.2 s after the turn's result. Measured the same day: 4 of 7 turns produced one with the field declared, 0 of 1 without it, 0 of 4 with promptSuggestionEnabled:false passed through --settings. The longer suggestion texts here are invented to exercise the display cut. Tab is a synthetic keydown on #input, which runs our handler (what is under test) but not the browser's own focus move. window.__bridge is wrapped around every Tab so a send would be seen; busy is flipped by hand for the mid-turn case and put back. NEGATIVE CONTROL RUN 2026-11-22 against the pre-change webview (the sandbox on 1c0b8ee, `typeof setSuggestion` 'undefined'): 14 passed / 11 failed — every DISCRIMINATING assert, plus the caret and length guards that need the text written.",
+ "steps": [
+  {
+   "note": "a suggestion becomes the placeholder, marked in words; Tab in the empty box writes it in and sends nothing; the placeholder goes back",
+   "setup": "window.__s132a=(function(){const I=document.getElementById('input'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const tab=function(extra){ const e=new KeyboardEvent('keydown',Object.assign({key:'Tab',bubbles:true,cancelable:true},extra||{})); I.dispatchEvent(e); return e.defaultPrevented; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;};  I.value=''; const before=I.placeholder; feed(sug('show hidden files too')); const shown=I.placeholder; let prevented; const sent=tap(function(){ prevented=tab(); }); const out={before:before, shown:shown, prevented:prevented, value:I.value, after:I.placeholder, sent:sent.filter(function(m){return m.kind==='send'||m.kind==='prompt';}).length, anySent:sent.length, caret:I.selectionStart}; I.value=''; I.dispatchEvent(new Event('input',{bubbles:true})); return out; })();",
+   "expect": [
+    {
+     "js": "window.__s132a.before",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: the box starts on its own placeholder"
+    },
+    {
+     "js": "window.__s132a.shown",
+     "equals": "Suggestion: show hidden files too   (Tab to use)",
+     "why": "DISCRIMINATING: the frame shows as the placeholder, marked as a suggestion (user's pick A)"
+    },
+    {
+     "js": "window.__s132a.prevented",
+     "equals": true,
+     "why": "DISCRIMINATING: Tab is taken — focus does not leave the box"
+    },
+    {
+     "js": "window.__s132a.value",
+     "equals": "show hidden files too",
+     "why": "DISCRIMINATING: the suggestion is written into the box"
+    },
+    {
+     "js": "window.__s132a.caret",
+     "equals": 21,
+     "why": "GUARD: the caret sits at its end, ready to edit or send"
+    },
+    {
+     "js": "window.__s132a.anySent",
+     "equals": 0,
+     "why": "GUARD: nothing is sent — Tab only writes"
+    },
+    {
+     "js": "window.__s132a.after",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: a used suggestion is gone; the normal placeholder is back"
+    }
+   ]
+  },
+  {
+   "note": "Tab is left alone when there is no suggestion, when the box has text, and with a modifier; typing does not consume the suggestion",
+   "setup": "window.__s132b=(function(){const I=document.getElementById('input'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const tab=function(extra){ const e=new KeyboardEvent('keydown',Object.assign({key:'Tab',bubbles:true,cancelable:true},extra||{})); I.dispatchEvent(e); return e.defaultPrevented; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;};  I.value=''; const none=tab(); feed(sug('run the tests')); I.value='my own text'; const typed=tab(); const kept=I.value; I.value=''; const shift=tab({shiftKey:true}); const still=I.placeholder; const now=tab(); const out={none:none, typed:typed, kept:kept, shift:shift, still:still, now:now, value:I.value}; I.value=''; I.dispatchEvent(new Event('input',{bubbles:true})); return out; })();",
+   "expect": [
+    {
+     "js": "window.__s132b.none",
+     "equals": false,
+     "why": "GUARD: no suggestion — Tab is the browser's"
+    },
+    {
+     "js": "window.__s132b.typed",
+     "equals": false,
+     "why": "GUARD: a box with text keeps its Tab"
+    },
+    {
+     "js": "window.__s132b.kept",
+     "equals": "my own text",
+     "why": "GUARD: and its text"
+    },
+    {
+     "js": "window.__s132b.shift",
+     "equals": false,
+     "why": "GUARD: Shift+Tab is never taken"
+    },
+    {
+     "js": "window.__s132b.still",
+     "equals": "Suggestion: run the tests   (Tab to use)",
+     "why": "DISCRIMINATING: emptying the box brings the suggestion back — typing did not consume it"
+    },
+    {
+     "js": "window.__s132b.now",
+     "equals": true,
+     "why": "DISCRIMINATING: and Tab now uses it"
+    },
+    {
+     "js": "window.__s132b.value",
+     "equals": "run the tests",
+     "why": "DISCRIMINATING: with the right text"
+    }
+   ]
+  },
+  {
+   "note": "display only: whitespace is collapsed and a long suggestion is cut at 90 characters, but Tab writes the whole text",
+   "setup": "window.__s132c=(function(){const I=document.getElementById('input'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const tab=function(extra){ const e=new KeyboardEvent('keydown',Object.assign({key:'Tab',bubbles:true,cancelable:true},extra||{})); I.dispatchEvent(e); return e.defaultPrevented; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;};  I.value=''; const long='refactor the session store so that the transcript reader and the replay builder share one parser,\\nthen add tests for both paths'; feed(sug(long)); const ph=I.placeholder; tab(); const out={ph:ph, oneLine:ph.indexOf('\\n')<0, cut:ph.indexOf('…   (Tab to use)')>0, len:ph.length, whole:I.value===long}; I.value=''; I.dispatchEvent(new Event('input',{bubbles:true})); return out; })();",
+   "expect": [
+    {
+     "js": "window.__s132c.oneLine",
+     "equals": true,
+     "why": "GUARD: the placeholder is one line"
+    },
+    {
+     "js": "window.__s132c.cut",
+     "equals": true,
+     "why": "DISCRIMINATING: the long text ends in an ellipsis before the hint"
+    },
+    {
+     "js": "window.__s132c.len",
+     "equals": 117,
+     "why": "GUARD: 'Suggestion: ' + 90 characters + '   (Tab to use)'"
+    },
+    {
+     "js": "window.__s132c.whole",
+     "equals": true,
+     "why": "DISCRIMINATING: Tab wrote the uncut, multi-line text"
+    }
+   ]
+  },
+  {
+   "note": "a suggestion belongs to the turn it followed: cleared when a turn starts and at __clear, dropped when it arrives mid-turn, and a non-string is ignored",
+   "setup": "window.__s132d=(function(){const I=document.getElementById('input'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const tab=function(extra){ const e=new KeyboardEvent('keydown',Object.assign({key:'Tab',bubbles:true,cancelable:true},extra||{})); I.dispatchEvent(e); return e.defaultPrevented; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;};  I.value=''; const out={}; feed(sug('first')); setBusy(true); out.onBusy=I.placeholder; feed(sug('late one')); out.midTurn=I.placeholder; setBusy(false); out.afterTurn=I.placeholder; feed(sug('second')); out.second=I.placeholder; feed({type:'__clear'}); out.cleared=I.placeholder; feed({type:'prompt_suggestion',suggestion:null}); out.bad=I.placeholder; out.tabAfter=tab(); return out; })();",
+   "expect": [
+    {
+     "js": "window.__s132d.onBusy",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: the next turn starting removes it"
+    },
+    {
+     "js": "window.__s132d.midTurn",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: one that arrives while a turn runs is stale and dropped"
+    },
+    {
+     "js": "window.__s132d.afterTurn",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: and does not appear when that turn ends"
+    },
+    {
+     "js": "window.__s132d.second",
+     "equals": "Suggestion: second   (Tab to use)",
+     "why": "DISCRIMINATING: the next real one shows"
+    },
+    {
+     "js": "window.__s132d.cleared",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: a new conversation / CLI restart (__clear) removes it"
+    },
+    {
+     "js": "window.__s132d.bad",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: a frame without a string suggestion changes nothing"
+    },
+    {
+     "js": "window.__s132d.tabAfter",
+     "equals": false,
+     "why": "GUARD: and leaves Tab alone"
+    }
+   ]
+  }
+ ]
+}

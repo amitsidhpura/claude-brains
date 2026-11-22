@@ -352,11 +352,45 @@
     };
   }
 
+  /* ---------- 1.32 prompt suggestion ----------
+     The CLI's guess at the next prompt (`prompt_suggestion`, about a second after a reply ends,
+     not after every reply). Shown as the message box's PLACEHOLDER, marked in words — user's pick
+     A, 2026-11-22, against a tag and an icon rendered beside it: "Suggestion: <text>   (Tab to
+     use)". A placeholder shows only while the box is empty, so typing hides it for free and
+     emptying the box brings it back. Tab in the empty box writes the suggestion in and sends
+     nothing. It dies with the turn it followed: cleared when the next turn starts and at the
+     CLI boundary, and one that arrives while a turn is already running is dropped (stale).
+     The placeholder is one line: whitespace is collapsed and a long suggestion is cut at 90
+     characters for DISPLAY only — Tab writes the whole text. */
+  const INPUT_PLACEHOLDER = input.placeholder;
+  let suggestion = '';
+  function setSuggestion(text) {
+    suggestion = String(text == null ? '' : text).trim();
+    if (!suggestion) { input.placeholder = INPUT_PLACEHOLDER; return; }
+    let shown = suggestion.replace(/\s+/g, ' ');
+    if (shown.length > 90) shown = shown.slice(0, 89).trimEnd() + '…';
+    input.placeholder = 'Suggestion: ' + shown + '   (Tab to use)';
+  }
+  function onPromptSuggestion(ev) {
+    if (busy || typeof ev.suggestion !== 'string') return;
+    setSuggestion(ev.suggestion);
+  }
+  input.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || !suggestion || input.value) return;
+    e.preventDefault();
+    const s = suggestion;
+    setSuggestion('');
+    input.value = s;
+    input.dispatchEvent(new Event('input', { bubbles: true }));   // auto-grow and the menus follow the text
+    input.setSelectionRange(s.length, s.length);
+  });
+
   let busy = false, stopping = false, effortMuted = false; // effortMuted: swallow a silent /effort turn
   function setBusy(b) {
     busy = b;
     send.title = b ? 'Stop' : 'Send';
     send.classList.toggle('stop', b);
+    if (b) setSuggestion('');   // 1.32: a suggestion belongs to the turn it followed
     if (b) showWorking();
     else {
       hideWorking(); workStart = 0; awaitingUser = false;

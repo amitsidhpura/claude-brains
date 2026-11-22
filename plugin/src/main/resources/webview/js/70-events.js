@@ -512,6 +512,9 @@
         fastModeReason = ev.reason || '';
         syncModelFooter();
         return;
+      case 'prompt_suggestion':   // 1.32
+        onPromptSuggestion(ev);
+        return;
       case '__trust':   // 15.7
         showTrust(ev);
         return;
