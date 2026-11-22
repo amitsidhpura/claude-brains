@@ -771,6 +771,62 @@ class SessionStoreTest {
     }
 
     /**
+     * Backlog #59 (register 8.6): CLI 2.1.330 can write three more synthetic texts into a transcript
+     * for a turn or an agent that ended with nobody stopping it. As a user record's whole text they
+     * must not replay as a message the human typed: each becomes a status line in the CLI's words.
+     * As an errored tool_result they stay in that call's OUT row. Quoting one stays a user message.
+     * Provenance: the strings are the 2.1.330 binary's own marker list; the record shapes are the
+     * stop marker's and a plain errored tool_result — no real record has been seen.
+     */
+    @Test
+    fun `ended markers of 2_1_330 become status lines, never user messages`() {
+        val turn = "[This turn ended before it finished.]"
+        val session = "[Request interrupted: the session ended before this agent finished. Nobody asked it to stop.]"
+        val agent = "[Agent call interrupted: the process running this conversation stopped before this agent " +
+            "finished, so it returned no result. Nobody asked it to stop.]"
+        fun user(id: String, text: String) =
+            """{"type":"user","uuid":"$id","timestamp":"2026-11-22T10:00:00.000Z","sessionId":"s",""" +
+                """"message":{"role":"user","content":[{"type":"text","text":"$text"}]}}"""
+        val jsonl = listOf(
+            user("m1", turn), user("m2", session), user("m3", agent),
+            user("m4", "the audit quotes $turn as a marker"),
+            """{"type":"assistant","uuid":"a1","timestamp":"2026-11-22T10:00:01.000Z","sessionId":"s",""" +
+                """"message":{"role":"assistant","content":[{"type":"tool_use","id":"tu1","name":"Bash",""" +
+                """"input":{"command":"echo hi","description":"Say hi"}}]}}""",
+            """{"type":"user","uuid":"m5","timestamp":"2026-11-22T10:00:02.000Z","sessionId":"s",""" +
+                """"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1",""" +
+                """"is_error":true,"content":"$agent"}]}}""",
+        ).joinToString("\n")
+
+        val tmpHome = File.createTempFile("claude-home-ended", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val dir = File(tmpHome, ".claude/projects/${CWD.replace(Regex("[^a-zA-Z0-9]"), "-")}")
+            dir.mkdirs()
+            File(dir, "ended.jsonl").writeText(jsonl)
+            SessionStore.claudeHome = tmpHome
+
+            val blocks = SessionStore.readTranscript(CWD, "ended")
+            val status = blocks.filter { it["role"]?.jsonPrimitive?.contentOrNull == "status" }
+            val users = blocks.filter { it["role"]?.jsonPrimitive?.contentOrNull == "user" }
+            assertEquals(
+                listOf(turn, session, agent).map { it.removeSurrounding("[", "]") },
+                status.map { it["text"]?.jsonPrimitive?.contentOrNull },
+                "each marker is a status line in the CLI's own words, brackets off")
+            assertTrue(status.none { it["text"]?.jsonPrimitive?.contentOrNull == "Stopped" },
+                "nobody asked these to stop, so none may read Stopped")
+            assertEquals(1, users.size, "only the message that quotes a marker is a user message")
+            assertTrue(users[0]["text"]?.jsonPrimitive?.contentOrNull?.startsWith("the audit quotes") == true)
+            assertTrue(blocks.toString().contains("Agent call interrupted"),
+                "the errored tool_result keeps its text on the call")
+            assertEquals(2, Regex("Agent call interrupted").findAll(blocks.toString()).count(),
+                "once as the status line and once on the tool call")
+        } finally {
+            SessionStore.claudeHome = home
+            tmpHome.deleteRecursively()
+        }
+    }
+
+    /**
      * Client-parity item 32: the retry banner must accept BOTH spellings of the retry event.
      * Transcripts persist the internal twin `api_error` ({error:{message,formatted}, retryAttempt,
      * maxRetries}); the live wire sends `api_retry` ({attempt, max_retries, error_status,

@@ -8,7 +8,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootManager
 import io.github.amitsidhpura.claudebrains.findVFile
 import io.github.amitsidhpura.claudebrains.findVFileOnDisk
 import io.github.amitsidhpura.claudebrains.readLocked
@@ -25,18 +24,20 @@ data class ToolResult(val texts: List<String>)
 
 /**
  * IntelliJ-backed implementations of the IDE tools the CLI calls.
+ *
+ * Six tools the VS Code extension once served are gone since 2026-11-22 (backlog #62; VS Code
+ * dropped them at 2.1.330): getWorkspaceFolders, getOpenEditors, getCurrentSelection,
+ * getLatestSelection, saveDocument, checkDocumentDirty. Neither the oldest CLI the panel supports
+ * (2.1.200) nor 2.1.330 names any of them in its binary, and the model is only ever offered
+ * getDiagnostics / executeCode from this server. `openFile` STAYS although VS Code dropped it
+ * too: the 2.1.200 binary still calls it (2.1.330 does not).
  */
 class IdeTools(private val project: Project) {
 
     private val diffReview = DiffReview(project)
 
     fun call(name: String, args: JsonObject): ToolResult = when (name) {
-        "getWorkspaceFolders" -> one(getWorkspaceFolders())
-        "getOpenEditors" -> one(getOpenEditors())
-        "getCurrentSelection", "getLatestSelection" -> one(getCurrentSelection())
         "openFile" -> one(openFile(args.str("filePath") ?: args.str("path").orEmpty()))
-        "saveDocument" -> one(saveDocument(args.str("filePath") ?: args.str("path").orEmpty()))
-        "checkDocumentDirty" -> one(checkDocumentDirty(args.str("filePath") ?: args.str("path").orEmpty()))
         "openDiff" -> openDiff(args)
         "closeAllDiffTabs" -> one(closeAllDiffTabs())
         "close_tab" -> one(closeTab(args.str("tab_name").orEmpty()))
@@ -54,53 +55,17 @@ class IdeTools(private val project: Project) {
         return ToolResult(diffReview.open(oldPath, newContent, tabName).get())
     }
 
-    private fun getWorkspaceFolders(): String = readLocked {
-        val roots = ProjectRootManager.getInstance(project).contentRoots.map { it.path }
-        (listOfNotNull(project.basePath) + roots).distinct().joinToString("\n")
-            .ifEmpty { "(no workspace folders)" }
-    }
-
-    private fun getOpenEditors(): String = readLocked {
-        FileEditorManager.getInstance(project).openFiles.joinToString("\n") { it.path }
-            .ifEmpty { "(no open editors)" }
-    }
-
-    private fun getCurrentSelection(): String = readLocked {
-        val editor = FileEditorManager.getInstance(project).selectedTextEditor
-            ?: return@readLocked "(no active editor)"
-        val sel = editor.selectionModel.selectedText ?: ""
-        val file = FileDocumentManager.getInstance().getFile(editor.document)?.path ?: "?"
-        "file: $file\n$sel"
-    }
-
     private fun openFile(rawPath: String): String {
         if (rawPath.isBlank()) return "error: missing filePath"
         // Disk-consulting lookup: the CLI routinely asks to open a file it created moments ago,
         // which the VFS snapshot has not seen yet (Vfs.kt). Runs on the WebSocket thread, no
-        // read lock held — unlike checkDocumentDirty/getDiagnostics below, which must not refresh.
+        // read lock held — unlike getDiagnostics below, which must not refresh.
         val vf = findVFileOnDisk(rawPath)
             ?: return "error: file not found: $rawPath"
         ApplicationManager.getApplication().invokeLater {
             OpenFileDescriptor(project, vf).navigate(true)
         }
         return "opened: $rawPath"
-    }
-
-    private fun saveDocument(rawPath: String): String {
-        val vf = findVFile(rawPath)
-            ?: return "error: file not found: $rawPath"
-        ApplicationManager.getApplication().invokeLater {
-            val fdm = FileDocumentManager.getInstance()
-            fdm.getDocument(vf)?.let { fdm.saveDocument(it) }
-        }
-        return "saved: $rawPath"
-    }
-
-    private fun checkDocumentDirty(rawPath: String): String = readLocked {
-        val vf = findVFile(rawPath)
-            ?: return@readLocked "error: file not found: $rawPath"
-        val doc = FileDocumentManager.getInstance().getDocument(vf)
-        "dirty: ${doc != null && FileDocumentManager.getInstance().isDocumentUnsaved(doc)}"
     }
 
     private fun closeAllDiffTabs(): String {
@@ -173,13 +138,7 @@ class IdeTools(private val project: Project) {
     companion object {
         /** tools/list specs. */
         val SPECS: List<JsonObject> = listOf(
-            spec("getWorkspaceFolders", "Get all workspace folders currently open in the IDE"),
-            spec("getOpenEditors", "Get information about currently open editors"),
-            spec("getCurrentSelection", "Get the current text selection in the active editor"),
-            spec("getLatestSelection", "Get the most recent text selection"),
             spec("openFile", "Open a file in the editor", "filePath"),
-            spec("saveDocument", "Save a document with unsaved changes", "filePath"),
-            spec("checkDocumentDirty", "Check if a document has unsaved changes", "filePath"),
             spec("openDiff", "Open a diff for the file and wait for accept/reject",
                 "old_file_path", "new_file_path", "new_file_contents", "tab_name"),
             spec("closeAllDiffTabs", "Close all diff tabs in the editor"),

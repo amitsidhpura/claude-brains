@@ -114,6 +114,8 @@
     bannerLine({ __gallery: true, type: 'system', subtype: 'memory_saved', written_paths: ['/x/a.md', '/x/b.md'] });
     bannerLine({ __gallery: true, type: 'system', subtype: 'code_change_published', provider: 'github',
       url: 'https://github.com/acme/demo/pull/42', repo: 'acme/demo' });
+    // #58: the disk-full warning (schema-shaped, 2.1.330 — no real frame can be provoked)
+    bannerLine({ __gallery: true, type: 'system', subtype: 'session_writes_lost', error_code: 'ENOSPC', lost: ['transcript'] });
 
     // in-flight states (2026-08-13): the gutter dot is white and breathing while its work has not
     // come back, and takes its verdict colour when it does. Every OTHER tool line in this gallery is

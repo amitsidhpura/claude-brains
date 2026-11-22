@@ -1,0 +1,130 @@
+{
+ "item": "disk-full warning (backlog #58, register 1.26): system/session_writes_lost draws as a warning line instead of being dropped",
+ "branch": "case 'session_writes_lost' in bannerLine (50-blocks.js), reached through BANNER_SUBTYPES from 70-events.js",
+ "provenance": "SCHEMA-SHAPED, never seen on a wire: the frame shape is read from the CLI 2.1.330 binary's own definition ({type:'system', subtype:'session_writes_lost', error_code:'ENOSPC'|'EDQUOT', lost:['transcript'|'global_config'], transcript_session_ids?, uuid, session_id}) and from its one call site, which writes it once at the end of a stream-json run whose writes failed. No real frame can be provoked without filling the disk. RUN 2026-11-22 against the sandbox serving HEAD's whole webview directory (c5a14b5): 9 FAILED / 0 passed; 9/9 after the change.",
+ "steps": [
+  {
+   "note": "transcript lines lost to a full disk: one warning line saying a resume may miss messages",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "session_writes_lost",
+     "error_code": "ENOSPC",
+     "lost": [
+      "transcript"
+     ],
+     "transcript_session_ids": [
+      "5ba1c352-6fa8-4492-aeb6-a60ee9dc5559"
+     ],
+     "uuid": "u1",
+     "session_id": "5ba1c352-6fa8-4492-aeb6-a60ee9dc5559"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status').length",
+     "equals": 1,
+     "why": "the frame draws one line; before the change it was dropped"
+    },
+    {
+     "js": "(function(x){x=x[x.length-1];return x?x.textContent:null})(document.querySelectorAll('#log .status'))",
+     "equals": "Disk full — part of this conversation was not saved, so resuming it may miss messages",
+     "why": "ENOSPC + transcript wording"
+    },
+    {
+     "js": "(function(x){x=x[x.length-1];return x?x.classList.contains('err'):null})(document.querySelectorAll('#log .status'))",
+     "equals": true,
+     "why": "lost history is a warning, not a muted notice"
+    },
+    {
+     "js": "(function(x){x=x[x.length-1];return x?!!x.querySelector('.s-ic svg'):null})(document.querySelectorAll('#log .status'))",
+     "equals": true,
+     "why": "a warning carries the alert glyph"
+    }
+   ]
+  },
+  {
+   "note": "quota + both kinds lost; a second frame replaces the first line",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "session_writes_lost",
+     "error_code": "ENOSPC",
+     "lost": [
+      "transcript"
+     ]
+    },
+    {
+     "type": "system",
+     "subtype": "session_writes_lost",
+     "error_code": "EDQUOT",
+     "lost": [
+      "transcript",
+      "global_config"
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .status').length",
+     "equals": 1,
+     "why": "same notice replaced in place, never stacked"
+    },
+    {
+     "js": "(function(x){x=x[x.length-1];return x?x.textContent:null})(document.querySelectorAll('#log .status'))",
+     "equals": "Disk quota used up — part of this conversation was not saved, so resuming it may miss messages; changes to Claude Code's own settings file were not saved",
+     "why": "EDQUOT wording, both losses named"
+    }
+   ]
+  },
+  {
+   "note": "settings only, and values the schema says may be added later",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "session_writes_lost",
+     "error_code": "ENOSPC",
+     "lost": [
+      "global_config"
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(x){x=x[x.length-1];return x?x.textContent:null})(document.querySelectorAll('#log .status'))",
+     "equals": "Disk full — changes to Claude Code's own settings file were not saved",
+     "why": "no transcript loss, so no resume warning"
+    }
+   ]
+  },
+  {
+   "note": "an unknown code and an unknown lost value degrade to the general wording, still a warning",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('hi', []);",
+   "frames": [
+    {
+     "type": "system",
+     "subtype": "session_writes_lost",
+     "error_code": "EIO",
+     "lost": [
+      "something_new"
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(x){x=x[x.length-1];return x?x.textContent:null})(document.querySelectorAll('#log .status'))",
+     "equals": "Disk full — some of this session was not saved",
+     "why": "more codes / values may be added: never an empty line"
+    },
+    {
+     "js": "(function(x){x=x[x.length-1];return x?x.classList.contains('err'):null})(document.querySelectorAll('#log .status'))",
+     "equals": true,
+     "why": "still a warning"
+    }
+   ]
+  }
+ ]
+}

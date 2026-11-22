@@ -886,6 +886,21 @@ object SessionStore {
                                 out.add(Item("status").apply { text = "Stopped"; icon = "stop" })
                                 continue
                             }
+                            // Since CLI 2.1.330 a transcript can also hold markers for a turn or an
+                            // agent that ended with nobody stopping it (the session or its process
+                            // went away). The human typed none of them, so none may replay as a user
+                            // box; each draws as a status line in the CLI's own words, brackets off —
+                            // not "Stopped", which would say the user asked. Same whole-block
+                            // equality as above. Read from the 2.1.330 binary's marker list, where
+                            // the CLI itself tests a user record's text against them; NO real record
+                            // has been seen (none in the local transcripts, 2026-11-22), so the
+                            // record shape here is the stop marker's, assumed. The same texts as an
+                            // errored tool_result already draw in that call's OUT row.
+                            if (stopMarker in ENDED_MARKERS) {
+                                reqWork = false; flushSummary()
+                                out.add(Item("status").apply { text = stopMarker!!.removeSurrounding("[", "]"); icon = "stop" })
+                                continue
+                            }
                             if (obj["isMeta"]?.jsonPrimitive?.content == "true") continue // caveat wrapper
                             // The CLI's post-compaction summary is written as a `user` record — but the
                             // user never typed it. It carries isCompactSummary rather than isMeta, so
@@ -1692,6 +1707,14 @@ object SessionStore {
     }
 
     /** Full user text (all text parts, newlines preserved) — skips tool_result-only messages. */
+    /** Synthetic "ended, nobody stopped it" texts of CLI 2.1.330 — see the replay loop's user arm. */
+    private val ENDED_MARKERS = setOf(
+        "[This turn ended before it finished.]",
+        "[Request interrupted: the session ended before this agent finished. Nobody asked it to stop.]",
+        "[Agent call interrupted: the process running this conversation stopped before this agent finished, " +
+            "so it returned no result. Nobody asked it to stop.]",
+    )
+
     private fun userTextFull(obj: JsonObject): String? =
         textParts(obj["message"]?.jsonObject?.get("content"))
             .joinToString("\n").ifBlank { null }

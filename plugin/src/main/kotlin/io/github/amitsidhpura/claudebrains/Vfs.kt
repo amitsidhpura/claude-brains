@@ -29,7 +29,7 @@ fun findVFile(path: String): VirtualFile? =
  * THREADING: `refreshAndFindFileByPath` refreshes SYNCHRONOUSLY, so this must not be called
  * while holding a read lock (it deadlocks against the refresh session) — which is why the
  * read-locked callers ([io.github.amitsidhpura.claudebrains.bridge.IdeTools]'s
- * `checkDocumentDirty` and `getDiagnostics`) keep using [findVFile]. Only the two "open this
+ * `getDiagnostics`) keep using [findVFile]. Only the two "open this
  * path" callers use this one, and both were driven end to end in a live sandbox on 2026-08-21
  * (panel click over CDP, MCP `openFile` over the bridge) — neither holds a read lock.
  */

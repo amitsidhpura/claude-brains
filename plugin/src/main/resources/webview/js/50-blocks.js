@@ -359,6 +359,7 @@
     notification: 1, vcs_state_changed: 1, code_change_published: 1, memory_saved: 1,
     memory_recall: 1, permission_retry: 1, scheduled_task_fire: 1, away_summary: 1,
     agents_killed: 1, stop_hook_summary: 1, task_summary: 1, turn_duration: 1,
+    session_writes_lost: 1,
   });
   // The REPL queue's priorities onto infoLine's prominence ladder: only the two loud ones alert.
   const NOTIFY_LEVEL = { immediate: 'warning', high: 'warning', medium: 'suggestion', low: 'notice' };
@@ -424,6 +425,22 @@
           : ev.prevented_continuation ? 'A stop hook kept the turn going'
           : plural(n, 'stop hook ran', 'stop hooks ran');
         infoLine(text, ev.level || 'notice', null, SVG_DOT_OPEN);
+        return;
+      }
+      case 'session_writes_lost': {
+        // Backlog #58, new at CLI 2.1.330: the disk filled (or the quota ran out) and the CLI could
+        // not save part of this run — transcript lines, so a resume may miss messages, and / or
+        // its own ~/.claude.json. Sent once, as the run ends. SCHEMA-SHAPED, never seen: read from
+        // the 2.1.330 binary's definition ({error_code: 'ENOSPC'|'EDQUOT', lost: ['transcript' |
+        // 'global_config'], transcript_session_ids?}; "more codes / values may be added", so an
+        // unknown one falls back to the general wording). A warning line; a repeat replaces it.
+        const why = ev.error_code === 'EDQUOT' ? 'Disk quota used up' : 'Disk full';
+        const lost = Array.isArray(ev.lost) ? ev.lost : [];
+        const what = [];
+        if (lost.indexOf('transcript') >= 0) what.push('part of this conversation was not saved, so resuming it may miss messages');
+        if (lost.indexOf('global_config') >= 0) what.push('changes to Claude Code\'s own settings file were not saved');
+        if (!what.length) what.push('some of this session was not saved');
+        infoLine(why + ' — ' + what.join('; '), 'warning', 'ntf:session-writes-lost');
         return;
       }
       case 'task_summary':
