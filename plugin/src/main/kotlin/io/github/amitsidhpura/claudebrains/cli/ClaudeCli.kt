@@ -52,6 +52,12 @@ class ClaudeCli(
     private val resumeSessionId: String? = null,
     /** Content roots outside [workingDir], each passed as `--add-dir` (checklist 2.12, [WorkspaceRoots]). */
     private val addDirs: List<String> = emptyList(),
+    /**
+     * 15.7: when set, `initialize` carries `workspaceTrust {accepted:true, directory}` — the
+     * user's answer to the panel's trust line, for the CLI to record. The schema's own rule:
+     * "Only send true after showing the user a trust dialog". Null on every ordinary start.
+     */
+    private val trustDirectory: String? = null,
     private val onEvent: (String) -> Unit,
     private val onPermission: (requestId: String, toolName: String, input: JsonObject, suggestions: JsonArray?, reason: String?) -> Unit,
     private val onInit: (commandsJson: String) -> Unit,
@@ -256,6 +262,10 @@ class ClaudeCli(
                 // Accepted by 2.1.296 (measured over stdio 2026-10-10: a bare initialize carrying
                 // exactly this list answered `success`).
                 put("supportedDialogKinds", buildJsonArray { DIALOG_KINDS.forEach { add(JsonPrimitive(it)) } })
+                // 15.7: the answer comes back on this request's response as `workspace_trust_recorded`.
+                trustDirectory?.let { dir ->
+                    put("workspaceTrust", buildJsonObject { put("accepted", true); put("directory", dir) })
+                }
             })
         })
         writeLine(line)

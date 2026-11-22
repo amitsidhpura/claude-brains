@@ -1,0 +1,151 @@
+{
+ "item": "15.7 — workspace trust line: shown while Claude Code has no trust record for the folder; Trust folder… → its own confirm → Trust sends one bridge frame; the line goes when the CLI recorded it (2026-11-22)",
+ "branch": "js/60-composer.js showTrust (the __trust host frame: untrusted shows #trust with the folder in #trustDir, anything else hides it and clears .asking / .sent) · #trustBtn / #trustNo flip .asking and send nothing · #trustYes sends bridge kind 'trust' once, rests the buttons (.sent), and is refused in words (.wait) while a reply streams · failed:true after a click draws an error block and keeps the line",
+ "provenance": "No CLI frames: __trust is OUR OWN Kotlin->webview frame (self-consistency only). What Kotlin puts in it is pinned by WorkspaceTrustTest (the record's read rule, against the shape of the CLI's own ~/.claude.json read 2026-11-22). The CLI facts behind the feature: `claude --help` on 2.1.330 says the trust dialog is skipped when stdout is not a TTY; a bare initialize in an untrusted folder answers success with nothing about trust (2.1.330 audit); probed 2026-11-22 with a scratch folder holding an output style, a SessionStart hook and one allow rule in .claude/settings.json: with no trust record the CLI dropped the allow rule (stderr 'Ignoring 1 permissions.allow entry … this workspace has not been trusted') while the output style applied and the hook ran, the same folder inside a trusted git repository had the rule applied (its git root is the trust key), while a repository of its own under a trusted plain folder, and a plain folder under it, had the rule dropped — a record does not cover what is below it; `initialize.workspaceTrust {accepted, directory}` answered by `workspace_trust_recorded` is read from the CLI's schema and from VS Code 2.1.330's host code and is NOT probed by this fixture — sending it writes the user's ~/.claude.json, so that half is the user's hand test. window.__bridge is wrapped for every click on Trust, so nothing reaches Kotlin and the sandbox CLI is never restarted. The last step puts the line back to hidden through the same frame. NEGATIVE CONTROL RUN 2026-11-22 against a build with the line's markup and styles but none of its script (the sandbox as it stood for the design render; `typeof showTrust` read 'undefined' first, the hand-set render state reset): 12 passed / 12 failed — eleven DISCRIMINATING asserts plus the layout guard that depends on the line showing; the .trust-wait lookup is null-safe because that span did not exist in the control's page.",
+ "steps": [
+  {
+   "note": "an untrusted folder shows the line; Trust folder… and Cancel flip the confirm and send nothing",
+   "setup": "window.__t157a=(function(){const T=document.getElementById('trust'); const g=function(i){return document.getElementById(i);}; const feed=function(o){window.onClaudeEvent(JSON.stringify(Object.assign({type:'__trust'},o)));}; const st=function(){return {hidden:T.hidden, asking:T.classList.contains('asking'), sent:T.classList.contains('sent'), wait:T.classList.contains('wait'), dir:g('trustDir').textContent, yesOff:g('trustYes').disabled, h:Math.round(T.getBoundingClientRect().height)};}; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing'}); const shown=st(); let a,b; const sent=tap(function(){ g('trustBtn').click(); a=st(); g('trustNo').click(); b=st(); }); return {shown:shown, asked:a, cancelled:b, sent:sent.length, sayVisible:getComputedStyle(g('trustBtn')).display!=='none', askHidden:getComputedStyle(g('trustYes')).display==='none'}; })();",
+   "expect": [
+    {
+     "js": "window.__t157a.shown.hidden",
+     "equals": false,
+     "why": "DISCRIMINATING: untrusted:true shows the line (stays [hidden] without the handler)"
+    },
+    {
+     "js": "window.__t157a.shown.dir",
+     "equals": "~/Sites/claude-brains-testing",
+     "why": "DISCRIMINATING: the confirm names the folder Kotlin sent"
+    },
+    {
+     "js": "window.__t157a.shown.h > 20",
+     "equals": true,
+     "why": "GUARD: the line is really laid out"
+    },
+    {
+     "js": "window.__t157a.sayVisible && window.__t157a.askHidden",
+     "equals": true,
+     "why": "GUARD: after Cancel only the notice's button is displayed"
+    },
+    {
+     "js": "window.__t157a.asked.asking",
+     "equals": true,
+     "why": "DISCRIMINATING: Trust folder… swaps to the confirm"
+    },
+    {
+     "js": "window.__t157a.cancelled.asking",
+     "equals": false,
+     "why": "GUARD: Cancel swaps back"
+    },
+    {
+     "js": "window.__t157a.sent",
+     "equals": 0,
+     "why": "GUARD: neither click reaches Kotlin"
+    }
+   ]
+  },
+  {
+   "note": "Trust sends exactly one frame and rests the buttons; a recorded answer hides the line and clears its state",
+   "setup": "window.__t157b=(function(){const T=document.getElementById('trust'); const g=function(i){return document.getElementById(i);}; const feed=function(o){window.onClaudeEvent(JSON.stringify(Object.assign({type:'__trust'},o)));}; const st=function(){return {hidden:T.hidden, asking:T.classList.contains('asking'), sent:T.classList.contains('sent'), wait:T.classList.contains('wait'), dir:g('trustDir').textContent, yesOff:g('trustYes').disabled, h:Math.round(T.getBoundingClientRect().height)};}; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing'}); let a; const sent=tap(function(){ g('trustBtn').click(); g('trustYes').click(); a=st(); g('trustYes').click(); }); feed({untrusted:false,dir:'~/Sites/claude-brains-testing'}); const done=st(); return {sent:sent.length, kind:sent[0]&&sent[0].kind||null, after:a, done:done, errs:document.querySelectorAll('#log .error').length}; })();",
+   "expect": [
+    {
+     "js": "window.__t157b.sent",
+     "equals": 1,
+     "why": "DISCRIMINATING: one frame for the click — the second click on the rested button sends nothing"
+    },
+    {
+     "js": "window.__t157b.kind",
+     "equals": "trust",
+     "why": "DISCRIMINATING: bridge kind 'trust'"
+    },
+    {
+     "js": "window.__t157b.after.sent && window.__t157b.after.yesOff",
+     "equals": true,
+     "why": "DISCRIMINATING: the buttons rest until the CLI answers"
+    },
+    {
+     "js": "window.__t157b.done.hidden",
+     "equals": true,
+     "why": "GUARD: untrusted:false hides the line"
+    },
+    {
+     "js": "window.__t157b.done.asking || window.__t157b.done.sent || window.__t157b.done.yesOff",
+     "equals": false,
+     "why": "GUARD: and the confirm state does not survive into the next showing"
+    },
+    {
+     "js": "window.__t157b.errs",
+     "equals": 0,
+     "why": "GUARD: a recorded answer draws no error"
+    }
+   ]
+  },
+  {
+   "note": "a refused attestation keeps the line and says where to accept instead; failed with no click of ours draws nothing",
+   "setup": "window.__t157c=(function(){const T=document.getElementById('trust'); const g=function(i){return document.getElementById(i);}; const feed=function(o){window.onClaudeEvent(JSON.stringify(Object.assign({type:'__trust'},o)));}; const st=function(){return {hidden:T.hidden, asking:T.classList.contains('asking'), sent:T.classList.contains('sent'), wait:T.classList.contains('wait'), dir:g('trustDir').textContent, yesOff:g('trustYes').disabled, h:Math.round(T.getBoundingClientRect().height)};}; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing',failed:true}); const replay=document.querySelectorAll('#log .error').length; tap(function(){ g('trustBtn').click(); g('trustYes').click(); }); feed({untrusted:true,dir:'~/Sites/claude-brains-testing',failed:true}); const e=document.querySelectorAll('#log .error'); return {replay:replay, errs:e.length, text:e.length?e[e.length-1].textContent:'', line:st()}; })();",
+   "expect": [
+    {
+     "js": "window.__t157c.replay",
+     "equals": 0,
+     "why": "GUARD: failed on a reloaded page's replay (no click in this page) is not announced again"
+    },
+    {
+     "js": "window.__t157c.errs",
+     "equals": 1,
+     "why": "DISCRIMINATING: the refusal after our click draws one error block"
+    },
+    {
+     "js": "window.__t157c.text.indexOf('did not record trust') >= 0 && window.__t157c.text.indexOf('~/Sites/claude-brains-testing') >= 0",
+     "equals": true,
+     "why": "DISCRIMINATING: it names the folder and the terminal route"
+    },
+    {
+     "js": "window.__t157c.line.hidden",
+     "equals": false,
+     "why": "DISCRIMINATING: the line stays"
+    },
+    {
+     "js": "window.__t157c.line.asking || window.__t157c.line.yesOff",
+     "equals": false,
+     "why": "GUARD: back on the notice, the button live again"
+    }
+   ]
+  },
+  {
+   "note": "Trust is refused in words while a reply streams — the restart would cut the turn",
+   "setup": "window.__t157d=(function(){const T=document.getElementById('trust'); const g=function(i){return document.getElementById(i);}; const feed=function(o){window.onClaudeEvent(JSON.stringify(Object.assign({type:'__trust'},o)));}; const st=function(){return {hidden:T.hidden, asking:T.classList.contains('asking'), sent:T.classList.contains('sent'), wait:T.classList.contains('wait'), dir:g('trustDir').textContent, yesOff:g('trustYes').disabled, h:Math.round(T.getBoundingClientRect().height)};}; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing'}); const was=busy; busy=true; let a; let sent; try { sent=tap(function(){ g('trustBtn').click(); g('trustYes').click(); a=st(); }); } finally { busy=was; } const W=T.querySelector('.trust-wait'); const waitShown=!!W && getComputedStyle(W).display!=='none'; let b; const sent2=tap(function(){ g('trustYes').click(); b=st(); }); feed({untrusted:false,dir:''}); return {sent:sent.length, wait:a.wait, waitShown:waitShown, yesOff:a.yesOff, sent2:sent2.length, wait2:b.wait, hidden:T.hidden}; })();",
+   "expect": [
+    {
+     "js": "window.__t157d.sent",
+     "equals": 0,
+     "why": "GUARD: nothing is sent mid-turn"
+    },
+    {
+     "js": "window.__t157d.wait && window.__t157d.waitShown",
+     "equals": true,
+     "why": "DISCRIMINATING: the confirm says to wait"
+    },
+    {
+     "js": "window.__t157d.yesOff",
+     "equals": false,
+     "why": "GUARD: the button stays live for the retry"
+    },
+    {
+     "js": "window.__t157d.sent2",
+     "equals": 1,
+     "why": "DISCRIMINATING: the same click goes through once the turn is over"
+    },
+    {
+     "js": "window.__t157d.wait2",
+     "equals": false,
+     "why": "GUARD: and the wait note is gone"
+    },
+    {
+     "js": "window.__t157d.hidden",
+     "equals": true,
+     "why": "GUARD: restore — the line is hidden again for the fixtures that follow"
+    }
+   ]
+  }
+ ]
+}

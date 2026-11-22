@@ -74,6 +74,9 @@
   <!-- 9.10: thinking locked on — a model whose roster row says supportsThinkingOff:false -->
   <button onclick="(function(b){var l=!b.disabled; b.disabled=l; if(l){b.classList.add('on');b.setAttribute('aria-checked','true');}
     b.title=l?'Thinking — always on for this model':'Extended thinking';})(document.getElementById('tglThink'))">think lock</button>
+  <!-- 15.7: the trust line's two states — the notice, and its own confirm (.asking) -->
+  <button onclick="document.getElementById('trust').classList.toggle('asking')">trust ask</button>
+  <button onclick="(function(t){t.hidden=!t.hidden;})(document.getElementById('trust'))">trust line</button>
   <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>
   <button class="wpreset" data-w="360">360</button>
@@ -1142,6 +1145,18 @@ README.md
   <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg></button>
 
   <div id="composer">
+    <!-- 15.7 workspace trust: shown while Claude Code has no trust record for this folder (its git
+         root) — the CLI then ignores the allow rules in the folder's settings and says so only on stderr.
+         "Trust folder…" swaps the line for its own confirm (class="asking"); nothing is sent before
+         the second click. Declining keeps no state: the line simply stays. -->
+    <div id="trust">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+      <span class="trust-t trust-say"><b>Claude Code does not trust this folder.</b> The allow rules in its settings are ignored.</span>
+      <span class="trust-t trust-ask">Trust <code id="trustDir">~/Sites/claude-brains-testing</code>? Claude Code will then apply the allow rules in its settings.<span class="trust-wait"> Wait for the reply to finish first.</span></span>
+      <button id="trustBtn" class="no trust-say" type="button">Trust folder…</button>
+      <button id="trustYes" class="ok trust-ask" type="button">Trust</button>
+      <button id="trustNo" class="no trust-ask" type="button">Cancel</button>
+    </div>
     <!-- 7.13 pinned commands: one click sends. The static example is the NARROW state — two chips
          hidden and counted on +2, whose menu lists them. A wide panel shows all five and no +N; with
          nothing pinned the whole row is [hidden]. Pinning happens on the slash menu's rows.

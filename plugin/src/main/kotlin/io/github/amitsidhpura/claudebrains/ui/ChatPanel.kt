@@ -14,6 +14,7 @@ import com.intellij.ui.jcef.JBCefJSQuery
 import io.github.amitsidhpura.claudebrains.ClaudeSessionService
 import io.github.amitsidhpura.claudebrains.EditProposals
 import io.github.amitsidhpura.claudebrains.RenderLimits
+import io.github.amitsidhpura.claudebrains.WorkspaceTrust
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -22,6 +23,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -305,6 +307,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
             "fastMode" -> session.setFastMode(msg["on"]?.jsonPrimitive?.content == "true")
             "thinking" -> session.setThinking(msg["on"]?.jsonPrimitive?.content != "false")
+            // 15.7: Trust on the panel's trust line — the second click, after its own confirm.
+            "trust" -> session.trustFolder()
             "customModels" -> msg["json"]?.jsonPrimitive?.content?.let { session.setCustomModels(it) }
             "stop" -> session.interrupt()
             // ✕ on a background-task roster row (11.3): kill that one task, not the turn.
@@ -973,9 +977,28 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     /** The newest `system/commands_changed` frame from THIS CLI process, replayed after [lastInitMeta]. */
     private var lastCommandsChanged: String? = null
 
+    /**
+     * 15.7: `__trust {untrusted, dir, failed?}` — whether the trust line shows. The CLI's own
+     * record is the truth and is re-read on every push (a terminal may have accepted meanwhile);
+     * [recorded] is the CLI's answer to an attestation just sent: true hides the line at once,
+     * false keeps it and says so. Off the EDT: the record is a file.
+     */
+    private fun pushTrust(recorded: Boolean? = null) {
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread {
+            val (trusted, dir) = session.trustPosture()
+            pushFrame(buildJsonObject {
+                put("type", "__trust")
+                put("untrusted", recorded != true && trusted == false)
+                put("dir", WorkspaceTrust.display(dir.absolutePath))
+                if (recorded == false) put("failed", true)
+            })
+        }
+    }
+
     /** Slash commands + the model roster, from the CLI's initialize payload. */
     private fun pushInitMeta(metaJson: String) {
         val meta = runCatching { json.parseToJsonElement(metaJson).jsonObject }.getOrNull() ?: return
+        pushTrust(runCatching { meta["workspace_trust_recorded"]?.jsonPrimitive?.booleanOrNull }.getOrNull())
         meta["commands"]?.let { pushEvent(frameOf("__commands", it)) }
         // custom models first, so a restored custom selection can resolve its display name
         runCatching { json.parseToJsonElement(session.customModels()) }.getOrNull()
@@ -1032,6 +1055,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         // init's cwd anyway, since that is what the model's paths are actually relative to.
         project.basePath?.let { pushFrame(buildJsonObject { put("type", "__project"); put("root", it) }) }
 
+        if (lastInitMeta == null) pushTrust()   // else pushInitMeta below pushes it
         lastInitMeta?.let { pushInitMeta(it) }
             // before the CLI's first initialize there is still a preference to show on the switch
             ?: pushFrame(buildJsonObject { put("type", "__fastMode"); put("pref", session.fastMode()) })

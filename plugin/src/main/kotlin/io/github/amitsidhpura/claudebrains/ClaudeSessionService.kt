@@ -193,8 +193,35 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         log.info("Claude session started on port $port")
     }
 
+    /**
+     * 15.7 — what Claude Code's own record says about this project's folder: trusted, not, or
+     * null when the record cannot be read; with the directory an attestation would name. The
+     * home folder is never reported untrusted: the CLI does not keep an answer for it, so a line
+     * there could not be answered for good. Reads a file — call off the EDT.
+     */
+    fun trustPosture(): Pair<Boolean?, File> {
+        val dir = WorkspaceTrust.attestDir(cwd)
+        if (project.basePath == null || dir == File(System.getProperty("user.home")).absoluteFile) return null to dir
+        val text = runCatching { WorkspaceTrust.configFile().readText() }.getOrNull()
+        return WorkspaceTrust.isTrusted(text, dir.absolutePath) to dir
+    }
+
+    /** One-shot: the next [startCli] attests trust for this directory, then forgets it. */
+    private var attestTrustDir: String? = null
+
+    /**
+     * 15.7 — the user said Trust on the panel's line. The answer can only ride an `initialize`,
+     * so the CLI restarts, on the same conversation when there is one. The CLI writes its own
+     * record; the panel only learns the outcome (`workspace_trust_recorded` on the init payload).
+     */
+    fun trustFolder() {
+        attestTrustDir = trustPosture().second.absolutePath
+        startCli(resumeSessionId = cli?.sessionId)
+    }
+
     private fun startCli(resumeSessionId: String?) {
         runCatching { cli?.stop() }
+        val trustDir = attestTrustDir.also { attestTrustDir = null }
         pendingPermissions.clear()
         pendingSuggestions.clear()
         pendingDialogs.clear()
@@ -210,6 +237,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
             permissionMode = selectedMode(),
             resumeSessionId = resumeSessionId,
             addDirs = extraRoots(),
+            trustDirectory = trustDir,
             onEvent = { line ->
                 // BEFORE the UI callback: the panel's own rendering must not be able to delay, or
                 // fail, the editor catching up with what the CLI just wrote to disk.

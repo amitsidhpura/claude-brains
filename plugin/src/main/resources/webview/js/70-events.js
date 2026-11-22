@@ -430,6 +430,9 @@
         fastModeReason = ev.reason || '';
         syncModelFooter();
         return;
+      case '__trust':   // 15.7
+        showTrust(ev);
+        return;
       case '__thinking':
         thinkingOn = ev.on !== false;
         syncModelFooter();

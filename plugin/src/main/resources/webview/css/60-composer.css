@@ -1,6 +1,32 @@
 /* ---------- composer ---------- */
 #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
   display: flex; flex-direction: column; align-items: center; }
+/* 15.7 Workspace trust line: the first row of the composer while Claude Code has no trust record
+   for this folder — its git root (the CLI then ignores the allow rules in the folder's settings,
+   and says so only on stderr — nowhere on the stream-json wire). A line, not a modal (user, 2026-11-22): trust is
+   settled once per folder, so it must not stand in front of the first prompt; declining stores
+   nothing — the line stays and is its own "review". It wears the "needs the user" frame of the
+   permission card (--warn-*) and the card's own .ok / .no buttons. Same width rule as #pins and
+   the card. .asking swaps the notice for the confirm in place: .trust-say / .trust-ask are the
+   two states' parts and only one set is ever displayed. */
+#trust { display: flex; align-items: center; gap: var(--attach-gap); width: 100%; max-width: 720px;
+  min-width: 0; box-sizing: border-box; margin-bottom: var(--attach-gap); padding: 6px 9px;
+  border: 1px solid var(--warn-border); border-radius: var(--radius); background: var(--warn-bg);
+  color: var(--fg); font-size: var(--fs-sm); }
+#trust[hidden] { display: none; }
+#trust svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--accent); }
+.trust-t { flex: 1 1 auto; min-width: 0; }
+.trust-t code { font-family: ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+#trust button { flex: 0 0 auto; border: 0; border-radius: var(--radius); font: inherit;
+  line-height: 18px; padding: 2px 10px; cursor: pointer; }
+#trust .trust-ask, #trust.asking .trust-say { display: none; }
+#trust.asking span.trust-ask { display: inline; }
+#trust.asking button.trust-ask { display: inline-block; }
+/* Trust was clicked: the answer is on its way to the CLI, both buttons rest until __trust returns. */
+#trust.sent button { opacity: .45; cursor: default; pointer-events: none; }
+/* Trust clicked while a reply streams: the restart would cut the turn, so the line says to wait. */
+#trust .trust-wait { display: none; color: var(--muted); }
+#trust.asking.wait .trust-wait { display: inline; }
 /* 7.13 Pinned commands: one click sends a command the user pinned, no typing and no menu. A row
    ABOVE the input card (user's pick A, 2026-11-22, against a band inside the card): its own
    surface, floating over the log like the card does; padLog() already follows #composer's height.

@@ -321,6 +321,37 @@
     return d;
   }
 
+  /* ---------- 15.7 workspace trust line ----------
+     Kotlin owns the fact (`__trust {untrusted, dir, failed?}`, read from Claude Code's own record);
+     the page only draws it. Two clicks to trust: "Trust folder…" swaps the line for its confirm
+     (.asking), Trust sends bridge kind 'trust' — the CLI restarts with the answer on its
+     initialize and the next __trust says whether it was recorded. Cancel stores nothing. While a
+     reply is streaming the Trust click is refused in words: the restart would cut the turn. */
+  const trustEl = document.getElementById('trust');
+  let trustSent = false;
+  function showTrust(ev) {
+    if (!trustEl) return;
+    const failed = trustSent && ev.failed === true;
+    trustSent = false;
+    document.getElementById('trustDir').textContent = ev.dir || 'this folder';
+    trustEl.classList.remove('asking', 'sent');
+    document.getElementById('trustYes').disabled = false;
+    trustEl.hidden = !ev.untrusted;
+    if (failed) errorBlock('Claude Code did not record trust for ' + (ev.dir || 'this folder') +
+      '. Run `claude` in a terminal in that folder and accept its trust prompt there.');
+  }
+  if (trustEl) {
+    document.getElementById('trustBtn').onclick = function () { trustEl.classList.add('asking'); };
+    document.getElementById('trustNo').onclick = function () { trustEl.classList.remove('asking'); };
+    document.getElementById('trustYes').onclick = function () {
+      const yes = document.getElementById('trustYes');
+      if (busy) { yes.title = 'Wait for the reply to finish — trusting restarts Claude'; trustEl.classList.add('wait'); return; }
+      trustEl.classList.remove('wait'); yes.title = '';
+      yes.disabled = true; trustSent = true; trustEl.classList.add('sent');
+      bridge({ kind: 'trust' });
+    };
+  }
+
   let busy = false, stopping = false, effortMuted = false; // effortMuted: swallow a silent /effort turn
   function setBusy(b) {
     busy = b;
