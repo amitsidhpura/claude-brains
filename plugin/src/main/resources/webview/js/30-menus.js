@@ -302,14 +302,19 @@
   // Default selection: a named row was chosen on purpose, and a mismatch there is model_fallback's
   // business (9.7 watch). The panel FOLLOWS — no set_model, nothing persisted. The gauge window is
   // re-seeded from the id (Fable is natively 1M) until a result's contextWindow has spoken.
+  // A frame under a NAMED selection says nothing about Default (set_model overrides the settings),
+  // so it is ignored outright: recording it made Default read "Sonnet 5.5 · from your settings"
+  // after a Sonnet reply while the CLI switched to Opus (user, 2026-11-22), and a named reply on
+  // the roster's default model wiped a real override. What was learned under Default is kept for
+  // the next Default pick. Fixture 88 steps 4-5.
   function reconcileCliModel(id) {
     if (typeof id !== 'string' || !id || id === '<synthetic>') return;
+    if (strip1m(currentModel || '') !== 'default') return;
     const row = models.find(function (m) { return m.value === 'default'; });
     if (!row) return;
     const real = strip1m(id) === strip1m(row.resolvedModel || '') ? null : id;
     if (real === defaultResolvedFromCli) return;
     defaultResolvedFromCli = real;
-    if (strip1m(currentModel || '') !== 'default') return;   // remembered for the next Default pick
     setModelChip(chipLabelFor(currentModel), currentModel);
     renderModels();
     if (!windowConfirmed) {
