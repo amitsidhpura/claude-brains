@@ -3,29 +3,30 @@
 What the plugin (`plugin/`) has, what it could have, and what it has decided not to have —
 one row per feature, measured against both reference clients.
 
-**References** (both on 2.1.296, last re-audit 2026-10-10; last FULL-SURFACE audit 2026-09-04 at 2.1.260)
-- VS Code extension — 2.1.296 from `~/.vscode/extensions/anthropic.claude-code-2.1.296-linux-x64`
-  (auto-updated; a 2.1.293 dir sits beside it), diffed against the 2.1.270 extraction; the local
-  `reference/anthropic-claude-code/` extraction is re-synced to the newest audited version after
-  each audit as the diff base for the NEXT one (still at 2.1.270 until the next sync)
-- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.296`; the 2.1.270 baseline binary (no
-  longer on disk — the dir held 2.1.294–296) came out of the 2.1.270 vsix's `resources/native-binary/`;
-  headless roster in `docs/slash-commands.md`
+**References** (both on 2.1.330, last re-audit 2026-11-22; last FULL-SURFACE audit 2026-09-04 at 2.1.260)
+- VS Code extension — 2.1.330 (published 2026-11-20), downloaded as a vsix from the Marketplace
+  (runbook step 3 — VS Code is not installed on the audit box), diffed against the 2.1.296
+  extraction; `reference/anthropic-claude-code/` is re-synced to 2.1.330 as the diff base for the
+  NEXT audit
+- Terminal TUI / CLI — `~/.local/share/claude/versions/2.1.330`; the 2.1.296 baseline binary (no
+  longer on disk — the dir held 2.1.325–330) came out of the 2.1.296 vsix's
+  `resources/native-binary/`; headless roster in `docs/slash-commands.md`
 - Public CHANGELOG (`reference/claude-code-log`, a clone of `anthropics/claude-code`) — read
-  2.1.271 → 2.1.296 for LEADS only (runbook step 3b; `[Cloud sessions]`, `[Claude Tag]` and
-  `[Code Review]` lines skipped — not our clients); no mark rests on it
+  2.1.299 → 2.1.330 (28 versions; no 2.1.297 / 2.1.298 entries exist) for LEADS only (runbook
+  step 3b; `[Cloud sessions]`, `[Claude Tag]` and `[Code Review]` lines skipped — not our
+  clients); no mark rests on it
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 104 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (149 rows) — no open rows, no [DECIDE] tags
-- **Next up (🟥):** none — the deferred rows live in `.cxtify/backlog.md` (worktrees, tabs, debugger tools). 6.6 (auto-include selection) left the deferred list and shipped 2026-10-10.
-- **Awaiting a decision ([DECIDE]):** none — 9.9 (the 1M switch) was decided 2026-10-10 after a
-  hand test: retired, and the gauge lookup it was masking fixed. The 2.1.296 audit's other rows
-  were taken and built the same day: 1.30 (message timestamps), 1.31 (question option previews),
-  4.10 (auto-mode server-fallback dialog), 11.7 (background task output) and 15.4 (export / copy
-  response). Earlier: 1.29 (2.1.270
-  audit) built 2026-09-13; the ten 2026-09-04 full-surface rows are settled (1.26–1.28, 2.12, 3.7,
-  3.8, 4.7, 4.8, 6.5, 6.9 shipped in 0.13.0; 4.9 deferred 2026-09-05; 13.3 deferred 2026-09-04)
+**At a glance** (2.1.330, re-audit 2026-11-22; full-surface audit 2026-09-04 at 2.1.260) — 104 ✅ · 0 🟥 · 1 🟧 · 4 ⬜ · 44 ➖ (153 rows) — five open rows, all taken 2026-11-22, no [DECIDE] tags
+- **Next up (🟥):** none — the deferred rows live in `.cxtify/backlog.md` (worktrees, tabs, debugger tools).
+- **Awaiting a decision ([DECIDE]):** none — the user said yes to all five rows of the 2.1.330
+  audit the same day (2026-11-22); they are open and waiting to be built: **15.7**
+  workspace trust prompt (🟧 — an untrusted folder silently runs without its project settings),
+  **1.32** prompt suggestions, **1.33** live output of a running command, **1.34** LaTeX math,
+  and **9.10** per-model Thinking gating (re-opened: the roster now carries
+  `supportsThinkingOff`). Earlier audits' rows are all settled (2.1.296: 1.30, 1.31, 4.10, 11.7,
+  15.4 built 2026-10-10, 9.9 retired; 2.1.270: 1.29; the ten 2026-09-04 full-surface rows).
 
 **Status marks**
 
@@ -51,7 +52,7 @@ outlives one event.
 
 | Tag | Meaning |
 |---|---|
-| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30, 1.31, 4.10, 11.7 and 15.4 were built the same day; 8.15 added 2026-10-27 — an RPC the 2.1.296 audit saw but never gave a row) |
+| **[NEW]** | new or newly noticed in a re-audit (2.1.233 audit 2026-08-17; the 2.1.241 audit 2026-08-23 added only 14.4; the 2.1.246 audit 2026-08-26 added none; the 2.1.250 audit 2026-08-28 added only 1.25; the 2.1.251 audit 2026-08-30 added only 9.11; the 2.1.260 audit 2026-09-04 added only 13.3; the 2026-09-04 FULL-SURFACE audit added ten: 1.26–1.28, 2.12, 3.7–3.8, 4.7–4.9, 6.9 — the shipped ten lost the tag 2026-09-13; the 2.1.270 audit 2026-09-13 added only 1.29; the 2.1.296 audit 2026-10-10 added 1.30, 1.31, 4.10, 11.7 and re-opened 9.9 and 15.4 as [DECIDE]; 1.30, 1.31, 4.10, 11.7 and 15.4 were built the same day; 8.15 added 2026-10-27 — an RPC the 2.1.296 audit saw but never gave a row; the 2.1.330 audit 2026-11-22 added 1.32, 1.33, 1.34, 15.7 and re-opened 9.10; all five taken the same day) |
 | **[DECIDE]** | open row awaiting the user's yes / later / no (yes → `state.md`, later → `backlog.md`, no or later → re-mark ➖, saying which) |
 
 **Row shape** — `**id** mark [effort] **Name** [tags] — gist`, the gist one to two lines of what
@@ -100,6 +101,177 @@ has no literal in the binary and § 12 has zero local records — unknown if it 
 `task_summary`/`turn_duration` (not on a plain turn); SandboxNetworkAccess asks (a bespoke card
 header, needs sandbox on); `post_turn_summary`/`away_summary` (`@internal`). Agent transcripts
 and inventories in the 2026-09-04 session scratchpad (`full/`).
+
+</details>
+
+<details><summary><b>Re-audit 2026-11-22 (2.1.296 → 2.1.330)</b></summary>
+
+Thirty-four version numbers in one hop; everything below is measured unless it says CHANGELOG.
+Sources: the 2.1.330 extension vsix from the Marketplace (VS Code is not installed on the audit
+box) diffed against the 2.1.296 extraction (byte-identical to the 2.1.296 vsix's `extension.js`);
+the 2.1.330 CLI from `~/.local/share/claude/versions/` against the 2.1.296 vsix's native binary;
+the CHANGELOG 2.1.299 → 2.1.330 for leads (2,709 lines after the product filter: the 201
+`[VSCode]` lines read directly, the other 2,424 bullets sorted by three read-only agents into
+376 candidate leads — recall over precision, no mark rests on a line; cross-checked by a keyword
+sweep of the same slices for `stream-json`, `IDE`, `SDK host`, `JetBrains`, `control request`,
+`AskUserQuestion`… — 29 hits, every host-relevant one already among the leads). **Extension:** `tool("…")`
+registrations 12 → **5** (`openDiff`, `getDiagnostics`, `close_tab`, `closeAllDiffTabs`,
+`executeCode`); `openFile`, `saveDocument`, `getOpenEditors`, `getWorkspaceFolders`,
+`getCurrentSelection`, `getLatestSelection`, `checkDocumentDirty` are gone (CHANGELOG: "Removed
+unused tools from the IDE connection") and neither CLI binary names the last five anywhere — §2.
+`contributes`: −`createWorktree` (14.1), +`addToChat` ("Claude Code: Add to Chat" in the
+Explorer's right-click menu, @-mentions the selection — ours is 6.5); settings
++`escapeStopsClaude` (default true — 1.7), +`pinPrompt` (default true: the prompt stays pinned
+while its reply scrolls, capped at 40% of the panel — 1.14), +`contextUsageThreshold` (default
+50: the context indicator shows only past that percentage — 9.3), +`promptSuggestions` (1.32),
++`attachSelection` (6.6; ours is the "Include selection" switch); the proposed-diff Accept /
+Reject menus are now scoped to the diff's own scheme (3.3). Gates +19 (`tengu_vscode_code_colors`,
+`tengu_vscode_math_rendering`, `tengu_vscode_restore_breaker`, `tengu_vscode_start_second_try`,
+`tengu_vscode_stored_startup_config`, `tengu_vscode_python_beside_start` and thirteen
+code-named), −2 (`tengu_per_turn_effort`, `tengu_vscode_review_upsell`). `case` labels 475 → 449:
+~85 new, ~110 gone (the zod / semver / markdown-token internals left the bundle, with
+`ask_debugger_help` — 15.5, `create_worktree` — 14.1, `get_plan_comments`,
+`dismiss_review_upsell_banner` — 15.1, `open_config_file`). New ones, all host RPC for the
+terminal's half or internals: the Mods UI relay (`engine_ui_attach … engine_ui_state`, `ui_focus
+ui_invalidate ui_log ui_panes ui_scroll ui_status ui_toast` — 11.1), `open_auto_mode_setup`,
+`open_user_settings_file`, `recommend_extension_offer_check|dismiss|review`,
+`request_admin_limit_increase`, `resolve_session_request`, `first_week` (onboarding relay — 15.1),
+`hook_started` / `hook_response` (the start-up-hook spinner follows `system` hook frames — 1.18),
+feedback refusal reasons (`auth_refused`, `scope_refused`, `org_refused`) and cloud-session
+verdicts; the webview adds `review_workspace_trust` (15.7), `gateway_question`, `teleport`,
+`fork`, `voice-call`. `supportedDialogKinds` is still passed through `initialize` from the
+extension's config; the top-level frame-type set the webview accepts is unchanged (`assistant
+auth_status command_lifecycle conversation_reset prompt_suggestion rate_limit_event result
+stream_event system tool_progress tool_use_summary user`). Settings schema 545 → 575 keys, none
+removed: `autoMode.*` (classifier rules), `permissions.denyInsteadOfPrompting`,
+`permissions.blockWritesOutsideWorkingDirectories`, `permissions.disableAutoMode`,
+`useAutoModeDuringPlan`, `attributionProject*`, plugin `engines`, `sshHostCommands`… — the
+terminal's half. **CLI:** typed control / system vocabulary 155 → 177, 22 new, none removed.
+PROBED over stdio 2026-11-22 with the panel's flags, bare `initialize` then one request each,
+no turn, no transcript written (scratchpad `accept_probe.py` / `accept-330.jsonl`). ANSWER
+`success`: `prompt_draft_activity` ("the person is typing" — lets the CLI warm the next
+request; carries no text; `null` body), `set_message_waiting {waiting}`, `set_has_subscribers
+{has_subscribers}`, `reload_connectors` (all `null`), `list_cloud_sessions` → `{status:
+"unavailable", reason:"started_by_session", message}` (the probe ran inside a Claude Code
+session; 8.12). KNOWN but refused on the argument: `get_cloud_session` /
+`get_cloud_session_transcript` → "session_id is not a cloud session id". **"Unsupported control
+request subtype" on this wire:** `dictate` (15.2), `start_shell_task`, `comparison_fork`, the
+Mods family (`ui_notify`, `ui_notify_cancel`, `ui_placed`, `ui_prompt_paint` — 11.1) and the
+five that are `system` frames, not requests. NOT probed, on purpose: `submit_survey_feedback`
+and `log_host_events` (each sends data to Anthropic under the user's account),
+`update_cloud_session` (changes the account's sessions). New `system` subtypes, NONE seen on the probed
+turn: `shell_cwd` (the folder a Bash call left its shell in — absent even after a `cd /tmp`
+call), `task_list_statuses` (task statuses the CLI sets itself, with no `TaskUpdate` call to
+show the change — 11.2 watch), `session_writes_lost {error_code: ENOSPC|EDQUOT, lost[]}` (a
+banner-class frame — 1.26 watch), `late_allow_not_run {tool_use_id, reason}` (1.28),
+`inherited_asks_settled` (cloud). Unlisted `system` subtypes still fall through `70-events.js`
+untouched (1.26). The `initialize` REQUEST schema grew `offersBypassSwitchBack`,
+`keepsBypassHeld` (VS Code only — 4.2), `codeRunningMcpTools`, `mcpServers`, `managedSettings`,
+`settings`, `disallowedTools`, `resumeOnly`; `workspaceTrust {accepted, directory}` was already
+in 2.1.296's (15.7). **Bare `initialize` on both binaries** (testing repo, which is NOT trusted:
+`hasTrustDialogAccepted:false`; both answer `success` and list the project's own commands):
+three new top-level keys — `hook_on_failure_supported:true`, `hooks_when_unanswered_kept:0`,
+`other_hook_ask_outranks_host:true` (another PreToolUse hook's ask reason now outranks the
+host's own on the same call — 2.10's autosave hook never asks, so nothing changes) — and
+`capabilities` 1 → 7 (`mcp_call_result_not_for_model_v1`, `mcp_call_check_permissions_v1`,
+`voice_call_talk_line_v1`, `ui_pane_widget_v1`, `reload_plugins_refuse_if_busy_v1`,
+`get_usage_detached_v1`). Roster: 14 rows on both binaries today (the 2026-10-10 run of the same
+2.1.296 binary listed 13 — the roster is per process and account, gotchas § Protocol); the
+`fable` alias now resolves to `claude-fable-5-2` and carries `supportsFastMode`, Fable 5.1 moved
+to the pinned id `claude-fable-5-1` (9.1); every row carries a NEW flag `supportsThinkingOff` —
+false on `default`, `opus`, `fable`, `sonnet`, `haiku`, `claude-fable-5-1`, `claude-fable-5`,
+true on Haiku 4.5, Sonnet 5, Opus 5, Opus 4.8 / 4.7 / 4.6, Sonnet 4.6 (9.10 re-opened; VS Code
+hides its Thinking toggle where it is false). Commands 82 → 84: `/whiteboard`,
+`/send-to-project` added, no drops, no hint or alias changes, seven description-only changes
+(`docs/slash-commands.md`). **MEASURED on one real turn** (2.1.330, the panel's flags and
+`initialize` payload plus `promptSuggestions:true`, `set_model haiku`, `--permission-mode
+default`, prompt "run `cd /tmp && echo probe-ok`", 25 s linger after the result; scratchpad
+`turn_probe.py` / `turn-330.jsonl`): `system/init` adds `served_by_anthropic`,
+`ultrathink_available:false`, `ultrathink_typed_raises:false`, `original_cwd`,
+`additional_directories`, `analytics_disabled`, `fast_mode_state`, `fast_mode_disabled_reason`;
+its `capabilities` add `interrupt_requeue_taken_v1`, `ask_user_question_unanswered_v1`,
+`lifecycle_wakeup_source_v1`, `withdrawn_files_note_v2`, `withdrawn_tools_v1`,
+`silent_resend_files_v1` and the six above; `init.tools` lists 30 names with NO `TodoWrite`,
+`TaskCreate`, `Glob`, `Grep` or `WebFetch` (`ToolSearch` is listed; the binary still carries
+those names — unmeasured whether they load on demand). The `can_use_tool` ask carries
+`display_name` and `blocked_path:"/tmp"` beside the old keys, and `permission_suggestions`
+offered the exact command for `localSettings` plus a `Read(//tmp/**)` session rule (1.23, 4.8).
+The tool-result `user` frame carries `tool_result_meta:[{id, permission_decision:{decision:
+"accept", source:"user_temporary"}}]`; the thinking `assistant` frame carries `thinking_display`
+and `thinking_duration_ms` (1.12), the tool-use one `wire_tool_inputs`; `rate_limit_event` now
+holds `unifiedWindows {five_hour, seven_day}` with `utilization` (1.17); `result` adds
+`begun_message_ids`, `credential_expires_at`, `model_usage_since_last_result`,
+`terminal_reason:"completed"`. **No `prompt_suggestion` frame arrived** in the 25 s after the
+result although `promptSuggestions:true` was declared (1.32 — the typed frame is
+`{type:"prompt_suggestion", suggestion, uuid, session_id}`, "emitted after each turn when
+promptSuggestions is enabled"; one haiku turn is not proof either way). **Checked in our own
+code against VS Code's bug fixes:** whole-line selections counting one line too many — not
+ours (`SelectionTracker.kt` drops the trailing line start); a copied code block's trailing
+newline — not ours (`20-markdown.js` strips it before render, the copy reads the rendered
+`pre`); custom commands sent without the open file or selection (#102799) — not ours
+(`submit()` takes `activeSel()` for every turn, slash or not); single-tilde ranges struck
+through — not ours (the renderer has no strikethrough at all, 1.10). **CHANGELOG-only leads,
+unmeasured, by row:** 1.7 Escape no longer stops Claude when it only closes a popup, and
+"Fixed a Stop pressed right after sending a message showing as an error … while a
+UserPromptSubmit hook was still running" (2.1.323); 1.9 click-to-send on a queued message
+(2.1.312); 1.15 a policy-blocked request now says how to continue (2.1.325), unparseable tool
+calls are retried twice (2.1.307) and a discarded reply should not stay on screen; 1.16 idle
+compaction of 200K+ conversations (terminal 2.1.299, VS Code 2.1.314; `idleCompaction:false`
+turns it off) and its notices; 1.17 "5-hour limit" wording and reset clock times (2.1.312);
+1.18 "Running UserPromptSubmit hooks" / "Running start-up hooks" spinner statuses and a 30 s
+progress heartbeat while hooks run long in SDK sessions (2.1.323 — also 1.22, whose "not
+emitted to stream-json clients" is now unverified); 1.19 advisor calls drew as "Unsupported
+content type" in VS Code; 1.29 the Bash edit diff may be absent on self-hosted runners and no
+longer lists a CRLF file as wholly changed; 2.3 the extension's diagnostics tool now leaves out
+clean files, returns compact JSON and takes a minimum severity; 3.2 "files accepted through
+the IDE diff being saved without their last newline, and losing their byte order mark"
+(2.1.329) and the diff tab not opening for multi-line edits on CRLF files — our CRLF / BOM
+check on Windows is still owed; 4.1 auto is the start mode in more cases and falls back to
+Manual when unavailable (2.1.302, 2.1.323, 2.1.326); 4.4 "Always allow" offers a rule only
+when saving it would allow that command again, and a rule that looks like a secret lasts the
+session only (2.1.323, 2.1.325); 5.1 the subagent plan-approval card has two choices (2.1.326);
+8.2 sessions that only opened a screen are no longer listed (2.1.330); 8.6 resumed sessions no
+longer show "Rejected" for cards cut off at session end (2.1.329); 8.7 VS Code's `/fork` and
+8.10 Move up / Move down on a session group; 9.2 the effort selector must not offer levels
+above `maxEffortLevel` or an organization's cap, and `ultrathink` runs its turn at `xhigh`
+with a rainbow in the box (`init.ultrathink_available` says where); 9.4 fast mode on Opus 4.8
+is removed 2026-11-30; 11.2 VS Code draws a background sub-agent as ONE status line under its
+Agent card, and main-conversation subagents always run in the background there (2.1.302);
+11.4 VS Code's `/workflows` agent map; 11.5 MCP tasks and elicitation changes (2.1.319,
+2.1.325). **Terminal's half, no row:** Code Mode, easel, Mods, `/auto-mode-setup`, every
+gateway / self-hosted-runner / Remote Control / cloud-session / login / plugin-marketplace
+line, the "More models" fold in `/model` (2.1.319 — the wire still sends all rows unflagged;
+parked by the user 2026-11-22). **Webview readable sentences** (quoted strings ≥ 25 chars with ≥ 3 words, 1,736 → 1,874): 195
+new, 57 gone. New, by row: trust ("This folder isn’t trusted, so its CLAUDE.md and settings
+aren’t loaded.", "This session still runs without the folder’s CLAUDE.md and settings. If you
+trusted the folder, start a new session to load them." — 15.7); a first-week onboarding
+questionnaire ("How do you want to work with Claude at first?", "Asks Claude to stop after each
+step and show you the change" — 15.1); bypass ↔ auto ("Started in auto mode instead of bypass
+permissions · choose Bypass permissions in the mode menu to switch back", "Switch to bypass
+permissions?" — 4.2); stacked asks ("Another prompt is waiting under this one. Switching mode
+can answer it without showing it." — 3.1); synthetic result texts a transcript can now hold
+("[This turn ended before it finished.]", "[Agent call interrupted: the process running this
+conversation stopped before this agent finished…]", "[Request interrupted: the session ended
+before this agent finished. Nobody asked it to stop.]" — 8.6, unmeasured in ours); background
+agent status ("· an agent it started is waiting for your permission: see the request below",
+"… failed", "… was stopped" — 11.2); the 50,000-character prompt notice ("What you typed or
+pasted here was dropped.", "nothing was added, paste less of it" — the truncation marker is
+NOT in the CLI binary, so the limit is the extension's own, 1.1); advisor ("Advisor has
+reviewed the conversation", "Advisor declined to advise on this request" — 1.19); a cut-short
+search ("The search stopped before it finished, most likely at its time limit, so these
+results are incomplete" — 1.5); fast mode and credits ("Fast mode was turned off because usage
+credits are unavailable…" — 9.4); plan mode after a reload ("The window reloaded during plan
+mode, and plan mode is now off, so Claude did not continue on its own." — 8.14); Mods drawing
+limits ("Picture not shown in this editor", "Drawing cut: too many pictures in this panel" —
+11.1); KaTeX's own messages (1.34); sign-in code hints, spend-limit and plugin-version notices
+(the terminal's half). Gone: "Failed to create worktree" (14.1), "Hold Shift while dragging to
+drop files into Claude Code", "This conversation is still open somewhere else…" (reworded),
+"Toggle fast mode for faster responses (Opus only)", the `/issue` and "Share with team"
+internal rows. **Cleanup:** the one-turn probe's transcript
+`52dd73eb-ea58-4bf2-b92c-1cd7df975f2e.jsonl` was deleted the same day on the user's ask; the
+testing project's `lastSessionId` never moved. Tapes and label sets in the
+2026-11-22 session scratchpad (`audit/init-296|330.json`, `turn-330.jsonl`, `sub-*.txt`,
+`case-*.txt`, `initreq-*.txt`, `changelog.txt`, `sent-new|gone.txt`, `accept-330.jsonl`).
 
 </details>
 
@@ -409,7 +581,7 @@ auto-include selection, voice.
 
 ---
 
-## 1. ✅ Core chat & streaming
+## 1. ⬜ Core chat & streaming
 - **1.1** ✅ **Send a prompt** — reply streams token-by-token (`stream_event` deltas)
 - **1.2** ✅ **User / assistant bubbles** — Ctrl+Enter sends, Enter = newline (VS Code's
       `useCtrlEnterToSend` behaviour, fixed on, no toggle)
@@ -735,7 +907,43 @@ auto-include selection, voice.
   the same row. Mockup carries a live card with a preview and an answered replayed card.
   </details>
 
-## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (12 tools, unchanged through 2.1.296)
+- **1.32** ⬜ [MD] **Prompt suggestions** [NEW] — a suggested next prompt in the empty
+  message box after a reply; Tab accepts it. VS Code has it at 2.1.330 with a
+  `claudeCode.promptSuggestions` setting ("Suggestions add a little to your usage").
+  <!-- --><details><summary>Read more…</summary>
+  2.1.330 audit (2026-11-22). Wire: the host declares `promptSuggestions:true` on `initialize`
+  and the CLI sends `{type:"prompt_suggestion", suggestion, uuid, session_id}` "after each turn"
+  (typed schema, 2.1.330 binary); `promptSuggestionEnabled:false` in settings.json turns it off.
+  PROBED once (stdio, haiku, one Bash turn, 25 s linger): declared true, NO frame arrived — the
+  conditions under which it fires are unmeasured, so a build starts with a longer probe. Was
+  listed under 15.3 "Small chrome" as leaning no; it is a setting-backed feature now, hence its
+  own row. Costs usage on every turn — a default-off switch is the cautious shape.
+  TAKEN by the user 2026-11-22 ("yes"); not built yet.
+  </details>
+- **1.33** ⬜ [MD] **Live output of a running command** [NEW] — VS Code now shows a
+  running Bash / PowerShell command's output under its card while it runs, drawn like the card's
+  OUT row; ours shows OUT only when the call returns.
+  <!-- --><details><summary>Read more…</summary>
+  2.1.330 audit (2026-11-22), CHANGELOG `[VSCode]` leads ("Added the live output of a running
+  Bash or PowerShell command to the chat, under the command's card"; "Fixed a running command's
+  live output stopping after one failed read"). MECHANISM UNMEASURED: the extension gained no
+  new label for it and still has `get_task_output` (11.7), so it most likely polls that for the
+  running foreground call — probe first (a `sleep`-and-print command over stdio, asking
+  `get_task_output` mid-run). If that holds, 11.7's output pane is most of the build.
+  TAKEN by the user 2026-11-22 ("yes"); not built yet.
+  </details>
+- **1.34** ⬜ [MD] **LaTeX math rendering** [NEW] — VS Code renders `$$…$$`, `\[ … \]`,
+  `$…$` and `\(…\)` math in replies (KaTeX, bundled fonts); ours shows the source text.
+  <!-- --><details><summary>Read more…</summary>
+  2.1.330 audit (2026-11-22): the 2.1.330 vsix ships 20 `KaTeX_*.woff2` fonts and the gate
+  `tengu_vscode_math_rendering`. A panel-side renderer change only (1.10); no wire involved.
+  Costs a bundled math library (the plugin has no third-party JS today — `20-markdown.js` is
+  hand-written), which is the real decision. Its sibling, syntax colouring in code blocks
+  (`tengu_vscode_code_colors`), we already have (1.11).
+  TAKEN by the user 2026-11-22 ("yes"); not built yet.
+  </details>
+
+## 2. ✅ Editor / IDE integration — the IDE-MCP tool set (ours: 12 tools; VS Code's own set shrank to 5 at 2.1.330)
 - **2.1** ✅ **Editor tools** — `getWorkspaceFolders`, `getOpenEditors`, `getCurrentSelection`,
       `getLatestSelection`, `openFile`, `saveDocument`, `checkDocumentDirty`, `closeAllDiffTabs`
 - **2.2** ✅ **`openDiff`** — real `DiffManager` view; three-verdict `DiffReview` contract
@@ -1428,7 +1636,7 @@ auto-include selection, voice.
   sandbox 2026-10-28 (add, minimize/maximize/close, Show in conversation, reopen, remove, row
   toggle, ticking ages); a second click on the open row closes it (user, 2026-10-28). Windows untested.
   </details>
-## 9. ✅ Model, effort, usage
+## 9. ⬜ Model, effort, usage
 - **9.1** ✅ **Model chip** — the roster from the CLI, search plus a custom id; persisted and
   re-applied on every restart; the CLI's own "Set model to …" echo draws as a confirmation line.
   <!-- --><details><summary>Read more…</summary>
@@ -1572,11 +1780,20 @@ auto-include selection, voice.
   no row" candidate (a persisted `fable[1m]` matching no tagless row); not re-driven in the live
   panel today.
   </details>
-- **9.10** ➖ **Per-model gating of effort / Thinking** — proposed and dropped 2026-08-26 on
-  measurement: no roster capability flag tracks behaviour in either direction. Only
-  `supportsFastMode` gates anything (9.4). Revive only if a CLI ships a flag proven to track
-  behaviour.
+- **9.10** ⬜ [SM] **Per-model gating of effort / Thinking** — dropped 2026-08-26 (no
+  roster flag tracked behaviour); RE-OPENED by the 2.1.330 audit: the roster now carries
+  `supportsThinkingOff`, the flag VS Code hides its Thinking toggle on. Proof that it tracks
+  behaviour is still owed.
   <!-- --><details><summary>Read more…</summary>
+  2.1.330 audit (2026-11-22), bare `initialize`: `supportsThinkingOff` is false on `default`,
+  `opus`, `fable`, `sonnet`, `haiku`, `claude-fable-5-1`, `claude-fable-5` and true on Haiku
+  4.5, Sonnet 5, Opus 5, Opus 4.8 / 4.7 / 4.6, Sonnet 4.6; the 2.1.296 binary sends no such
+  key. The webview reads `currentModelInfo.supportsThinkingOff ?? true` (absent = can turn
+  off). It matches the one behaviour measured here (the switch is inert on Fable, 9.5). Owed
+  before gating: drive the switch on one false model other than Fable and one true model.
+  The effort half is unchanged (CHANGELOG lead: VS Code now hides levels above
+  `maxEffortLevel` / an organization's cap — 9.2). TAKEN by the user 2026-11-22 ("yes").
+  History:
   The flags: `supportsEffort` / `supportedEffortLevels` / `supportsAdaptiveThinking`. Haiku
   carries none of them yet accepts `/effort max` and thinks; Fable carries
   `supportsAdaptiveThinking` yet ignores the switch (9.5). Gotchas § Protocol; decisions
@@ -1833,7 +2050,9 @@ auto-include selection, voice.
   "worktrees" backlog bundle (with 14.3); a worktree is a new project window in JetBrains, so the
   IDE-side question comes first.
   <!-- --><details><summary>Read more…</summary>
-  `create_worktree`; TUI `/branch`.
+  `create_worktree`; TUI `/branch`. 2.1.330 audit (2026-11-22): VS Code REMOVED its
+  `claude-vscode.createWorktree` command and the `create_worktree` label — no reference
+  client has this as a panel command any more (`EnterWorktree` / `ExitWorktree` remain tools).
   </details>
 - **14.2** ➖ [MD] **Git actions in the host** [NEW] — declined 2026-08-29, by design: thin-client
   git for a webview that has no git; the IDE's git client is one keystroke away.
@@ -1849,7 +2068,7 @@ auto-include selection, voice.
   git timeout, 50 files, 1MB/file caps; present since ≤2.1.233).
   </details>
 
-## 15. ✅ Onboarding & misc
+## 15. 🟧 Onboarding & misc
 - **15.1** ➖ **Walkthrough / onboarding / upsell banners** — `dismiss_review_upsell_banner` [NEW],
       `update`, `showLogs`; JetBrains handles updates, the README is the walkthrough
 - **15.2** ➖ **Voice input** [NEW] — `start_speech_to_text`; TUI `/voice`; deferred by the user
@@ -1859,7 +2078,7 @@ auto-include selection, voice.
   <!-- --><details><summary>Read more…</summary>
   Message rating + `/feedback` / `/bug`; "Explored" grouping is gated `window.IS_ANT` in 2.1.260
   — Anthropic-internal only; `/stickers`, `/radio`, `/powerup`; the "How is Claude doing?"
-  survey.
+  survey. Prompt suggestions left this row for 1.32 (2.1.330 audit, 2026-11-22).
   </details>
 - **15.4** ✅ [XS] **`/export` / `/copy` — export the conversation, copy a response** — built
   2026-10-10: a hover-revealed Copy response control on every finished assistant text block
@@ -1898,13 +2117,35 @@ auto-include selection, voice.
   console hand-off, as VS Code has.
   <!-- --><details><summary>Read more…</summary>
   VS Code registers a `claude-vscode-extension` MCP server while a debug session is active;
-  buildable via `XDebuggerManager` in the bridge's `IdeTools.kt`.
+  buildable via `XDebuggerManager` in the bridge's `IdeTools.kt`. 2.1.330 audit (2026-11-22):
+  the `ask_debugger_help` label is gone from the 2.1.330 extension — recheck that VS Code
+  still has the feature before this is ever picked up.
   </details>
 - **15.6** ➖ [SM] **Chrome MCP / Jupyter MCP toggles** [NEW] — declined by the user 2026-08-29 (by
   design): MCP configuration is the terminal's half.
   <!-- --><details><summary>Read more…</summary>
   `ensure_chrome_mcp_enabled` / `disable_chrome_mcp`, `enable_jupyter_mcp` /
   `disable_jupyter_mcp`.
+  </details>
+
+- **15.7** 🟧 [MD] **Workspace trust prompt** [NEW] — in a folder Claude Code has not
+  been told to trust, the CLI runs WITHOUT the folder's settings, hooks and MCP servers and the
+  panel says nothing. VS Code now asks before the first session and can re-ask ("Review trust").
+  <!-- --><details><summary>Read more…</summary>
+  2.1.330 audit (2026-11-22). CHANGELOG `[VSCode]`: "Added a Claude Code trust prompt before
+  the first session in a folder you haven't trusted; declining leaves the folder's settings and
+  MCP servers unused", plus a line above the message box with Review trust after a decline.
+  MEASURED: the testing repo reads `hasTrustDialogAccepted:false` in `~/.claude.json`, and a
+  bare `initialize` there answers `success` with the project's commands on the roster — nothing
+  on the wire says the folder is untrusted (the old trap, gotchas § Testing: project settings
+  silently not loaded, only stderr says "workspace has not been trusted"). Wire for a host:
+  `initialize.workspaceTrust {accepted:true, directory}` ("Only send true after showing the
+  user a trust dialog"; honoured only when `directory` resolves to the session's trust key —
+  the git root) answered by `workspace_trust_recorded`; in the schema since at least 2.1.296.
+  NOT PROBED: it writes the user's `~/.claude.json` (conventions: probes never accept trust on
+  the user's behalf) — a hand test in the sandbox settles it. JetBrains has its own project
+  trust ("Trust project?"), a different record; whether to reuse it is part of the decision.
+  TAKEN by the user 2026-11-22 ("yes"); not built yet.
   </details>
 
 ## 16. ✅ Quality gates (not features, but part of "what we have")

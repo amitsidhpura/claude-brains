@@ -125,6 +125,14 @@ before); `plugin-authoring` / `plugin-types` left this roster. Hint changes: `/e
 `<low|medium|high|xhigh|max|auto|ultracode [on|off]>`, `/doctor` `""` → `[prompt-audit [<path>]]`,
 `/code-review` + `[--max-findings <n>|all]`; description-only changes on `/fast`, `/heapdump`,
 `/ultrareview`, `/code-review`, `/artifact-capabilities`. Rows below updated.
+**Re-audit 2026-11-22 (2.1.296 → 2.1.330)**, bare `initialize` on both binaries in the testing repo
+(the 2.1.296 one from that version's vsix), same account: 82 → 84 wire entries. Two built-ins
+added, both Hidden by the allowlist: `/whiteboard` `[what the whiteboard is for]` and
+`/send-to-project` `["project name" or id] [message]`. None removed, no hint or alias changed.
+Description-only changes on `/autocompact`, `/clear`, `/effort`, `/code-review`, `/design-sync`,
+`/claude-api`, `/plugin-authoring` (listed by both binaries today — it had left the roster in the
+2026-10-10 run). VS Code's own `/fork` and `/workflows` (CHANGELOG `[VSCode]`) are extension
+commands and are NOT on this roster. Rows below updated.
 Descriptions over 140 chars are truncated with `…`. The tables are grouped by IDE-development
 relevance (user-picked 2026-08-15); alphabetical within each group. The 16 in the first group
 are visible in the menu; every other built-in is hidden.
@@ -144,7 +152,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
 | `/btw` | Enabled - native (IDE) | [x] |  | Ask a quick side question without interrupting the conversation — opens the side-question panel (bare) or asks at once (`/btw question`); answered by a `side_question` control request, never a turn. NOT in the stdio roster (54 entries, 2.1.251, measured 2026-08-29): the panel supplies the entry itself (`CMD_LOCAL` in `65-slash.js`), as the TUI and VS Code do (checklist 8.11) |
-| `/clear` | Hidden | [ ] | `/reset`, `/new` | Start a new session with empty context. REMOVED as a panel command 2026-08-29: the header's New-conversation button does the same thing; the `[name]` hint (2.1.241) made a menu pick insert-not-run, and naming already lives in the header pencil (checklist 7.6) |
+| `/clear` | Hidden | [ ] | `/reset`, `/new` | Start a new session with empty context; loops carry over, and the old one stays in /resume (wording at 2.1.330). REMOVED as a panel command 2026-08-29: the header's New-conversation button does the same thing; the `[name]` hint (2.1.241) made a menu pick insert-not-run, and naming already lives in the header pencil (checklist 7.6) |
 | `/compact` | Enabled - sent to CLI | [x] |  | Free up context by summarizing the conversation so far |
 | `/context` | Enabled - sent to CLI | [x] |  | Show current context usage. Broke a second way ~CLI 2.1.24x: the CLI began tagging local built-ins' output `model:"<synthetic>"` (the API-error-echo tag), so the usage table drew as one red `.error` block; fixed 2026-09-04 by draining the stash by the RESULT's `is_error` (fixture 70), re-verified live in the panel |
 | `/code-review` | Enabled - sent to CLI | [x] | `/review` | Review the current diff, or a PR number/branch/path target, for correctness bugs (plus reuse/simplification/efficiency cleanups where the model's… — hint grew `[--max-findings <n>\|all]` at 2.1.288 (measured on 2.1.296, 2026-10-10); 2.1.296 also fixed the SDK/IDE run "ending on a raw JSON array" — findings now print as a numbered list (not re-driven in the panel yet) |
@@ -166,7 +174,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | Command | Status | Verified | Aliases | Description |
 |---|---|---|---|---|
 | `/model` | Hidden | [ ] |  | Set the AI model for Claude Code Composer has the model chip + dropdown. |
-| `/effort` | Hidden | [ ] |  | Set effort level for model usage Composer has the effort slider. Hint at 2.1.296: `<low\|medium\|high\|xhigh\|max\|auto\|ultracode [on\|off]>` — Ultracode is its own toggle since 2.1.284 (checklist 9.2). |
+| `/effort` | Hidden | [ ] |  | Set the model's effort level (wording at 2.1.330). Composer has the effort slider. Hint at 2.1.296: `<low\|medium\|high\|xhigh\|max\|auto\|ultracode [on\|off]>` — Ultracode is its own toggle since 2.1.284 (checklist 9.2). |
 | `/rename` | Hidden | [ ] | `/name` | Rename the current conversation The panel header has inline rename (same custom-title record). |
 | `/usage` | Hidden | [ ] | `/cost`, `/stats` | Show session cost, plan usage, and what's contributing to your limits **Declined 2026-08-06** as a panel surface — stays Hidden by decision, not omission. |
 | `/focus` | Hidden | [ ] |  | Toggle focus view: just your prompt, summary, and response — hint `[on\|off]`. **New on the headless roster at 2.1.296** (measured 2026-10-10); it toggles the TUI's reading mode, and the panel's Focus view is deferred (checklist 12.6). |
@@ -178,7 +186,7 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/advisor` | Hidden | [ ] |  | Let Claude consult a stronger model at key moments — hint `[fable\|opus\|sonnet\|off]` **New in 2.1.260** (headless roster 2026-09-04; not yet driven through the panel) |
 | `/agents` | Hidden | [ ] |  | (removed) Ask Claude to create/manage subagents, or edit .claude/agents/ Description says "(removed)". |
 | `/auto-mode-setup` | Hidden | [ ] |  | Set up and customise auto mode — environment context, plus optional rule tweaks |
-| `/autocompact` | Hidden | [ ] |  | Configure the auto-compact window size |
+| `/autocompact` | Hidden | [ ] |  | Set how full the context gets before auto-summarizing — hint `[auto\|<tokens>]` (description reworded by 2.1.330; was "Configure the auto-compact window size") |
 | `/color` | Hidden | [ ] |  | Set the prompt bar color for this session |
 | `/config` | Hidden | [ ] | `/settings` | Set a setting by key |
 | `/debug` | Hidden | [ ] |  | Enable debug logging for this session and help diagnose issues |
@@ -210,6 +218,8 @@ usage" entry in its own roster, marked "(project)" like any custom entry.
 | `/dataviz` | Hidden | [ ] |  | Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML… |
 | `/design-sync` | Hidden | [ ] |  | Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or a bare pack… |
 | `/workflow-authoring` | Hidden | [ ] |  | Reference for writing a Workflow tool script (script API and gotchas, resume, quality patterns, worked examples). Load before authoring… **New in 2.1.250** (headless roster 2026-08-28; not yet driven through the panel) |
+| `/whiteboard` | Hidden | [ ] |  | Make a new Whiteboard artifact from a brief — hint `[what the whiteboard is for]`. **New on the headless roster at 2.1.330** (measured 2026-11-22; `builtin: true`; not driven through the panel) |
+| `/send-to-project` | Hidden | [ ] |  | Send this session's work to a Claude Project — hint `["project name" or id] [message]`. **New on the headless roster at 2.1.330** (measured 2026-11-22; `builtin: true`; not driven through the panel) |
 
 ### Hidden — internal / special session types
 
