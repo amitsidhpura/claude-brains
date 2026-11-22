@@ -1,7 +1,7 @@
 {
- "item": "1.3 Prompt history — ArrowUp first takes the caret to the first character; only from there does it recall the previous prompt (2026-11-22)",
- "branch": "The composer's keydown handler in js/65-slash.js. On the first line with a collapsed caret that is NOT at offset 0, a plain ArrowUp moves the caret to offset 0 and recalls nothing; at offset 0 it recalls the previous prompt and leaves the caret at offset 0, so walking further back stays one press per prompt. A selection, or Shift held, is left to the browser. ArrowDown is unchanged: on the last line it steps forward and puts the caret at the end.",
- "provenance": "No wire frames: this is composer key handling, driven with synthetic keydown events on #input (a synthetic event runs our handler but not the browser's default caret move, which is why the handler moves the caret itself). `history` / `histIdx` / `histDraft` are the composer's own state, set directly and restored in the last step. USER REQUEST 2026-11-22: 'clicking up key to go to first character before going to previous message' — before the change ArrowUp anywhere on the first line recalled at once and replaced a half-edited line. NEGATIVE CONTROL RUN 2026-11-22 against the 242 sandbox still serving the pre-change webview: 6 passed, 7 failed — both step-1 asserts (it recalled 'second prompt' at once), steps 2-3 (one prompt further along than expected, caret at the end) and both step-5 asserts (a selection was recalled over); step 0, the step-1 'consumed' assert, step 3's text, the ArrowDown asserts and the restore are GUARDs or pass on both builds.",
+ "item": "1.3 Prompt history — ↑ recalls only from the first character and ↓ only from the last; anywhere else the arrow moves the caret, one visual row at a time on a wrapped draft (2026-11-22)",
+ "branch": "The composer's keydown handler in js/65-slash.js. A plain ArrowUp with a collapsed caret that is NOT at offset 0 is left to the browser (not consumed): on a wrapped draft it climbs one visual row, from the top row it goes to offset 0, and where the browser leaves the caret untouched the handler's deferred fallback puts it at offset 0. At offset 0 ArrowUp recalls the previous prompt and leaves the caret at 0, so walking further back is one press per prompt. ArrowDown mirrors it: left to the browser until the caret is at the very end, then it steps forward and leaves the caret at the end. A selection, or Shift held, is never touched.",
+ "provenance": "No wire frames: composer key handling, driven with synthetic keydown events on #input. A synthetic event runs our handler but NOT the browser's default caret move, so these steps exercise exactly the 'browser left the caret where it was' branch — the deferred fallback — and each press waits 40 ms for it. The browser's own row-by-row move cannot be asserted this way; it was MEASURED with real key presses (CDP Input.dispatchKeyEvent) in the 242 sandbox on 2026-11-22: on a 287-character draft wrapped to three rows, ArrowUp from the end took the caret 287 → 167 → 52 → 0 and ArrowDown back 0 → 167 → 287, first with our handler bypassed (native behaviour) and then with it active and two prompts in history (same offsets, draft untouched; only the next ArrowUp at 0 recalled). `history` / `histIdx` / `histDraft` are the composer's own state, set directly and restored in the last step. USER REPORT 2026-11-22: on a line that wraps, ArrowUp from a lower row recalled the previous prompt, so the top row could not be reached to edit it (Home only reaches the start of the current visual row). The first cut the same day (a8c1860) consumed the key and jumped straight to offset 0; this version leaves the key to the browser and extends the rule to ArrowDown. NEGATIVE CONTROL RUN 2026-11-22 against the sandbox still serving a8c1860: 13 passed, 5 failed — step 1 'not consumed', all three of step 4's asserts (ArrowDown stepped forward from offset 0 instead of going to the end first) and step 5's first assert, one prompt further along as a result; the rest pass on both builds or are GUARDs.",
  "steps": [
   {
    "note": "0 — two sent prompts in history, a half-typed draft in the composer with the caret at its end",
@@ -15,29 +15,29 @@
    ]
   },
   {
-   "note": "1 — ArrowUp with the caret inside the line goes to the first character and recalls nothing",
-   "setup": "window.__r106 = window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "note": "1 — ArrowUp with the caret inside the text recalls nothing and is left to the browser; with no row above, the caret ends at the first character",
+   "setup": "(async function(){ window.__r106 = window.__k106('ArrowUp'); await new Promise(function(r){ setTimeout(r, 40); }); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })()",
    "expect": [
     {
      "js": "window.__s106.v",
      "equals": "draft text",
-     "why": "the draft is still in the composer (pre-fix: 'second prompt')"
+     "why": "the draft is still in the composer"
     },
     {
      "js": "window.__s106.s + ',' + window.__s106.e",
      "equals": "0,0",
-     "why": "the caret is at the first character"
+     "why": "the caret is at the first character (the fallback: a synthetic key moves nothing by itself)"
     },
     {
      "js": "window.__r106",
-     "equals": true,
-     "why": "we moved the caret ourselves, so the key is consumed"
+     "equals": false,
+     "why": "NOT consumed — this is what lets the browser climb one visual row on a wrapped draft (a8c1860: true)"
     }
    ]
   },
   {
    "note": "2 — ArrowUp again, now at the first character, recalls the previous prompt and keeps the caret at the start",
-   "setup": "window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "setup": "(async function(){ window.__r106 = window.__k106('ArrowUp'); await new Promise(function(r){ setTimeout(r, 40); }); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })()",
    "expect": [
     {
      "js": "window.__s106.v",
@@ -47,13 +47,18 @@
     {
      "js": "window.__s106.s + ',' + window.__s106.e",
      "equals": "0,0",
-     "why": "caret at the start, so the next ArrowUp steps back at once (pre-fix: 13,13)"
+     "why": "caret at the start, so the next ArrowUp steps back at once"
+    },
+    {
+     "js": "window.__r106",
+     "equals": true,
+     "why": "a recall consumes the key"
     }
    ]
   },
   {
    "note": "3 — one more ArrowUp steps straight to the prompt before it: one press per prompt while walking back",
-   "setup": "window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "setup": "(async function(){ window.__r106 = window.__k106('ArrowUp'); await new Promise(function(r){ setTimeout(r, 40); }); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })()",
    "expect": [
     {
      "js": "window.__s106.v",
@@ -68,29 +73,55 @@
    ]
   },
   {
-   "note": "4 — ArrowDown is unchanged: forward one prompt with the caret at the end, then back to the stashed draft",
-   "setup": "window.__k106('ArrowDown'); window.__a106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; window.__k106('ArrowDown'); window.__b106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd };",
+   "note": "4 — ArrowDown mirrors it: from the first character of a recalled prompt it goes to the END and steps nowhere — on a wrapped prompt this is the key that moves down a row",
+   "setup": "(async function(){ window.__r106 = window.__k106('ArrowDown'); await new Promise(function(r){ setTimeout(r, 40); }); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })()",
    "expect": [
     {
-     "js": "window.__a106.v + '|' + window.__a106.s",
-     "equals": "second prompt|13",
-     "why": "GUARD: forward one, caret at the end"
+     "js": "window.__s106.v",
+     "equals": "first prompt",
+     "why": "still the same prompt (a8c1860: 'second prompt')"
     },
     {
-     "js": "window.__b106.v + '|' + window.__b106.s",
-     "equals": "draft text|10",
-     "why": "GUARD: the half-typed draft survived the round trip"
+     "js": "window.__s106.s + ',' + window.__s106.e",
+     "equals": "12,12",
+     "why": "the caret is at the last character (the fallback)"
+    },
+    {
+     "js": "window.__r106",
+     "equals": false,
+     "why": "not consumed — the browser moves down a visual row when there is one"
     }
    ]
   },
   {
-   "note": "5 — a selection that starts at the first character is not a caret: ArrowUp recalls nothing and is left to the browser; then restore",
-   "setup": "input.setSelectionRange(0, 5); window.__r106 = window.__k106('ArrowUp'); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; history = window.__h106.history; histIdx = window.__h106.idx; histDraft = window.__h106.draft; input.value = window.__h106.value; autoGrow();",
+   "note": "5 — from the last character ArrowDown steps forward, caret at the end each time, back to the stashed draft",
+   "setup": "(async function(){ window.__r106 = window.__k106('ArrowDown'); await new Promise(function(r){ setTimeout(r, 40); }); window.__a106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })().then(function(){ return (async function(){ window.__r106 = window.__k106('ArrowDown'); await new Promise(function(r){ setTimeout(r, 40); }); window.__b106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })(); })",
+   "expect": [
+    {
+     "js": "window.__a106.v + '|' + window.__a106.s",
+     "equals": "second prompt|13",
+     "why": "forward one, caret at the end"
+    },
+    {
+     "js": "window.__b106.v + '|' + window.__b106.s",
+     "equals": "draft text|10",
+     "why": "the half-typed draft survived the round trip"
+    }
+   ]
+  },
+  {
+   "note": "6 — a selection is not a caret: ArrowUp recalls nothing, moves nothing and is left to the browser; then restore",
+   "setup": "input.setSelectionRange(0, 5); (async function(){ window.__r106 = window.__k106('ArrowUp'); await new Promise(function(r){ setTimeout(r, 40); }); window.__s106 = { v: input.value, s: input.selectionStart, e: input.selectionEnd }; })().then(function(){ history = window.__h106.history; histIdx = window.__h106.idx; histDraft = window.__h106.draft; input.value = window.__h106.value; autoGrow(); })",
    "expect": [
     {
      "js": "window.__s106.v",
      "equals": "draft text",
-     "why": "nothing recalled over a selection (pre-fix: 'second prompt')"
+     "why": "nothing recalled over a selection"
+    },
+    {
+     "js": "window.__s106.s + ',' + window.__s106.e",
+     "equals": "0,5",
+     "why": "the selection is untouched by the fallback"
     },
     {
      "js": "window.__r106",

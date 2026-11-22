@@ -281,27 +281,33 @@
     }
     if (activeMenu()) return;                       // popup menus own the keys (document handler)
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } // Ctrl/Cmd+Enter sends; plain Enter = newline
-    // ↑/↓ recall sent messages — only at the edges so line movement still works in a multi-line draft
-    const caret = input.selectionStart;
-    const onFirstLine = input.value.slice(0, caret).indexOf('\n') === -1;
-    const onLastLine = input.value.indexOf('\n', caret) === -1;
-    // ↑ goes to the FIRST CHARACTER before it recalls anything (user, 2026-11-22): on the first line
-    // with the caret inside the text, a plain ↑ only moves the caret to offset 0, and the recall
-    // needs a second ↑ from there — so a half-edited line is never swapped out by a stray ↑. The
-    // caret is moved here, not left to the browser, so the rule holds whatever the platform's own
-    // first-line ↑ does. A selection, or Shift (extending one), is the browser's business. After a
-    // recall the caret STAYS at 0: walking further back is then one press per prompt. Fixture 106.
-    const plainUp = e.key === 'ArrowUp' && !e.shiftKey && caret === input.selectionEnd;
-    if (plainUp && onFirstLine && histIdx > 0 && caret > 0) {
-      e.preventDefault();
-      input.setSelectionRange(0, 0);
-    } else if (plainUp && histIdx > 0 && caret === 0) {
+    // ↑/↓ recall sent messages — ONLY from the two ends of the draft: ↑ with the caret at the very
+    // first character, ↓ at the very last (user, 2026-11-22). Anywhere else a plain arrow is the
+    // browser's. On a draft that WRAPS it moves one visual row at a time — a wrapped row has no
+    // newline, so the old newline test took every row for the first (and last) line and swapped
+    // the draft for another prompt while the user was only trying to reach the top row. From the
+    // top row ↑ goes to offset 0, from the bottom row ↓ goes to the end: measured with real keys
+    // in the 242 sandbox, 287 → 167 → 52 → 0 on a three-row draft. Whether that last hop happens
+    // at all is platform editing behaviour, so it is not relied on: if the key left the caret
+    // where it was, there was no row to move to and we finish the move ourselves. A selection, or
+    // Shift (extending one), is never touched. After a recall the caret stays at the end it came
+    // from (↑ → offset 0, ↓ → the end), so walking on in the same direction is one press per
+    // prompt. Fixture 106.
+    const caret = input.selectionStart, len = input.value.length;
+    const plain = !e.shiftKey && caret === input.selectionEnd;
+    const up = plain && e.key === 'ArrowUp', down = plain && e.key === 'ArrowDown';
+    if ((up && caret > 0) || (down && caret < len)) {
+      const text = input.value, edge = up ? 0 : len;
+      setTimeout(function () {          // after the browser's own caret move
+        if (input.value === text && input.selectionStart === caret && input.selectionEnd === caret) input.setSelectionRange(edge, edge);
+      }, 0);
+    } else if (up && histIdx > 0) {
       e.preventDefault();
       if (histIdx === history.length) histDraft = input.value; // stash the in-progress draft
       histIdx--;
       input.value = history[histIdx]; autoGrow();
       input.setSelectionRange(0, 0);
-    } else if (e.key === 'ArrowDown' && onLastLine && histIdx < history.length) {
+    } else if (down && histIdx < history.length) {
       e.preventDefault();
       histIdx++;
       input.value = histIdx === history.length ? histDraft : history[histIdx]; autoGrow();
