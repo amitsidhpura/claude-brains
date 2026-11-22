@@ -1,0 +1,272 @@
+{
+ "item": "backlog #3: a Stop hook that blocks (exit 2) hands its message to the model; the panel draws it as a warning line with the message in a box under it, live and on replay, instead of only 'stop hook problem'",
+ "branch": "stopHookFeedback / stopHookBlock / lastBlock and the stop-hook-error guard in bannerLine (50-blocks.js); the text branch of onUserEvent (75-retraction.js); the 'stophook' status icon in 55-replay.js; LIMITS.stopHookPrefix (RenderLimits.kt)",
+ "provenance": "The `user` frame and the `system/notification` frame of step 1 are TAPED VERBATIM (2026-11-22, CLI 2.1.330, stdio with the panel's flags plus --settings holding one Stop hook that blocks the first stop, haiku; tape _local/probe-3/tape-stop-1.jsonl): after the first reply's message_stop came the user frame and, in the same 10 ms, the notification, then the second request. The two assistant frames are that tape's, cut to the keys read; the result frame is cut the same way. Step 2's reversed order (notification first) was NOT seen on the wire — it is drawn by hand to pin that either order ends in one block. The replay items of step 3 are OUR OWN Kotlin→page shape (SessionStore: the META user record that probe's transcript holds, string content, same text). Step 4's three frames are TAPED VERBATIM (same day and setup with TWO blocking Stop hooks, tape _local/probe-3/tape-stop-two.jsonl): each hook's message is a user frame of its own, 10 ms apart, followed by one notification. The second replay item of step 3 (no [command]: lead) is hand-made.",
+ "steps": [
+  {
+   "note": "#3 live: a blocking Stop hook's message draws as a warning line with the message in a box under it; the notification that rides with it adds nothing",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('Reply with the single word: hello', []);",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "hello"
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a443052a-d799-4cf6-9584-d74a82690d0b",
+     "uuid": "75f31d88-a021-479c-81fb-a3d7c474667c"
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "Stop hook feedback:\n[python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once.py]: PROBE3: say the word 'pineapple' once, then stop.\nSecond line of feedback."
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a443052a-d799-4cf6-9584-d74a82690d0b",
+     "uuid": "2d4d580d-4506-4052-9f57-c954ce04ff68",
+     "timestamp": "2026-11-22T15:35:57.180Z",
+     "isSynthetic": true
+    },
+    {
+     "type": "system",
+     "subtype": "notification",
+     "key": "stop-hook-error",
+     "text": "stop hook problem · ctrl+o to see",
+     "priority": "immediate",
+     "session_id": "a443052a-d799-4cf6-9584-d74a82690d0b",
+     "uuid": "33d2f871-502e-40fd-a0f9-cc5914878bf3"
+    },
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "pineapple"
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a443052a-d799-4cf6-9584-d74a82690d0b",
+     "uuid": "d7b0d487-f8e5-4f91-8c4e-fae4228b1de5"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 2350,
+     "num_turns": 2,
+     "usage": {
+      "output_tokens": 116,
+      "speed": "standard"
+     },
+     "session_id": "a443052a-d799-4cf6-9584-d74a82690d0b"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.status.stop-hook').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the synthetic user frame draws one line (it drew nothing before the change)"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook');return s?s.textContent:null;})()",
+     "equals": "Stop hook sent Claude back to work",
+     "why": "DISCRIMINATING: the line's wording"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook');return !!(s&&s.classList.contains('err')&&s.querySelector('.s-ic svg'));})()",
+     "equals": true,
+     "why": "DISCRIMINATING: a warning line with the alert glyph"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook'),b=s&&s.nextElementSibling;return !!(b&&b.classList.contains('io'));})()",
+     "equals": true,
+     "why": "DISCRIMINATING: the box is the line's next sibling (the attached-block contract)"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook'),b=s&&s.nextElementSibling,k=b&&b.querySelector('.io-k');return k?k.textContent:null;})()",
+     "equals": "HOOK",
+     "why": "DISCRIMINATING: the row label"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook'),b=s&&s.nextElementSibling,v=b&&b.querySelector('.io-v');return v?v.textContent:null;})()",
+     "equals": "PROBE3: say the word 'pineapple' once, then stop.\nSecond line of feedback.",
+     "why": "DISCRIMINATING: the hook's own words, both lines, with the 'Stop hook feedback:' header and the [command]: lead taken off"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook'),b=s&&s.nextElementSibling,n=b&&b.querySelector('.io-note');return n?n.textContent:null;})()",
+     "equals": "↳ python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once.py",
+     "why": "DISCRIMINATING: the command that spoke is the row's note"
+    },
+    {
+     "js": "Array.prototype.filter.call(document.querySelectorAll('.status'),function(s){return /stop hook problem/i.test(s.textContent);}).length",
+     "equals": 0,
+     "why": "DISCRIMINATING: the notification line is not drawn beside the block (one was drawn before the change)"
+    },
+    {
+     "js": "document.querySelectorAll('.msg-user').length",
+     "equals": 1,
+     "why": "GUARD: the hook's message is not a user bubble"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status.stop-hook'),b=s&&s.nextElementSibling,a=b&&b.nextElementSibling;return a?a.textContent.trim():null;})()",
+     "equals": "pineapple",
+     "why": "GUARD: the continued reply follows the block in the same turn"
+    }
+   ]
+  },
+  {
+   "note": "#3 order and neighbours: a notification that arrives FIRST gives way to the block; a stop-hook notification with no feedback frame still draws; other synthetic text draws nothing",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('second', []);window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"notification\\\", \\\"key\\\": \\\"stop-hook-error\\\", \\\"text\\\": \\\"stop hook problem \\\\u00b7 ctrl+o to see\\\", \\\"priority\\\": \\\"immediate\\\", \\\"session_id\\\": \\\"a443052a-d799-4cf6-9584-d74a82690d0b\\\", \\\"uuid\\\": \\\"33d2f871-502e-40fd-a0f9-cc5914878bf3\\\"}\");window.__m117={before:Array.prototype.filter.call(document.querySelectorAll('.status'),function(s){return /stop hook problem/i.test(s.textContent);}).length};window.onClaudeEvent(\"{\\\"type\\\": \\\"user\\\", \\\"message\\\": {\\\"role\\\": \\\"user\\\", \\\"content\\\": [{\\\"type\\\": \\\"text\\\", \\\"text\\\": \\\"Stop hook feedback:\\\\n[python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once.py]: PROBE3: say the word 'pineapple' once, then stop.\\\\nSecond line of feedback.\\\"}]}, \\\"parent_tool_use_id\\\": null, \\\"session_id\\\": \\\"a443052a-d799-4cf6-9584-d74a82690d0b\\\", \\\"uuid\\\": \\\"2d4d580d-4506-4052-9f57-c954ce04ff68\\\", \\\"timestamp\\\": \\\"2026-11-22T15:35:57.180Z\\\", \\\"isSynthetic\\\": true}\");window.__m117.after=Array.prototype.filter.call(document.querySelectorAll('.status'),function(s){return /stop hook problem/i.test(s.textContent);}).length;window.__m117.blocks=document.querySelectorAll('.status.stop-hook').length;window.onClaudeEvent(\"{\\\"type\\\": \\\"assistant\\\", \\\"message\\\": {\\\"model\\\": \\\"claude-haiku-5-5\\\", \\\"type\\\": \\\"message\\\", \\\"role\\\": \\\"assistant\\\", \\\"content\\\": [{\\\"type\\\": \\\"text\\\", \\\"text\\\": \\\"pineapple\\\"}]}, \\\"parent_tool_use_id\\\": null, \\\"session_id\\\": \\\"a443052a-d799-4cf6-9584-d74a82690d0b\\\", \\\"uuid\\\": \\\"fx117-a\\\"}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"notification\\\", \\\"key\\\": \\\"stop-hook-error\\\", \\\"text\\\": \\\"stop hook problem \\\\u00b7 ctrl+o to see\\\", \\\"priority\\\": \\\"immediate\\\", \\\"session_id\\\": \\\"a443052a-d799-4cf6-9584-d74a82690d0b\\\", \\\"uuid\\\": \\\"33d2f871-502e-40fd-a0f9-cc5914878bf3\\\"}\");window.__m117.lone=Array.prototype.filter.call(document.querySelectorAll('.status'),function(s){return /stop hook problem/i.test(s.textContent);}).length;window.onClaudeEvent(\"{\\\"type\\\": \\\"user\\\", \\\"message\\\": {\\\"role\\\": \\\"user\\\", \\\"content\\\": [{\\\"type\\\": \\\"text\\\", \\\"text\\\": \\\"Some other synthetic note that quotes Stop hook feedback: in passing\\\"}]}, \\\"isSynthetic\\\": true}\");window.__m117.blocks2=document.querySelectorAll('.status.stop-hook').length;",
+   "frames": [],
+   "expect": [
+    {
+     "js": "window.__m117&&window.__m117.before",
+     "equals": 1,
+     "why": "GUARD: alone, the notification draws its line"
+    },
+    {
+     "js": "window.__m117&&window.__m117.after",
+     "equals": 0,
+     "why": "DISCRIMINATING: the feedback frame takes the notification's line away"
+    },
+    {
+     "js": "window.__m117&&window.__m117.blocks",
+     "equals": 1,
+     "why": "DISCRIMINATING: and draws the block"
+    },
+    {
+     "js": "window.__m117&&window.__m117.lone",
+     "equals": 1,
+     "why": "GUARD: a stop-hook notification that does not follow a block (a reply came between) still draws"
+    },
+    {
+     "js": "window.__m117&&window.__m117.blocks2",
+     "equals": 1,
+     "why": "GUARD: only text that STARTS with the prefix is hook feedback"
+    }
+   ]
+  },
+  {
+   "note": "#3 replay: the 'stophook' status item draws the same line and box; a body without the [command]: lead is shown whole with no note",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"__transcript\\\", \\\"items\\\": [{\\\"role\\\": \\\"user\\\", \\\"text\\\": \\\"Reply with the single word: hello\\\"}, {\\\"role\\\": \\\"assistant\\\", \\\"text\\\": \\\"hello\\\"}, {\\\"role\\\": \\\"status\\\", \\\"text\\\": \\\"[python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once.py]: PROBE3: say the word 'pineapple' once, then stop.\\\\nSecond line of feedback.\\\", \\\"icon\\\": \\\"stophook\\\"}, {\\\"role\\\": \\\"assistant\\\", \\\"text\\\": \\\"pineapple\\\"}, {\\\"role\\\": \\\"status\\\", \\\"text\\\": \\\"no lead here\\\\nsecond line\\\", \\\"icon\\\": \\\"stophook\\\"}, {\\\"role\\\": \\\"done\\\", \\\"durMs\\\": 2350, \\\"tokens\\\": 116, \\\"seed\\\": \\\"s117\\\"}]}\");",
+   "frames": [],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.status.stop-hook').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: both items draw the block"
+    },
+    {
+     "js": "Array.prototype.map.call(document.querySelectorAll('.status.stop-hook'),function(s){return s.textContent;}).join('|')",
+     "equals": "Stop hook sent Claude back to work|Stop hook sent Claude back to work",
+     "why": "DISCRIMINATING: the wording is the webview's, not the item's text (before the change the item's text was the line)"
+    },
+    {
+     "js": "Array.prototype.map.call(document.querySelectorAll('.status.stop-hook + .io .io-v'),function(s){return s.textContent;}).join('|')",
+     "equals": "PROBE3: say the word 'pineapple' once, then stop.\nSecond line of feedback.|no lead here\nsecond line",
+     "why": "DISCRIMINATING: the message is in the box; a body with no [command]: lead is kept whole"
+    },
+    {
+     "js": "Array.prototype.map.call(document.querySelectorAll('.status.stop-hook + .io .io-note'),function(s){return s.textContent;}).join('|')",
+     "equals": "↳ python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once.py",
+     "why": "DISCRIMINATING: one note — the command of the first; the second has none"
+    }
+   ]
+  },
+  {
+   "note": "#3 two hooks block the same stop: one line, one box, a row and a note per hook",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('Reply with the single word: hello', []);",
+   "frames": [
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "Stop hook feedback:\n[python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once_b.py]: PROBE3-B: also say 'mango'."
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "458da3b7-3c1a-413e-8e58-792380ab845a",
+     "uuid": "90440ded-4b24-439d-9618-ca1cc7983107",
+     "timestamp": "2026-11-22T17:54:44.868Z",
+     "isSynthetic": true
+    },
+    {
+     "type": "user",
+     "message": {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "Stop hook feedback:\n[python3 /home/syncroze/Sites/claude-brains/_local/probe-3/stop_once.py]: PROBE3: say the word 'pineapple' once, then stop.\nSecond line of feedback."
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "458da3b7-3c1a-413e-8e58-792380ab845a",
+     "uuid": "1d8de9cb-c788-4ebd-a747-67f667767493",
+     "timestamp": "2026-11-22T17:54:44.872Z",
+     "isSynthetic": true
+    },
+    {
+     "type": "system",
+     "subtype": "notification",
+     "key": "stop-hook-error",
+     "text": "stop hook problem · ctrl+o to see",
+     "priority": "immediate",
+     "session_id": "458da3b7-3c1a-413e-8e58-792380ab845a",
+     "uuid": "cde6c8b7-4b9b-494b-8ecd-8d079425e750"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.status.stop-hook').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: two feedback frames back to back share one line"
+    },
+    {
+     "js": "document.querySelectorAll('.status.stop-hook + .io .io-row').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: a row per hook"
+    },
+    {
+     "js": "Array.prototype.map.call(document.querySelectorAll('.status.stop-hook + .io .io-v'),function(s){return s.textContent;}).join('|')",
+     "equals": "PROBE3-B: also say 'mango'.|PROBE3: say the word 'pineapple' once, then stop.\nSecond line of feedback.",
+     "why": "DISCRIMINATING: each hook's own words, in arrival order"
+    },
+    {
+     "js": "document.querySelectorAll('.status.stop-hook + .io .io-note').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: each row names its command"
+    },
+    {
+     "js": "Array.prototype.filter.call(document.querySelectorAll('.status'),function(s){return /stop hook problem/i.test(s.textContent);}).length",
+     "equals": 0,
+     "why": "GUARD: the one notification that follows both is still dropped"
+    }
+   ]
+  }
+ ]
+}

@@ -172,7 +172,13 @@
       // where the full name lives.
       title.title = title.textContent;
       body.appendChild(title);
-      const type = t && t.task_type;
+      // A Monitor is a background shell to the CLI — its roster entry says task_type "local_bash"
+      // like any other (taped 2026-11-22 on 2.1.330) — and the only thing that tells the two apart
+      // is the tool call the task came from: task_started carries the Monitor call's tool_use_id,
+      // which taskLine keeps on taskProg. Say "Monitor" for those; everything else keeps the CLI's
+      // own word (backlog #11).
+      const from = tid && taskProg[tid] && taskProg[tid].tool;
+      const type = (from && from.name === 'Monitor') ? 'Monitor' : (t && t.task_type);
       if (type) {
         const d = document.createElement('div'); d.className = 'pi-desc';
         d.textContent = String(type);
@@ -479,6 +485,12 @@
         if (ev.parent_tool_use_id) return;
         return onUserEvent(ev);
       case 'result':             return onResult(ev);
+      // Backlog #2: only a scheduler fire is drawn. Every other state of this frame (queued,
+      // completed, cancelled, … — the queue's bookkeeping for prompts the panel sent itself)
+      // stays silent, as it always was.
+      case 'command_lifecycle':
+        if (ev.state === 'started' && typeof ev.wakeup_source === 'string' && ev.wakeup_source) wakeLine(ev.wakeup_source);
+        return;
       case 'permission_request': return renderPermission(ev);
       case 'dialog_request':     return renderDialog(ev);       // 4.10: a host dialog (request_user_dialog)
       case 'files':              files = ev.items || []; if (currentMention()) updateAuto(); return;   // #38: redraw an open @ menu
@@ -588,6 +600,10 @@
         } else if (ev.subtype === 'task_started' || ev.subtype === 'task_progress') {
           taskLine(ev, false);
           if (ev.subtype === 'task_started') { offerBackground(ev); startLiveOut(ev); }   // 11.7 offer, 1.33 live output
+          // The roster frame arrives BEFORE this one (taped: background_tasks_changed, then
+          // task_started with the tool_use_id), so a Monitor's row was already drawn as
+          // "local_bash" — draw the roster again now that the task's tool is known (#11).
+          if (ev.subtype === 'task_started' && ev.is_backgrounded === true && bgTasks.length) renderBgTasks();
         } else if (ev.subtype === 'task_notification') {
           taskLine(ev, true);
           clearBackgroundOffer(ev.task_id); endLiveOut(ev.task_id);

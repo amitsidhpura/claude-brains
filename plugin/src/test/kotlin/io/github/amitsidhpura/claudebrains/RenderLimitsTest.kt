@@ -255,7 +255,8 @@ class RenderLimitsTest {
                 "planDenyPrefix:\"User chose to stay in plan mode and continue planning\"," +
                 "planCommentsHeader:\"Comments on the plan:\"," +
                 "tweakNote:\"edited in the IDE before accepting\"," +
-                "rejectMessage:\"User rejected the change in the IDE\"}",
+                "rejectMessage:\"User rejected the change in the IDE\"," +
+                "stopHookPrefix:\"Stop hook feedback:\"}",
             RenderLimits.asJs(),
         )
     }

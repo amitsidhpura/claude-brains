@@ -118,6 +118,24 @@
       'Your organization has disabled OAuth. Use an API key or ask your admin — signing in again will not help.',
   });
   /**
+   * A turn nobody typed (backlog #2): the CLI's scheduler fired — a `/loop` wakeup or a scheduled
+   * job — and the reply used to appear out of nowhere under the previous turn. The CLI says so
+   * on the frame that starts the turn, `command_lifecycle{state:"started", wakeup_source}` (taped
+   * 2026-11-22 on 2.1.330 with `/loop 1m …`: started → system/init → assistant → result →
+   * completed, no user frame), and on the transcript's own record of the fired prompt
+   * (`isMeta`, `wakeupSource`), which is what replay reads. The two values are the schema's:
+   * `loop_wakeup` is a self-paced /loop's ScheduleWakeup, `schedule_wakeup` every other fire —
+   * a CronCreate job, which is also what `/loop 1m` becomes, so that one cannot be called a
+   * loop. The wording lives here once; replay sends the CODE (icon 'wake'), like `auth`.
+   */
+  const WAKE_LINES = Object.assign(Object.create(null), {
+    loop_wakeup: 'Loop wakeup',
+    schedule_wakeup: 'Scheduled task',
+  });
+  function wakeLine(source) {
+    return statusLine(WAKE_LINES[source] || 'Scheduled task', SVG_CLOCK);
+  }
+  /**
    * The api_retry event's string `error` is NOT prose — it is a five-code ENUM, read verbatim from
    * the 2.1.226 binary's classifier: 529/overloaded_error → "overloaded", 429 → "rate_limit",
    * 401|403 → "authentication_failed", any other status ≥ 408 → "server_error", and no status at

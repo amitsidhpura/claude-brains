@@ -54,6 +54,28 @@ object Autosave {
             if (wantSnap) snapshot!!(rawPath!!, readOnDisk(rawPath))
             respond(CONTINUE); return
         }
+        // Nothing unsaved = nothing to save: answer from THIS thread, without the EDT. The EDT hop
+        // below runs at the non-modal level, so while any modal IDE dialog is open it does not run
+        // at all and the CLI waits on the hook — every Read, Edit and Write of the turn, until the
+        // dialog closes or the CLI gives up (ten minutes, then the tool is skipped; the VS Code
+        // host had the same stall, CHANGELOG 2.1.285). Measured 2026-11-22 in the sandbox on
+        // 2.1.330 with the plugin's own Save-as-command dialog open: the model's Read sat with no
+        // result for 40 s and counting, against 2 s for the whole turn with no dialog (backlog #10).
+        // Only a file with unsaved edits still waits for the EDT — there the save is the point.
+        // Both lookups are safe off the EDT: the document cache and the unsaved set are concurrent.
+        val fdmNow = FileDocumentManager.getInstance()
+        val cached = fdmNow.getCachedDocument(vf)
+        if (cached == null || !fdmNow.isDocumentUnsaved(cached)) {
+            try {
+                // the same text the EDT path hands over: the document's, else the file's bytes
+                if (wantSnap) snapshot!!(rawPath!!, readLocked { fdmNow.getDocument(vf)?.text } ?: String(vf.contentsToByteArray(), vf.charset))
+            } catch (t: Throwable) {
+                log.warn("baseline read failed for ${vf.path}", t)
+            } finally {
+                respond(CONTINUE)
+            }
+            return
+        }
         // Reply from the EDT AFTER the save, so the tool cannot outrun the disk write.
         ApplicationManager.getApplication().invokeLater {
             try {

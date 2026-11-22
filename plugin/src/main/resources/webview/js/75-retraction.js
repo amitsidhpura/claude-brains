@@ -333,6 +333,18 @@
       return;
     }
     if (!Array.isArray(content)) return;
+    // Backlog #3: a blocking Stop hook's message to the model — a synthetic user frame with one
+    // text block (stopHookBlock). The notification that rides with it is dropped there; should
+    // it ever arrive FIRST, its line gives way to this one.
+    if (content.length === 1 && content[0].type === 'text') {
+      const fb = stopHookFeedback(content[0].text);
+      if (fb) {
+        const ntf = infoByTool['ntf:stop-hook-error'];
+        if (ntf && ntf.isConnected && ntf === lastBlock()) { ntf.remove(); delete infoByTool['ntf:stop-hook-error']; }
+        stopHookBlock(fb);
+        return;
+      }
+    }
     content.forEach(function (b) {
       if (b.type !== 'tool_result') return;
       const t = toolsById[b.tool_use_id];
@@ -475,10 +487,15 @@
   // The completion summary line. The time always shows (a finished request always took some); the
   // token segment is appended only when non-zero, so a 0-token request reads "✻ Baked for 2s" rather
   // than a noisy "↓ 0 tokens". Live and replay share this so a request renders the same either way.
-  function doneHtml(durMs, tokens, seed, prevSeed) {
+  // `fast` (backlog #7): the request was SERVED in fast mode — the result's `usage.speed`, which
+  // is delivery, where the footer switch and `fast_mode_state` are only intent (an account
+  // without extra usage keeps the switch off; a cooldown serves a turn at standard speed with
+  // the switch still on). Replay reads the same key off the request's last assistant record.
+  function doneHtml(durMs, tokens, seed, prevSeed, fast) {
     let s = '<span class="star">✻</span> ' +
       doneVerb(seed, prevSeed) + ' for ' + fmtDur(durMs || 0);
     if (tokens > 0) s += ' · ' + SVG_DOWN + fmtTok(tokens) + ' tokens';
+    if (fast) s += ' · fast';
     return s;
   }
   // "Files changed" block under the summary (3.6). [turn] non-null = live, reviewable: the

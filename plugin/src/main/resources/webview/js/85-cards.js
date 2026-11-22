@@ -380,6 +380,19 @@
   // Live permission cards by request id, so `__perm_answered` (the editor diff answered first)
   // can retire the matching card. Entries die with the card: answered, cleared, or superseded.
   let permCards = Object.create(null);
+  // Backlog #15: a selection made with the KEYBOARD (a click puts the caret in the plan, Shift+arrows
+  // extend it) never met a mouseup, so the Comment pill never came. One listener for every plan
+  // card: the keys land on <body>, not on the card, so a per-card listener would never hear them.
+  // Only a key that can extend a selection is looked at — Shift held, or Shift itself released.
+  document.addEventListener('keyup', function planKeySelection(e) {
+    if (!e.shiftKey && e.key !== 'Shift') return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    let n = sel.getRangeAt(0).commonAncestorContainer;
+    if (n && n.nodeType !== 1) n = n.parentNode;
+    const blk = n && n.closest ? n.closest('.card.plan .blk') : null;
+    if (blk && blk.__planSelCheck) blk.__planSelCheck();
+  });
   function renderPermission(ev) {
     hideWorking(); awaitingUser = true; // Claude is now waiting on the user, not processing
     let inp = {}; try { inp = JSON.parse(ev.input); } catch (_) {}
@@ -587,20 +600,24 @@
       card.appendChild(pillEl);
     }
     if (isPlan) {
+      // The selection, read once it has settled — after a mouseup, or after a key that extended
+      // it (planKeySelection below, backlog #15).
+      const selCheck = function () {
+        const sel = window.getSelection();
+        // While a draft is open, a mere click (collapsed selection) must not discard it — the
+        // input keeps its text and focus is the user's to move. Only a REAL new selection acts.
+        if (!sel || sel.isCollapsed || !sel.rangeCount) { if (!composing) hidePill(); return; }
+        const r = sel.getRangeAt(0);
+        if (!blkEl.contains(r.commonAncestorContainer) || !r.toString().trim()) { if (!composing) hidePill(); return; }
+        // A new selection while composing SETTLES the draft (commit if typed, cancel if empty)
+        // and then proceeds exactly as a first selection would — the pill, not a second
+        // composer. Rows are rebuilt outside the plan body, so the selection survives it.
+        if (composing) { settleDraft(); renderComments(false); }
+        showPill(r);
+      };
+      blkEl.__planSelCheck = selCheck;
       blkEl.addEventListener('mouseup', function () {
-        setTimeout(function () {             // selection is finalized after mouseup returns
-          const sel = window.getSelection();
-          // While a draft is open, a mere click (collapsed selection) must not discard it — the
-          // input keeps its text and focus is the user's to move. Only a REAL new selection acts.
-          if (!sel || sel.isCollapsed || !sel.rangeCount) { if (!composing) hidePill(); return; }
-          const r = sel.getRangeAt(0);
-          if (!blkEl.contains(r.commonAncestorContainer) || !r.toString().trim()) { if (!composing) hidePill(); return; }
-          // A new selection while composing SETTLES the draft (commit if typed, cancel if empty)
-          // and then proceeds exactly as a first selection would — the pill, not a second
-          // composer. Rows are rebuilt outside the plan body, so the selection survives it.
-          if (composing) { settleDraft(); renderComments(false); }
-          showPill(r);
-        }, 0);
+        setTimeout(selCheck, 0);             // selection is finalized after mouseup returns
       });
       card.addEventListener('mousedown', function (e) {
         if (pillEl && e.target !== pillEl && !pillEl.contains(e.target)) hidePill();

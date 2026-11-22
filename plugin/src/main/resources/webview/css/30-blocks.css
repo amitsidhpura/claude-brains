@@ -199,6 +199,16 @@
 .tool-line .t-desc.path, .card-h code.path { display: inline-flex; align-items: baseline; overflow: hidden; }
 .tool-line .t-desc.path .p-head, .card-h code.path .p-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tool-line .t-desc.path .p-tail, .card-h code.path .p-tail { flex: 0 0 auto; white-space: nowrap; }
+/* A tail WIDER than the line (backlog #16) used to run off the right edge and be hard-clipped by the
+   panel — measured in the sandbox 2026-11-22: at a 260px panel a 642px filename overhung by 482px
+   and even "/session/SessionStoreTest.kt" by 59px, no ellipsis on either. On the tool line the tail
+   may now shrink, but only once the head has nothing left: flex shrinks in proportion to
+   size x factor, so the head's factor is set five orders of magnitude above the tail's and the
+   tail's share stays under a layout unit until the head is at zero (measured on real JCEF: with
+   room for both, the tail keeps its 219.16px to the hundredth). The card header's path is left
+   alone on purpose — its wrap was settled separately (backlog #19). */
+.tool-line .t-desc.path .p-head { flex-shrink: 100000; }
+.tool-line .t-desc.path .p-tail { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* The card header is prose ("Claude wants to run Edit on <path>"), so the path sits INLINE and must
    be allowed to shrink within it — max-width bounds the flex box, vertical-align keeps it sitting on
    the sentence's baseline rather than lifting the line. Same head/tail split as the tool line: the

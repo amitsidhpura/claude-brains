@@ -127,6 +127,23 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
         }, browser.cefBrowser)
 
+        // Backlog #4: HTML `title` tooltips. The off-screen browser draws none of its own — CEF
+        // only REPORTS the text to the display handler (measured 2026-11-22 in the sandbox, Linux,
+        // 2024.2.6: onTooltip("haiku") on entering the model chip and again on every move over
+        // it, onTooltip("") on leaving) and for a year nothing listened, so every `title` in the
+        // page was invisible. WebTooltip hands the text to the IDE's own tooltip manager.
+        // Off-screen only: a windowed browser has a native surface that may draw its own, and
+        // returning false there leaves that as it was.
+        if (browser.isOffScreenRendering) {
+            val tip = WebTooltip(browser.cefBrowser.uiComponent as? JComponent)
+            browser.jbCefClient.addDisplayHandler(object : org.cef.handler.CefDisplayHandlerAdapter() {
+                override fun onTooltip(b: CefBrowser?, text: String?): Boolean {
+                    javax.swing.SwingUtilities.invokeLater { tip.set(text) }
+                    return true
+                }
+            }, browser.cefBrowser)
+        }
+
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             // Main frame only: this fires per frame, and seedUi() must not run several times for
             // one load. Nothing in chat.html is framed today, so `started` had been hiding that.
@@ -1150,12 +1167,18 @@ class ChatPanel(private val project: Project, parent: Disposable) {
     private fun pushEvent(jsonLine: String) {
         // Encode as a fully-escaped JS string literal (robust for large/complex payloads like init).
         val jsArg = JsonPrimitive(jsonLine).toString()
-        ApplicationManager.getApplication().invokeLater {
+        // ModalityState.any(): at the default (non-modal) level nothing ran while a modal IDE
+        // dialog was open — Settings, the plugin's own Save as command — so the panel stopped
+        // drawing and caught up when the dialog closed (measured 2026-11-22: a whole haiku turn
+        // finished in the transcript while the page still showed none of it). Handing a frame to
+        // the page changes no IDE model, which is the one thing `any` must not be used for, and
+        // every frame takes this one road, so their order is unchanged.
+        ApplicationManager.getApplication().invokeLater({
             browser.cefBrowser.executeJavaScript(
                 "window.onClaudeEvent && window.onClaudeEvent($jsArg);",
                 browser.cefBrowser.url, 0,
             )
-        }
+        }, com.intellij.openapi.application.ModalityState.any())
     }
 
     /** Open Chrome DevTools for the webview. Reached only through the "Claude Brains:

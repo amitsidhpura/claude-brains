@@ -526,6 +526,7 @@ object SessionStore {
         var dropped: Long? = null
         var seed: String? = null           // first assistant uuid — picks the summary's whimsical verb
         var prevSeed: String? = null       // previous summary's seed, so two in a row can't share a verb
+        var fast: Boolean = false          // the request was served in fast mode (backlog #7) — "· fast" on the summary
         // The record's timestamp, epoch ms — on user and assistant items only (1.30): the webview
         // stamps the prompt bubble and the turn's first reply text with it, and lays date lines
         // between turns from it. Live uses the page clock for the same two stamps.
@@ -561,6 +562,7 @@ object SessionStore {
             dropped?.let { put("dropped", it) }
             seed?.let { put("seed", it) }
             prevSeed?.let { put("prevSeed", it) }
+            if (fast) put("fast", true)
             files?.takeIf { it.isNotEmpty() }?.let { put("files", JsonArray(it.map { p -> JsonPrimitive(p) })) }
             desc?.let { put("desc", it) }
             suffix?.let { put("suffix", it) }
@@ -707,6 +709,11 @@ object SessionStore {
         // request's retries (which are younger than the error) out of the old turn.
         val apiErrAnchor = DisplacedAnchor()
         var reqSeed: String? = null            // first assistant uuid of the request (verb seed)
+        // Whether the request's LAST assistant record was served in fast mode (backlog #7): its
+        // `message.usage.speed` ("fast" / "standard" — the key is on every persisted assistant
+        // record, checked 2026-11-22 on 2.1.330 transcripts). Live reads the same key off the
+        // turn's `result`, which closes the request, so last-record-wins is the matching rule.
+        var reqFast = false
         val reqMsgIds = HashSet<String>()      // message.ids already counted — see the "assistant" branch
         // A compaction boundary awaiting its summary. The CLI writes the marker and the summary as
         // two records, linked by parentUuid; holding the marker here lets the summary fold into it
@@ -754,13 +761,14 @@ object SessionStore {
                     tokens = reqTokens
                     seed = sd
                     prevSeed = prevDoneSeed
+                    fast = reqFast
                     files = reqFiles.toList()
                 })
                 prevDoneSeed = sd
             }
             reqFiles.clear()
             reqStart = null; reqLast = null; reqTokens = 0L; reqWork = false; reqError = false
-            reqSeed = null; reqMsgIds.clear()
+            reqSeed = null; reqMsgIds.clear(); reqFast = false
         }
 
         // Blocks dropped by the window. Reaching the top of a windowed list is otherwise
@@ -901,6 +909,34 @@ object SessionStore {
                                 out.add(Item("status").apply { text = stopMarker!!.removeSurrounding("[", "]"); icon = "stop" })
                                 continue
                             }
+                            // A scheduler fire (backlog #2): the prompt a `/loop` wakeup or a scheduled
+                            // job submitted is persisted as a META user record carrying
+                            // `wakeupSource` ("schedule_wakeup" | "loop_wakeup" — taped 2026-11-22 on
+                            // 2.1.330 with `/loop 1m …`; its uuid is the live frame's command_uuid).
+                            // Nobody typed it, so it is no bubble — but it DID start a request:
+                            // close the previous one and say what woke the conversation, as live
+                            // does from `command_lifecycle{started, wakeup_source}`. The text is the
+                            // CODE; the wording lives in the webview (icon "wake", like "auth").
+                            val wake = (obj["wakeupSource"] as? JsonPrimitive)?.contentOrNull
+                            if (wake != null && obj["isMeta"]?.jsonPrimitive?.content == "true") {
+                                flushSummary()
+                                out.add(Item("status").apply { text = wake; icon = "wake" })
+                                reqStart = ts
+                                continue
+                            }
+                            // A Stop hook that blocked (backlog #3): its message to the model is a
+                            // META user record "Stop hook feedback:\n[<command>]: <stderr>" (taped
+                            // 2026-11-22 on 2.1.330). Nobody typed it and the request goes on, so no
+                            // bubble and no summary flush — the line and box the live path draws
+                            // from the same text. `text` is the message with the prefix off; the
+                            // wording lives in the webview (icon "stophook", like "wake").
+                            if (obj["isMeta"]?.jsonPrimitive?.content == "true") {
+                                val fb = io.github.amitsidhpura.claudebrains.RenderLimits.stopHookFeedback(userTextFull(obj))
+                                if (!fb.isNullOrBlank()) {
+                                    out.add(Item("status").apply { text = fb; icon = "stophook" })
+                                    continue
+                                }
+                            }
                             if (obj["isMeta"]?.jsonPrimitive?.content == "true") continue // caveat wrapper
                             // The CLI's post-compaction summary is written as a `user` record — but the
                             // user never typed it. It carries isCompactSummary rather than isMeta, so
@@ -987,6 +1023,10 @@ object SessionStore {
                                     ?.get("output_tokens")?.jsonPrimitive?.content?.toLongOrNull()
                                     ?.let { reqTokens += it }
                             }
+                            // only a record that HAS the key speaks: a synthetic one (a local
+                            // command's output, an API-error echo) carries no real usage
+                            (msg?.get("usage") as? JsonObject)?.get("speed")
+                                ?.let { reqFast = (it as? JsonPrimitive)?.contentOrNull == "fast" }
                             // an API error ("session limit", "usage credits") is persisted as an
                             // ordinary assistant record + `isApiErrorMessage`; live draws it as an
                             // `.error` block, so replay must not render it as prose

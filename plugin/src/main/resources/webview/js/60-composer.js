@@ -394,6 +394,7 @@
     if (b) showWorking();
     else {
       hideWorking(); workStart = 0; awaitingUser = false;
+      defaultLearnHeld = false;   // #57: the turn a model pick interrupted is over
       // Nothing is in flight once the turn is over. An interrupt, an API error or a process exit
       // ends a turn with a tool_use that never gets a tool_result at all, and that line would go on
       // pulsing for the rest of the session — the same failure .t-prog.run is guarded against

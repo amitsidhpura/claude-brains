@@ -375,6 +375,10 @@
     }
     switch (st) {
       case 'notification': {
+        // #3: the hook's own message was just drawn (line + box), which says the same and more.
+        if (ev.key === 'stop-hook-error') {
+          if (openStopHookBox()) return;
+        }
         const text = String(ev.text || '').replace(/\s*·\s*ctrl\+o to see\s*$/i, '');
         // Same key = the REPL replaces its banner; infoLine's dedupe slot does the same here.
         infoLine(text, NOTIFY_LEVEL[ev.priority] || 'notice', ev.key ? 'ntf:' + ev.key : null, SVG_DOT_OPEN);
@@ -450,6 +454,47 @@
       case 'turn_duration':
         return;   // the ✻ summary already carries the turn's timing; nothing to add
     }
+  }
+  /**
+   * Backlog #3: a Stop hook that blocks (exit 2) sends its stderr back to the model and the turn
+   * goes on. TAPED 2026-11-22 on 2.1.330 (a hook that blocks once, _local/probe-3): right after
+   * the reply's message_stop come a `user` frame {isSynthetic:true, content:[{type:"text", text:
+   * "Stop hook feedback:\n[<command>]: <stderr>"}]} and, same instant, `system/notification`
+   * {key:"stop-hook-error", text:"stop hook problem · ctrl+o to see"}; then the next request. The
+   * transcript keeps the text as a META user record (and a system/stop_hook_summary the wire
+   * never carries). The panel used to drop the user frame and show only "stop hook problem".
+   *
+   * Drawn as a warning line with the hook's message in a box attached under it (the user's pick
+   * 2026-11-22 from a three-way render in the real panel: one line / line + box / fold). A lone
+   * "[<command>]: " lead is taken off the message and shown as the row's note. One builder for
+   * live (onUserEvent) and replay (Item status, icon "stophook").
+   */
+  function stopHookFeedback(text) {
+    const p = LIM.stopHookPrefix;
+    return (typeof text === 'string' && text.slice(0, p.length) === p) ? text.slice(p.length).trim() : null;
+  }
+  // The last block drawn in the current turn (the working spinner is pinned below everything).
+  function lastBlock() {
+    const parent = curTurn || log;
+    const e = (workingEl && workingEl.parentNode === parent) ? workingEl.previousElementSibling : parent.lastElementChild;
+    return e || null;
+  }
+  // The stop-hook box when it is the last thing drawn, else null.
+  function openStopHookBox() {
+    const last = lastBlock();
+    return (last && last.classList.contains('io') && last.previousElementSibling &&
+      last.previousElementSibling.classList.contains('stop-hook')) ? last : null;
+  }
+  // Several hooks blocking the same stop arrive as one frame EACH, back to back (taped 2026-11-22,
+  // two hooks: two user frames 10 ms apart, then one notification): they share one line, a row each.
+  function stopHookBlock(body) {
+    const m = /^\[([^\n]*?)\]: ([\s\S]*)$/.exec(body);
+    const row = ['HOOK', m ? m[2] : body, null, null, null, m ? m[1] : null];
+    const open = openStopHookBox();
+    if (open) { open.appendChild(ioRow(row[0], row[1], row[2], row[3], row[4], row[5])); maybeScroll(); return open.previousElementSibling; }
+    const line = statusLine('Stop hook sent Claude back to work', SVG_ALERT, 'status err stop-hook');
+    line.parentNode.insertBefore(ioBox([row]), line.nextSibling);
+    return line;
   }
   /**
    * Sub-agent progress (client-parity item 1) — what a `Task`/`Agent` sub-agent is doing while it

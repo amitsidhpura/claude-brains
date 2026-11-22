@@ -255,7 +255,7 @@
       syntheticEcho.forEach(function (t) { mdBlock(el('blk', ''), t); });
       const done = el('done', '');
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
-      done.innerHTML = doneHtml(durMs, outTok, reqSeed);   // time always; token segment only when non-zero
+      done.innerHTML = doneHtml(durMs, outTok, reqSeed, null, usage.speed === 'fast');   // time always; token segment only when non-zero
     }
     turnEndReason(ev);
     syntheticEcho = [];   // turn-scoped: a stale echo must not leak into the next result

@@ -21,6 +21,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import io.github.amitsidhpura.claudebrains.findVFile
+import io.github.amitsidhpura.claudebrains.findVFileOnDisk
 import io.github.amitsidhpura.claudebrains.readLocked
 import java.awt.Color
 import java.awt.FlowLayout
@@ -92,7 +93,13 @@ class DiffReview(private val project: Project) {
         val future = CompletableFuture<List<String>>()
         pending.add(future)
         tabNames[future] = tabName
-        val vf = findVFile(oldPath)
+        // The snapshot is not the disk (Vfs.kt): a file the CLI wrote a moment ago, or one in a
+        // folder the IDE never indexes, is unknown to it — and an unknown file read as EMPTY
+        // here, so the left pane showed a brand-new file where a real one sits (backlog #13).
+        // Only when the text has to be read here ([current] == null, the bridge flow) is the
+        // disk worth asking; the permission flow brings its own text. No read lock is held on
+        // either caller's thread, which findVFileOnDisk requires.
+        val vf = if (current == null) findVFileOnDisk(oldPath) else findVFile(oldPath)
         val fileName = vf?.name ?: File(oldPath).name
         val fileType = FileTypeManager.getInstance().getFileTypeByFileName(fileName)
 

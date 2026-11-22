@@ -41,6 +41,15 @@ object RenderLimits {
      *  under PLAN_NOTES_MARKER. The webview BUILDS the lines live (via window.LIMITS);
      *  [parsePlanComments] reads them back for replay. One copy of each string, or the replay
      *  parser drifts from the live producer. */
+    /** Backlog #3: a Stop hook that blocks (exit 2) hands its stderr to the model as a user message
+     *  the human never typed — "Stop hook feedback:\n[<command>]: <stderr>". Taped 2026-11-22 on
+     *  2.1.330: live it is a `user` frame with `isSynthetic:true` and one text block, in the
+     *  transcript a `user` record with `isMeta:true` and string content. Live (webview) and replay
+     *  (SessionStore) both recognise it by this prefix and draw the rest through stopHookBlock. */
+    const val STOP_HOOK_PREFIX = "Stop hook feedback:"
+    /** The hook's message with the prefix off, or null when [text] is not Stop hook feedback. */
+    fun stopHookFeedback(text: String?): String? =
+        text?.takeIf { it.startsWith(STOP_HOOK_PREFIX) }?.substring(STOP_HOOK_PREFIX.length)?.trim()
     const val PLAN_DENY_PREFIX = "User chose to stay in plan mode and continue planning"
     const val PLAN_COMMENTS_HEADER = "Comments on the plan:"
     /** An AMBIGUOUS anchor's line carries " (2nd occurrence)" etc. so replay can highlight the
@@ -562,6 +571,7 @@ object RenderLimits {
             "descKeys:${arr(DESC_KEYS)},pathKeys:${arr(PATH_KEYS)},resultSkip:${arr(RESULT_SKIP)}," +
             "inKeys:${arr(IN_KEYS)},plumbingTags:${arr(PLUMBING_TAGS)}," +
             "planDenyPrefix:\"$PLAN_DENY_PREFIX\",planCommentsHeader:\"$PLAN_COMMENTS_HEADER\"," +
-            "tweakNote:\"$TWEAK_NOTE\",rejectMessage:\"$REJECT_MESSAGE\"}"
+            "tweakNote:\"$TWEAK_NOTE\",rejectMessage:\"$REJECT_MESSAGE\"," +
+            "stopHookPrefix:\"$STOP_HOOK_PREFIX\"}"
     }
 }

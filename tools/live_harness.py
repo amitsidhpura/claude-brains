@@ -110,6 +110,13 @@ def run(names, shots):
 
     panel = Panel()
     passed = failed = 0
+    # Backlog #56: six fixtures REPLACE the / menu's command roster (04 and 100 through system/init,
+    # 46, 50, 52 and 103 through __commands) and none puts the real one back, so every full run
+    # left the sandbox panel with fixture 52's five commands until a New conversation re-seeded
+    # it (measured 2026-11-22, each fixture run alone: 2, 2, 0, 7, 5 and 5 commands left behind
+    # against 84 real ones). The roster is the page's own, pushed by Kotlin; keep the one the run
+    # found and put it back at the end, whatever the fixtures did in between.
+    roster = panel.eval("JSON.stringify(slashCommands)")
     try:
         for f in files:
             fx = json.loads(f.read_text(encoding="utf-8"))
@@ -138,6 +145,11 @@ def run(names, shots):
                 panel.screenshot(pathlib.Path(shots) / f"{f.stem}.png")
         panel.reset()
     finally:
+        try:
+            left = panel.eval(f"(function(){{var n=slashCommands.length;slashCommands=JSON.parse({json.dumps(roster)});renderPins();return n;}})()")
+            print(f"\ncommand roster restored: {len(json.loads(roster))} commands (the fixtures left {left})")
+        except Exception as e:  # a dead socket must not hide the run's own failure
+            print(f"\ncommand roster NOT restored: {e}")
         panel.close()
 
     print(f"\n{passed} passed, {failed} failed")

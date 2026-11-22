@@ -234,6 +234,12 @@
   // exhausted the Fable allowance (user, 2026-09-27). Page-lifetime, never persisted: the next
   // frame re-derives it. Fixture 88.
   let defaultResolvedFromCli = null;
+  // Backlog #57: the selection changed while a turn was still running. set_model reaches the
+  // NEXT request, so the frames still arriving belong to the model that was selected before —
+  // picking Default while Sonnet streams let Sonnet's last frames teach "Default (Sonnet 5.5) ·
+  // from your settings" until the next reply. Held from the pick to the end of that turn
+  // (setBusy(false)); the next turn's system/init and assistant frames then speak for Default.
+  let defaultLearnHeld = false;
   let customModels = [];   // user-defined, persisted via Kotlin PropertiesComponent (see the search field)
   // footer-switch state (model menu): fast mode is CLI truth (initialize + result frames, an
   // optimistic click in between); thinking is Kotlin-owned preference, seeded on every load.
@@ -310,6 +316,7 @@
   function reconcileCliModel(id) {
     if (typeof id !== 'string' || !id || id === '<synthetic>') return;
     if (strip1m(currentModel || '') !== 'default') return;
+    if (defaultLearnHeld) return;   // a late frame of the turn the pick interrupted (#57)
     const row = models.find(function (m) { return m.value === 'default'; });
     if (!row) return;
     const real = strip1m(id) === strip1m(row.resolvedModel || '') ? null : id;
@@ -414,6 +421,7 @@
   // CLI back to the model it kept, the same rule the retraction fallback obeys.
   function showModel(v) {
     currentModel = v; windowConfirmed = false;   // new selection: seeded until its first result
+    defaultLearnHeld = busy;                      // #57: a mid-turn pick does not learn from that turn
     const m = allModels().find(function (x) { return x.value === v; });
     // custom carries the same {value, displayName, description} shape as built-in, so both draw the
     // Model+Version through chipName; an unlisted id falls back to a prettified label

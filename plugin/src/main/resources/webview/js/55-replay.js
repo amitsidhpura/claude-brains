@@ -180,6 +180,10 @@
             statusLine(AUTH_BLOCKED[it.text] || it.text, SVG_ALERT, 'status err');
             break;
           }
+          // icon 'wake' (backlog #2): `text` is the CLI's wakeup_source code — same split as 'auth'
+          if (it.icon === 'wake') { wakeLine(it.text); break; }
+          // icon 'stophook' (backlog #3): `text` is a blocking Stop hook's message, prefix off
+          if (it.icon === 'stophook') { stopHookBlock(it.text); break; }
           statusLine(it.text, it.icon === 'stop' ? SVG_STOP : (it.icon === 'alert' ? SVG_ALERT : null),
             it.icon === 'alert' ? 'status err' : null);
           break;
@@ -193,7 +197,7 @@
           break;
         case 'done': {
           const d = el('done', '');
-          d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0, it.seed, it.prevSeed);
+          d.innerHTML = doneHtml(it.durMs || 0, it.tokens || 0, it.seed, it.prevSeed, it.fast === true);
           if (it.files && it.files.length) filesLine(it.files.map(function (p) { return { path: p }; }), null);
           break;
         }

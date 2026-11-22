@@ -1,0 +1,248 @@
+{
+ "item": "panel follow-ups (backlog #2, #7, #16, #57, #15, #11): a scheduler wake says what started the turn; the summary says when a request was served in fast mode; a filename wider than the tool line is cut with an ellipsis; a model picked mid-turn does not learn what Default resolves to from that turn's late frames; a keyboard-made selection in a plan gets the Comment pill; a Monitor's row in the background roster says Monitor",
+ "branch": "case 'command_lifecycle' in 70-events.js + wakeLine / WAKE_LINES (10-turn-working.js) + the 'wake' status icon in 55-replay.js; doneHtml's `fast` (75-retraction.js) fed by onResult (80-gauge.js) and the replay `done` item; the #16 block in 30-blocks.css; defaultLearnHeld in 30-menus.js, cleared by setBusy(false) (60-composer.js); planKeySelection in 85-cards.js; renderBgTasks' row type + the task_started redraw in 70-events.js",
+ "provenance": "#2: the `command_lifecycle` started frame is TAPED VERBATIM (2026-11-22, CLI 2.1.330, stdio with the panel's flags, `/loop 1m …` on haiku: started{wakeup_source:\"schedule_wakeup\"} → system/init → assistant → result → completed, no user frame; tape _local/probe-xs/tape-loop.jsonl). `loop_wakeup` is the schema's other value, read from the 2.1.330 binary and NOT taped. The replay items are OUR OWN Kotlin→page shape (SessionStore: a meta user record carrying `wakeupSource`, read from that probe's transcript). #7: the result frame is the taped tick's, cut to the keys read; `usage.speed` was \"standard\" on every frame taped here — the value \"fast\" is set by hand (the key and its two values were measured 2026-08-24, protocol gotchas § Fast mode; no fast turn has been served on this machine). #16, #57, #15: pure DOM / CSS geometry and page state, no CLI frame claimed beyond the assistant frame's `message.model`; the #15 keyup is SYNTHETIC — real Shift+Arrow keys sent over CDP reached the page but did not extend the selection in the sandbox (2026-11-22), so whether a real keyboard can make such a selection in JCEF is not proven here. #11: the roster frame and the task_started frame are TAPED VERBATIM (2026-11-22, 2.1.330, a real Monitor call on haiku, tape _local/probe-xs/tape-monitor.jsonl; uuid and session_id cut) — roster first, then task_started with the Monitor call's tool_use_id; the second task (a background Bash) is hand-made in the same shape. NEGATIVE CONTROL RUN 2026-11-22: against the sandbox serving HEAD's whole webview (4119ec1) the 27 asserts outside the #11 step went 16 FAILED / 11 passed (every DISCRIMINATING assert, plus two that cannot hold without the line they look at); the #11 step, run against a build carrying every other change here, 2 FAILED / 3 passed; 32/32 after.",
+ "steps": [
+  {
+   "note": "#2: a scheduler fire draws one muted line naming what woke the conversation; the queue's other bookkeeping frames draw nothing",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('first', []);",
+   "frames": [
+    {
+     "type": "command_lifecycle",
+     "command_uuid": "e67dcbbc-e55d-4451-a619-b513ad696d68",
+     "state": "started",
+     "wakeup_source": "schedule_wakeup",
+     "uuid": "cecf3215-38a8-4fc3-9d4f-86a01a721f09",
+     "session_id": "03491b28-b501-40d9-a8e7-412a811b9062"
+    },
+    {
+     "type": "command_lifecycle",
+     "command_uuid": "e67dcbbc-e55d-4451-a619-b513ad696d68",
+     "state": "completed",
+     "uuid": "aa3a22d0-e02a-4632-822d-8cfc23bc7a92",
+     "session_id": "03491b28-b501-40d9-a8e7-412a811b9062"
+    },
+    {
+     "type": "command_lifecycle",
+     "command_uuid": "fx116-q",
+     "state": "queued"
+    },
+    {
+     "type": "command_lifecycle",
+     "command_uuid": "fx116-q",
+     "state": "started"
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('.status').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: one line for the fire (none before the change); completed / queued / a started frame without wakeup_source add nothing"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status');return s?s.textContent:null;})()",
+     "equals": "Scheduled task",
+     "why": "DISCRIMINATING: schedule_wakeup reads 'Scheduled task' — `/loop 1m` becomes a cron job, so it is not called a loop"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status .s-ic svg');return !!s;})()",
+     "equals": true,
+     "why": "it wears a glyph like every status line"
+    },
+    {
+     "js": "(function(){var s=document.querySelector('.status');return !!(s&&s.closest('.turn-body'));})()",
+     "equals": true,
+     "why": "GUARD: it sits in the current turn, where the wake's reply will follow"
+    }
+   ]
+  },
+  {
+   "note": "#2: a self-paced /loop wakeup has its own wording; an unknown source falls back; replay draws both from the code",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('second', []);window.onClaudeEvent(\"{\\\"type\\\": \\\"command_lifecycle\\\", \\\"command_uuid\\\": \\\"fx116-l\\\", \\\"state\\\": \\\"started\\\", \\\"wakeup_source\\\": \\\"loop_wakeup\\\", \\\"scheduled_for\\\": 1795358341764}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"command_lifecycle\\\", \\\"command_uuid\\\": \\\"fx116-u\\\", \\\"state\\\": \\\"started\\\", \\\"wakeup_source\\\": \\\"some_future_source\\\"}\");window.__m116b={live:Array.prototype.map.call(document.querySelectorAll('.status'),function(s){return s.textContent;}).join('|')};window.onClaudeEvent(\"{\\\"type\\\": \\\"__transcript\\\", \\\"items\\\": [{\\\"role\\\": \\\"user\\\", \\\"text\\\": \\\"earlier prompt\\\"}, {\\\"role\\\": \\\"assistant\\\", \\\"text\\\": \\\"earlier reply\\\"}, {\\\"role\\\": \\\"done\\\", \\\"durMs\\\": 2000, \\\"tokens\\\": 10, \\\"seed\\\": \\\"s1\\\"}, {\\\"role\\\": \\\"status\\\", \\\"text\\\": \\\"schedule_wakeup\\\", \\\"icon\\\": \\\"wake\\\"}, {\\\"role\\\": \\\"assistant\\\", \\\"text\\\": \\\"tick\\\"}, {\\\"role\\\": \\\"done\\\", \\\"durMs\\\": 1747, \\\"tokens\\\": 4, \\\"seed\\\": \\\"s2\\\", \\\"prevSeed\\\": \\\"s1\\\", \\\"fast\\\": true}, {\\\"role\\\": \\\"status\\\", \\\"text\\\": \\\"loop_wakeup\\\", \\\"icon\\\": \\\"wake\\\"}]}\");window.__m116b.replay=Array.prototype.map.call(document.querySelectorAll('.status'),function(s){return s.textContent;}).join('|');window.__m116b.dones=Array.prototype.map.call(document.querySelectorAll('.done'),function(s){return / · fast$/.test(s.textContent);}).join('|');",
+   "expect": [
+    {
+     "js": "window.__m116b.live",
+     "equals": "Loop wakeup|Scheduled task",
+     "why": "DISCRIMINATING: loop_wakeup → 'Loop wakeup'; an unknown source still says something true"
+    },
+    {
+     "js": "window.__m116b.replay",
+     "contains": "Scheduled task|Loop wakeup",
+     "why": "DISCRIMINATING: replay resolves the same codes through the same map (pre-change the raw code printed)"
+    },
+    {
+     "js": "window.__m116b.dones",
+     "equals": "false|true",
+     "why": "DISCRIMINATING (#7, replay): only the request whose done item says fast ends '· fast'"
+    }
+   ]
+  },
+  {
+   "note": "#7 live: a result served in fast mode ends its summary '· fast'; a standard one does not",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('speed', []);reqTokens=0;window.onClaudeEvent(\"{\\\"type\\\": \\\"result\\\", \\\"subtype\\\": \\\"success\\\", \\\"is_error\\\": false, \\\"duration_ms\\\": 1747, \\\"num_turns\\\": 1, \\\"result\\\": \\\"tick\\\", \\\"stop_reason\\\": \\\"end_turn\\\", \\\"terminal_reason\\\": \\\"completed\\\", \\\"usage\\\": {\\\"input_tokens\\\": 4, \\\"output_tokens\\\": 4, \\\"service_tier\\\": \\\"standard\\\", \\\"speed\\\": \\\"fast\\\"}}\");window.__m116a={fast:document.querySelector('.done').textContent};window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('speed', []);reqTokens=0;window.onClaudeEvent(\"{\\\"type\\\": \\\"result\\\", \\\"subtype\\\": \\\"success\\\", \\\"is_error\\\": false, \\\"duration_ms\\\": 1747, \\\"num_turns\\\": 1, \\\"result\\\": \\\"tick\\\", \\\"stop_reason\\\": \\\"end_turn\\\", \\\"terminal_reason\\\": \\\"completed\\\", \\\"usage\\\": {\\\"input_tokens\\\": 4, \\\"output_tokens\\\": 4, \\\"service_tier\\\": \\\"standard\\\", \\\"speed\\\": \\\"standard\\\"}}\");window.__m116a.std=document.querySelector('.done').textContent;",
+   "expect": [
+    {
+     "js": "/ for \\d+s · 4 tokens · fast$/.test(window.__m116a.fast)",
+     "equals": true,
+     "why": "DISCRIMINATING: time, tokens, then '· fast' (absent before the change)"
+    },
+    {
+     "js": "/ · 4 tokens$/.test(window.__m116a.std)",
+     "equals": true,
+     "why": "GUARD: usage.speed 'standard' — the taped value — adds nothing"
+    }
+   ]
+  },
+  {
+   "note": "#16: at a 260px panel a filename wider than the line is cut with an ellipsis inside the line; with room the tail is whole",
+   "setup": "window.__m116c=(function(){window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"__project\\\", \\\"root\\\": \\\"/home/syncroze/Sites/claude-brains\\\"}\");addUserMessage('paths', []);window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"message_start\\\", \\\"message\\\": {\\\"usage\\\": {}}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_start\\\", \\\"index\\\": 0, \\\"content_block\\\": {\\\"type\\\": \\\"tool_use\\\", \\\"id\\\": \\\"t116a\\\", \\\"name\\\": \\\"Read\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_delta\\\", \\\"index\\\": 0, \\\"delta\\\": {\\\"type\\\": \\\"input_json_delta\\\", \\\"partial_json\\\": \\\"{\\\\\\\"file_path\\\\\\\": \\\\\\\"/home/syncroze/Sites/claude-brains/plugin/src/a/TheQuiteExtraordinarilyLongGeneratedFileNameThatNoPanelCouldEverHold.generated.kt\\\\\\\"}\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_stop\\\", \\\"index\\\": 0}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"message_start\\\", \\\"message\\\": {\\\"usage\\\": {}}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_start\\\", \\\"index\\\": 0, \\\"content_block\\\": {\\\"type\\\": \\\"tool_use\\\", \\\"id\\\": \\\"t116b\\\", \\\"name\\\": \\\"Read\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_delta\\\", \\\"index\\\": 0, \\\"delta\\\": {\\\"type\\\": \\\"input_json_delta\\\", \\\"partial_json\\\": \\\"{\\\\\\\"file_path\\\\\\\": \\\\\\\"/home/syncroze/Sites/claude-brains/plugin/src/test/kotlin/io/github/amitsidhpura/claudebrains/session/SessionStoreTest.kt\\\\\\\"}\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_stop\\\", \\\"index\\\": 0}}\");var keep=document.body.style.width;var read=function(){return Array.prototype.map.call(document.querySelectorAll('.tool-line'),function(l){var t=l.querySelector('.p-tail'),h=l.querySelector('.p-head');var lr=l.getBoundingClientRect(),tr=t.getBoundingClientRect();return {past:Math.round(tr.right-lr.right),cut:t.scrollWidth>Math.ceil(tr.width),ell:getComputedStyle(t).textOverflow,tailW:Math.round(tr.width*100)/100,full:t.scrollWidth,headW:Math.round(h.getBoundingClientRect().width),lines:Math.round(lr.height/(parseFloat(getComputedStyle(l).lineHeight)||18)),text:l.querySelector('.t-desc').textContent};});};document.body.style.width='260px';var narrow=read();document.body.style.width='460px';var wide=read();document.body.style.width=keep;return {narrow:narrow,wide:wide};})();",
+   "expect": [
+    {
+     "js": "window.__m116c.narrow[0].past",
+     "equals": 0,
+     "why": "DISCRIMINATING: the tail ends at the line's right edge (482px past it before)"
+    },
+    {
+     "js": "window.__m116c.narrow[0].cut && window.__m116c.narrow[0].ell === 'ellipsis'",
+     "equals": true,
+     "why": "DISCRIMINATING: and it is cut by an ellipsis, not clipped"
+    },
+    {
+     "js": "window.__m116c.narrow[1].past",
+     "equals": 0,
+     "why": "DISCRIMINATING: '/session/SessionStoreTest.kt' no longer overhangs either (59px before)"
+    },
+    {
+     "js": "window.__m116c.narrow[0].lines === 1 && window.__m116c.narrow[1].lines === 1",
+     "equals": true,
+     "why": "GUARD: still one line each"
+    },
+    {
+     "js": "window.__m116c.wide[1].cut === false && window.__m116c.wide[1].tailW >= window.__m116c.wide[1].full - 1 && window.__m116c.wide[1].headW > 0",
+     "equals": true,
+     "why": "GUARD: at 460px the tail keeps its full width and the head takes the ellipsis, as before"
+    },
+    {
+     "js": "window.__m116c.narrow[0].text",
+     "contains": "TheQuiteExtraordinarilyLongGeneratedFileNameThatNoPanelCouldEverHold.generated.kt",
+     "why": "GUARD: the text is still the whole displayed path"
+    }
+   ]
+  },
+  {
+   "note": "#57: Default picked while a Sonnet turn is still running — its late frame teaches nothing; the next turn's frames do; an idle pick learns at once",
+   "setup": "if(!window.__realBridge116){window.__realBridge116=window.__bridge;}window.__bridge=function(){};window.__m116d={models:JSON.parse(JSON.stringify(models)),sel:currentModel,win:ctxWindowFromCli,learned:defaultResolvedFromCli};defaultResolvedFromCli=null;window.onClaudeEvent(\"{\\\"type\\\": \\\"__models\\\", \\\"selected\\\": \\\"sonnet\\\", \\\"items\\\": [{\\\"value\\\": \\\"default\\\", \\\"resolvedModel\\\": \\\"claude-opus-5-5\\\", \\\"displayName\\\": \\\"Default (recommended)\\\", \\\"description\\\": \\\"Opus 5.5 \\\\u00b7 Best for everyday, complex tasks\\\", \\\"supportsFastMode\\\": true}, {\\\"value\\\": \\\"sonnet\\\", \\\"resolvedModel\\\": \\\"claude-sonnet-5\\\", \\\"displayName\\\": \\\"Sonnet 5\\\", \\\"description\\\": \\\"Sonnet 5 \\\\u00b7 Efficient for routine tasks\\\"}, {\\\"value\\\": \\\"fable\\\", \\\"resolvedModel\\\": \\\"claude-fable-5-1\\\", \\\"displayName\\\": \\\"Fable 5.1\\\", \\\"description\\\": \\\"Fable 5.1 \\\\u00b7 Most capable\\\"}]}\");setBusy(true);showModel('default');window.onClaudeEvent(\"{\\\"type\\\": \\\"assistant\\\", \\\"uuid\\\": \\\"fx116-late\\\", \\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"model\\\": \\\"claude-sonnet-5\\\", \\\"content\\\": []}}\");window.__m116d.late=document.getElementById('modelChip').textContent.trim();window.__m116d.lateDesc=(function(){var r=document.querySelector('#modelItems .popup-item[data-v=\"default\"] .pi-desc');return r?r.textContent:null;})();setBusy(false);window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"init\\\", \\\"model\\\": \\\"claude-fable-5-1\\\"}\");window.__m116d.next=document.getElementById('modelChip').textContent.trim();showModel('sonnet');showModel('default');window.onClaudeEvent(\"{\\\"type\\\": \\\"assistant\\\", \\\"uuid\\\": \\\"fx116-idle\\\", \\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"model\\\": \\\"claude-opus-5-5\\\", \\\"content\\\": []}}\");window.__m116d.idle=document.getElementById('modelChip').textContent.trim();",
+   "expect": [
+    {
+     "js": "window.__m116d.late",
+     "equals": "Default (Opus 5.5)",
+     "why": "DISCRIMINATING: the late Sonnet frame did not relabel Default (pre-fix: 'Default (Sonnet 5)')"
+    },
+    {
+     "js": "window.__m116d.lateDesc",
+     "equals": "Opus 5.5 · Best for everyday, complex tasks",
+     "why": "DISCRIMINATING: nor did the row claim Sonnet came 'from your settings'"
+    },
+    {
+     "js": "window.__m116d.next",
+     "equals": "Default (Fable 5.1)",
+     "why": "GUARD: once that turn is over, the next turn's system/init speaks for Default again"
+    },
+    {
+     "js": "window.__m116d.idle",
+     "equals": "Default (Opus 5.5)",
+     "why": "GUARD: a pick made while idle learns from the very next frame (here: back to the roster's own)"
+    }
+   ]
+  },
+  {
+   "note": "#57: restore the live roster, selection, window and bridge",
+   "setup": "defaultResolvedFromCli=window.__m116d.learned;window.onClaudeEvent(JSON.stringify({type:'__models',items:window.__m116d.models,selected:window.__m116d.sel}));ctxWindowFromCli=window.__m116d.win;renderContext();window.__bridge=window.__realBridge116;",
+   "expect": [
+    {
+     "js": "currentModel === window.__m116d.sel && window.__bridge === window.__realBridge116 && busy === false",
+     "equals": true,
+     "why": "pre-fixture selection and bridge restored, nothing left busy"
+    }
+   ]
+  },
+  {
+   "note": "#15: a selection inside the plan followed by a Shift key-up brings the Comment pill; other keys and other selections do not",
+   "setup": "window.__m116e=(function(){window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('plan it', []);if(!window.__realBridge116){window.__realBridge116=window.__bridge;}window.__bridge=function(){};window.onClaudeEvent(\"{\\\"type\\\": \\\"permission_request\\\", \\\"id\\\": \\\"fx116p\\\", \\\"tool\\\": \\\"ExitPlanMode\\\", \\\"input\\\": \\\"{\\\\\\\"plan\\\\\\\": \\\\\\\"## Steps\\\\\\\\n1. Wrap network calls in a retry helper\\\\\\\\n2. Backfill `tests`\\\\\\\"}\\\", \\\"suggestions\\\": \\\"[]\\\"}\");var o={};(function(){var blk=document.querySelector('.card.plan .blk');var tn=blk.querySelector('li').firstChild;var r=document.createRange();r.setStart(tn,5);r.setEnd(tn,18);var s=getSelection();s.removeAllRanges();s.addRange(r);})();document.body.dispatchEvent(new KeyboardEvent('keyup',{key:'a',shiftKey:false,bubbles:true}));o.plainKey=document.querySelectorAll('.card.plan .plan-add').length;document.body.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowRight',shiftKey:true,bubbles:true}));o.shiftArrow=document.querySelectorAll('.card.plan .plan-add').length;o.pillInCard=(function(){var p=document.querySelector('.plan-add'),c=document.querySelector('.card.plan');return !!(p&&c&&p.offsetParent===c);})();var pp=document.querySelector('.plan-add');if(pp)pp.remove();getSelection().removeAllRanges();document.body.dispatchEvent(new KeyboardEvent('keyup',{key:'Shift',shiftKey:false,bubbles:true}));o.collapsed=document.querySelectorAll('.card.plan .plan-add').length;var u=document.querySelector('.msg-user')||document.querySelector('.turn');var r2=document.createRange();r2.selectNodeContents(u);var s2=getSelection();s2.removeAllRanges();s2.addRange(r2);document.body.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowRight',shiftKey:true,bubbles:true}));o.outside=document.querySelectorAll('.card.plan .plan-add').length;(function(){var blk=document.querySelector('.card.plan .blk');var tn=blk.querySelector('li').firstChild;var r=document.createRange();r.setStart(tn,5);r.setEnd(tn,18);var s=getSelection();s.removeAllRanges();s.addRange(r);})();document.body.dispatchEvent(new KeyboardEvent('keyup',{key:'Shift',shiftKey:false,bubbles:true}));o.shiftUp=document.querySelectorAll('.card.plan .plan-add').length;getSelection().removeAllRanges();return o;})();",
+   "expect": [
+    {
+     "js": "window.__m116e.shiftArrow",
+     "equals": 1,
+     "why": "DISCRIMINATING: Shift+ArrowRight released over a plan selection shows the pill (0 before — only mouseup looked)"
+    },
+    {
+     "js": "window.__m116e.shiftUp",
+     "equals": 1,
+     "why": "DISCRIMINATING: so does releasing Shift itself"
+    },
+    {
+     "js": "window.__m116e.pillInCard",
+     "equals": true,
+     "why": "the pill is the card's own, placed as the mouse path places it"
+    },
+    {
+     "js": "window.__m116e.plainKey",
+     "equals": 0,
+     "why": "GUARD: a key-up without Shift is not a selection key"
+    },
+    {
+     "js": "window.__m116e.collapsed",
+     "equals": 0,
+     "why": "GUARD: no selection, no pill"
+    },
+    {
+     "js": "window.__m116e.outside",
+     "equals": 0,
+     "why": "GUARD: a selection outside the plan is not the plan's"
+    }
+   ]
+  },
+  {
+   "note": "#11: a Monitor's roster row says Monitor once task_started names its tool call; a background shell keeps the CLI's own word",
+   "setup": "window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");addUserMessage('watch it', []);window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"message_start\\\", \\\"message\\\": {\\\"usage\\\": {}}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_start\\\", \\\"index\\\": 0, \\\"content_block\\\": {\\\"type\\\": \\\"tool_use\\\", \\\"id\\\": \\\"toolu_01MA6nzoUXbN9YQnqD27WW33\\\", \\\"name\\\": \\\"Monitor\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_delta\\\", \\\"index\\\": 0, \\\"delta\\\": {\\\"type\\\": \\\"input_json_delta\\\", \\\"partial_json\\\": \\\"{\\\\\\\"command\\\\\\\": \\\\\\\"for i in 1 2 3; do echo tick $i; sleep 3; done\\\\\\\", \\\\\\\"description\\\\\\\": \\\\\\\"Tick output from a 3-iteration sleep loop\\\\\\\", \\\\\\\"timeout_ms\\\\\\\": 60000}\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_stop\\\", \\\"index\\\": 0}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"background_tasks_changed\\\", \\\"tasks\\\": [{\\\"task_id\\\": \\\"bb43zzg5g\\\", \\\"run_id\\\": \\\"0mwrydi6s-1e2a65dc\\\", \\\"task_type\\\": \\\"local_bash\\\", \\\"description\\\": \\\"Tick output from a 3-iteration sleep loop\\\"}]}\");window.__m116f={before:Array.prototype.map.call(document.querySelectorAll('#bgList .bg-row'),function(r){var d=r.querySelector('.pi-desc');return d?d.textContent:'';}).join('|')};window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"task_started\\\", \\\"task_id\\\": \\\"bb43zzg5g\\\", \\\"run_id\\\": \\\"0mwrydi6s-1e2a65dc\\\", \\\"tool_use_id\\\": \\\"toolu_01MA6nzoUXbN9YQnqD27WW33\\\", \\\"description\\\": \\\"Tick output from a 3-iteration sleep loop\\\", \\\"is_backgrounded\\\": true, \\\"task_type\\\": \\\"local_bash\\\"}\");window.__m116f.after=Array.prototype.map.call(document.querySelectorAll('#bgList .bg-row'),function(r){var d=r.querySelector('.pi-desc');return d?d.textContent:'';}).join('|');window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"message_start\\\", \\\"message\\\": {\\\"usage\\\": {}}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_start\\\", \\\"index\\\": 0, \\\"content_block\\\": {\\\"type\\\": \\\"tool_use\\\", \\\"id\\\": \\\"fx116bash\\\", \\\"name\\\": \\\"Bash\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_delta\\\", \\\"index\\\": 0, \\\"delta\\\": {\\\"type\\\": \\\"input_json_delta\\\", \\\"partial_json\\\": \\\"{\\\\\\\"command\\\\\\\": \\\\\\\"npm run build\\\\\\\", \\\\\\\"run_in_background\\\\\\\": true}\\\"}}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"stream_event\\\", \\\"event\\\": {\\\"type\\\": \\\"content_block_stop\\\", \\\"index\\\": 0}}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"background_tasks_changed\\\", \\\"tasks\\\": [{\\\"task_id\\\": \\\"bb43zzg5g\\\", \\\"run_id\\\": \\\"0mwrydi6s-1e2a65dc\\\", \\\"task_type\\\": \\\"local_bash\\\", \\\"description\\\": \\\"Tick output from a 3-iteration sleep loop\\\"}, {\\\"task_id\\\": \\\"fx116sh\\\", \\\"task_type\\\": \\\"local_bash\\\", \\\"description\\\": \\\"npm run build\\\"}]}\");window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"task_started\\\", \\\"task_id\\\": \\\"fx116sh\\\", \\\"tool_use_id\\\": \\\"fx116bash\\\", \\\"description\\\": \\\"npm run build\\\", \\\"is_backgrounded\\\": true, \\\"task_type\\\": \\\"local_bash\\\"}\");window.__m116f.both=Array.prototype.map.call(document.querySelectorAll('#bgList .bg-row'),function(r){var d=r.querySelector('.pi-desc');return d?d.textContent:'';}).join('|');window.__m116f.title=document.querySelector('#bgList .bg-row .pi-title').textContent;window.onClaudeEvent(\"{\\\"type\\\": \\\"system\\\", \\\"subtype\\\": \\\"background_tasks_changed\\\", \\\"tasks\\\": []}\");window.__m116f.chipHidden=document.getElementById('bgChip').hidden;",
+   "expect": [
+    {
+     "js": "window.__m116f.before",
+     "equals": "local_bash",
+     "why": "GUARD: the roster frame alone cannot tell — it arrives first and says local_bash (taped order)"
+    },
+    {
+     "js": "window.__m116f.after",
+     "equals": "Monitor",
+     "why": "DISCRIMINATING: task_started carries the Monitor call's tool_use_id and the row is redrawn (local_bash before the change)"
+    },
+    {
+     "js": "window.__m116f.both",
+     "equals": "Monitor|local_bash",
+     "why": "DISCRIMINATING: beside it a background Bash still reads local_bash"
+    },
+    {
+     "js": "window.__m116f.title",
+     "equals": "Tick output from a 3-iteration sleep loop",
+     "why": "GUARD: the row's title is still the task's description"
+    },
+    {
+     "js": "window.__m116f.chipHidden",
+     "equals": true,
+     "why": "GUARD: an empty roster hides the chip again, nothing left behind"
+    }
+   ]
+  },
+  {
+   "note": "restore: real bridge back, log cleared",
+   "setup": "window.__bridge=window.__realBridge116;window.onClaudeEvent(\"{\\\"type\\\": \\\"__clear\\\"}\");",
+   "expect": [
+    {
+     "js": "window.__bridge === window.__realBridge116 && document.querySelectorAll('.card.plan').length",
+     "equals": 0,
+     "why": "real bridge back, no card left"
+    }
+   ]
+  }
+ ]
+}
