@@ -1,0 +1,115 @@
+{
+ "item": "9.10 — the Thinking switch is locked on for a model whose roster row says supportsThinkingOff:false (2026-11-22)",
+ "branch": "syncModelFooter reads the selected roster row's supportsThinkingOff: false = switch disabled and drawn on, with its own title; true, an absent key or no roster row = the switch works as before and shows the thinking preference",
+ "provenance": "The first three roster rows are copied VERBATIM from the CLI's bare initialize response on 2.1.330 (2026-11-22 audit); the fourth (haiku, no supportsThinkingOff key) is the 2.1.241 row from fixture 55 and stands for an older CLI that sends no such key. That the flag tracks behaviour was probed live over stdio with the panel's flags on 2.1.330, 2026-11-22, a control turn and a set_max_thinking_tokens 0 turn per model on the same prompt: flag true — Haiku 4.5 (1 thinking block -> 0) and Sonnet 5 (1 -> 0); flag false — Haiku 5.5 (1 -> 1) and Sonnet 5.5 (1 -> 1), the 0 acked with success every time. The __models and __thinking frames are OUR OWN Kotlin->webview frames (self-consistency only). The roster is switched by injected __models frames, never setModel, and the switch is never clicked while enabled, so nothing is persisted and nothing reaches the live CLI; the click on the locked switch goes through tglThink.onclick directly with window.__bridge wrapped, because a browser fires no click on a disabled button and the handler's own guard is what is under test. The last step puts back the saved roster, selection and thinking preference. NEGATIVE CONTROL RUN 2026-11-22 against the pre-change webview (whole webview/ dir stashed back to 0efe93b, sandbox restarted, control verified BY CONTENT: syncModelFooter has no supportsThinkingOff): 9 passed / 9 failed — all seven DISCRIMINATING asserts failed (not disabled, drawn off, aria false, old title, not locked with the preference on, 1 bridge frame sent, preference flipped) plus step 2's two guards that depend on the lock; every other guard passed.",
+ "steps": [
+  {
+   "note": "flag false: the switch is locked and drawn on, even with the thinking preference off; flag true and an absent key: it works and shows the preference",
+   "setup": "window.__t910 = (function () { function snap(){ const t=document.getElementById('tglThink'); return { dis: t.disabled, on: t.classList.contains('on'), aria: t.getAttribute('aria-checked'), title: t.title }; } function pick(v){ window.onClaudeEvent(JSON.stringify({ type: '__models', selected: v, items: [{\"value\": \"sonnet\", \"resolvedModel\": \"claude-sonnet-5-5\", \"displayName\": \"Sonnet 5.5\", \"description\": \"Most efficient for simpler tasks\", \"supportsEffort\": true, \"supportedEffortLevels\": [\"low\", \"medium\", \"high\", \"xhigh\", \"max\"], \"supportsAdaptiveThinking\": true, \"supportsAutoMode\": true, \"supportsThinkingOff\": false}, {\"value\": \"claude-haiku-4-5-20251001\", \"resolvedModel\": \"claude-haiku-4-5-20251001\", \"displayName\": \"Haiku 4.5\", \"description\": \"Fastest for quick answers\", \"supportsThinkingOff\": true}, {\"value\": \"claude-sonnet-5\", \"resolvedModel\": \"claude-sonnet-5\", \"displayName\": \"Sonnet 5\", \"description\": \"Efficient for routine tasks\", \"supportsEffort\": true, \"supportedEffortLevels\": [\"low\", \"medium\", \"high\", \"xhigh\", \"max\"], \"supportsAdaptiveThinking\": true, \"supportsAutoMode\": true, \"supportsThinkingOff\": true}, {\"value\": \"haiku\", \"resolvedModel\": \"claude-haiku-4-5-20251001\", \"displayName\": \"Haiku\", \"description\": \"Haiku 4.5 \\u00b7 Fastest for quick answers\"}] })); return snap(); } window.__t910Saved = JSON.stringify({ items: models, selected: currentModel, thinkingOn: thinkingOn }); window.onClaudeEvent(JSON.stringify({ type: '__thinking', on: false })); const out = { locked: pick('sonnet'), free: pick('claude-sonnet-5'), haiku45: pick('claude-haiku-4-5-20251001'), noKey: pick('haiku') }; window.onClaudeEvent(JSON.stringify({ type: '__thinking', on: true })); out.lockedPrefOn = pick('sonnet'); out.freePrefOn = pick('claude-sonnet-5'); return out; })();",
+   "expect": [
+    {
+     "js": "window.__t910.locked.dis",
+     "equals": true,
+     "why": "DISCRIMINATING: supportsThinkingOff:false locks the switch (never disabled before the change)"
+    },
+    {
+     "js": "window.__t910.locked.on",
+     "equals": true,
+     "why": "DISCRIMINATING: locked shows what happens — thinking on — although the preference is off (drawn off before the change)"
+    },
+    {
+     "js": "window.__t910.locked.aria",
+     "equals": "true",
+     "why": "DISCRIMINATING: aria-checked follows the drawn state"
+    },
+    {
+     "js": "window.__t910.locked.title",
+     "equals": "Thinking — always on for this model",
+     "why": "DISCRIMINATING: the tooltip says why the switch does not move"
+    },
+    {
+     "js": "window.__t910.free.dis",
+     "equals": false,
+     "why": "GUARD: supportsThinkingOff:true leaves the switch live"
+    },
+    {
+     "js": "window.__t910.free.on",
+     "equals": false,
+     "why": "GUARD: a live switch shows the preference (off), so the lock did not overwrite it"
+    },
+    {
+     "js": "window.__t910.free.title",
+     "equals": "Extended thinking",
+     "why": "GUARD: the title goes back when the lock lifts"
+    },
+    {
+     "js": "window.__t910.haiku45.dis",
+     "equals": false,
+     "why": "GUARD: Haiku 4.5 carries true and no other capability flag — live"
+    },
+    {
+     "js": "window.__t910.noKey.dis",
+     "equals": false,
+     "why": "GUARD: no key at all (an older CLI) = can turn off"
+    },
+    {
+     "js": "window.__t910.noKey.on",
+     "equals": false,
+     "why": "GUARD: and it shows the preference"
+    },
+    {
+     "js": "window.__t910.lockedPrefOn.dis",
+     "equals": true,
+     "why": "DISCRIMINATING: locked whatever the preference"
+    },
+    {
+     "js": "window.__t910.freePrefOn.on",
+     "equals": true,
+     "why": "GUARD: preference on, live switch on"
+    }
+   ]
+  },
+  {
+   "note": "a click on the locked switch sends nothing and changes nothing",
+   "setup": "window.__t910b = (function () { function snap(){ const t=document.getElementById('tglThink'); return { dis: t.disabled, on: t.classList.contains('on'), aria: t.getAttribute('aria-checked'), title: t.title }; } window.onClaudeEvent(JSON.stringify({ type: '__models', selected: 'sonnet', items: models })); const sent = []; const real = window.__bridge; window.__bridge = function (j) { sent.push(j); }; const before = thinkingOn; try { document.getElementById('tglThink').onclick({ stopPropagation: function () {} }); } finally { window.__bridge = real; } const s = snap(); return { sent: sent.length, prefKept: thinkingOn === before, dis: s.dis, on: s.on }; })();",
+   "expect": [
+    {
+     "js": "window.__t910b.dis",
+     "equals": true,
+     "why": "GUARD: the step really ran against a locked switch"
+    },
+    {
+     "js": "window.__t910b.sent",
+     "equals": 0,
+     "why": "DISCRIMINATING: no thinking frame goes to Kotlin from a locked switch (one before the change)"
+    },
+    {
+     "js": "window.__t910b.prefKept",
+     "equals": true,
+     "why": "DISCRIMINATING: the stored preference is not flipped behind the lock"
+    },
+    {
+     "js": "window.__t910b.on",
+     "equals": true,
+     "why": "GUARD: still drawn on"
+    }
+   ]
+  },
+  {
+   "note": "restore: the saved roster, selection and thinking preference go back",
+   "setup": "window.__t910c = (function () { const saved = JSON.parse(window.__t910Saved || '{}'); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: saved.selected || null, items: saved.items || [] })); window.onClaudeEvent(JSON.stringify({ type: '__thinking', on: saved.thinkingOn !== false })); return { restored: currentModel === (saved.selected || currentModel), pref: thinkingOn === (saved.thinkingOn !== false) }; })();",
+   "expect": [
+    {
+     "js": "window.__t910c.restored",
+     "equals": true,
+     "why": "GUARD: the selection is back"
+    },
+    {
+     "js": "window.__t910c.pref",
+     "equals": true,
+     "why": "GUARD: the thinking preference is back"
+    }
+   ]
+  }
+ ]
+}

@@ -71,6 +71,9 @@
   <button onclick="(function(b){var s=b.classList.contains('cooldown')?'off':b.classList.contains('on')?'cooldown':'on';
     b.classList.toggle('on',s!=='off'); b.classList.toggle('cooldown',s==='cooldown');
     b.setAttribute('aria-checked',String(s!=='off')); b.title=s==='cooldown'?'Fast mode: cooling down':'Faster responses (Opus only)';})(document.getElementById('tglFast'))">fast</button>
+  <!-- 9.10: thinking locked on — a model whose roster row says supportsThinkingOff:false -->
+  <button onclick="(function(b){var l=!b.disabled; b.disabled=l; if(l){b.classList.add('on');b.setAttribute('aria-checked','true');}
+    b.title=l?'Thinking — always on for this model':'Extended thinking';})(document.getElementById('tglThink'))">think lock</button>
   <span class="sep"></span>
   <button class="wpreset" data-w="300">300</button>
   <button class="wpreset" data-w="360">360</button>

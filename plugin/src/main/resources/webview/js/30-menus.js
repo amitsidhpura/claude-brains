@@ -453,7 +453,15 @@
     tglFast.title = !fastOk ? 'Fast mode — not supported by this model (Opus only)'
       : fastModeReason ? 'Fast mode: ' + fastModeReason
       : fastModeState === 'cooldown' ? 'Fast mode: cooling down' : 'Faster responses (Opus only)';
-    setTgl(tglThink, thinkingOn);
+    // 9.10: the roster's supportsThinkingOff:false marks a model that thinks whatever
+    // set_max_thinking_tokens says (probed 2026-11-22 on 2.1.330: 0 kills the thinking block on
+    // Haiku 4.5 and Sonnet 5, and is acked then ignored on Haiku 5.5 and Sonnet 5.5). There the
+    // switch shows what happens — on, locked — and thinkingOn keeps the user's preference for
+    // the next model that honours it. An absent key (older CLIs) or an unknown model = can.
+    const thinkOffOk = !m || m.supportsThinkingOff !== false;
+    tglThink.disabled = !thinkOffOk;
+    setTgl(tglThink, !thinkOffOk || thinkingOn);
+    tglThink.title = thinkOffOk ? 'Extended thinking' : 'Thinking — always on for this model';
   }
   if (tglFast) {
     tglFast.onclick = function (e) {
@@ -468,6 +476,7 @@
     };
     tglThink.onclick = function (e) {
       e.stopPropagation();
+      if (tglThink.disabled) return;
       thinkingOn = !thinkingOn;
       bridge({ kind: 'thinking', on: thinkingOn });
       syncModelFooter();
