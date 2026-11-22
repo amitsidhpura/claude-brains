@@ -80,6 +80,34 @@ object WebviewAssets {
     }
 
     /**
+     * The ONE piece of third-party code the page carries: KaTeX 0.19.1 (MIT), for math in replies
+     * (checklist 1.34; user's pick 2026-11-22 against two native-MathML candidates rendered in the
+     * real panel — the browser's own MathML layout left brackets unstretched and sums cramped).
+     * Files are the npm package's `dist/`, unchanged, under `webview/vendor/katex/` (VENDORED.md).
+     * Spliced by `loadUi` at the VENDOR markers, in blocks of their OWN: a parse error in the
+     * library must not take the panel's script down with it, and its styles sit before ours so
+     * ours can override. The page works without it — 20-markdown.js then leaves math as source.
+     */
+    fun vendorJs(): String = resource("/webview/vendor/katex/katex.min.js")
+
+    /**
+     * KaTeX's stylesheet with every font inlined: `loadHTML` has no base URL, so `url(fonts/…)`
+     * could never resolve. Each `@font-face` keeps its woff2 source as a `data:` URI and loses the
+     * woff / ttf fallbacks (not shipped; the panel's browser is Chromium). Built once.
+     */
+    fun vendorCss(): String = vendorCssCached
+
+    private val vendorCssCached: String by lazy {
+        val css = resource("/webview/vendor/katex/katex.min.css")
+        val woff2 = Regex("""url\((fonts/[\w-]+\.woff2)\)""")
+        val fallback = Regex(""",url\(fonts/[\w-]+\.(?:woff|ttf)\)\s*format\("[a-z]+"\)""")
+        woff2.replace(fallback.replace(css, "")) { m ->
+            val bytes = javaClass.getResourceAsStream("/webview/vendor/katex/${m.groupValues[1]}")!!.use { it.readBytes() }
+            "url(data:font/woff2;base64,${java.util.Base64.getEncoder().encodeToString(bytes)})"
+        }
+    }
+
+    /**
      * `chat.html` with the JS spliced in — the whole page as it existed before the split, banners
      * aside. The CSS / VERSION / LIMITS markers are left for `loadUi` (and are asserted on by
      * tests, which is why this stops here). Only the marker TEXT is replaced — its own line

@@ -853,6 +853,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         val css = WebviewAssets.css()
         browser.loadHTML(
             html.replace("<!--CSS-->", "<style>\n$css\n</style>")
+                // KaTeX (1.34), in blocks of its own — WebviewAssets.vendorJs / vendorCss.
+                .replace("<!--VENDOR_CSS-->", "<style>\n${WebviewAssets.vendorCss()}\n</style>")
+                .replace("<!--VENDOR_JS-->", "<script>\n${WebviewAssets.vendorJs()}\n</script>")
                 // Welcome-screen version, spliced (not pushed as an event) so it is present on
                 // first paint. Read from our own descriptor — never hardcode, it would drift
                 // from build.gradle.kts. getPluginByClass avoids repeating the plugin id and is

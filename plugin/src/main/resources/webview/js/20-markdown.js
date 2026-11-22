@@ -65,6 +65,53 @@
     return lines[i].indexOf('|') >= 0 && i + 1 < lines.length && mdIsSep(lines[i + 1]);
   }
   function renderMd(srcRaw) { return mdBlocks(esc(srcRaw), []); }
+  /* ---------- math (1.34): KaTeX, the page's one vendored library ----------
+     `$$…$$` and `\[…\]` are display math, `\(…\)` and `$…$` inline. Found by ONE pass over the
+     block text after fenced code has been lifted out; the same regex matches inline code spans
+     first and returns them untouched, so a `$` inside backticks is never math. Each formula is
+     swapped for a token (U+0001 M<n> U+0001) that no markdown rule can touch — a `|` or `*`
+     inside a formula would otherwise split a table cell or open an italic — and the tokens are
+     put back as KaTeX's HTML once the blocks are built.
+     `$…$` is the ambiguous one, so it is strict (pandoc's rule): one line, no space just inside
+     either `$`, the opener not after a word character, a backslash or another `$`, the closer not
+     before a digit, and no backtick inside. "$5 and $10" and "$5-$10" stay text, and a price
+     cannot pair with a `$` inside a later code span ("$10, and `$x$`" did, in the first build's
+     own screenshot — the code-span alternative only protects a span the scan REACHES).
+     Left as source text: a formula KaTeX cannot parse, any formula while it is still streaming
+     in (no closer yet), and everything when the library is absent (window.katex undefined).
+     The text reaching this pass is ALREADY ESCAPED (esc() runs first), so the TeX is unescaped
+     for KaTeX and the fallback returns the escaped original. KaTeX's own output is safe to
+     insert: `trust` stays off, so \href / \includegraphics / \htmlClass are refused.
+     A reply re-renders whole on every streamed chunk, so rendered formulas are cached by source. */
+  const MATH_RE = /(`[^`\n]+`)|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\((.+?)\\\)|(?<![\\$\w])\$(?!\s)([^$\n`]+?)(?<![\s\\])\$(?![\d$])/g;
+  const mathCache = new Map();
+  function mathHtml(tex, display) {
+    if (typeof katex === 'undefined' || !katex.renderToString) return null;
+    const key = (display ? 'D' : 'I') + tex;
+    if (mathCache.has(key)) return mathCache.get(key);
+    let html = null;
+    try {
+      const raw = tex.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
+      html = '<span class="math' + (display ? ' math-d' : '') + '">' +
+        katex.renderToString(raw, { displayMode: display, throwOnError: true }) + '</span>';
+    } catch (e) { html = null; }
+    if (mathCache.size > 400) mathCache.clear();
+    mathCache.set(key, html);
+    return html;
+  }
+  function mathOut(src, store) {
+    if (src.indexOf('$') < 0 && src.indexOf('\\') < 0) return src;
+    return src.replace(MATH_RE, function (m, code, dd, db, ip, id) {
+      if (code) return m;
+      const display = dd != null || db != null;
+      const tex = dd != null ? dd : db != null ? db : ip != null ? ip : id;
+      if (!tex || !tex.trim()) return m;
+      const html = mathHtml(tex.trim(), display);
+      if (html == null) return m;
+      store.push(html);
+      return '\u0001M' + (store.length - 1) + '\u0001';
+    });
+  }
   /* List item marker (CommonMark): indent, `-`/`*`/`+` or 1-9 digits + `.`/`)`, then 1-4 spaces
      (or nothing). The indent is unbounded on purpose — the renderer has no indented-code block,
      so a bullet four spaces in is still a bullet, not code. Groups: indent, marker, gap, text. */
@@ -155,6 +202,10 @@
         highlight(code.replace(/\n[ \t]*$/, '')) + '</pre></div>');
       return ' B' + (blocks.length - 1) + ' ';
     });
+    // 1.34: math out, once, on the outermost call (nested calls — a quote, a list item — get text
+    // that already carries the tokens). `blocks.math` is the token store shared with them.
+    const mathTop = !blocks.math;
+    if (mathTop) { blocks.math = []; src = mathOut(src, blocks.math); }
     const lines = src.split('\n');
     let out = '', i = 0;
     while (i < lines.length) {
@@ -203,6 +254,7 @@
       const para = inlineMd(buf.join('\n')).replace(/\n/g, '<br>');
       out += tight ? para : '<p>' + para + '</p>';
     }
+    if (mathTop && blocks.math.length) out = out.replace(/\u0001M(\d+)\u0001/g, function (m, n) { return blocks.math[+n] || ''; });
     return out;
   }
 

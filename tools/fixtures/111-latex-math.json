@@ -1,0 +1,275 @@
+{
+ "item": "1.34 — LaTeX math in replies: $$…$$ and \\[…\\] as display math, \\(…\\) and $…$ inline, drawn by the vendored KaTeX; money, code and unparseable formulas stay text (2026-11-22)",
+ "branch": "js/20-markdown.js mathOut (one pass after fenced code is lifted: code spans returned untouched, each formula swapped for a token, tokens put back as KaTeX's HTML in .math / .math.math-d after the blocks are built) · mathHtml (escaped text unescaped for KaTeX, cached, null on a parse error or when window.katex is absent) · css/30-blocks.css .math-d · the page's VENDOR_CSS / VENDOR_JS blocks (WebviewAssets.vendorCss / vendorJs, pinned by WebviewVendorTest)",
+ "provenance": "No wire frames: math is the panel's own rendering of reply text, driven through renderMd — the one function live streaming, replay, plan cards, side answers and bookmarks all draw through. The delimiters are the four VS Code 2.1.330 renders (its CHANGELOG line and the audit, 2026-11-22); KaTeX 0.19.1 is the npm package's dist, unchanged. The library was the user's pick the same day from three candidates rendered side by side in the real panel (KaTeX with its fonts, Temml on native MathML, KaTeX's MathML output): the browser's own MathML layout left brackets unstretched and sums cramped. The font check reads document.fonts for a KaTeX face, which only passes when the inlined data: URIs really loaded. NEGATIVE CONTROL RUN 2026-11-22 against the pre-change webview (the sandbox on f7e5e94, `typeof mathOut` 'undefined'; window.katex WAS defined there, left over from the candidates render, so the control isolates the renderer change): 17 passed / 16 failed — every DISCRIMINATING assert, plus the sideways-scroll guard that needs a .math-d to exist.",
+ "steps": [
+  {
+   "note": "the four delimiters render; display math is its own block, inline math stays in the line",
+   "setup": "window.__m134a=(function(){const R=function(src){ const d=document.createElement('div'); d.innerHTML=renderMd(src); return d; }; const n=function(d,sel){ return d.querySelectorAll(sel).length; };  const lib=typeof katex!=='undefined'; const a=R('Inline $x^2 + y^2$ and \\\\(z_1\\\\) here.'); const b=R('Before\\n\\n$$\\n\\\\frac{a}{b}\\n$$\\n\\nAfter'); const c=R('Bracket \\\\[ \\\\sum_{i=1}^n i \\\\] done'); const d=b.querySelector('.math-d'); return {lib:lib, inline:n(a,'.math:not(.math-d)'), inlineDisplay:n(a,'.math-d'), katex:n(a,'.katex'), noDollar:a.textContent.indexOf('$')<0, dd:n(b,'.math-d .katex-display'), frac:n(b,'.mfrac'), around:/Before/.test(b.textContent)&&/After/.test(b.textContent), br:n(c,'.math-d'), sumOp:n(c,'.mop'), dDisplay:d?(document.body.appendChild(b), getComputedStyle(d).display):null, cleanup:(b.remove(),true)}; })();",
+   "expect": [
+    {
+     "js": "window.__m134a.lib",
+     "equals": true,
+     "why": "GUARD: the vendored library is defined in the page — everything below is void otherwise"
+    },
+    {
+     "js": "window.__m134a.inline",
+     "equals": 2,
+     "why": "DISCRIMINATING: $…$ and \\(…\\) each become one inline .math (source text before the change)"
+    },
+    {
+     "js": "window.__m134a.inlineDisplay",
+     "equals": 0,
+     "why": "GUARD: neither is display math"
+    },
+    {
+     "js": "window.__m134a.katex",
+     "equals": 2,
+     "why": "DISCRIMINATING: drawn by KaTeX"
+    },
+    {
+     "js": "window.__m134a.noDollar",
+     "equals": true,
+     "why": "DISCRIMINATING: the delimiters are gone from the text"
+    },
+    {
+     "js": "window.__m134a.dd",
+     "equals": 1,
+     "why": "DISCRIMINATING: a multi-line $$…$$ is one display formula"
+    },
+    {
+     "js": "window.__m134a.frac",
+     "equals": 1,
+     "why": "DISCRIMINATING: \\frac reached KaTeX intact (its backslash survived the escape pass)"
+    },
+    {
+     "js": "window.__m134a.around",
+     "equals": true,
+     "why": "GUARD: the paragraphs around it are kept"
+    },
+    {
+     "js": "window.__m134a.br",
+     "equals": 1,
+     "why": "DISCRIMINATING: \\[…\\] is display math too"
+    },
+    {
+     "js": "window.__m134a.dDisplay",
+     "equals": "block",
+     "why": "DISCRIMINATING: .math-d is its own row (our stylesheet reached the wrapper)"
+    }
+   ]
+  },
+  {
+   "note": "what must NOT be math: money, code spans, fenced code, a lone or spaced dollar",
+   "setup": "window.__m134b=(function(){const R=function(src){ const d=document.createElement('div'); d.innerHTML=renderMd(src); return d; }; const n=function(d,sel){ return d.querySelectorAll(sel).length; };  const t=function(src){ const d=R(src); return {m:n(d,'.math'), text:d.textContent}; }; const money=t('It costs $5 and $10, or $5-$10 a month.'); const code=t('Use `$x$` and `echo $HOME$PATH` here.'); const fence=t('```sh\\necho $a$b\\n$$ x $$\\n```'); const spaced=t('a $ x $ b and price$x$ end'); const mixed=t('It costs $5 and $10, and `$x$` in code stays code.'); const esc=t('paid \\\\$5 for $x$'); return {mixed:mixed.m, mixedText:mixed.text, money:money.m, moneyText:money.text, code:code.m, codeText:code.text, fence:fence.m, spaced:spaced.m, esc:esc.m}; })();",
+   "expect": [
+    {
+     "js": "window.__m134b.mixed",
+     "equals": 0,
+     "why": "GUARD: a price cannot pair with the $ inside a later code span (the first build rendered `10, and` as math — caught in its own screenshot, 2026-11-22)"
+    },
+    {
+     "js": "window.__m134b.mixedText",
+     "equals": "It costs $5 and $10, and $x$ in code stays code.",
+     "why": "GUARD: and the line keeps its text"
+    },
+    {
+     "js": "window.__m134b.money",
+     "equals": 0,
+     "why": "GUARD: two prices on one line are not a formula (pandoc's rule: no space inside the closer, no digit after it)"
+    },
+    {
+     "js": "window.__m134b.moneyText",
+     "equals": "It costs $5 and $10, or $5-$10 a month.",
+     "why": "GUARD: and the sentence is untouched"
+    },
+    {
+     "js": "window.__m134b.code",
+     "equals": 0,
+     "why": "GUARD: a $ inside backticks is code"
+    },
+    {
+     "js": "window.__m134b.codeText",
+     "equals": "Use $x$ and echo $HOME$PATH here.",
+     "why": "GUARD: the code spans keep their text"
+    },
+    {
+     "js": "window.__m134b.fence",
+     "equals": 0,
+     "why": "GUARD: nothing inside a fenced block is math"
+    },
+    {
+     "js": "window.__m134b.spaced",
+     "equals": 0,
+     "why": "GUARD: `$ x $` and a $ glued to a word do not open math"
+    },
+    {
+     "js": "window.__m134b.esc",
+     "equals": 1,
+     "why": "DISCRIMINATING: an escaped \\$ does not open, the real formula after it still renders"
+    }
+   ]
+  },
+  {
+   "note": "a formula KaTeX cannot parse, and one still streaming in, stay as source; math inside a table cell and a list item renders without breaking them",
+   "setup": "window.__m134c=(function(){const R=function(src){ const d=document.createElement('div'); d.innerHTML=renderMd(src); return d; }; const n=function(d,sel){ return d.querySelectorAll(sel).length; };  const bad=R('Broken $\\\\frac{a}{$ here and $$ \\\\notacommand{x} $$'); const open=R('Streaming $$ \\\\frac{a}{b'); const tbl=R('| f | v |\\n|---|---|\\n| $|x|$ | $a*b*c$ |'); const lst=R('1. first $a_1$\\n2. second\\n\\n   $$ b^2 $$\\n3. third'); const lt=R('$a < b$ and $c > d$ and $x \\\\& y$'); return {bad:n(bad,'.math'), badText:bad.textContent.indexOf('\\\\notacommand')>=0, open:n(open,'.math'), openText:open.textContent.indexOf('$$')>=0, cols:tbl.querySelectorAll('tbody td').length, tblMath:n(tbl,'td .math'), italics:n(tbl,'i'), items:lst.querySelectorAll('ol > li').length, lstMath:n(lst,'li .math'), lstDisplay:n(lst,'li .math-d'), lt:n(lt,'.math'), ltErr:n(lt,'.katex-error')}; })();",
+   "expect": [
+    {
+     "js": "window.__m134c.bad",
+     "equals": 0,
+     "why": "GUARD: a parse error leaves the source"
+    },
+    {
+     "js": "window.__m134c.badText",
+     "equals": true,
+     "why": "GUARD: with its text intact"
+    },
+    {
+     "js": "window.__m134c.open",
+     "equals": 0,
+     "why": "GUARD: no closer yet (mid-stream) = text"
+    },
+    {
+     "js": "window.__m134c.openText",
+     "equals": true,
+     "why": "GUARD: the opener is still shown"
+    },
+    {
+     "js": "window.__m134c.cols",
+     "equals": 2,
+     "why": "GUARD: the | inside $|x|$ did not split the row — still two columns"
+    },
+    {
+     "js": "window.__m134c.tblMath",
+     "equals": 2,
+     "why": "DISCRIMINATING: both cells render"
+    },
+    {
+     "js": "window.__m134c.italics",
+     "equals": 0,
+     "why": "GUARD: the * inside $a*b*c$ opened no italic"
+    },
+    {
+     "js": "window.__m134c.items",
+     "equals": 3,
+     "why": "GUARD: the list keeps its three items around an indented display formula"
+    },
+    {
+     "js": "window.__m134c.lstMath",
+     "equals": 2,
+     "why": "DISCRIMINATING: inline and display math inside list items"
+    },
+    {
+     "js": "window.__m134c.lstDisplay",
+     "equals": 1,
+     "why": "DISCRIMINATING: the indented $$…$$ is display math"
+    },
+    {
+     "js": "window.__m134c.lt",
+     "equals": 3,
+     "why": "DISCRIMINATING: < > & inside a formula reach KaTeX unescaped and parse"
+    },
+    {
+     "js": "window.__m134c.ltErr",
+     "equals": 0,
+     "why": "GUARD: with no error rendering"
+    }
+   ]
+  },
+  {
+   "note": "through the live path: a streamed reply ends up rendered, and KaTeX's own fonts are loaded from the inlined stylesheet",
+   "setup": "addUserMessage('show me the formula', [], Date.now()); window.__m134fonts=null; document.fonts.load('16px KaTeX_Main').then(function(f){ window.__m134fonts=f.length; }, function(){ window.__m134fonts=-1; });",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "id": "msg_m134",
+       "role": "assistant",
+       "content": []
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "Euler: $e^{i\\pi} + 1 = 0$ and\n\n$$\n\\int_0^1 x"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "text_delta",
+       "text": "^2\\,dx = \\frac{1}{3}\n$$\n"
+      }
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     }
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     }
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "result": "ok",
+     "usage": {
+      "input_tokens": 1,
+      "output_tokens": 1
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .blk .math').length",
+     "equals": 2,
+     "why": "DISCRIMINATING: the live reply holds the inline and the display formula"
+    },
+    {
+     "js": "document.querySelectorAll('#log .blk .math-d .katex-display').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: the display one closed across two chunks"
+    },
+    {
+     "js": "new Promise(function(r){ setTimeout(function(){ r(window.__m134fonts > 0); }, 300); })",
+     "equals": true,
+     "why": "DISCRIMINATING: KaTeX_Main loaded — the fonts arrived as data: URIs (0 faces before the change)"
+    },
+    {
+     "js": "(function(){ const d=document.querySelector('#log .math-d'); return d ? d.scrollWidth <= d.clientWidth + 1 || getComputedStyle(d).overflowX === 'auto' : false; })()",
+     "equals": true,
+     "why": "GUARD: a display formula can scroll sideways instead of widening the log"
+    }
+   ]
+  }
+ ]
+}

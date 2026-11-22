@@ -6,6 +6,9 @@
 <title>Claude Brains — design mockup</title>
 <!-- One <link> per file, in WebviewAssets.CSS_FILES order — link order IS cascade order.
      RenderLimitsTest pins this list to the manifest; edit both together. -->
+<!-- 1.34: KaTeX, the vendored math library — before our styles, as in the panel (WebviewAssets.vendorCss);
+     here its fonts resolve as plain files beside the stylesheet. -->
+<link rel="stylesheet" href="../plugin/src/main/resources/webview/vendor/katex/katex.min.css"/>
 <link rel="stylesheet" href="../plugin/src/main/resources/webview/css/00-tokens.css"/>
 <link rel="stylesheet" href="../plugin/src/main/resources/webview/css/10-header.css"/>
 <link rel="stylesheet" href="../plugin/src/main/resources/webview/css/20-log.css"/>
@@ -444,6 +447,11 @@ total 196K
       <details class="think"><summary>Thought<svg class="chev" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></summary><div class="body">Reconstructed from a record with no measurable gap.</div></details>
 
       <div class="blk">
+        <!-- 1.34 math: inline (.math) and display (.math.math-d, its own centred row, scrolls when
+             wider than the panel). The spans carry the TeX in data-tex and are filled by KaTeX at
+             load (the script at the end of this file), exactly what 20-markdown.js inserts. -->
+        <p>The roots are <span class="math" data-tex="x_{1,2}"></span>, given by</p>
+        <p><span class="math math-d" data-tex="x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"></span></p>
         <p>Current Unix timestamp: <b>1785155723</b></p>
         <p>That's <code>2026-07-27</code> (UTC), matching today's date.</p>
       </div>
@@ -1296,6 +1304,14 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
 <div id="grip" title="Drag to resize preview"></div>
 </div>
 
+<script src="../plugin/src/main/resources/webview/vendor/katex/katex.min.js"></script>
+<script>
+  // 1.34: fill the static math examples the way the panel does (KaTeX's HTML inside our wrapper).
+  document.querySelectorAll('.math[data-tex]').forEach(function (el) {
+    if (window.katex) el.innerHTML = katex.renderToString(el.dataset.tex, { displayMode: el.classList.contains('math-d'), throwOnError: false });
+    else el.textContent = el.dataset.tex;
+  });
+</script>
 <script>
   var MOCK_SPARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
   // dev toolbar toggles (mockup only)

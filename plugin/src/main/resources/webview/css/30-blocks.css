@@ -10,6 +10,13 @@
 .blk { position: relative; padding-left: 22px; --dot-c: var(--fg); }
 .blk > *:first-child { margin-top: 0; } .blk > *:last-child { margin-bottom: 0; }
 .blk p { margin: .45em 0; }
+/* 1.34 math: KaTeX's HTML inside our own wrapper (vendor styles come first in the page, so this
+   can override). A display formula is its own centred row and scrolls sideways when it is wider
+   than the panel — KaTeX draws at its natural width and would otherwise push the log sideways.
+   KaTeX's 1em display margin is cut to the paragraph rhythm; its 1.21em size is kept (the
+   formula's x-height then matches the 13px text around it). */
+.math-d { display: block; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.math-d .katex-display { margin: .45em 0; }
 .blk ul, .blk ol { margin: .4em 0; padding-left: 1.5em; }
 .blk li { margin: .2em 0; }
 /* a LOOSE list (blank lines between items) keeps each item's <p>; tighter than body paragraphs
