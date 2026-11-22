@@ -61,6 +61,32 @@
    ]
   },
   {
+   "note": "1b — a list that fits is never capped at a rounded-down height: ONE conversation row, measured at eight zoom levels, grows no scrollbar (user, 2026-11-22: a one-row Past conversations list showed a scrollbar; Math.floor on the 54.19px row left the cap a fraction short, which crosses a device pixel at some scales — 9px bar at zoom 1.1 in the 242 sandbox)",
+   "setup": "closeMenus(); (function(){ var real = window.__bridge; window.__bridge = function(){}; try { document.getElementById('histBtn').click(); } finally { window.__bridge = real; } })(); window.onClaudeEvent(JSON.stringify({type:'sessions', items:[{id:'fx98-s1', title:'One conversation', time:0, size:1024, tokens:10}]})); (function(){ var l = document.querySelector('.hist-list'), bars = 0, caps = {}; [1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.5].forEach(function(z){ document.body.style.zoom = z; capToRows(l, 5, '.hist-item'); bars += l.offsetWidth - l.clientWidth; caps[l.style.maxHeight] = 1; }); document.body.style.zoom = ''; capToRows(l, 5, '.hist-item'); window.__m98c = { rows: l.querySelectorAll('.hist-item').length, bars: bars, caps: Object.keys(caps).join(','), shown: document.getElementById('histPanel').classList.contains('show') }; document.getElementById('histPanel').classList.remove('show'); })();",
+   "expect": [
+    {
+     "js": "window.__m98c.rows",
+     "equals": 1,
+     "why": "GUARD: one row"
+    },
+    {
+     "js": "window.__m98c.shown",
+     "equals": true,
+     "why": "GUARD: the panel was open while measuring (a hidden list measures 0)"
+    },
+    {
+     "js": "window.__m98c.bars",
+     "equals": 0,
+     "why": "no scrollbar width at any zoom (pre-fix: 9, from zoom 1.1)"
+    },
+    {
+     "js": "window.__m98c.caps",
+     "equals": "none",
+     "why": "nothing to clip, so no pixel cap is set at all (pre-fix: '54px')"
+    }
+   ]
+  },
+  {
    "note": "2 — restore",
    "setup": "closeMenus(); var g=JSON.parse(window.__g98); window.onClaudeEvent(JSON.stringify({ type: '__models', selected: g.selected || null, items: g.items || [] }));",
    "expect": [

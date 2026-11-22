@@ -83,6 +83,14 @@
       const pad = parseFloat(getComputedStyle(list).paddingBottom) || 0;
       h = Math.min(h, rows[n - 1].getBoundingClientRect().bottom - box.top + pad);
     }
+    // Nothing to clip: leave the list uncapped ('none' is already set). Writing its own height
+    // back, floored, capped a one-row history list (54.19px) at 54px — a fraction short, which at
+    // some display scales crosses a device pixel and draws a scrollbar for a list that fits
+    // (user, 2026-11-22; 9px bar at zoom 1.1 in the sandbox). "Nothing" means under a whole pixel:
+    // the edge terms are fractional by themselves (the history panel sits at the header's INTEGER
+    // offsetHeight + 4 while the header's real bottom is 39.14, a 0.14px "overlap" on every open).
+    // Fixture 98 step 1b.
+    if (h > box.height - 1) return;
     if (h > 0) list.style.maxHeight = Math.floor(h) + 'px';
   }
   // Set only by the button, so a `sessions` frame that ARRIVES unasked (Kotlin re-pushes the list
