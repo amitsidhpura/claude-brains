@@ -403,7 +403,8 @@
       case '__mention':          insertMentions(ev.items || []); return;   // 6.5: IDE context menu → composer
       case '__selection':        setIdeSelection(ev); return;              // 6.6: the editor's live selection (bare = none)
       case '__selPref':          setSelIncluded(ev.on, false); if ('file' in ev) setFileIncluded(ev.file, false); return;   // 6.6: both switches, seeded on every load
-      case '__commands':         slashCommands = markCustom(ev.items || []); return;
+      case '__commands':         slashCommands = markCustom(ev.items || []); renderPins(); return;
+      case '__cmdPins':          setPins(ev.pins); return;                  // 7.13: seeded on every load
       case '__cmdRecent':        cmdRecent = ev.recent || {}; return;      // 7.12: seeded on every load
       case '__cmdSaved':         onCmdSaved(ev); return;                    // 7.11: the dialog wrote the file
       case '__customModels':
@@ -444,6 +445,7 @@
           reconcileCliModel(ev.model);
           if (ev.slash_commands && !slashCommands.length) {
             slashCommands = ev.slash_commands.map(function (n) { return { name: n }; });
+            renderPins();   // 7.13: a pin is drawn only once its command is in the roster
           }
           // Item 13a. `mcp_servers: [{name, status}]` rides on the init EVENT — NOT on the
           // initialize control response, which the audit assumed and which was probed against
@@ -603,6 +605,7 @@
             slashCommands = markCustom(ev.commands.map(function (c) {
               return (typeof c === 'string') ? { name: c } : c;
             }));
+            renderPins();   // 7.13: the replaced roster may add or drop a pinned command
           }
         } else if (BANNER_SUBTYPES[ev.subtype]) {
           // Checklist 1.26: the banner family (vcs_state_changed, notification, …) — one muted

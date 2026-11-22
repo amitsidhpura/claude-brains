@@ -137,6 +137,14 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun noteCommandUsed(name: String) =
         props.setValue(RECENT_CMDS_KEY, SavedCommands.bumpRecent(props.getValue(RECENT_CMDS_KEY), name, System.currentTimeMillis()))
 
+    /** 7.13: the commands pinned above the composer (JSON array of names, in pin order).
+     *  Application-level like the model pick and the recents, so the strip is the same in every
+     *  project; a command a project does not have is simply not drawn there. Sanitised on the way
+     *  in AND out, so the page never sees more than a list of plausible names. */
+    fun commandPins(): String = SavedCommands.encodePins(SavedCommands.parsePins(props.getValue(PINNED_CMDS_KEY)))
+    fun setCommandPins(jsonArray: String) =
+        props.setValue(PINNED_CMDS_KEY, SavedCommands.encodePins(SavedCommands.parsePins(jsonArray)))
+
     /** 6.6: "Include open file" — the active file's content rides the prompt when nothing is
      *  highlighted (the highlight always wins). Same persistence as the selection switch. Default OFF. */
     fun includeOpenFile(): Boolean = props.getBoolean(OPEN_FILE_KEY, false)
@@ -645,5 +653,6 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         const val SELECTION_KEY = "claudeCode.includeSelection"
         const val OPEN_FILE_KEY = "claudeCode.includeOpenFile"
         const val RECENT_CMDS_KEY = "claudeCode.commandRecents"
+        const val PINNED_CMDS_KEY = "claudeCode.commandPins"
     }
 }

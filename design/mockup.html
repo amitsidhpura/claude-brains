@@ -48,6 +48,7 @@
   <button onclick="tg('modeMenu', event)">mode</button>
   <button onclick="tg('modelMenu', event)">model</button>
   <button onclick="tg('slashMenu', event)">slash</button>
+  <button onclick="tg('pinMenu', event)">pins</button>
   <button onclick="tg('exportMenu', event)">export</button>
   <button onclick="event.stopPropagation(); document.getElementById('send').classList.toggle('stop')">stop</button>
   <span class="sep"></span>
@@ -1138,6 +1139,29 @@ README.md
   <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg></button>
 
   <div id="composer">
+    <!-- 7.13 pinned commands: one click sends. The static example is the NARROW state — two chips
+         hidden and counted on +2, whose menu lists them. A wide panel shows all five and no +N; with
+         nothing pinned the whole row is [hidden]. Pinning happens on the slash menu's rows.
+         Chips are dragged to reorder: the one in hand wears class="pin drag" (dimmed, its glyph swapped for the .pin-grip one) and the row
+         class="sorting" (grabbing cursor) until it is dropped — transient, so not drawn here. -->
+    <div id="pins">
+      <button class="pin" type="button" data-cmd="/lets-do-it"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg><svg class="pin-grip" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg><span class="pin-t">Let's do it</span></button>
+      <button class="pin" type="button" data-cmd="/lets-commit-it"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg><svg class="pin-grip" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg><span class="pin-t">Let's commit it</span></button>
+      <button class="pin takes-arg" type="button" data-cmd="/cxtify"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 22h-1a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h1"/><path d="M7 22h1a4 4 0 0 0 4-4v-1"/><path d="M7 2h1a4 4 0 0 1 4 4v1"/></svg><svg class="pin-grip" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg><span class="pin-t">Manage portable project context/memory stored in the project</span></button>
+      <button class="pin" type="button" data-cmd="/lets-push-it" hidden><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg><svg class="pin-grip" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg><span class="pin-t">Let's push it</span></button>
+      <button class="pin" type="button" data-cmd="/lets-tag-it" hidden><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg><svg class="pin-grip" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg><span class="pin-t">Let's tag it</span></button>
+      <span class="menu-anchor pin-more">
+        <button id="pinMore" class="pin more" type="button" title="More pinned commands" onclick="tg('pinMenu', event)">+2</button>
+        <div id="pinMenu" class="popup">
+          <div class="popup-h"><span>More pins</span></div>
+          <div id="pinList">
+          <div class="popup-item" data-cmd="/lets-push-it"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><div class="pi-body"><div class="pi-title">Let's push it<span class="pi-alias">/lets-push-it</span></div></div></div>
+          <div class="popup-item" data-cmd="/lets-tag-it"><span class="pi-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><div class="pi-body"><div class="pi-title">Let's tag it<span class="pi-alias">/lets-tag-it</span></div></div></div>
+          </div>
+          <div class="popup-f">Pin and unpin from the / menu.</div>
+        </div>
+      </span>
+    </div>
     <div id="inputcard">
       <!-- queued messages (item 24): typed while a turn was running, waiting their turn.
            Click a row to edit it back into the composer; the hover-revealed remove control drops it. -->
@@ -1250,7 +1274,7 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
 <script>
   var MOCK_SPARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
   // dev toolbar toggles (mockup only)
-  var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu','exportMenu'];
+  var MENUS = ['modeMenu','modelMenu','slashMenu','attachMenu','exportMenu','pinMenu'];
   // Mirrors chat.html: Escape on the slash menu must stick even though the input handler
   // re-asserts .show while the text still looks like "/cmd".
   var slashEscaped = false;
@@ -1582,6 +1606,8 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
   var slashList = document.getElementById('slashList');
   // enabled allowlist mirrors chat.html cmdKind (compact/btw; /clear removed 2026-08-29); everything else hidden
   var SLASH_ON = { '/compact': 1, '/deploy': 1, '/standup': 1 };
+  var SLASH_PINNED = { '/deploy': 1 };   // 7.13: one pinned row for the static example
+  var PIN_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
   function renderSlash(q) {
     var ql = (q || '').toLowerCase();
     var hits = SLASH.filter(function (c) {
@@ -1591,12 +1617,18 @@ transforming (412) src/components/App.tsx</pre><div class="bg-out-meta">Showing 
     slashList.innerHTML = hits.map(function (c, i) {
       var aliases = c.aliases ? '<span class="pi-alias">' + c.aliases.map(function (a) { return '/' + a; }).join(' ') + '</span>' : '';
       var src = c.src ? '<span class="pi-src">' + c.src + '</span>' : '';
-      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="' + c.name + '">' +
-        '<div class="pi-body"><div class="pi-title">' + c.name + aliases + src + '</div><div class="pi-desc">' + c.desc + '</div></div></div>';
+      // 7.13: the pin toggle — hover-only on a plain row, always shown (filled) on a pinned one
+      var pinned = !!SLASH_PINNED[c.name];
+      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + (pinned ? ' pinned' : '') + '" data-cmd="' + c.name + '">' +
+        '<div class="pi-body"><div class="pi-title">' + c.name + aliases + src + '</div><div class="pi-desc">' + c.desc + '</div></div>' +
+        '<button class="pi-pin" type="button" title="' + (pinned ? 'Unpin' : 'Pin above the message box') + '">' + PIN_SVG + '</button></div>';
     }).join('');
   }
   slashList.addEventListener('click', function (e) {
     var item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
+    if (e.target.closest('.pi-pin')) {          // 7.13: toggling a pin never runs the command or closes the menu
+      SLASH_PINNED[item.dataset.cmd] = !SLASH_PINNED[item.dataset.cmd]; renderSlash(inp.value.charAt(0) === '/' ? inp.value.slice(1) : ''); return;
+    }
     inp.value = item.dataset.cmd + ' ';
     document.getElementById('slashMenu').classList.remove('show');
     inp.focus(); autoGrow();

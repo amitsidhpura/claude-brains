@@ -14,7 +14,7 @@
   };
 
   /* ---------- dropdown system (mode / model / slash / attach) ---------- */
-  const MENUS = ['modeMenu', 'modelMenu', 'slashMenu', 'attachMenu', 'bgMenu', 'exportMenu'];
+  const MENUS = ['modeMenu', 'modelMenu', 'slashMenu', 'attachMenu', 'bgMenu', 'exportMenu', 'pinMenu'];
   // Escape on the slash menu must STICK: the composer's input handler re-asserts .show on
   // every keystroke while the text still looks like "/cmd", so removing the class alone
   // lasts exactly one keypress. Re-armed when the text leaves the /-shape, when the slash

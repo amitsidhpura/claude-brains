@@ -1,5 +1,6 @@
 package io.github.amitsidhpura.claudebrains.session
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -74,4 +75,21 @@ object SavedCommands {
 
     fun encodeRecent(map: Map<String, Long>): String =
         json.encodeToString(JsonObject.serializer(), buildJsonObject { map.forEach { (k, v) -> put(k, JsonPrimitive(v)) } })
+
+    // ---- 7.13 pinned commands: an ordered list of names (the strip above the composer) ----
+    const val MAX_PINS = 30
+    private val PIN_NAME = Regex("[A-Za-z0-9:._-]{1,120}")
+
+    /** The stored pins as clean names in pin order: only strings that can be a command name,
+     *  lowercased (the page compares canonical lowercase names), no repeats, at most [MAX_PINS].
+     *  Anything unreadable is an empty list — the page sends the whole list on every change, so a
+     *  bad value heals on the next pin. */
+    fun parsePins(stored: String?): List<String> = runCatching {
+        (json.parseToJsonElement(stored ?: return emptyList()) as? JsonArray ?: return emptyList())
+            .mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+            .filter { PIN_NAME.matches(it) }.map { it.lowercase() }.distinct().take(MAX_PINS)
+    }.getOrDefault(emptyList())
+
+    fun encodePins(names: List<String>): String =
+        json.encodeToString(JsonArray.serializer(), JsonArray(names.map { JsonPrimitive(it) }))
 }

@@ -17,7 +17,7 @@ one row per feature, measured against both reference clients.
 - Data-level parity audit (`docs/client-parity.md`) was closed 2026-08-06 and deleted 2026-08-28; the
   not-taken wire vocabulary lives in `docs/ide-mcp-protocol.md` § 11
 
-**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 102 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (147 rows) — no open rows, no [DECIDE] tags
+**At a glance** (2.1.296, re-audit 2026-10-10; full-surface audit 2026-09-04 at 2.1.260) — 104 ✅ · 0 🟥 · 0 🟧 · 0 ⬜ · 45 ➖ (149 rows) — no open rows, no [DECIDE] tags
 - **Next up (🟥):** none — the deferred rows live in `.cxtify/backlog.md` (worktrees, tabs, debugger tools). 6.6 (auto-include selection) left the deferred list and shipped 2026-10-10.
 - **Awaiting a decision ([DECIDE]):** none — 9.9 (the 1M switch) was decided 2026-10-10 after a
   hand test: retired, and the gauge lookup it was masking fixed. The 2.1.296 audit's other rows
@@ -1276,6 +1276,30 @@ auto-include selection, voice.
   `__cmdRecent`; the page updates its own copy at send time. Never-sent commands keep the CLI's order
   (stable sort). Fixture 105. Hand-tested 2026-10-28: `/` put the just-sent `/reply-pong` first;
   `/co` led with the used `/code-review`, then `/compact` `/context` in the CLI's order.
+  </details>
+- **7.13** ✅ **Pinned commands** — a row of chips above the message box; one click sends a pinned
+  command, with no typing and no menu. Pinned and unpinned on the `/` menu's rows.
+  <!-- --><details><summary>Read more…</summary>
+  Panel-only (asked for 2026-11-22 with two mockups; the row above the card was picked from three
+  placements rendered in the real panel). A chip is labelled with the command's own text — the first
+  line of its description ("Let's commit it"), ellipsised; `/name` when it has none. Its glyph says
+  what a click does: an arrow SENDS the command at once, alone — the draft and its attachments stay
+  in the composer as they are, and a turn already running queues it; a text cursor marks a command
+  that takes an argument (any `argumentHint`, the `/` menu's own rule), where the click only writes
+  `/name ` in front of the draft. Chips that do not fit fold into a `+N` chip whose menu lists them.
+  No strip when nothing is pinned. Kotlin keeps the ordered list in one application-level property
+  (`claudeCode.commandPins`, at most 30, sanitised by `SavedCommands.parsePins`), seeded on every
+  load as `__cmdPins`; a toggle sends the whole list back (`cmdPins`). A pin is drawn only while
+  its command is in the roster and enabled here, so a project without it shows no dead chip and the
+  pin survives for the projects that have it. Chips are dragged to reorder (plain
+  mouse events, a drag starts after 5px and never sends; the chip in hand dims and shows a grip in
+  place of its arrow; pins folded into `+N` keep their place
+  behind the row, and pins this project cannot draw keep their slots). Deliberately absent: keyboard
+  shortcuts (the plugin binds none) and "Pin command" / "Edit pins" buttons on the strip.
+  Fixture 107; `SavedCommandsTest`. Hand-checked 2026-11-22 in the 242 sandbox: a pin made through
+  the real bridge survived a page reload; the user saved `/hi` and `/how-are-you` (7.11), pinned both
+  and sent `/hi` from its chip against the real CLI (the Skill ran, the reply came back); a real-mouse
+  drag over CDP moved the last of five chips to the front, saved the order and sent nothing.
   </details>
 
 ## 8. ✅ Sessions / history

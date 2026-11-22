@@ -1,6 +1,44 @@
 /* ---------- composer ---------- */
 #composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px; z-index: 16;
-  display: flex; justify-content: center; }
+  display: flex; flex-direction: column; align-items: center; }
+/* 7.13 Pinned commands: one click sends a command the user pinned, no typing and no menu. A row
+   ABOVE the input card (user's pick A, 2026-11-22, against a band inside the card): its own
+   surface, floating over the log like the card does; padLog() already follows #composer's height.
+   Same width rule as the card, so the row and the card share their edges. Chips that do not fit
+   are hidden by layoutPins() and counted on the +N chip, which opens #pinMenu with the rest.
+   No strip at all when nothing is pinned — the [hidden] re-assert is the #queue trap again. */
+#pins { display: flex; align-items: center; gap: var(--attach-gap); width: 100%; max-width: 720px;
+  min-width: 0; margin-bottom: var(--attach-gap); }
+#pins[hidden] { display: none; }
+/* Wears the attachment chip's surface (.att, .q-row): raised, bordered, lifts on hover. The label
+   is the command's own text (its description — "Let's commit it"), ellipsised at 22ch because a
+   built-in's description can be a sentence; a command with no description shows its /name. */
+.pin { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  background: var(--user-raised); border: 1px solid var(--user-border); border-radius: var(--radius);
+  color: var(--fg); font: inherit; font-size: var(--fs-sm); line-height: 1; padding: 6px 9px; cursor: pointer; }
+.pin:hover { background: var(--user-raised-hover); }
+/* Drag to reorder (reorderPins): the chip in hand dims and the whole row shows the grabbing
+   cursor, so it is plain that releasing will drop it, not send it. No text selection mid-drag. */
+.pin { user-select: none; }
+.pin.drag { opacity: .55; }
+/* ...and its glyph becomes the grip for as long as it is held: an arrow on a chip that is being
+   moved would still say "this sends". Both glyphs are in the chip; only one is ever displayed. */
+.pin svg.pin-grip { display: none; }
+.pin.drag svg:not(.pin-grip) { display: none; }
+.pin.drag svg.pin-grip { display: block; }
+#pins.sorting, #pins.sorting .pin { cursor: grabbing; }
+.pin[hidden] { display: none; }
+/* The glyph says what a click does: an arrow SENDS now; .takes-arg (a command that wants an
+   argument) swaps it for a text cursor, because that click only writes "/name " into the box. */
+.pin svg { width: 13px; height: 13px; flex: 0 0 auto; color: var(--accent); }
+.pin .pin-t { min-width: 0; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* +N: the pins that did not fit. Pushed to the row's right edge so it sits over the send button
+   whatever the visible chips add up to; muted, it is a count and not a command. */
+.pin-more { margin-left: auto; }
+/* .menu-anchor is display:inline-flex, which beats [hidden] — the #queue trap a third time. */
+.pin-more[hidden] { display: none; }
+.pin.more { color: var(--user-muted); }
+.pin.more:hover { color: var(--fg); }
 #inputcard { position: relative; width: 100%; max-width: 720px; background: var(--user-bg); border: 1px solid var(--user-border); border-radius: 12px;
   padding: 10px 12px 8px; box-shadow: 0 2px 14px rgba(0,0,0,.35); }
 /* focus is the coloured border alone — the 3px tinted halo that used to sit outside it made the

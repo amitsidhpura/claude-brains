@@ -1,0 +1,240 @@
+{
+ "item": "7.13 Pinned commands — a row of chips above the composer sends a pinned command in one click; pinned and unpinned on the / menu's rows; the rest fold into +N when the row is too narrow; chips are dragged to reorder (2026-11-22)",
+ "branch": "js/65-slash.js: setPins (the __cmdPins seed) / togglePin (the .pi-pin toggle renderSlash draws on every row; sends the whole list as bridge kind cmdPins) / renderPins (a chip only for a pin whose command is in the roster and enabled by cmdKind; label = the description's first line, else /name) / runPinned (no argument: sent alone at once, the draft untouched, queued while a turn runs; takes an argument: '/name ' is written in front of the draft and nothing is sent) / layoutPins (chips that do not fit are [hidden], counted on +N and listed in #pinMenu). Markup: #pins in chat.html, styles in css/60-composer.css and css/70-popups.css. Reordering: mousedown / document mousemove / mouseup in the same file (a drag starts after 5px, the chip is re-inserted before the first visible chip whose midpoint the pointer has not passed, the release commits through reorderPins and the click that follows is swallowed).",
+ "provenance": "No CLI wire frames beyond the roster: the feature is the panel's own. The roster is fed through the panel's __commands host frame with the shapes the CLI sends — a custom command carries the ' (user)' description suffix markCustom parses (measured 2.1.228, fixture 105's provenance), a built-in carries none; `config` stands for any built-in the panel does not enable (cmdKind 'tui'). The __cmdPins seed and the cmdPins bridge frame are this change's own contract with Kotlin (ChatPanel.kt, SavedCommands.parsePins — unit-tested). USER DESIGN 2026-11-22: two mockups and the picks made in the session — the row ABOVE the card (candidate A of three rendered in the real panel), the command's text as the label, an arrow on a chip that sends and a text cursor on one that only fills the box, the command alone with the draft left as it is, global pins, no shortcuts. NEGATIVE CONTROL RUN 2026-11-22 against the 242 sandbox still serving the previous build (2506a26, no #pins element and no pin functions): 8 passed, 22 failed: every assert that reads the feature failed and the GUARDs passed — the asserts are written null-safe so a missing element fails an assert instead of throwing and aborting the suite. The first run on the new build then failed ONE assert, step 1's 'the menu stays open': the pin toggle's redraw removes the clicked button, so the document-level click handler saw a target outside every .popup and closed the menu — fixed with stopPropagation in the toggle branch. Fixed build 30/30, whole suite 1320/1320 under JCEF. Step 5b (drag to reorder) was added the same day: negative control on the build without it 30 passed / 5 failed (all of 5b — its trailing click SENT the command), with it 35/35; and a REAL mouse drag (CDP Input.dispatchMouseEvent, 25px steps) moved the last of five chips to the front in the sandbox, order saved, nothing sent. The grip glyph on the chip in hand was added after that (two more asserts in 5b: 2 failed without it, 37/37 with it; whole suite 1327/1327), and a real-mouse press-and-move showed the grip displayed and the arrow hidden mid-drag.",
+ "steps": [
+  {
+   "note": "0 — a roster of three custom commands, one enabled built-in and one built-in the panel does not enable; four pins seeded, one of them for a command this roster does not have",
+   "setup": "if (!window.__realBridge107) { window.__realBridge107 = window.__bridge; } window.__tape107 = []; window.__bridge = function(j){ window.__tape107.push(JSON.parse(j)); }; window.__cmds107 = slashCommands.slice(); window.__pins107 = (typeof cmdPins !== 'undefined') ? cmdPins.slice() : null; window.__recent107 = Object.assign({}, cmdRecent); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.onClaudeEvent(JSON.stringify({type:'__commands', items:[{name:'lets-commit-it', description:\"Let's commit it (user)\", argumentHint:''}, {name:'lets-push-it', description:\"Let's push it (user)\", argumentHint:''}, {name:'cxtify', description:'Manage portable project context (user)', argumentHint:'[init | load | save]'}, {name:'compact', description:'Clear conversation history but keep a summary in context', argumentHint:'[instructions]'}, {name:'config', description:'Open config panel', argumentHint:''}]})); window.onClaudeEvent(JSON.stringify({type:'__cmdPins', pins:['lets-commit-it', 'cxtify', 'not-in-this-project', 'config']})); input.value = ''; autoGrow(); window.__chips107 = function(){ return Array.prototype.slice.call(document.querySelectorAll('#pins > .pin')).filter(function(b){ return !b.hidden; }); };",
+   "expect": [
+    {
+     "js": "(function(){ var p = document.getElementById('pins'); return p ? p.hidden : null; })()",
+     "equals": false,
+     "why": "the row is shown once a drawable pin exists"
+    },
+    {
+     "js": "window.__chips107().map(function(b){ return b.querySelector('.pin-t').textContent; }).join(' | ')",
+     "equals": "Let's commit it | Manage portable project context",
+     "why": "label = the command's own text; the pin for a missing command and the one for a built-in the panel does not enable are not drawn"
+    },
+    {
+     "js": "window.__chips107().map(function(b){ return b.classList.contains('takes-arg'); }).join(',')",
+     "equals": "false,true",
+     "why": "the second chip's command takes an argument: it wears the text-cursor glyph"
+    },
+    {
+     "js": "(function(){ var w = document.querySelector('#pins .pin-more'); return w ? w.hidden : null; })()",
+     "equals": true,
+     "why": "two chips fit: no +N"
+    },
+    {
+     "js": "window.__tape107.length",
+     "equals": 0,
+     "why": "a seed is not echoed back to Kotlin"
+    }
+   ]
+  },
+  {
+   "note": "1 — the / menu is where a command is pinned: pinned rows are marked, and a click on a row's pin toggles it without running the command or closing the menu",
+   "setup": "tg('slashMenu'); window.__before107 = Array.prototype.slice.call(document.querySelectorAll('#slashList .popup-item.pinned')).map(function(r){ return r.dataset.cmd; }).sort().join(','); (function(){ var b = document.querySelector('#slashList .popup-item[data-cmd=\"/lets-push-it\"] .pi-pin'); if (b) b.click(); })();",
+   "expect": [
+    {
+     "js": "window.__before107",
+     "equals": "/cxtify,/lets-commit-it",
+     "why": "the two drawable pins are marked on their rows"
+    },
+    {
+     "js": "JSON.stringify(window.__tape107)",
+     "equals": "[{\"kind\":\"cmdPins\",\"pins\":[\"lets-commit-it\",\"cxtify\",\"not-in-this-project\",\"config\",\"lets-push-it\"]}]",
+     "why": "the whole list goes to Kotlin, the undrawn pins kept for the projects that have them; nothing was sent to the CLI"
+    },
+    {
+     "js": "menuEl('slashMenu').classList.contains('show')",
+     "equals": true,
+     "why": "GUARD: the menu stays open"
+    },
+    {
+     "js": "(function(){ var r = document.querySelector('#slashList .popup-item[data-cmd=\"/lets-push-it\"]'); return r ? r.classList.contains('pinned') : null; })()",
+     "equals": true,
+     "why": "the row redraws as pinned"
+    },
+    {
+     "js": "window.__chips107().length",
+     "equals": 3,
+     "why": "and its chip is on the row"
+    },
+    {
+     "js": "input.value",
+     "equals": "",
+     "why": "GUARD: the composer is untouched"
+    }
+   ]
+  },
+  {
+   "note": "2 — a chip whose command takes no argument SENDS it at once, alone: the half-typed draft stays in the composer exactly as it is",
+   "setup": "closeMenus(); window.__tape107 = []; input.value = 'a half-typed draft'; autoGrow(); (function(){ var b = window.__chips107().filter(function(x){ return x.dataset.cmd === 'lets-push-it'; })[0]; if (b) b.click(); })();",
+   "expect": [
+    {
+     "js": "JSON.stringify(window.__tape107.map(function(f){ return f.kind + ':' + (f.text || f.name || ''); }))",
+     "equals": "[\"cmdUsed:lets-push-it\",\"user:/lets-push-it\"]",
+     "why": "one use recorded (7.12), one turn carrying the command and nothing else"
+    },
+    {
+     "js": "input.value",
+     "equals": "a half-typed draft",
+     "why": "the draft is still there"
+    },
+    {
+     "js": "/\\/lets-push-it/.test(document.getElementById('log').textContent)",
+     "equals": true,
+     "why": "the sent command shows as the user's message"
+    },
+    {
+     "js": "busy",
+     "equals": true,
+     "why": "GUARD: a turn is now running"
+    }
+   ]
+  },
+  {
+   "note": "3 — while that turn runs, a chip click QUEUES its command like a typed message",
+   "setup": "window.__tape107 = []; (function(){ var b = window.__chips107().filter(function(x){ return x.dataset.cmd === 'lets-commit-it'; })[0]; if (b) b.click(); })();",
+   "expect": [
+    {
+     "js": "JSON.stringify(queue.map(function(q){ return q.text; }))",
+     "equals": "[\"/lets-commit-it\"]",
+     "why": "held in the queue, not raced into the running turn"
+    },
+    {
+     "js": "window.__tape107.filter(function(f){ return f.kind === 'user'; }).length",
+     "equals": 0,
+     "why": "nothing sent yet"
+    },
+    {
+     "js": "input.value",
+     "equals": "a half-typed draft",
+     "why": "GUARD: the draft is still untouched"
+    }
+   ]
+  },
+  {
+   "note": "4 — a chip whose command takes an argument sends nothing: '/name ' goes in front of the draft, which becomes its argument",
+   "setup": "queue = []; renderQueue(); setBusy(false); window.__tape107 = []; (function(){ var b = window.__chips107().filter(function(x){ return x.dataset.cmd === 'cxtify'; })[0]; if (b) b.click(); })();",
+   "expect": [
+    {
+     "js": "input.value",
+     "equals": "/cxtify a half-typed draft",
+     "why": "written into the box for the user to finish"
+    },
+    {
+     "js": "window.__tape107.length",
+     "equals": 0,
+     "why": "nothing sent, no use recorded"
+    }
+   ]
+  },
+  {
+   "note": "5 — a row too narrow for the chips hides the ones that do not fit, counts them on +N and lists them in the menu; a menu row runs like its chip",
+   "setup": "input.value = ''; autoGrow(); (function(){ var p = document.getElementById('pins'); if (!p || typeof layoutPins === 'undefined') { window.__m107 = {}; return; } p.style.maxWidth = '190px'; layoutPins(); var hiddenN = document.querySelectorAll('#pins > .pin[hidden]').length; var more = document.getElementById('pinMore'); window.__m107 = { visible: window.__chips107().length, hidden: hiddenN, more: more.textContent, wrapHidden: more.parentNode.hidden, rows: Array.prototype.slice.call(document.querySelectorAll('#pinList .popup-item')).map(function(r){ return r.dataset.cmd; }).join(',') }; more.click(); window.__m107.open = menuEl('pinMenu').classList.contains('show'); window.__tape107 = []; var row = document.querySelector('#pinList .popup-item[data-cmd=\"lets-push-it\"]'); if (row) row.click(); window.__m107.closed = !menuEl('pinMenu').classList.contains('show'); p.style.maxWidth = ''; layoutPins(); window.__m107.after = window.__chips107().length; })();",
+   "expect": [
+    {
+     "js": "window.__m107.visible + window.__m107.hidden",
+     "equals": 3,
+     "why": "every pin is either on the row or in the menu"
+    },
+    {
+     "js": "window.__m107.hidden >= 1 && window.__m107.more === '+' + window.__m107.hidden && window.__m107.wrapHidden === false",
+     "equals": true,
+     "why": "+N is shown and counts exactly the hidden chips"
+    },
+    {
+     "js": "window.__m107.rows ? window.__m107.rows.split(',').length === window.__m107.hidden && /lets-push-it/.test(window.__m107.rows) : null",
+     "equals": true,
+     "why": "the menu lists the hidden pins, the last-pinned among them"
+    },
+    {
+     "js": "window.__m107.open",
+     "equals": true,
+     "why": "+N opens the menu"
+    },
+    {
+     "js": "JSON.stringify(window.__tape107.map(function(f){ return f.kind + ':' + (f.text || f.name || ''); }))",
+     "equals": "[\"cmdUsed:lets-push-it\",\"user:/lets-push-it\"]",
+     "why": "a menu row sends exactly like its chip"
+    },
+    {
+     "js": "window.__m107.closed",
+     "equals": true,
+     "why": "and the menu closes"
+    },
+    {
+     "js": "window.__m107.after",
+     "equals": 3,
+     "why": "with the width back every chip returns to the row"
+    }
+   ]
+  },
+  {
+   "note": "5b — dragging a chip reorders the pins and never sends: 'Let's push it' is dragged from the end to the front, and the click the browser fires on release is swallowed",
+   "setup": "window.__tape107 = []; (function(){ window.__d107 = {}; var chips = window.__chips107(), chip = chips.filter(function(x){ return x.dataset.cmd === 'lets-push-it'; })[0]; if (!chip || typeof reorderPins === 'undefined') return; var r = chip.getBoundingClientRect(), first = chips[0].getBoundingClientRect(), y = r.top + r.height / 2; var ev = function(type, x, target, buttons){ target.dispatchEvent(new MouseEvent(type, {bubbles:true, cancelable:true, button:0, buttons:buttons, clientX:x, clientY:y})); }; ev('mousedown', r.left + r.width / 2, chip, 1); ev('mousemove', r.left + r.width / 2 - 2, document, 1); window.__d107.early = chip.classList.contains('drag'); ev('mousemove', r.left + r.width / 2 - 30, document, 1); window.__d107.dragging = chip.classList.contains('drag') && document.getElementById('pins').classList.contains('sorting'); window.__d107.glyphMid = (function(c){ var g = c.querySelector('.pin-grip'), a = c.querySelector('svg:not(.pin-grip)'); return g && a ? getComputedStyle(g).display + '/' + getComputedStyle(a).display : null; })(chip); ev('mousemove', first.left + 2, document, 1); ev('mouseup', first.left + 2, document, 0); chip.click(); window.__d107.after = chip.classList.contains('drag') || document.getElementById('pins').classList.contains('sorting'); window.__d107.glyphAfter = (function(c){ var g = c.querySelector('.pin-grip'), a = c.querySelector('svg:not(.pin-grip)'); return g && a ? getComputedStyle(g).display + '/' + getComputedStyle(a).display : null; })(window.__chips107()[0]); window.__d107.order = window.__chips107().map(function(b){ return b.dataset.cmd; }).join(','); })();",
+   "expect": [
+    {
+     "js": "window.__d107.early",
+     "equals": false,
+     "why": "2px of travel is still a click, not a drag"
+    },
+    {
+     "js": "window.__d107.dragging",
+     "equals": true,
+     "why": "past 5px the chip is in hand: dimmed, the row in its sorting state"
+    },
+    {
+     "js": "window.__d107.glyphMid",
+     "equals": "block/none",
+     "why": "while it is held the chip shows the grip, not the arrow that says 'this sends'"
+    },
+    {
+     "js": "window.__d107.order",
+     "equals": "lets-push-it,lets-commit-it,cxtify",
+     "why": "dropped in front of the first chip"
+    },
+    {
+     "js": "JSON.stringify(window.__tape107)",
+     "equals": "[{\"kind\":\"cmdPins\",\"pins\":[\"lets-push-it\",\"lets-commit-it\",\"not-in-this-project\",\"config\",\"cxtify\"]}]",
+     "why": "the new order is saved — the pins this roster cannot draw keep their slots — and NOTHING was sent, although a click followed the release"
+    },
+    {
+     "js": "window.__d107.after",
+     "equals": false,
+     "why": "the drag state is cleared on release"
+    },
+    {
+     "js": "window.__d107.glyphAfter",
+     "equals": "none/block",
+     "why": "dropped, it shows its own glyph again"
+    }
+   ]
+  },
+  {
+   "note": "6 — unpinning the last drawable pins empties the row away; then restore the roster, the pins, the recents and the bridge",
+   "setup": "setBusy(false); window.__tape107 = []; if (typeof togglePin !== 'undefined') { togglePin('lets-push-it'); togglePin('lets-commit-it'); togglePin('cxtify'); } window.__end107 = { hidden: (document.getElementById('pins') || {}).hidden, last: (window.__tape107[window.__tape107.length - 1] || {}).pins }; slashCommands = markCustom(window.__cmds107.map(function(c){ var o = Object.assign({}, c); if (o.src) { o.description = (o.description || '') + ' (' + o.src + ')'; delete o.src; } return o; })); if (window.__pins107 !== null) { setPins(window.__pins107); } cmdRecent = window.__recent107; queue = []; renderQueue(); window.onClaudeEvent(JSON.stringify({type:'__clear'})); input.value = ''; autoGrow(); closeMenus(); window.__bridge = window.__realBridge107;",
+   "expect": [
+    {
+     "js": "window.__end107.hidden",
+     "equals": true,
+     "why": "no drawable pin left: the row takes no space at all"
+    },
+    {
+     "js": "JSON.stringify(window.__end107.last)",
+     "equals": "[\"not-in-this-project\",\"config\"]",
+     "why": "the pins this roster cannot draw were never dropped"
+    },
+    {
+     "js": "window.__bridge === window.__realBridge107 && busy === false && queue.length === 0",
+     "equals": true,
+     "why": "bridge, busy state and queue restored"
+    }
+   ]
+  }
+ ]
+}

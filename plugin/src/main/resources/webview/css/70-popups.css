@@ -3,6 +3,9 @@
   border-radius: 12px; box-shadow: 0 12px 38px rgba(0,0,0,.55); display: none; overflow: hidden; min-width: 330px; }
 .popup.show { display: block; }
 #modeMenu { right: 0; } #modelMenu { right: 0; } #slashMenu { left: 0; min-width: 0; max-width: 100%; }
+/* 7.13: the +N chip's menu — the pins that did not fit, same rows as the slash menu. */
+#pinMenu { right: 0; min-width: 220px; }
+#pinMenu .popup-item { align-items: center; }
 .menu-anchor { position: relative; display: inline-flex; align-items: center; }
 .menu-anchor .popup { bottom: calc(100% + 9px); }
 /* Pre-measure fallback only: renderSlash caps this at exactly 5 rows via capToRows, measured,
@@ -86,6 +89,17 @@
 /* a command's aliases, muted beside its name — same tone as the source badge, kept at the
    title's own size because it is a name too, not a label */
 .pi-alias { color: var(--user-muted); margin-left: 8px; font-weight: 400; }
+/* 7.13: the pin toggle on a slash-menu row — the only place a command is pinned or unpinned.
+   The conversations list's delete idiom: hidden until the row is hovered, so an unhovered list
+   uses its full width and nothing is reserved for it. A PINNED row shows it always, filled in the
+   accent — there it is state, not an affordance. */
+.pi-pin { display: none; flex: 0 0 auto; align-self: center; background: transparent; border: 0; padding: 4px;
+  border-radius: 3px; color: var(--user-muted); cursor: pointer; }
+.pi-pin svg { width: 15px; height: 15px; display: block; }
+.popup-item:hover .pi-pin, .popup-item.pinned .pi-pin { display: block; }
+.pi-pin:hover { color: var(--fg); }
+.popup-item.pinned .pi-pin { color: var(--accent); }
+.popup-item.pinned .pi-pin svg { fill: currentColor; }
 .pi-check { position: relative; color: var(--fg); visibility: hidden; padding-top: 1px; display: inline-flex; }
 .pi-check svg { width: 16px; height: 16px; }
 .popup-item.on .pi-check { visibility: visible; }

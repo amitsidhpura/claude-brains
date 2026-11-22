@@ -381,6 +381,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             // 7.12: a slash command was sent; the store keeps its time for the / menu's order.
             "cmdUsed" -> msg["name"]?.jsonPrimitive?.contentOrNull?.takeIf { CMD_NAME.matches(it) }
                 ?.let { session.noteCommandUsed(it) }
+            // 7.13: the page sends the WHOLE pin list on every change (a toggle on a / menu row);
+            // the service keeps only plausible names.
+            "cmdPins" -> msg["pins"]?.let { session.setCommandPins(it.toString()) }
             // 7.11 Save as command: the bubble's text into the native dialog, which writes the file;
             // the page hears the result so the menu has it before the CLI's watcher reports it.
             "saveCommand" -> {
@@ -1040,6 +1043,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         pushSelection(selectionTracker.current())
         lastCommandsChanged?.let { pushEvent(it) }   // after the seed: it REPLACES the init roster
         pushFrame(buildJsonObject { put("type", "__cmdRecent"); put("recent", json.parseToJsonElement(session.commandRecents())) })   // 7.12
+        pushFrame(buildJsonObject { put("type", "__cmdPins"); put("pins", json.parseToJsonElement(session.commandPins())) })   // 7.13
 
         lastTitle = null; titleProbed = false
         pushTitle(session.currentSessionId())

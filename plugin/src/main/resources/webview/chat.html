@@ -99,6 +99,18 @@
   <button id="scrollBtn" title="Scroll to bottom"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg></button>
 
   <div id="composer">
+    <!-- 7.13 pinned commands: one click sends a command pinned from the / menu. Chips are built by
+         renderPins() in front of the +N anchor; the row stays [hidden] while nothing is pinned. -->
+    <div id="pins" hidden>
+      <span class="menu-anchor pin-more" hidden>
+        <button id="pinMore" class="pin more" type="button" title="More pinned commands"></button>
+        <div id="pinMenu" class="popup">
+          <div class="popup-h"><span>More pins</span></div>
+          <div id="pinList"></div>
+          <div class="popup-f">Pin and unpin from the / menu.</div>
+        </div>
+      </span>
+    </div>
     <div id="inputcard">
       <!-- Messages typed while a turn is in flight (client-parity item 24). Held here rather than
            sent, because a mid-turn send corrupts the running request's accounting. Click a row to

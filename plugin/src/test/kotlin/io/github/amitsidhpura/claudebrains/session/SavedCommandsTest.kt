@@ -51,4 +51,19 @@ class SavedCommandsTest {
         assertFalse("a" in m, "the oldest fall off")
         assertTrue("c${SavedCommands.MAX_RECENT + 4}" in m)
     }
+
+    @Test
+    fun `pins keep order, drop junk and repeats, and cap the list`() {
+        assertEquals(emptyList<String>(), SavedCommands.parsePins(null))
+        assertEquals(emptyList<String>(), SavedCommands.parsePins("not json"))
+        assertEquals(emptyList<String>(), SavedCommands.parsePins("{\"a\":1}"))
+        assertEquals(
+            listOf("lets-commit-it", "cxtify", "mcp__srv__prompt"),
+            SavedCommands.parsePins("[\"lets-commit-it\", 7, \"Cxtify\", \"has space\", \"cxtify\", null, \"mcp__srv__prompt\", \"<b>\"]"),
+        )
+        val many = SavedCommands.encodePins((1..SavedCommands.MAX_PINS + 5).map { "c$it" })
+        assertEquals(SavedCommands.MAX_PINS, SavedCommands.parsePins(many).size)
+        assertEquals("[\"a\",\"b\"]", SavedCommands.encodePins(listOf("a", "b")))
+        assertEquals(listOf("a", "b"), SavedCommands.parsePins(SavedCommands.encodePins(listOf("a", "b"))))
+    }
 }

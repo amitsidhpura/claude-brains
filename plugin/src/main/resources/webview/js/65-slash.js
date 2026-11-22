@@ -124,10 +124,7 @@
     // their description. Array.sort is stable, so ties keep the CLI's original order. An alias
     // scores like the name it stands for, so typing "/review" surfaces /code-review at rank 0 —
     // it used to fall through to the description-only tier or vanish (checklist 7.7).
-    const roster = slashCommands.concat(CMD_LOCAL.filter(function (l) {
-      return !slashCommands.some(function (c) { return (c.name || '').toLowerCase() === l.name; });
-    }));
-    const hits = roster.map(function (c) {
+    const hits = cmdRoster().map(function (c) {
       const names = [(c.name || '').toLowerCase()].concat(
         Array.isArray(c.aliases) ? c.aliases.map(function (a) { return String(a).toLowerCase(); }) : []);
       const desc = (c.description || '').toLowerCase();
@@ -156,16 +153,33 @@
       // Aliases ride the title, muted, so the row that matched "/review" says why it is here.
       const aliases = Array.isArray(c.aliases) && c.aliases.length
         ? '<span class="pi-alias">' + c.aliases.map(function (a) { return '/' + esc(String(a)); }).join(' ') + '</span>' : '';
-      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + '" data-cmd="/' + esc(c.name) + '"' +
+      // 7.13: the pin toggle — hover-only on a plain row, always shown (filled) on a pinned one
+      const pinned = isPinned(c.name);
+      return '<div class="popup-item' + (i === 0 ? ' sel' : '') + (pinned ? ' pinned' : '') + '" data-cmd="/' + esc(c.name) + '"' +
         (cmdTakesArg(c) ? ' data-takesarg="1"' : '') + '>' +
         '<div class="pi-body"><div class="pi-title">/' + esc(c.name) + aliases +
         (src ? '<span class="pi-src">' + esc(src) + '</span>' : '') + '</div>' +
-        (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div></div>';
+        (c.description ? '<div class="pi-desc">' + esc(c.description) + '</div>' : '') + '</div>' +
+        '<button class="pi-pin" type="button" title="' + (pinned ? 'Unpin' : 'Pin above the message box') + '">' + SVG_PIN + '</button></div>';
     }).join('');
     return hits.length;
   }
   slashList.addEventListener('click', function (e) {
     const item = e.target.closest('.popup-item'); if (!item || !item.dataset.cmd) return;
+    if (e.target.closest('.pi-pin')) {         // 7.13: a pin toggle never runs the command or closes the menu
+      // The redraw below REMOVES the clicked button, so by the time the click reaches the
+      // document-level handler its target is outside every .popup and reads as an outside click,
+      // which closed the menu (fixture 107 step 1). Stop it here.
+      e.stopPropagation();
+      const top = slashList.scrollTop;
+      togglePin(item.dataset.cmd.slice(1));
+      renderSlash(/^\/[\w-]*$/.test(input.value) ? input.value.slice(1) : '');
+      slashList.scrollTop = top;
+      const again = slashList.querySelector('.popup-item[data-cmd="' + item.dataset.cmd.replace(/"/g, '') + '"]');
+      if (again) { slashList.querySelectorAll('.popup-item.sel').forEach(function (x) { x.classList.remove('sel'); }); again.classList.add('sel'); }
+      input.focus();
+      return;
+    }
     menuEl('slashMenu').classList.remove('show');
     if (item.dataset.takesarg) {              // takes an argument → insert and let the user type it
       input.value = item.dataset.cmd + ' ';
@@ -175,6 +189,181 @@
       submit();
     }
   });
+
+  /* ---------- 7.13 pinned commands ----------
+     A row of chips above the input card: one click sends a command the user pinned, with no typing
+     and no menu (user, 2026-11-22). Pinned and unpinned ONLY from the / menu's rows (the .pi-pin
+     toggle renderSlash draws) — the strip itself carries commands and the +N overflow, nothing
+     else. Kotlin owns the store (application-level like the model pick, so the pins are the same
+     in every project) and seeds it on every load as __cmdPins; a toggle sends the whole list back.
+     A pin is DRAWN only while its command is in the roster and enabled here (cmdKind), so a
+     project without that command shows no dead chip — the pin itself is kept for the projects
+     that have it. No keyboard shortcuts: the plugin binds none (decision 2026-08-09). Fixture 107. */
+  let cmdPins = [];   // canonical lowercased names, in pin order
+  const pinsEl = document.getElementById('pins'), pinMore = document.getElementById('pinMore'),
+        pinMoreWrap = pinMore.parentNode, pinList = document.getElementById('pinList');
+  // Everything the / menu can offer: the CLI's roster plus the commands the panel supplies itself.
+  function cmdRoster() {
+    return slashCommands.concat(CMD_LOCAL.filter(function (l) {
+      return !slashCommands.some(function (c) { return (c.name || '').toLowerCase() === l.name; });
+    }));
+  }
+  function isPinned(name) { return cmdPins.indexOf(canonicalCmd(name)) !== -1; }
+  function setPins(list) {
+    cmdPins = (Array.isArray(list) ? list : []).filter(function (n) { return typeof n === 'string' && n; });
+    renderPins();
+  }
+  function togglePin(name) {
+    const n = canonicalCmd(name), i = cmdPins.indexOf(n);
+    if (i === -1) cmdPins.push(n); else cmdPins.splice(i, 1);
+    bridge({ kind: 'cmdPins', pins: cmdPins });
+    renderPins();
+  }
+  // The chip's label is the command's own text — its description ("Let's commit it"), first line
+  // only; CSS ellipsises a long one. A command with no description shows its /name.
+  function pinLabel(c) {
+    const d = String(c.description || '').split('\n')[0].trim();
+    return d || '/' + c.name;
+  }
+  // A click on a pin. A command that takes NO argument is sent at once, alone: the draft and its
+  // attachments stay in the composer exactly as they are (user's rule, 2026-11-22), and a turn
+  // already running queues it like any typed message. A command that takes an argument cannot be
+  // sent bare (cmdTakesArg — the same rule a / menu click follows): "/name " goes in front of
+  // whatever is in the box, so a draft becomes its argument, and the user sends when ready.
+  function runPinned(name) {
+    const n = canonicalCmd(name);
+    const c = cmdRoster().find(function (x) { return (x.name || '').toLowerCase() === n; });
+    closeMenus(); hideMenu();
+    if (!c || cmdKind(n) === 'tui') return;
+    if (cmdTakesArg(c)) {
+      const draft = input.value;
+      input.value = '/' + n + ' ' + (new RegExp('^/' + n.replace(/[^\w-]/g, '\\$&') + '(\\s|$)', 'i').test(draft) ? draft.replace(/^\S+\s*/, '') : draft);
+      histIdx = history.length;
+      autoGrow(); input.focus();
+      const end = input.value.length; input.setSelectionRange(end, end);
+      return;
+    }
+    noteCmdUsed(n);                                                // 7.12: a pin click is a use
+    const text = '/' + n;
+    if (busy) { queue.push({ text: text, images: [], selection: null }); renderQueue(); smoothToBottom(); return; }
+    sendTurn(text, [], null);
+  }
+  function renderPins() {
+    pinsEl.querySelectorAll(':scope > .pin').forEach(function (b) { b.remove(); });
+    const roster = cmdRoster();
+    let shown = 0;
+    cmdPins.forEach(function (n) {
+      const c = roster.find(function (x) { return (x.name || '').toLowerCase() === n; });
+      if (!c || cmdKind(n) === 'tui') return;                      // not in this project's roster: not drawn
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'pin' + (cmdTakesArg(c) ? ' takes-arg' : '');
+      b.dataset.cmd = n;
+      b.title = '/' + n + (cmdTakesArg(c) ? ' — writes it into the message box' : ' — sends it now');
+      // two glyphs, one shown: what a click does, or — while the chip is dragged — the grip (CSS, .pin.drag)
+      b.innerHTML = (cmdTakesArg(c) ? SVG_TEXT_CURSOR : SVG_ARROW_R) + SVG_GRIP + '<span class="pin-t"></span>';
+      b.lastChild.textContent = pinLabel(c);
+      pinsEl.insertBefore(b, pinMoreWrap);
+      shown++;
+    });
+    pinsEl.hidden = !shown;
+    if (!shown) menuEl('pinMenu').classList.remove('show');
+    layoutPins();
+  }
+  // Fit the chips to the row: everything visible when it fits, otherwise as many as fit beside the
+  // +N chip, the rest [hidden] and listed in #pinMenu. Measured, never assumed — a chip's width is
+  // its label in the IDE's font. Runs on every render and whenever the row's width changes.
+  function layoutPins() {
+    if (pinsEl.hidden) return;
+    const chips = Array.prototype.slice.call(pinsEl.querySelectorAll(':scope > .pin'));
+    chips.forEach(function (c) { c.hidden = false; });
+    pinMoreWrap.hidden = false; pinMore.textContent = '+' + chips.length;   // widest it can be
+    const gap = parseFloat(getComputedStyle(pinsEl).columnGap) || 0, avail = pinsEl.clientWidth;
+    const widths = chips.map(function (c) { return c.getBoundingClientRect().width; });
+    const total = function (k) { let w = 0; for (let i = 0; i < k; i++) w += widths[i] + (i ? gap : 0); return w; };
+    let n = chips.length;
+    if (!avail) return;                                           // not laid out yet (hidden tool window)
+    if (total(n) <= avail + 0.5) pinMoreWrap.hidden = true;
+    else {
+      const moreW = pinMoreWrap.getBoundingClientRect().width + gap;
+      while (n > 0 && total(n) + moreW > avail + 0.5) n--;
+      chips.forEach(function (c, i) { c.hidden = i >= n; });
+      pinMore.textContent = '+' + (chips.length - n);
+    }
+    pinList.textContent = '';
+    chips.slice(n).forEach(function (c) {
+      const r = document.createElement('div');
+      r.className = 'popup-item'; r.dataset.cmd = c.dataset.cmd;
+      r.innerHTML = '<span class="pi-ic">' + (c.classList.contains('takes-arg') ? SVG_TEXT_CURSOR : SVG_ARROW_R) + '</span>' +
+        '<div class="pi-body"><div class="pi-title"></div></div>';
+      const title = r.querySelector('.pi-title'), alias = document.createElement('span');
+      title.textContent = c.querySelector('.pin-t').textContent;
+      alias.className = 'pi-alias'; alias.textContent = '/' + c.dataset.cmd;
+      title.appendChild(alias);
+      pinList.appendChild(r);
+    });
+    if (pinMoreWrap.hidden) menuEl('pinMenu').classList.remove('show');
+  }
+  pinsEl.addEventListener('click', function (e) {
+    if (pinDropped) { e.stopPropagation(); return; }              // the click that ends a drag sends nothing
+    if (e.target.closest('#pinMore')) return tg('pinMenu', e);
+    const hit = e.target.closest('#pinList .popup-item, #pins > .pin');
+    if (!hit || !hit.dataset.cmd) return;
+    e.stopPropagation();
+    runPinned(hit.dataset.cmd);
+  });
+  // Drag a chip to reorder (user, 2026-11-22). Plain mouse events, not HTML5 drag-and-drop: the
+  // panel renders off-screen and OS-level drags never reach this DOM (gotchas § JCEF). A press
+  // becomes a drag only after 5px of travel, so an ordinary click still sends; from then on the
+  // chip follows the pointer by changing PLACE — it is re-inserted before the first visible chip
+  // whose midpoint the pointer has not passed — and the release commits. The browser fires a
+  // click after that release (same element under the pointer), which pinDropped swallows: a drag
+  // must never send the command. Only the chips on the row take part; pins folded into +N keep
+  // their place behind them.
+  let pinDrag = null, pinDropped = false;
+  pinsEl.addEventListener('mousedown', function (e) {
+    const chip = e.button === 0 && e.target.closest('#pins > .pin');
+    if (chip) pinDrag = { chip: chip, x: e.clientX, moved: false };
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (!pinDrag) return;
+    if (pinDrag.moved && e.buttons === 0) return endPinDrag();     // released outside the window
+    if (!pinDrag.moved) {
+      if (Math.abs(e.clientX - pinDrag.x) < 5) return;
+      pinDrag.moved = true;
+      pinDrag.chip.classList.add('drag'); pinsEl.classList.add('sorting');
+      closeMenus();
+    }
+    const chip = pinDrag.chip;
+    const others = Array.prototype.filter.call(pinsEl.querySelectorAll(':scope > .pin'), function (c) { return c !== chip; });
+    const visible = others.filter(function (c) { return !c.hidden; });
+    let before = others.filter(function (c) { return c.hidden; })[0] || pinMoreWrap;   // end of the visible run
+    for (let i = 0; i < visible.length; i++) {
+      const r = visible[i].getBoundingClientRect();
+      if (e.clientX < r.left + r.width / 2) { before = visible[i]; break; }
+    }
+    if (chip.nextElementSibling !== before) pinsEl.insertBefore(chip, before);
+  });
+  document.addEventListener('mouseup', function () { if (pinDrag) endPinDrag(); });
+  function endPinDrag() {
+    const d = pinDrag; pinDrag = null;
+    if (!d.moved) return;
+    d.chip.classList.remove('drag'); pinsEl.classList.remove('sorting');
+    pinDropped = true; setTimeout(function () { pinDropped = false; }, 0);
+    reorderPins(Array.prototype.map.call(pinsEl.querySelectorAll(':scope > .pin'), function (c) { return c.dataset.cmd; }));
+  }
+  // `drawn` is the chips' names in their new order. The pins this roster cannot draw keep the
+  // slots they had in the list — only the drawn ones trade places — so reordering in one project
+  // never shuffles a pin that belongs to another.
+  function reorderPins(drawn) {
+    const set = {}; drawn.forEach(function (n) { set[n] = 1; });
+    let k = 0;
+    const next = cmdPins.map(function (n) { return set[n] ? drawn[k++] : n; });
+    if (next.join('\n') === cmdPins.join('\n')) return;
+    cmdPins = next;
+    bridge({ kind: 'cmdPins', pins: cmdPins });
+    renderPins();
+  }
+  if (window.ResizeObserver) new ResizeObserver(function () { layoutPins(); }).observe(pinsEl);
 
   const menu = document.getElementById('mention');
   let menuItems = [], menuSel = -1, menuStart = 0; // menuItems: [{ins, disp}]
