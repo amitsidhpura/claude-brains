@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.18.0"
+version = "0.19.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,28 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.19.0</b>
+            <ul>
+              <li>Model switch between steps: ask for work split across models ("step 1 on Fable,
+                  step 2 on Opus") and the panel changes the model at each step and continues on
+                  its own — a "Switch to …" line marks each change. Same conversation, so the
+                  next model sees everything before it</li>
+              <li>Prompt suggestions: Ctrl+Enter or the Send button on an empty message box sends
+                  the suggestion as it is; Tab still writes it in so you can edit it first</li>
+              <li>A turn started by a scheduled task or a loop wake-up opens with a line that
+                  says so</li>
+              <li>When a Stop hook sends Claude back to work, a warning line shows it with the
+                  hook's message under it</li>
+              <li>Hover tooltips on the panel's buttons show</li>
+              <li>The turn summary ends "· fast" when the request was served in fast mode</li>
+              <li>The panel no longer waits on every Read, Edit and Write while a modal IDE
+                  dialog is open, and keeps drawing under the dialog</li>
+              <li>A filename wider than the tool line is cut with an ellipsis</li>
+              <li>A model picked while a reply is running no longer mislabels Default in the
+                  model menu</li>
+              <li>A selection made with the keyboard in a plan gets the Comment button</li>
+              <li>A running Monitor is named "Monitor" in the background list</li>
+            </ul>
             <b>0.18.0</b>
             <ul>
               <li>Pinned commands: pin a command on its row in the / menu and it becomes a chip
@@ -142,24 +164,6 @@ val changeNotesHtml = """
                   the panel no longer uses an editor API that IntelliJ 2026.3 deprecates, so the
                   plugin stays ready for the next IDE versions. Nothing changes in how they look
                   or behave</li>
-            </ul>
-            <b>0.17.0</b>
-            <ul>
-              <li>Bookmarks: a bookmark button beside Copy response on every reply; the header
-                  button opens a card above the composer listing them with their age — open one to
-                  read the reply, jump to it in the conversation, or remove it. Kept per
-                  conversation across restarts</li>
-              <li>Save as command: hover a message you sent and save it as a /command for all
-                  projects or this one — an ordinary command file, so the terminal and VS Code
-                  have it too; ${'$'}ARGUMENTS takes the text typed after the name</li>
-              <li>The / menu puts the commands you sent most recently first</li>
-              <li>Copy image: images a tool returned (a screenshot, a PNG it read) get a copy
-                  button on hover, and the image popup has one beside ×</li>
-              <li>A question card's preview box keeps one height while you hover the options —
-                  the list used to slide under the pointer</li>
-              <li>Menus keep the cursor on the first match while you type with the mouse resting
-                  over them, and show one highlight — typing /con could pick /goal</li>
-              <li>Date lines are drawn as a soft wave</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
