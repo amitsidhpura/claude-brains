@@ -1,6 +1,6 @@
 {
  "item": "1.32 — prompt suggestions: the CLI's guess at the next prompt shows as the message box's placeholder, marked 'Suggestion:', and Tab writes it in (2026-11-22)",
- "branch": "js/70-events.js case 'prompt_suggestion' → js/60-composer.js onPromptSuggestion / setSuggestion (placeholder 'Suggestion: <text>   (Tab to use)', one line, cut at 90 characters for display) · the Tab keydown on #input (empty box only: writes the whole suggestion, sends nothing) · cleared by setBusy(true) and clearLogUI; dropped when it arrives mid-turn",
+ "branch": "js/70-events.js case 'prompt_suggestion' → js/60-composer.js onPromptSuggestion / setSuggestion (placeholder 'Suggestion: <text>   (Ctrl+Enter to send, Tab to edit)', one line, cut at 90 characters for display) · the Tab keydown on #input (empty box only: writes the whole suggestion, sends nothing) · cleared by setBusy(true) and clearLogUI; dropped when it arrives mid-turn",
  "provenance": "The prompt_suggestion frame is the CLI's own, copied from a stdio tape of 2026-11-22 (2.1.330, panel flags + initialize.promptSuggestions:true, haiku, the prompt 'List the files in this directory'): {type:'prompt_suggestion', suggestion:'show hidden files too', uuid, session_id}, 1.2 s after the turn's result. Measured the same day: 4 of 7 turns produced one with the field declared, 0 of 1 without it, 0 of 4 with promptSuggestionEnabled:false passed through --settings. The longer suggestion texts here are invented to exercise the display cut. Tab is a synthetic keydown on #input, which runs our handler (what is under test) but not the browser's own focus move. window.__bridge is wrapped around every Tab so a send would be seen; busy is flipped by hand for the mid-turn case and put back. NEGATIVE CONTROL RUN 2026-11-22 against the pre-change webview (the sandbox on 1c0b8ee, `typeof setSuggestion` 'undefined'): 14 passed / 11 failed — every DISCRIMINATING assert, plus the caret and length guards that need the text written.",
  "steps": [
   {
@@ -14,7 +14,7 @@
     },
     {
      "js": "window.__s132a.shown",
-     "equals": "Suggestion: show hidden files too   (Tab to use)",
+     "equals": "Suggestion: show hidden files too   (Ctrl+Enter to send, Tab to edit)",
      "why": "DISCRIMINATING: the frame shows as the placeholder, marked as a suggestion (user's pick A)"
     },
     {
@@ -70,7 +70,7 @@
     },
     {
      "js": "window.__s132b.still",
-     "equals": "Suggestion: run the tests   (Tab to use)",
+     "equals": "Suggestion: run the tests   (Ctrl+Enter to send, Tab to edit)",
      "why": "DISCRIMINATING: emptying the box brings the suggestion back — typing did not consume it"
     },
     {
@@ -87,7 +87,7 @@
   },
   {
    "note": "display only: whitespace is collapsed and a long suggestion is cut at 90 characters, but Tab writes the whole text",
-   "setup": "window.__s132c=(function(){const I=document.getElementById('input'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const tab=function(extra){ const e=new KeyboardEvent('keydown',Object.assign({key:'Tab',bubbles:true,cancelable:true},extra||{})); I.dispatchEvent(e); return e.defaultPrevented; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;};  I.value=''; const long='refactor the session store so that the transcript reader and the replay builder share one parser,\\nthen add tests for both paths'; feed(sug(long)); const ph=I.placeholder; tab(); const out={ph:ph, oneLine:ph.indexOf('\\n')<0, cut:ph.indexOf('…   (Tab to use)')>0, len:ph.length, whole:I.value===long}; I.value=''; I.dispatchEvent(new Event('input',{bubbles:true})); return out; })();",
+   "setup": "window.__s132c=(function(){const I=document.getElementById('input'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const tab=function(extra){ const e=new KeyboardEvent('keydown',Object.assign({key:'Tab',bubbles:true,cancelable:true},extra||{})); I.dispatchEvent(e); return e.defaultPrevented; }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent;};  I.value=''; const long='refactor the session store so that the transcript reader and the replay builder share one parser,\\nthen add tests for both paths'; feed(sug(long)); const ph=I.placeholder; tab(); const out={ph:ph, oneLine:ph.indexOf('\\n')<0, cut:ph.indexOf('…   (Ctrl+Enter to send, Tab to edit)')>0, len:ph.length, whole:I.value===long}; I.value=''; I.dispatchEvent(new Event('input',{bubbles:true})); return out; })();",
    "expect": [
     {
      "js": "window.__s132c.oneLine",
@@ -101,8 +101,8 @@
     },
     {
      "js": "window.__s132c.len",
-     "equals": 117,
-     "why": "GUARD: 'Suggestion: ' + 90 characters + '   (Tab to use)'"
+     "equals": 138,
+     "why": "GUARD: 'Suggestion: ' + 90 characters + '   (Ctrl+Enter to send, Tab to edit)'"
     },
     {
      "js": "window.__s132c.whole",
@@ -132,7 +132,7 @@
     },
     {
      "js": "window.__s132d.second",
-     "equals": "Suggestion: second   (Tab to use)",
+     "equals": "Suggestion: second   (Ctrl+Enter to send, Tab to edit)",
      "why": "DISCRIMINATING: the next real one shows"
     },
     {

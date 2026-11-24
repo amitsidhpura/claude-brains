@@ -355,13 +355,15 @@
   /* ---------- 1.32 prompt suggestion ----------
      The CLI's guess at the next prompt (`prompt_suggestion`, about a second after a reply ends,
      not after every reply). Shown as the message box's PLACEHOLDER, marked in words — user's pick
-     A, 2026-11-22, against a tag and an icon rendered beside it: "Suggestion: <text>   (Tab to
-     use)". A placeholder shows only while the box is empty, so typing hides it for free and
-     emptying the box brings it back. Tab in the empty box writes the suggestion in and sends
-     nothing. It dies with the turn it followed: cleared when the next turn starts and at the
+     A, 2026-11-22, against a tag and an icon rendered beside it: "Suggestion: <text>   (Ctrl+Enter
+     to send, Tab to edit)", the hint worded like the default placeholder's. A placeholder shows
+     only while the box is empty, so typing hides it for free and emptying the box brings it
+     back. Tab in the empty box writes the suggestion in and sends nothing; Ctrl+Enter or the
+     Send button on the empty box sends it as it is (submit(), 2026-11-25 — the user's design,
+     against a button of its own inside the box). It dies with the turn it followed: cleared when the next turn starts and at the
      CLI boundary, and one that arrives while a turn is already running is dropped (stale).
      The placeholder is one line: whitespace is collapsed and a long suggestion is cut at 90
-     characters for DISPLAY only — Tab writes the whole text. */
+     characters for DISPLAY only — Tab writes, and a send sends, the whole text. */
   const INPUT_PLACEHOLDER = input.placeholder;
   let suggestion = '';
   function setSuggestion(text) {
@@ -369,7 +371,7 @@
     if (!suggestion) { input.placeholder = INPUT_PLACEHOLDER; return; }
     let shown = suggestion.replace(/\s+/g, ' ');
     if (shown.length > 90) shown = shown.slice(0, 89).trimEnd() + '…';
-    input.placeholder = 'Suggestion: ' + shown + '   (Tab to use)';
+    input.placeholder = 'Suggestion: ' + shown + '   (Ctrl+Enter to send, Tab to edit)';
   }
   function onPromptSuggestion(ev) {
     if (busy || typeof ev.suggestion !== 'string') return;
@@ -525,6 +527,9 @@
     // slash-command routing (only for a bare "/cmd [args]" turn with no attachments): native
     // commands are handled in the IDE; TUI-only built-ins are refused rather than sent as literal
     // text to the model; everything else falls through and is sent as a turn for the CLI to expand.
+    // 1.32: an empty box under a showing suggestion sends the suggestion. Attachments alone go
+    // as they always did, without it.
+    if (!t && !pending.length && !busy && suggestion) t = suggestion;
     // The name must be the ENTIRE first token (whitespace or end after it) — a message starting
     // with a path ("/home/x …") is ordinary text, not a command named "home".
     const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/i);

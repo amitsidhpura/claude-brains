@@ -1,0 +1,115 @@
+{
+ "item": "1.32 follow-up — with a suggestion showing and the box empty, Ctrl+Enter and the Send button send the suggestion; Tab still only writes it in; the placeholder says both (2026-11-25)",
+ "branch": "js/60-composer.js setSuggestion (placeholder 'Suggestion: <text>   (Ctrl+Enter to send, Tab to edit)') · submit(): an empty box with no attachments takes the suggestion as the text",
+ "provenance": "The prompt_suggestion frame is the CLI's own shape, taped 2026-11-22 on 2.1.330 (fixture 112); the suggestion texts are invented. Ctrl+Enter is a synthetic keydown on #input and the click is S.click(), both of which run our handlers (what is under test). window.__bridge is wrapped around every send, so no turn reaches the CLI; the 'user' frames it would have sent are what is asserted. Each step resets with setBusy(false) + __clear. The attachment is a hand-made entry in the composer's own `pending` list.",
+ "steps": [
+  {
+   "note": "the placeholder names both keys; Ctrl+Enter in the empty box sends the suggestion",
+   "setup": "window.__s118a=(function(){const I=document.getElementById('input'); const S=document.getElementById('send'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const ce=function(){ I.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true})); }; const tab=function(){ I.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true})); }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent.filter(function(m){return m.kind==='user';});}; const reset=function(){ setBusy(false); feed({type:'__clear'}); I.value=''; pending=[]; renderAttachments(); I.dispatchEvent(new Event('input',{bubbles:true})); }; reset(); feed(sug('show hidden files too')); const ph=I.placeholder; const sent=tap(ce); const out={ph:ph, n:sent.length, text:sent[0]?sent[0].text:null, after:I.placeholder, value:I.value, bubble:(function(){const u=document.querySelectorAll('#log .user'); return u.length;})()>0}; reset(); return out;})();",
+   "expect": [
+    {
+     "js": "window.__s118a.ph",
+     "equals": "Suggestion: show hidden files too   (Ctrl+Enter to send, Tab to edit)",
+     "why": "DISCRIMINATING: the hint is worded like the default placeholder (user, 2026-11-25)"
+    },
+    {
+     "js": "window.__s118a.n",
+     "equals": 1,
+     "why": "DISCRIMINATING: one turn is sent"
+    },
+    {
+     "js": "window.__s118a.text",
+     "equals": "show hidden files too",
+     "why": "DISCRIMINATING: its text is the suggestion"
+    },
+    {
+     "js": "window.__s118a.after",
+     "equals": "Ask Claude…  (Ctrl+Enter to send, Enter for newline)",
+     "why": "GUARD: the suggestion is gone once sent"
+    },
+    {
+     "js": "window.__s118a.value",
+     "equals": "",
+     "why": "GUARD: the box stays empty"
+    }
+   ]
+  },
+  {
+   "note": "the Send button does the same, and sends the whole text of a suggestion that is cut for display",
+   "setup": "window.__s118b=(function(){const I=document.getElementById('input'); const S=document.getElementById('send'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const ce=function(){ I.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true})); }; const tab=function(){ I.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true})); }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent.filter(function(m){return m.kind==='user';});}; const reset=function(){ setBusy(false); feed({type:'__clear'}); I.value=''; pending=[]; renderAttachments(); I.dispatchEvent(new Event('input',{bubbles:true})); }; reset(); const long='refactor the session store so that the transcript reader and the replay builder share one parser,\\nthen add tests for both paths'; feed(sug(long)); const ph=I.placeholder; const sent=tap(function(){ S.click(); }); const out={cut:ph.indexOf('…   (Ctrl+Enter to send, Tab to edit)')>0, len:ph.length, n:sent.length, whole:!!sent[0]&&sent[0].text===long}; reset(); return out;})();",
+   "expect": [
+    {
+     "js": "window.__s118b.cut",
+     "equals": true,
+     "why": "DISCRIMINATING: the long text ends in an ellipsis before the hint"
+    },
+    {
+     "js": "window.__s118b.len",
+     "equals": 138,
+     "why": "GUARD: 'Suggestion: ' + 90 characters + the hint"
+    },
+    {
+     "js": "window.__s118b.n",
+     "equals": 1,
+     "why": "DISCRIMINATING: the click sends one turn"
+    },
+    {
+     "js": "window.__s118b.whole",
+     "equals": true,
+     "why": "DISCRIMINATING: with the uncut, multi-line text"
+    }
+   ]
+  },
+  {
+   "note": "typed text wins; Tab then an edit sends the edited text; an attachment alone goes without the suggestion; no suggestion, nothing sent",
+   "setup": "window.__s118c=(function(){const I=document.getElementById('input'); const S=document.getElementById('send'); const feed=function(o){window.onClaudeEvent(JSON.stringify(o));}; const sug=function(t){ return {type:'prompt_suggestion',suggestion:t,uuid:'e3681089-5121-4e47-b21c-474991b345c2',session_id:'7714a849-1074-4c8e-bb27-73e80474c59f'}; }; const ce=function(){ I.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true})); }; const tab=function(){ I.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true})); }; const tap=function(fn){const sent=[]; const real=window.__bridge; window.__bridge=function(j){sent.push(JSON.parse(j));}; try{fn();}finally{window.__bridge=real;} return sent.filter(function(m){return m.kind==='user';});}; const reset=function(){ setBusy(false); feed({type:'__clear'}); I.value=''; pending=[]; renderAttachments(); I.dispatchEvent(new Event('input',{bubbles:true})); }; reset(); const out={}; feed(sug('run the tests')); I.value='my own text'; let s=tap(ce); out.typedN=s.length; out.typed=s[0]?s[0].text:null; reset(); feed(sug('run the tests')); tab(); I.value=I.value+' twice'; s=tap(ce); out.editN=s.length; out.edit=s[0]?s[0].text:null; reset(); feed(sug('run the tests')); pending=[{kind:'text',media_type:'text/plain',data:'aGk=',name:'a.txt'}]; s=tap(ce); out.attN=s.length; out.att=s[0]?s[0].text:null; out.attImgs=s[0]?s[0].images.length:null; reset(); s=tap(ce); out.noneN=s.length; const s2=tap(function(){ S.click(); }); out.noneClick=s2.length; reset(); return out;})();",
+   "expect": [
+    {
+     "js": "window.__s118c.typedN",
+     "equals": 1,
+     "why": "GUARD: a box with text sends"
+    },
+    {
+     "js": "window.__s118c.typed",
+     "equals": "my own text",
+     "why": "GUARD: its own text, not the suggestion"
+    },
+    {
+     "js": "window.__s118c.editN",
+     "equals": 1,
+     "why": "GUARD: Tab then an edit sends once"
+    },
+    {
+     "js": "window.__s118c.edit",
+     "equals": "run the tests twice",
+     "why": "GUARD: the edited text"
+    },
+    {
+     "js": "window.__s118c.attN",
+     "equals": 1,
+     "why": "GUARD: an attachment with no text still sends"
+    },
+    {
+     "js": "window.__s118c.att",
+     "equals": "",
+     "why": "GUARD: without the suggestion added to it"
+    },
+    {
+     "js": "window.__s118c.attImgs",
+     "equals": 1,
+     "why": "GUARD: and carries the attachment"
+    },
+    {
+     "js": "window.__s118c.noneN",
+     "equals": 0,
+     "why": "GUARD: no suggestion — Ctrl+Enter on an empty box sends nothing"
+    },
+    {
+     "js": "window.__s118c.noneClick",
+     "equals": 0,
+     "why": "GUARD: nor does the Send button"
+    }
+   ]
+  }
+ ]
+}
