@@ -166,6 +166,7 @@
           if (cb.id) toolsById[cb.id] = openTool;
           finishBubble();
           curBubble = null; // text after a tool starts a fresh block
+          turnHandoff = null;   // a marker counts only as the END of the reply
         } else if (cb.type === 'web_search_tool_result') {
           serverToolResult(cb);
         } else if (cb.type === 'redacted_thinking') {

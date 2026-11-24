@@ -206,6 +206,7 @@
 
   function clearLogUI() {
     pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
+    handoffPending = null; turnHandoff = null; handoffRun = 0;   // a handoff dies with its conversation
     exportState = null; exportMenu.classList.remove('show');   // the /export text belongs to the process that is going (15.4)
     Array.from(log.children).forEach(function (c) { if (c.id !== 'welcome') c.remove(); });
     if (welcome) welcome.style.display = '';

@@ -285,6 +285,12 @@ class ClaudeCli(
                 // is the only switch: the panel has none (user, 2026-11-22). Each suggestion costs
                 // a little usage. The frame is a conversation event and reaches the page as is.
                 put("promptSuggestions", true)
+                // Model-switch handoff: the protocol text rides the initialize request, not a
+                // spawn flag — no argv quoting on Windows, and an old CLI that does not know the
+                // key is not stopped at arg parse. MEASURED 2026-11-25 on 2.1.331 over stdio:
+                // with only this key (no --append-system-prompt) a haiku → sonnet task ended its
+                // step with the marker on the last line and resumed from the continue message.
+                put("appendSystemPrompt", HANDOFF_PROTOCOL)
                 // 15.7: the answer comes back on this request's response as `workspace_trust_recorded`.
                 trustDirectory?.let { dir ->
                     put("workspaceTrust", buildJsonObject { put("accepted", true); put("directory", dir) })
@@ -672,6 +678,14 @@ class ClaudeCli(
 
     companion object {
         const val INIT_REQ_ID = "sdk-init"
+
+        /** The model-switch handoff protocol, appended to every session's system prompt. Its
+         *  marker syntax is what `handoffSplit` in webview/js/20-markdown.js parses — change
+         *  both together (pinned by HandoffProtocolTest). */
+        val HANDOFF_PROTOCOL: String by lazy {
+            ClaudeCli::class.java.getResourceAsStream("/handoff/protocol.md")!!
+                .use { it.readBytes() }.toString(Charsets.UTF_8)
+        }
         /** callback_id of the PreToolUse autosave hook declared in [sendInitialize]. */
         const val HOOK_AUTOSAVE = "autosave"
         /**

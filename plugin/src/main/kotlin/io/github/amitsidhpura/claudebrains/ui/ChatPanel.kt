@@ -325,7 +325,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 if (pairs.isNotEmpty()) permDiffReview.openChain("Claude: changes (turn $turn)", pairs)
             }
             "mode" -> msg["mode"]?.jsonPrimitive?.content?.let { session.setPermissionMode(it) }
-            "model" -> msg["model"]?.jsonPrimitive?.content?.let { session.setModel(it) }
+            "model" -> msg["model"]?.jsonPrimitive?.content?.let {
+                session.setModel(it, ack = msg["ack"]?.jsonPrimitive?.content == "true")
+            }
             "fastMode" -> session.setFastMode(msg["on"]?.jsonPrimitive?.content == "true")
             "thinking" -> session.setThinking(msg["on"]?.jsonPrimitive?.content != "false")
             // 15.7: Trust on the panel's trust line — the second click, after its own confirm.

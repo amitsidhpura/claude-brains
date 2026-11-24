@@ -591,10 +591,19 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * (checklist 9.11), so an error answer puts the persisted value back and sends the webview a
      * `__model_rejected` frame that reverts the chip WITHOUT bridging a model message back.
      */
-    fun setModel(model: String) {
+    fun setModel(model: String, ack: Boolean = false) {
         val previous = selectedModel()
         props.setValue(MODEL_KEY, model)
-        cli?.setModel(model) { _, err -> if (err != null) revertModel(model, previous, err) }
+        cli?.setModel(model) { _, err ->
+            if (err != null) revertModel(model, previous, err)
+            // Model-switch handoff: the page sends its continue message only once the CLI has
+            // answered the switch, so a refused one (a PreModelSwitch hook) never runs the next
+            // step on the wrong model.
+            else if (ack) onEventCb?.invoke(buildJsonObject {
+                put("type", "__model_set")
+                put("model", model)
+            }.toString())
+        }
     }
 
     private fun revertModel(model: String, previous: String?, error: String) {

@@ -1,0 +1,1097 @@
+{
+ "item": "Model-switch handoff — a reply that ends with the marker: the marker line is not drawn, a 'Switch to …' line is, the model is switched with an ack, and the continue message goes out only when the CLI has answered the switch (2026-11-25); no more than 30 automatic switches in a row",
+ "branch": "js/20-markdown.js handoffSplit / handoffHideTail / asstBlock / handoffLine · js/70-events.js flushMd, finishBubble (turnHandoff), __model_set, __model_rejected · js/80-gauge.js startHandoff / handoffContinue in onResult · js/55-replay.js case 'assistant' · js/60-composer.js sendTurn(auto)",
+ "provenance": "Step 1's frames are the CLI's own: the last message of the first turn of _local/probe-handoff/tape-3.jsonl, taped over stdio 2026-11-25 on 2.1.331 with the panel's flags and the shipped protocol text in initialize.appendSystemPrompt (start model sonnet, prompt 'Step 1 on haiku: list the files in this directory. Step 2 on sonnet: …') — message_start through the result. The result's modelUsage and permission_denials are dropped. The __model_set and __model_rejected frames are the plugin's own (ClaudeSessionService.setModel); the rejection text is the CLI's wording measured 2026-08-30. The assistant frames of the later steps are hand-made in the wire's shape, un-streamed. window.__bridge is wrapped for the whole fixture (restored in the last step), so no model switch or turn reaches the CLI; the model chip is put back with showModel. NEGATIVE CONTROL RUN 2026-11-25 against the pre-change webview, with the first build's marker (it carried a state attribute): 11 passed / 17 failed.",
+ "steps": [
+  {
+   "note": "live, streamed: the marker is cut from the reply, the handoff line is drawn above the summary, and the switch is sent with an ack — no continue yet",
+   "setup": "window.__realBridge119=window.__realBridge119||window.__bridge; window.__b119=[]; window.__bridge=function(j){window.__b119.push(JSON.parse(j));};setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];window.__m119=currentModel; addUserMessage('Step 1 on haiku: list the files in this directory. Step 2 on sonnet: summarise.', []);",
+   "frames": [
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_start",
+      "message": {
+       "model": "claude-sonnet-5-5",
+       "id": "msg_011ChNK2ZbKsqkhFY4ZJ32My",
+       "type": "message",
+       "role": "assistant",
+       "content": [],
+       "container": null,
+       "stop_reason": null,
+       "stop_sequence": null,
+       "stop_details": null,
+       "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 12421,
+        "cache_read_input_tokens": 25938,
+        "cache_creation": {
+         "ephemeral_5m_input_tokens": 0,
+         "ephemeral_1h_input_tokens": 12421
+        },
+        "output_tokens": 2,
+        "service_tier": "standard",
+        "inference_geo": "global",
+        "speed": "standard"
+       },
+       "input_transformations": [],
+       "diagnostics": null,
+       "context_management": null
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "ba7eca25-435e-468a-bd29-4c3e509efee3",
+     "ttft_ms": 1177,
+     "thinking_display": "updates",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 0,
+      "content_block": {
+       "type": "thinking",
+       "thinking": "",
+       "signature": ""
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "11a699d9-be1d-4953-964c-75eea8e78468",
+     "thinking_display": "updates",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "thinking_delta",
+       "thinking": "",
+       "estimated_tokens": 50
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "af9b803f-99aa-48b1-a8ea-4fe13ca06b21",
+     "thinking_display": "updates",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "thinking_delta",
+       "thinking": "",
+       "estimated_tokens": null
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "1e240282-2798-487a-ba7f-27bc9f1e640f",
+     "thinking_display": "updates",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 0,
+      "delta": {
+       "type": "signature_delta",
+       "signature": "CAQSpwcKEAgUGAI4AUIIdGhpbmtpbmcSDNWjiTmH6bAnihppCRoMK+1px2+sXtIOkx+cIjCTYh7/TIQQMTJlqKApDh1rlyiIulVm2Gzy5v3Ze6cA1RwE1kybbORRPf4YYTGzWf8qxAbjYJayPVapOaTWHUNwIY6eKWqRZxCVxk4c69T0/Isb/xZuR2MVBiM+S+OT6yJOcKIxz8OgQl77g0ktiQ9MevMdlBjF2wt03+Oq4NTdV/Bqjd8jar+HoPaNGk5YhY15xIdxyyqJ/kxWOF5e96HK5AypEsIGOQly+wmuzZGPouEdrq7CBj+GVVt7OI30mQLJrT3z2NqUVYFBN/WzPWnEwnRlfNeW9iRwoEH3jybR3DsFfEEcZU3GoGTGyuxHcjw2APzc+Xu67/CKqAVtdYQajxERUHmgFNUKUBVvLT4kM5DJTLpkwDaWjR6s42cbBrZs+5pf+QM7bwn0fpjxAbYiq5fx/geeD7BWVIytoXqCyJvN7c0EvJqZeJNTggcSMBIJG6reF9y60SyrZyckg23k/YkVJNg7qP/mYCbTHJKgDSwr5mXGgnOV2TTuBjEEeM2z3guBYg3RMjJQo880n60ja9cBLP4bk0zAgPiApkN+LwaKu0hpmDhlow2P0xNr0W5uR9F2dDrwbVYvGIhfCBLBGL8czLyzX7dK/aa+MLPEYO1Jkkn4pzI7ylvcWtixAdud0If+Y0V3LsPrVXQmUXDokR44ej9Odsj3+uLHvntsIAvn8sVJZduBvFNT2qITlp8Da1bSDXMFAyR+Tf19ah0tne+sIxCXPllekgMXp0sgMG/BZdZ+qa2qOZ8RZJEmPGXYHq1SyVNUcdn63bdxQ6RIQe7Pryj43yxD35wV2jhlBTflzgQ6gnVd7VrfUTq3ibS3FL5jigxTis9ygPDeiYMboPzuCM/YbIytMKboHD3/+d969OOjhHvm/jnOUDH21q7T5asLH4cnh/dWf/ajppyUIRjXisDHqBZODyS7eOxOAK763fNOnFbOvPOGAiH1Cx7OIHKksQqNkiFMFEe5UIjKoNaS7UlDlUBddHvmbrJAJySxgPSzSsr1iVcV56zAMlNRZZLnpnGurvv4YN6y6Q8jrd9ybzDvunOwu1bBQAxQX9M6+zSHcEwQiZlBkJV7fcrPRHEEbyIZKAnnenUIcUwZ4AgNyqFvmNFwO3U2MGgs3XRohx9x88qQOD+3awF6nnTKKPVi/el16M72rYG/fGaF+f5UWRMACxgB"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "76f3b3c0-5e3b-4468-99ec-7cf4050e6d2b",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-sonnet-5-5",
+      "id": "msg_011ChNK2ZbKsqkhFY4ZJ32My",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQSpwcKEAgUGAI4AUIIdGhpbmtpbmcSDNWjiTmH6bAnihppCRoMK+1px2+sXtIOkx+cIjCTYh7/TIQQMTJlqKApDh1rlyiIulVm2Gzy5v3Ze6cA1RwE1kybbORRPf4YYTGzWf8qxAbjYJayPVapOaTWHUNwIY6eKWqRZxCVxk4c69T0/Isb/xZuR2MVBiM+S+OT6yJOcKIxz8OgQl77g0ktiQ9MevMdlBjF2wt03+Oq4NTdV/Bqjd8jar+HoPaNGk5YhY15xIdxyyqJ/kxWOF5e96HK5AypEsIGOQly+wmuzZGPouEdrq7CBj+GVVt7OI30mQLJrT3z2NqUVYFBN/WzPWnEwnRlfNeW9iRwoEH3jybR3DsFfEEcZU3GoGTGyuxHcjw2APzc+Xu67/CKqAVtdYQajxERUHmgFNUKUBVvLT4kM5DJTLpkwDaWjR6s42cbBrZs+5pf+QM7bwn0fpjxAbYiq5fx/geeD7BWVIytoXqCyJvN7c0EvJqZeJNTggcSMBIJG6reF9y60SyrZyckg23k/YkVJNg7qP/mYCbTHJKgDSwr5mXGgnOV2TTuBjEEeM2z3guBYg3RMjJQo880n60ja9cBLP4bk0zAgPiApkN+LwaKu0hpmDhlow2P0xNr0W5uR9F2dDrwbVYvGIhfCBLBGL8czLyzX7dK/aa+MLPEYO1Jkkn4pzI7ylvcWtixAdud0If+Y0V3LsPrVXQmUXDokR44ej9Odsj3+uLHvntsIAvn8sVJZduBvFNT2qITlp8Da1bSDXMFAyR+Tf19ah0tne+sIxCXPllekgMXp0sgMG/BZdZ+qa2qOZ8RZJEmPGXYHq1SyVNUcdn63bdxQ6RIQe7Pryj43yxD35wV2jhlBTflzgQ6gnVd7VrfUTq3ibS3FL5jigxTis9ygPDeiYMboPzuCM/YbIytMKboHD3/+d969OOjhHvm/jnOUDH21q7T5asLH4cnh/dWf/ajppyUIRjXisDHqBZODyS7eOxOAK763fNOnFbOvPOGAiH1Cx7OIHKksQqNkiFMFEe5UIjKoNaS7UlDlUBddHvmbrJAJySxgPSzSsr1iVcV56zAMlNRZZLnpnGurvv4YN6y6Q8jrd9ybzDvunOwu1bBQAxQX9M6+zSHcEwQiZlBkJV7fcrPRHEEbyIZKAnnenUIcUwZ4AgNyqFvmNFwO3U2MGgs3XRohx9x88qQOD+3awF6nnTKKPVi/el16M72rYG/fGaF+f5UWRMACxgB"
+       }
+      ],
+      "container": null,
+      "stop_reason": null,
+      "stop_sequence": null,
+      "stop_details": null,
+      "usage": {
+       "input_tokens": 2,
+       "cache_creation_input_tokens": 12421,
+       "cache_read_input_tokens": 25938,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 12421
+       },
+       "output_tokens": 2,
+       "service_tier": "standard",
+       "inference_geo": "global",
+       "speed": "standard"
+      },
+      "input_transformations": [],
+      "diagnostics": null,
+      "context_management": null
+     },
+     "parent_tool_use_id": null,
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "uuid": "800d0589-876c-4409-9469-0d6033a342af",
+     "timestamp": "2026-11-24T19:33:15.128Z",
+     "request_id": "req_011ChNK2ZQBFCw31x77Pf8Cy",
+     "thinking_duration_ms": 914,
+     "thinking_display": "updates"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 0
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "744bd3e6-9eff-4988-902d-708c1660380c",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_start",
+      "index": 1,
+      "content_block": {
+       "type": "text",
+       "text": ""
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "94bc98d6-a25f-4354-99fc-29a1af42df45",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "Here"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "ff24e627-22a6-4746-b0d9-20f18c717f0d",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "'s the"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "2c9b6952-57bb-4328-bcd0-837db559a203",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " plan:\n\n-"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "21b3d65a-3f39-40f0-9f16-021cb0579d73",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " `"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "9ef56f05-665e-4016-a279-7b9757007a52",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "step-1`"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "9c53f7ab-3fcc-48ae-8729-4a722426aea4",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " (haiku): list the files"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "ddcdc699-8651-4a64-b45a-62acdbf8209f",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " in this directory.\n- `"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "db1956d6-b672-4482-a2da-cd2bc9709431",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "step-2` (sonn"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "036a736a-a853-4aa1-a2ce-f0aa3f7ae7d3",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "et): summarise what kind"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "9246fb75-1e35-4ecc-ab8b-57299b303817",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " of project this is in two sent"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "95a18259-67e5-40b2-b4ac-24fae8991e7c",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "ences.\n\nStep 1 "
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "8a71d265-70be-427e-91e3-ee50dae709ff",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "belongs to"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "268d13e4-5e5e-4782-bb2d-bcf2e8d662c9",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " Haiku, so I'm"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "be7cc460-bdf6-4cdb-be02-55261cd8c9a5",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " switching to"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "42d808c8-8554-48d1-be0c-e262507686c5",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " it now.\n\n<<MOD"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "d2ccfb00-b721-4e75-b03c-4e9c9ccfaa2d",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "EL_SWITCH"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "020e4f61-f472-4577-9a3a-f93c5f70531d",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": " v=\"1\" model=\"hai"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "61f1e06d-bdd4-464b-bf5c-28492736571d",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": "ku\" next=\"step-1\">"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "bb0d81fe-9eaa-4e4d-9ab2-267be97182cb",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_delta",
+      "index": 1,
+      "delta": {
+       "type": "text_delta",
+       "text": ">"
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "eb679870-b022-428e-89f2-2bed82f1ac14",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-sonnet-5-5",
+      "id": "msg_011ChNK2ZbKsqkhFY4ZJ32My",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "Here's the plan:\n\n- `step-1` (haiku): list the files in this directory.\n- `step-2` (sonnet): summarise what kind of project this is in two sentences.\n\nStep 1 belongs to Haiku, so I'm switching to it now.\n\n<<MODEL_SWITCH v=\"1\" model=\"haiku\" next=\"step-1\">>"
+       }
+      ],
+      "container": null,
+      "stop_reason": null,
+      "stop_sequence": null,
+      "stop_details": null,
+      "usage": {
+       "input_tokens": 2,
+       "cache_creation_input_tokens": 12421,
+       "cache_read_input_tokens": 25938,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 12421
+       },
+       "output_tokens": 2,
+       "service_tier": "standard",
+       "inference_geo": "global",
+       "speed": "standard"
+      },
+      "input_transformations": [],
+      "diagnostics": null,
+      "context_management": null
+     },
+     "parent_tool_use_id": null,
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "uuid": "3d2a36fd-c779-4599-aa6c-3fa95be05679",
+     "timestamp": "2026-11-24T19:33:15.722Z",
+     "request_id": "req_011ChNK2ZQBFCw31x77Pf8Cy"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "content_block_stop",
+      "index": 1
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "c5370ce6-db7b-4c63-a663-d0b030c176bb",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_delta",
+      "delta": {
+       "stop_reason": "end_turn",
+       "stop_sequence": null,
+       "stop_details": null,
+       "container": null
+      },
+      "usage": {
+       "input_tokens": 2,
+       "cache_creation_input_tokens": 12421,
+       "cache_read_input_tokens": 25938,
+       "output_tokens": 223,
+       "output_tokens_details": {
+        "thinking_tokens": 110
+       },
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 223,
+         "cache_read_input_tokens": 25938,
+         "cache_creation_input_tokens": 12421,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 12421
+         },
+         "type": "message"
+        }
+       ]
+      },
+      "context_management": {
+       "applied_edits": []
+      }
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "257d0656-d448-4984-a059-f82103e6be18",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "type": "stream_event",
+     "event": {
+      "type": "message_stop"
+     },
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "parent_tool_use_id": null,
+     "uuid": "ce266620-6381-4954-94cb-c3ade3ce4d00",
+     "api_message_id": "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+    },
+    {
+     "duration_api_ms": 3773,
+     "stop_reason": "end_turn",
+     "session_id": "0065345f-4894-4d46-8d82-f6ba6807a7c3",
+     "total_cost_usd": 0.0546417,
+     "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 12421,
+      "cache_read_input_tokens": 25938,
+      "output_tokens": 223,
+      "output_tokens_details": {
+       "thinking_tokens": 110
+      },
+      "server_tool_use": {
+       "web_search_requests": 0,
+       "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+       "ephemeral_1h_input_tokens": 12421,
+       "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+       {
+        "input_tokens": 2,
+        "output_tokens": 223,
+        "cache_read_input_tokens": 25938,
+        "cache_creation_input_tokens": 12421,
+        "cache_creation": {
+         "ephemeral_5m_input_tokens": 0,
+         "ephemeral_1h_input_tokens": 12421
+        },
+        "type": "message"
+       }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+     },
+     "terminal_reason": "completed",
+     "fast_mode_state": "off",
+     "fast_mode_disabled_reason": "sdk_opt_in_required",
+     "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+       "background": 0,
+       "foreground": 0,
+       "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+       "parent": 0,
+       "user": 0,
+       "system": 0
+      },
+      "refused": {
+       "depth_limit": 0,
+       "concurrency_limit": 0,
+       "budget": 0
+      },
+      "by_type": {}
+     },
+     "safety_stops": 0,
+     "is_error": false,
+     "num_turns": 1,
+     "subtype": "success",
+     "api_error_status": null,
+     "result": "Here's the plan:\n\n- `step-1` (haiku): list the files in this directory.\n- `step-2` (sonnet): summarise what kind of project this is in two sentences.\n\nStep 1 belongs to Haiku, so I'm switching to it now.\n\n<<MODEL_SWITCH v=\"1\" model=\"haiku\" next=\"step-1\">>",
+     "ttft_ms": 2139,
+     "type": "result",
+     "duration_ms": 2763,
+     "uuid": "7e51aa24-4423-4935-9d49-dbc534c32e6c",
+     "begun_message_ids": [
+      "msg_011ChNK2ZbKsqkhFY4ZJ32My"
+     ],
+     "ttft_stream_ms": 1224,
+     "time_to_request_ms": 48,
+     "first_content_frame_ms": 1225,
+     "queued_turn_count": 0,
+     "result_index": 0,
+     "model_usage_since_last_result": {
+      "claude-haiku-5-5": {
+       "inputTokens": 1209,
+       "outputTokens": 18,
+       "cacheReadInputTokens": 0,
+       "cacheCreationInputTokens": 0,
+       "webSearchRequests": 0,
+       "costUSD": 0.0001299,
+       "contextWindow": 1000000,
+       "maxOutputTokens": 128000,
+       "thinkingTokens": 0,
+       "cacheCreationEphemeral5mInputTokens": 0,
+       "cacheCreationEphemeral1hInputTokens": 0,
+       "canonicalModel": "claude-haiku-5-5",
+       "provider": "firstParty",
+       "costBasis": "list"
+      },
+      "claude-sonnet-5-5": {
+       "inputTokens": 2,
+       "outputTokens": 223,
+       "cacheReadInputTokens": 25938,
+       "cacheCreationInputTokens": 12421,
+       "webSearchRequests": 0,
+       "costUSD": 0.0545118,
+       "contextWindow": 1000000,
+       "maxOutputTokens": 128000,
+       "thinkingTokens": 110,
+       "cacheCreationEphemeral5mInputTokens": 0,
+       "cacheCreationEphemeral1hInputTokens": 12421,
+       "canonicalModel": "claude-sonnet-5-5",
+       "provider": "firstParty",
+       "costBasis": "list"
+      }
+     },
+     "credential_expires_at": "2026-12-23T13:05:03.791Z"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})() ? (function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})().textContent.indexOf('MODEL_SWITCH') : null",
+     "equals": -1,
+     "why": "DISCRIMINATING: the marker line is not drawn"
+    },
+    {
+     "js": "(function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})() ? (function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})().textContent.indexOf('the plan:') > 0 : null",
+     "equals": true,
+     "why": "GUARD: the rest of the reply is"
+    },
+    {
+     "js": "(function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})() ? String((function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})().__md).indexOf('MODEL_SWITCH') : null",
+     "equals": -1,
+     "why": "DISCRIMINATING: nor is it in the block's copy source"
+    },
+    {
+     "js": "document.querySelectorAll('#log .status.handoff').length",
+     "equals": 1,
+     "why": "DISCRIMINATING: one handoff line"
+    },
+    {
+     "js": "(function(){const h=document.querySelector('#log .status.handoff'); return h ? /^Switch to .*Haiku.* \\u00b7 step-1$/.test(h.textContent) : null;})()",
+     "equals": true,
+     "why": "DISCRIMINATING: it names the model and the step"
+    },
+    {
+     "js": "(function(){const h=document.querySelector('#log .status.handoff'), d=document.querySelector('#log .done'); return h&&d ? !!(h.compareDocumentPosition(d) & 4) : null;})()",
+     "equals": true,
+     "why": "GUARD: the line sits above the turn's summary"
+    },
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='model';}).length",
+     "equals": 1,
+     "why": "DISCRIMINATING: one model switch is sent"
+    },
+    {
+     "js": "(function(){const m=(window.__b119||[]).filter(function(m){return m.kind==='model';})[0]; return m ? m.model + '|' + m.ack : null;})()",
+     "equals": "haiku|true",
+     "why": "DISCRIMINATING: to the marker's model, asking for an ack"
+    },
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='user';}).length",
+     "equals": 0,
+     "why": "GUARD: nothing is sent before the CLI answers the switch"
+    },
+    {
+     "js": "currentModel",
+     "equals": "haiku",
+     "why": "DISCRIMINATING: the chip follows"
+    }
+   ]
+  },
+  {
+   "note": "the CLI answered the switch: the continue message is sent as the next turn, once",
+   "frames": [
+    {
+     "type": "__model_set",
+     "model": "haiku"
+    },
+    {
+     "type": "__model_set",
+     "model": "haiku"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='user';}).length",
+     "equals": 1,
+     "why": "DISCRIMINATING: one turn, even when the ack repeats"
+    },
+    {
+     "js": "(function(){const u=(window.__b119||[]).filter(function(m){return m.kind==='user';})[0]; return u ? u.text : null;})()",
+     "equals": "continue next=step-1",
+     "why": "DISCRIMINATING: the continue message"
+    },
+    {
+     "js": "document.getElementById('send').classList.contains('stop')",
+     "equals": true,
+     "why": "GUARD: the panel is busy with the next step"
+    }
+   ]
+  },
+  {
+   "note": "no false trigger: marker syntax that is not the reply's last line is ordinary text and switches nothing",
+   "setup": "setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];sendTurn('explain the protocol', []); window.__b119=[];",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "The marker looks like this:\n<<MODEL_SWITCH v=\"1\" model=\"opus\" next=\"step-2\">>\nand the client acts on it."
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a93c9670-ede7-48f9-a985-6ce2c4c53cf0",
+     "uuid": "11111111-0000-4000-8000-000000000119"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 900,
+     "num_turns": 1,
+     "usage": {
+      "output_tokens": 20
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})() ? (function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})().textContent.indexOf('MODEL_SWITCH') > 0 : null",
+     "equals": true,
+     "why": "GUARD: the quoted marker is drawn as text"
+    },
+    {
+     "js": "document.querySelectorAll('#log .status.handoff').length",
+     "equals": 0,
+     "why": "GUARD: no handoff line"
+    },
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='model';}).length",
+     "equals": 0,
+     "why": "GUARD: no switch"
+    }
+   ]
+  },
+  {
+   "note": "a model outside the allowlist is not switched to: an error line, the marker still hidden",
+   "setup": "setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];sendTurn('go', []); window.__b119=[];",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "Step 1 done.\n\n<<MODEL_SWITCH v=\"1\" model=\"gpt-9\" next=\"step-2\">>"
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a93c9670-ede7-48f9-a985-6ce2c4c53cf0",
+     "uuid": "22222222-0000-4000-8000-000000000119"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 900,
+     "num_turns": 1,
+     "usage": {
+      "output_tokens": 20
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})() ? (function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})().textContent : null",
+     "equals": "Step 1 done.",
+     "why": "DISCRIMINATING: the marker line is cut"
+    },
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='model';}).length",
+     "equals": 0,
+     "why": "GUARD: nothing is switched"
+    },
+    {
+     "js": "(function(){const e=[...document.querySelectorAll('#log .status.err')]; return e.length ? e[e.length-1].textContent.indexOf(\"'gpt-9'\") > 0 : null;})()",
+     "equals": true,
+     "why": "DISCRIMINATING: the user is told which model was asked for"
+    },
+    {
+     "js": "document.querySelectorAll('#log .status.handoff').length",
+     "equals": 0,
+     "why": "GUARD: no handoff line"
+    }
+   ]
+  },
+  {
+   "note": "a refused switch sends no continue; a Stop-ped turn starts no handoff",
+   "setup": "setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];sendTurn('go', []); window.__b119=[];",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "Step 1 done.\n\n<<MODEL_SWITCH v=\"1\" model=\"sonnet\" next=\"step-2\">>"
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a93c9670-ede7-48f9-a985-6ce2c4c53cf0",
+     "uuid": "33333333-0000-4000-8000-000000000119"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 900,
+     "num_turns": 1,
+     "usage": {
+      "output_tokens": 20
+     }
+    },
+    {
+     "type": "__model_rejected",
+     "model": "sonnet",
+     "previous": "haiku",
+     "error": "Model switch blocked by a PreModelSwitch hook: not now"
+    },
+    {
+     "type": "__model_set",
+     "model": "sonnet"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='model';}).length",
+     "equals": 1,
+     "why": "GUARD: the switch was asked for"
+    },
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='user';}).length",
+     "equals": 0,
+     "why": "DISCRIMINATING: no continue after a refusal, even if an ack turns up late"
+    },
+    {
+     "js": "(function(){const e=[...document.querySelectorAll('#log .status.err')]; return e.length ? e[e.length-1].textContent : null;})()",
+     "equals": "The model was not switched, so the next step was not started.",
+     "why": "DISCRIMINATING: and the user is told"
+    },
+    {
+     "js": "currentModel",
+     "equals": "haiku",
+     "why": "GUARD: the chip went back (9.11)"
+    }
+   ]
+  },
+  {
+   "note": "the runaway guard: the 30th automatic switch in a row still goes (the panel's own continue does not reset the count)",
+   "setup": "setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];sendTurn('go', []); handoffRun=29; window.__b119=[];",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "Step 29 done.\n\n<<MODEL_SWITCH v=\"1\" model=\"sonnet\" next=\"step-30\">>"
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a93c9670-ede7-48f9-a985-6ce2c4c53cf0",
+     "uuid": "55555555-0000-4000-8000-000000000119"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 900,
+     "num_turns": 1,
+     "usage": {
+      "output_tokens": 20
+     }
+    },
+    {
+     "type": "__model_set",
+     "model": "sonnet"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='model';}).length",
+     "equals": 1,
+     "why": "DISCRIMINATING: switch number 30 is allowed (a cap of 20 would refuse it)"
+    },
+    {
+     "js": "(function(){const u=(window.__b119||[]).filter(function(m){return m.kind==='user';})[0]; return u ? u.text : null;})()",
+     "equals": "continue next=step-30",
+     "why": "GUARD: and continues"
+    },
+    {
+     "js": "handoffRun",
+     "equals": 30,
+     "why": "DISCRIMINATING: the automatic continue did not reset the count"
+    }
+   ]
+  },
+  {
+   "note": "the 31st is refused with a line that says how to go on; a prompt the user sends resets the count",
+   "frames": [
+    {
+     "type": "assistant",
+     "message": {
+      "model": "claude-haiku-5-5",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "Step 30 done.\n\n<<MODEL_SWITCH v=\"1\" model=\"haiku\" next=\"step-31\">>"
+       }
+      ]
+     },
+     "parent_tool_use_id": null,
+     "session_id": "a93c9670-ede7-48f9-a985-6ce2c4c53cf0",
+     "uuid": "66666666-0000-4000-8000-000000000119"
+    },
+    {
+     "type": "result",
+     "subtype": "success",
+     "is_error": false,
+     "duration_ms": 900,
+     "num_turns": 1,
+     "usage": {
+      "output_tokens": 20
+     }
+    }
+   ],
+   "expect": [
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='model';}).length",
+     "equals": 1,
+     "why": "DISCRIMINATING: no further switch is sent"
+    },
+    {
+     "js": "(window.__b119||[]).filter(function(m){return m.kind==='user';}).length",
+     "equals": 1,
+     "why": "GUARD: and no further continue"
+    },
+    {
+     "js": "(function(){const e=[...document.querySelectorAll('#log .status.err')]; return e.length ? e[e.length-1].textContent : null;})()",
+     "equals": "Stopped after 30 automatic model switches in a row. Send \"continue next=step-31\" to go on.",
+     "why": "DISCRIMINATING: the user is told, with the message that resumes"
+    },
+    {
+     "js": "(function(){ sendTurn('continue next=step-31', []); const r=handoffRun; setBusy(false); return r; })()",
+     "equals": 0,
+     "why": "DISCRIMINATING: a prompt of the user's own starts the count again"
+    }
+   ]
+  },
+  {
+   "note": "replay: the marker is cut and the line drawn, nothing is switched; the bridge and the chip are put back",
+   "setup": "setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];",
+   "frames": [
+    {
+     "type": "__transcript",
+     "items": [
+      {
+       "role": "user",
+       "text": "Step 1 on haiku, step 2 on sonnet"
+      },
+      {
+       "role": "assistant",
+       "text": "Step 1 done.\n\n<<MODEL_SWITCH v=\"1\" model=\"sonnet\" next=\"step-2\">>",
+       "uuid": "44444444-0000-4000-8000-000000000119"
+      }
+     ],
+     "more": 0
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})() ? (function(){const b=[...document.querySelectorAll('#log .blk')]; return b.length?b[b.length-1]:null;})().textContent : null",
+     "equals": "Step 1 done.",
+     "why": "DISCRIMINATING: the replayed reply has no marker line"
+    },
+    {
+     "js": "(function(){const h=document.querySelector('#log .status.handoff'); return h ? /^Switch to .*Sonnet.* \\u00b7 step-2$/.test(h.textContent) : null;})()",
+     "equals": true,
+     "why": "DISCRIMINATING: the same line as live"
+    },
+    {
+     "js": "(window.__b119||[]).length",
+     "equals": 0,
+     "why": "GUARD: a replay sends nothing"
+    },
+    {
+     "js": "(function(){ if(window.__realBridge119){window.__bridge=window.__realBridge119; window.__realBridge119=null;} if(window.__m119) showModel(window.__m119); window.onClaudeEvent(JSON.stringify({type:'__clear'})); return currentModel===window.__m119; })()",
+     "equals": true,
+     "why": "GUARD: cleanup — the real bridge and the model chip are back"
+    }
+   ]
+  }
+ ]
+}

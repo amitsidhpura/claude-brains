@@ -13,14 +13,24 @@
   function flushMd() {
     if (!mdPending) return;
     mdPending = false;
-    if (curBubble) { curBubble.innerHTML = renderMd(curRaw); maybeScroll(); }
+    if (curBubble) { curBubble.innerHTML = renderMd(handoffHideTail(curRaw)); maybeScroll(); }
   }
+  // Model-switch handoff: the mark of the turn's LAST top-level text block, or null. A tool call
+  // after the text clears it — the marker counts only when it ends the reply. Read at the result.
+  let turnHandoff = null;
   // The streaming text block is FINAL: paint the last deltas, keep the source, fold long code, add
   // the copy control (15.4). Idempotent — content_block_stop, message_stop and the result can all
   // land on one block — and every site that drops curBubble after a flush goes through here.
   function finishBubble() {
     flushMd();
-    if (curBubble) { curBubble.__md = curRaw; foldCode(curBubble); copyable(curBubble); }
+    if (curBubble) {
+      const h = handoffSplit(curRaw);
+      // the stream hid the last line while it looked like a marker: draw what the block really is
+      if (h.mark || handoffHideTail(curRaw) !== curRaw) curBubble.innerHTML = renderMd(h.text);
+      if (h.mark) { curBubble.__handoff = h.mark; curBubble.hidden = !String(h.text).trim(); }
+      turnHandoff = h.mark;
+      curBubble.__md = h.text; foldCode(curBubble); copyable(curBubble);
+    }
   }
   let openTool = null;        // tool block currently streaming its input
   let pendingBgTasks = 0;     // background subagent tasks still running (from background_tasks_changed)
@@ -460,7 +470,7 @@
               // the CLI's API-error echo — stash for the result, never draw as prose (see
               // syntheticEcho's declaration); tool_use content in synthetic frames is untouched
               if ((ev.message || {}).model === '<synthetic>') { syntheticEcho.push(b.text); return; }
-              mdBlock(track(el('blk', '')), b.text);
+              turnHandoff = asstBlock(track(el('blk', '')), b.text).__handoff || null;
             }
           });
         }
@@ -819,12 +829,20 @@
       case '__mode':             return applyCliMode(ev.mode);   // persisted mode, at startup
       case '__project':          return setProjectRoot(ev.root); // shortens tool-line paths
       case '__ctl_error':        return errorBlock(ev.error || 'control request failed');
+      case '__model_set':   // the CLI took a handoff's switch: now the next step may start
+        return handoffContinue(ev.model);
       case '__model_rejected': {
         // The CLI refused set_model (a PreModelSwitch hook, 2.1.251 — checklist 9.11). The chip
         // flipped optimistically; put it back to what the CLI kept. `previous` absent = a refused
         // restart re-apply: the CLI is on its default, shown as the roster head (the __models rule).
         showModel(ev.previous || (models[0] && models[0].value) || '');
-        return errorBlock(ev.error || 'model switch refused');
+        errorBlock(ev.error || 'model switch refused');
+        if (handoffPending) {   // a refused handoff sends no continue; what was typed ahead may go
+          handoffPending = null;
+          statusLine('The model was not switched, so the next step was not started.', SVG_ALERT, 'status err');
+          drainQueue(false);
+        }
+        return;
       }
       case '__exit': {
         setBusy(false);

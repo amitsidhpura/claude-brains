@@ -193,6 +193,39 @@
     if (typeof r !== 'string' || !r || SILENT_END[r] || stopping) return;
     (curTurn || log).appendChild(statusLine('Turn ended early · ' + r.replace(/_/g, ' '), SVG_ALERT, 'status err'));
   }
+  /* ---------- model-switch handoff: the client's half ----------
+     A turn that ended with the marker (turnHandoff): draw the line, switch the model, and when the
+     CLI has answered the switch (`__model_set`) send the continue message as the next turn.
+     Nothing is sent for a model outside the allowlist or the roster, after a Stop or an error,
+     or past HANDOFF_MAX switches in a row with nothing typed by the user in between. */
+  const HANDOFF_MAX = 30;   // user, 2026-11-25
+  let handoffPending = null, handoffRun = 0;
+  function startHandoff(mark) {
+    const known = HANDOFF_MODELS.indexOf(mark.model) >= 0 &&
+      allModels().some(function (m) { return m.value === mark.model; });
+    if (!known) {
+      statusLine("Claude asked to switch to '" + mark.model + "', which is not a model this panel can switch to. Nothing was switched.", SVG_ALERT, 'status err');
+      return false;
+    }
+    if (handoffRun >= HANDOFF_MAX) {
+      statusLine('Stopped after ' + HANDOFF_MAX + ' automatic model switches in a row. Send "continue next=' + mark.next + '" to go on.', SVG_ALERT, 'status err');
+      return false;
+    }
+    handoffRun++;
+    handoffLine(mark);
+    handoffPending = mark;
+    showModel(mark.model);
+    bridge({ kind: 'model', model: mark.model, ack: true });
+    return true;
+  }
+  function handoffContinue(model) {
+    const m = handoffPending;
+    if (!m || m.model !== model) return;
+    handoffPending = null;
+    if (busy) return;   // a turn the CLI started on its own got there first
+    sendTurn('continue next=' + m.next, [], null, true);
+  }
+
   function onResult(ev) {
     msgStreamed = false;   // an interrupted stream must not mark the next message as drawn
     // A result that ends NO request this page started. The CLI emits one on `--resume` when a
@@ -223,6 +256,7 @@
     // those this result IS the true end. background_tasks_changed empties just before the last
     // result in the subagent case.
     if (!ev.is_error && pendingBgTasks > 0) return;
+    const handoff = turnHandoff; turnHandoff = null;
     // Total request wall-clock (workStart persists across suspends since we don't setBusy(false)
     // on the intermediate results); reqTokens is summed across every turn in the request.
     const durMs = workStart ? Date.now() - workStart : (typeof ev.duration_ms === 'number' ? ev.duration_ms : 0);
@@ -253,6 +287,7 @@
       // Not track()ed: no stampMessage follows a result, and a pending block would be stamped by
       // the NEXT message's uuid.
       syntheticEcho.forEach(function (t) { mdBlock(el('blk', ''), t); });
+      if (handoff && !stopping) startHandoff(handoff);
       const done = el('done', '');
       // reqSeed makes this line's verb survive a resume: the parser hashes the same uuid.
       done.innerHTML = doneHtml(durMs, outTok, reqSeed, null, usage.speed === 'fast');   // time always; token segment only when non-zero
@@ -264,6 +299,7 @@
     // exactly when the queue must NOT fire — read it before it is cleared.
     const wasStopped = stopping;
     stopping = false;
-    drainQueue(wasStopped);
+    // a handoff in flight goes first: what was typed ahead is sent when the chain of steps ends
+    if (!handoffPending) drainQueue(wasStopped);
   }
 

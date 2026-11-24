@@ -359,6 +359,48 @@
      message's text content, markdown and all). The side panel's answers are .blk as well but are
      not responses, so they never go through here. */
   function mdBlock(k, src) { k.innerHTML = renderMd(src); k.__md = src; foldCode(k); copyable(k); return k; }
+
+  /* ---------- model switch between the steps of one task ----------
+     Claude ends a step with a marker as the LAST line of its reply (the protocol the plugin
+     appends to the system prompt, resources/handoff/protocol.md):
+         <<MODEL_SWITCH v="1" model="opus" next="step-2">>
+     The panel hides that line, switches the model and sends the continue message (startHandoff,
+     80-gauge.js). Only the last line counts: marker syntax quoted mid-message is ordinary text.
+     Nothing is handed over: it is the same conversation, so the next model reads the plan and
+     the earlier steps from it (user, 2026-11-25 — the first build's ./.handoff/state.md file
+     cost a Read, a Write and a permission card per step and told the model nothing new).
+     MEASURED 2026-11-25 on 2.1.331 over stdio (sonnet → haiku → sonnet): the marker was the
+     reply's last line every time, with no trailing whitespace, and no file was written. */
+  const HANDOFF_RE = /^<<MODEL_SWITCH v="1" model="([^"\n]{1,40})" next="([\w-]{1,60})">>$/;
+  const HANDOFF_HEAD = '<<MODEL_SWITCH';
+  const HANDOFF_MODELS = ['fable', 'opus', 'sonnet', 'haiku'];
+  function handoffTail(src) {
+    const s = String(src == null ? '' : src).replace(/\s+$/, ''), i = s.lastIndexOf('\n');
+    return { head: i < 0 ? '' : s.slice(0, i).replace(/\s+$/, ''), last: s.slice(i + 1) };
+  }
+  // A finished text: { text: what to draw, mark: {model, next} | null }.
+  function handoffSplit(src) {
+    const t = handoffTail(src), m = HANDOFF_RE.exec(t.last);
+    return m ? { text: t.head, mark: { model: m[1], next: m[2] } } : { text: src, mark: null };
+  }
+  // A text still streaming: the marker, or its beginning, is not drawn while it is the last line
+  // (a line that turns out not to be a marker comes back with the next delta or at the block's end).
+  function handoffHideTail(src) {
+    const t = handoffTail(src);
+    return t.last.length >= 2 && (HANDOFF_HEAD.indexOf(t.last) === 0 || t.last.indexOf(HANDOFF_HEAD) === 0) ? t.head : src;
+  }
+  // An assistant text block, live un-streamed and replay: the marker line is cut, the mark kept on
+  // the element. A reply that was the marker alone leaves nothing to draw.
+  function asstBlock(k, src) {
+    const h = handoffSplit(src);
+    mdBlock(k, h.text);
+    if (h.mark) { k.__handoff = h.mark; k.hidden = !String(h.text).trim(); }
+    return k;
+  }
+  // The line both live and replay draw where a switch happened.
+  function handoffLine(mark) {
+    return statusLine('Switch to ' + chipLabelFor(mark.model) + ' \u00b7 ' + mark.next, SVG_SPARK, 'status handoff');
+  }
   function copyable(k) {
     if (!k || k.querySelector(':scope > .blk-copy')) return;
     const b = document.createElement('button');

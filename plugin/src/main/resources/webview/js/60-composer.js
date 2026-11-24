@@ -414,13 +414,17 @@
 
   // sel (6.6): the selection snapshot taken when the message was composed (activeSel() at
   // submit, the queue item's own on drain, lastUser's on Retry) — null sends no selection key.
-  function sendTurn(t, imgs, sel) {
+  // auto: the panel's own continue message after a model-switch handoff — not a typed prompt, so
+  // it stays out of the ↑/↓ history and does not reset the count of switches in a row.
+  function sendTurn(t, imgs, sel, auto) {
     pendingPlanMode = null;   // a parked plan-row mode switch dies with its turn
+    handoffPending = null; turnHandoff = null;   // any new turn ends a handoff still waiting
+    if (!auto) handoffRun = 0;
     const bubble = addUserMessage(t, imgs, Date.now(), sel);
     daySepBefore(bubble.parentNode);   // 1.30: a date line when the day changed since the last turn
     turnStamped = false;               // the reply's first text block gets its own stamp
     lastUser = { text: t, images: imgs, selection: sel || null };
-    if (t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
+    if (!auto && t && history[history.length - 1] !== t) history.push(t); // record for ↑/↓ recall
     histIdx = history.length; histDraft = '';
     turnTokens = 0; msgTokens = 0; reqTokens = 0; pendingBgTasks = 0; reqSeed = null; retrySeen = null;
     msgStreamed = false;   // this turn's answer must prove its own streaming (or render whole)
@@ -523,13 +527,13 @@
 
   function submit() {
     let t = input.value.trim();
+    // 1.32: an empty box under a showing suggestion sends the suggestion. Attachments alone go
+    // as they always did, without it.
+    if (!t && !pending.length && !busy && suggestion) t = suggestion;
     if (!t && !pending.length) return;
     // slash-command routing (only for a bare "/cmd [args]" turn with no attachments): native
     // commands are handled in the IDE; TUI-only built-ins are refused rather than sent as literal
     // text to the model; everything else falls through and is sent as a turn for the CLI to expand.
-    // 1.32: an empty box under a showing suggestion sends the suggestion. Attachments alone go
-    // as they always did, without it.
-    if (!t && !pending.length && !busy && suggestion) t = suggestion;
     // The name must be the ENTIRE first token (whitespace or end after it) — a message starting
     // with a path ("/home/x …") is ordinary text, not a command named "home".
     const sc = pending.length ? null : t.match(/^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/i);
