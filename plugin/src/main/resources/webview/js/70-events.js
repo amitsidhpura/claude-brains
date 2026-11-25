@@ -544,6 +544,11 @@
         thinkingOn = ev.on !== false;
         syncModelFooter();
         return;
+      case '__effort': {   // 9.2: the level the CLI runs on, at start-up and on every page load
+        const i = efDots.findIndex(function (d) { return d.dataset.v === ev.level; });
+        if (i >= 0) setEffortUI(i);
+        return;
+      }
       case 'system':
         if (typeof ev.permissionMode === 'string') applyCliMode(ev.permissionMode);
         if (ev.subtype === 'init') {

@@ -515,4 +515,6 @@
       bridge({ kind: 'user', text: '/effort ' + d.dataset.v });
     });
   });
-  setEffortUI(2); // default: High
+  // Markup default only, until the __effort frame says what the CLI runs on (9.2, 2026-11-25):
+  // the plugin saves the pick and re-applies it at every start, since `/effort` lasts one process.
+  setEffortUI(2);

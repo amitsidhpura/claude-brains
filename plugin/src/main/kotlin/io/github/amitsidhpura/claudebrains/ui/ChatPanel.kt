@@ -1098,6 +1098,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             ?: pushFrame(buildJsonObject { put("type", "__fastMode"); put("pref", session.fastMode()) })
         // Thinking is Kotlin-owned preference with no CLI echo — seed it on every load.
         pushFrame(buildJsonObject { put("type", "__thinking"); put("on", !session.thinkingOff()) })
+        // 9.2: the effort the CLI runs on (or the saved pick before its answer) — the slider's
+        // markup default is High, which a reloaded page would otherwise show whatever is applied.
+        session.shownEffort()?.let { lvl -> pushFrame(buildJsonObject { put("type", "__effort"); put("level", lvl) }) }
         // 6.6: the selection switch and whatever the editor holds right now — the tracker only
         // pushes on CHANGE, so a reloaded page would otherwise show no pill until the caret moved.
         pushFrame(buildJsonObject { put("type", "__selPref"); put("on", session.includeSelection()); put("file", session.includeOpenFile()) })

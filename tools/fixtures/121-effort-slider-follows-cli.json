@@ -1,0 +1,82 @@
+{
+ "item": "9.2 (2026-11-25): the effort slider is set by an __effort frame — the level the CLI runs on after the plugin's start-up re-apply of the saved pick, pushed again on every page load — instead of staying on its fixed High",
+ "branch": "js/70-events.js the __effort arm (setEffortUI) · Kotlin side ClaudeSessionService.startCli / shownEffort, ChatPanel.seedUi",
+ "provenance": "The __effort frame is the plugin's own (ClaudeSessionService pushes it from get_settings.applied.effort, whose shape was measured on 2.1.332 in _local/probe-effort-persist/); it never comes from the CLI. No bridge call is made, so nothing reaches the CLI; the last step puts the slider back where it was.",
+ "steps": [
+  {
+   "note": "a never-picked CLI on medium: the slider leaves its markup High",
+   "setup": "window.__ef121=efDots.findIndex(function(d){return d.classList.contains('cur');}); setEffortUI(2);",
+   "frames": [
+    {
+     "type": "__effort",
+     "level": "medium"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const i=efDots.findIndex(function(d){return d.classList.contains('cur');}); return i<0?null:efDots[i].dataset.v+'/'+document.getElementById('efName').textContent;})()",
+     "equals": "medium/Medium",
+     "why": "DISCRIMINATING: without the arm the slider stays on High"
+    }
+   ]
+  },
+  {
+   "note": "a saved pick re-applied at start: max",
+   "frames": [
+    {
+     "type": "__effort",
+     "level": "max"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const i=efDots.findIndex(function(d){return d.classList.contains('cur');}); return i<0?null:efDots[i].dataset.v+'/'+document.getElementById('efName').textContent;})()",
+     "equals": "max/Max",
+     "why": "DISCRIMINATING: the frame moves the slider to the CLI's level"
+    }
+   ]
+  },
+  {
+   "note": "the label for xhigh is the slider's own",
+   "frames": [
+    {
+     "type": "__effort",
+     "level": "xhigh"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const i=efDots.findIndex(function(d){return d.classList.contains('cur');}); return i<0?null:efDots[i].dataset.v+'/'+document.getElementById('efName').textContent;})()",
+     "equals": "xhigh/Very High",
+     "why": "DISCRIMINATING: the dot's data-l, not the raw level"
+    }
+   ]
+  },
+  {
+   "note": "an unknown level changes nothing",
+   "frames": [
+    {
+     "type": "__effort",
+     "level": "bogus"
+    }
+   ],
+   "expect": [
+    {
+     "js": "(function(){const i=efDots.findIndex(function(d){return d.classList.contains('cur');}); return i<0?null:efDots[i].dataset.v+'/'+document.getElementById('efName').textContent;})()",
+     "equals": "xhigh/Very High",
+     "why": "GUARD: only the five levels"
+    }
+   ]
+  },
+  {
+   "note": "cleanup: the slider is back where it was",
+   "expect": [
+    {
+     "js": "(function(){ if(window.__ef121>=0) setEffortUI(window.__ef121); return true; })()",
+     "equals": true,
+     "why": "GUARD: cleanup"
+    }
+   ]
+  }
+ ]
+}

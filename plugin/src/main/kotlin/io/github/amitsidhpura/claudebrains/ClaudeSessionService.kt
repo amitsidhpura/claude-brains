@@ -17,7 +17,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import java.io.File
@@ -116,6 +118,16 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         props.setValue(FAST_MODE_KEY, on, false)
         cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", on) })
     }
+
+    /** Persisted effort level (9.2), saved from any `/effort <level>` message ([EffortPick]); null =
+     * never picked, the CLI's own default. Per-process in the CLI since 2.1.331, so every (re)start
+     * re-applies it. */
+    fun effortLevel(): String? = props.getValue(EFFORT_KEY)?.takeIf { it in EffortPick.LEVELS }
+
+    /** The level the slider should show: the CLI's `applied.effort` read after the start-up
+     * re-apply, or a newer pick, else the saved one. Seeded into a reloaded page. */
+    fun shownEffort(): String? = shownEffort ?: effortLevel()
+    @Volatile private var shownEffort: String? = null
 
     /** Side question (8.11): answered off-thread by the CLI; see [ClaudeCli.askSideQuestion]. With
      * no CLI running there is nobody to ask, and the panel needs to hear that too. */
@@ -288,6 +300,19 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         // thinking cap). Only the non-default states are worth a request.
         if (fastMode()) cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", true) })
         if (thinkingOff()) cli?.setMaxThinkingTokens(0)
+        // 9.2: the saved effort level, silently — no turn, no line, no transcript (`/effort` lasts
+        // one process since 2.1.331). A later slider move still wins: the `/effort` turn moves
+        // `applied` past this flag layer (measured on 2.1.332, `_local/probe-effort-persist/`).
+        // Then the slider is set from what the CLI actually runs on, picked or not — it used to
+        // open on a fixed High while a never-picked CLI ran on `medium`.
+        effortLevel()?.let { lvl -> cli?.applyFlagSettings(buildJsonObject { put("effortLevel", lvl) }) }
+        shownEffort = null
+        cli?.getSettings { r, _ ->
+            val applied = ((r?.get("applied") as? JsonObject)?.get("effort") as? JsonPrimitive)
+                ?.contentOrNull?.takeIf { it in EffortPick.LEVELS } ?: return@getSettings
+            if (shownEffort == null) shownEffort = applied   // a pick sent meanwhile is newer
+            onEventCb?.invoke(buildJsonObject { put("type", "__effort"); put("level", shownEffort) }.toString())
+        }
     }
 
     /**
@@ -472,6 +497,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         // A slash command goes as typed: text after its name would become its arguments
         // (`/effort high` from the slider, `/compact` from the gauge).
         if (text.trimStart().startsWith("/")) {
+            // 9.2: an effort pick is saved here, whoever sent it (slider, switch marker, typed).
+            EffortPick.parse(text)?.let { lvl -> props.setValue(EFFORT_KEY, lvl); shownEffort = lvl }
             prev.whenComplete { _, _ -> try { c.sendUserMessage(text, attachments) } finally { done.complete(Unit) } }
             return
         }
@@ -744,6 +771,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         const val CUSTOM_MODELS_KEY = "claudeCode.customModels"
         const val FAST_MODE_KEY = "claudeCode.fastMode"
         const val THINKING_OFF_KEY = "claudeCode.thinkingOff"
+        const val EFFORT_KEY = "claudeCode.effortLevel"
         const val SELECTION_KEY = "claudeCode.includeSelection"
         const val OPEN_FILE_KEY = "claudeCode.includeOpenFile"
         const val RECENT_CMDS_KEY = "claudeCode.commandRecents"
