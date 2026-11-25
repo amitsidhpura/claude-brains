@@ -290,10 +290,13 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         cli = fresh
         fresh.start()
 
-        // Re-apply the persisted model on every (re)start. A refusal here (9.11) has no previous
-        // value to fall back to: the CLI stays on its default, so the persisted choice is dropped
-        // and the chip falls back to the roster head (`previous` absent).
-        selectedModel()?.takeIf { it.isNotBlank() && it != "default" }?.let { m ->
+        // Re-apply the persisted model on every (re)start — `default` too, and when nothing is saved
+        // (#65 doubt 19, 2026-11-26): a CLI sent no model ran Sonnet 5.5 while its own Default row
+        // named Opus 5.5 (2.1.332: applied.model, system/init and the reply all Sonnet 5.5); after
+        // `set_model default` the turn was served by Opus 5.5. A refusal here (9.11) has no previous
+        // value to fall back to: the persisted choice is dropped and the chip falls back to the
+        // roster head (`previous` absent).
+        startupModel(selectedModel()).let { m ->
             cli?.setModel(m) { _, err -> if (err != null) revertModel(m, null, err) }
         }
         // …and the footer-switch preferences, which live in per-process CLI state (flag layer /
@@ -778,3 +781,6 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         const val PINNED_CMDS_KEY = "claudeCode.commandPins"
     }
 }
+
+/** The model sent to the CLI at every start: the saved pick, or `default` when none is saved (#65 doubt 19). */
+internal fun startupModel(saved: String?): String = saved?.takeIf { it.isNotBlank() } ?: "default"
