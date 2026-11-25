@@ -363,7 +363,10 @@
   /* ---------- model switch between the steps of one task ----------
      Claude ends a step with a marker as the LAST line of its reply (the protocol the plugin
      appends to the system prompt, resources/handoff/protocol.md):
-         <<MODEL_SWITCH v="1" model="opus" next="step-2">>
+         <<MODEL_SWITCH v="1" model="opus" effort="high" speed="fast" next="step-2" reason="…">>
+     model, effort and speed are each optional (at least one); reason is shown on the line. Effort
+     and speed were added 2026-11-25, and Claude may now switch on its own judgement (the user's
+     model-picker list: no setting, no ceiling).
      The panel hides that line, switches the model and sends the continue message (startHandoff,
      80-gauge.js). Only the last line counts: marker syntax quoted mid-message is ordinary text.
      Nothing is handed over: it is the same conversation, so the next model reads the plan and
@@ -371,17 +374,36 @@
      cost a Read, a Write and a permission card per step and told the model nothing new).
      MEASURED 2026-11-25 on 2.1.331 over stdio (sonnet → haiku → sonnet): the marker was the
      reply's last line every time, with no trailing whitespace, and no file was written. */
-  const HANDOFF_RE = /^<<MODEL_SWITCH v="1" model="([^"\n]{1,40})" next="([\w-]{1,60})">>$/;
+  // Attributes in any order, each at most once; `v="1"` first. Values are checked by startHandoff
+  // (80-gauge.js), so a marker naming an unknown model is still cut and gets an error line.
+  const HANDOFF_RE = /^<<MODEL_SWITCH v="1"((?: [a-z]+="[^"\n]{0,300}")+)>>$/;
   const HANDOFF_HEAD = '<<MODEL_SWITCH';
+  const HANDOFF_KEYS = ['model', 'effort', 'speed', 'next', 'reason'];
   const HANDOFF_MODELS = ['fable', 'opus', 'sonnet', 'haiku'];
+  const HANDOFF_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+  const HANDOFF_SPEEDS = ['fast', 'standard'];
+  // The last line → {model?, effort?, speed?, next, reason?}, or null when it is not a marker.
+  function handoffParse(line) {
+    const m = HANDOFF_RE.exec(line);
+    if (!m) return null;
+    const mark = {}, re = / ([a-z]+)="([^"\n]*)"/g;
+    let a;
+    while ((a = re.exec(m[1]))) {
+      if (HANDOFF_KEYS.indexOf(a[1]) < 0 || a[1] in mark) return null;
+      mark[a[1]] = a[2];
+    }
+    if (!/^[\w-]{1,60}$/.test(mark.next || '')) return null;
+    if (!mark.model && !mark.effort && !mark.speed) return null;
+    return mark;
+  }
   function handoffTail(src) {
     const s = String(src == null ? '' : src).replace(/\s+$/, ''), i = s.lastIndexOf('\n');
     return { head: i < 0 ? '' : s.slice(0, i).replace(/\s+$/, ''), last: s.slice(i + 1) };
   }
-  // A finished text: { text: what to draw, mark: {model, next} | null }.
+  // A finished text: { text: what to draw, mark: {model?, effort?, speed?, next, reason?} | null }.
   function handoffSplit(src) {
-    const t = handoffTail(src), m = HANDOFF_RE.exec(t.last);
-    return m ? { text: t.head, mark: { model: m[1], next: m[2] } } : { text: src, mark: null };
+    const t = handoffTail(src), mark = handoffParse(t.last);
+    return mark ? { text: t.head, mark: mark } : { text: src, mark: null };
   }
   // A text still streaming: the marker, or its beginning, is not drawn while it is the last line
   // (a line that turns out not to be a marker comes back with the next delta or at the block's end).
@@ -399,7 +421,17 @@
   }
   // The line both live and replay draw where a switch happened.
   function handoffLine(mark) {
-    return statusLine('Switch to ' + chipLabelFor(mark.model) + ' \u00b7 ' + mark.next, SVG_SPARK, 'status handoff');
+    // "Switch to Opus 5.5 · effort high · fast mode on · step-2 — <reason>"; an effort-only change
+    // reads "Effort low · step-3".
+    const parts = [];
+    if (mark.model) parts.push('Switch to ' + chipLabelFor(mark.model));
+    if (mark.effort) parts.push('effort ' + mark.effort);
+    if (mark.speed) parts.push(mark.speed === 'fast' ? 'fast mode on' : 'fast mode off');
+    parts.push(mark.next);
+    let t = parts.join(' \u00b7 ');
+    t = t.charAt(0).toUpperCase() + t.slice(1);
+    if (mark.reason) t += ' \u2014 ' + mark.reason;
+    return statusLine(t, SVG_SPARK, 'status handoff');
   }
   function copyable(k) {
     if (!k || k.querySelector(':scope > .blk-copy')) return;

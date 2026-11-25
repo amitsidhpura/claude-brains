@@ -4,8 +4,8 @@
  "provenance": "Step 1's frames are the CLI's own: the last message of the first turn of _local/probe-handoff/tape-3.jsonl, taped over stdio 2026-11-25 on 2.1.331 with the panel's flags and the shipped protocol text in initialize.appendSystemPrompt (start model sonnet, prompt 'Step 1 on haiku: list the files in this directory. Step 2 on sonnet: …') — message_start through the result. The result's modelUsage and permission_denials are dropped. The __model_set and __model_rejected frames are the plugin's own (ClaudeSessionService.setModel); the rejection text is the CLI's wording measured 2026-08-30. The assistant frames of the later steps are hand-made in the wire's shape, un-streamed. window.__bridge is wrapped for the whole fixture (restored in the last step), so no model switch or turn reaches the CLI; the model chip is put back with showModel. NEGATIVE CONTROL RUN 2026-11-25 against the pre-change webview, with the first build's marker (it carried a state attribute): 11 passed / 17 failed.",
  "steps": [
   {
-   "note": "live, streamed: the marker is cut from the reply, the handoff line is drawn above the summary, and the switch is sent with an ack — no continue yet",
-   "setup": "window.__realBridge119=window.__realBridge119||window.__bridge; window.__b119=[]; window.__bridge=function(j){window.__b119.push(JSON.parse(j));};setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];window.__m119=currentModel; addUserMessage('Step 1 on haiku: list the files in this directory. Step 2 on sonnet: summarise.', []);",
+   "note": "live, streamed: the marker is cut from the reply, the handoff line is drawn above the summary, and the switch is sent with an ack — no continue yet (the chat starts on Sonnet: a marker naming the model already in use switches nothing)",
+   "setup": "window.__realBridge119=window.__realBridge119||window.__bridge; window.__b119=[]; window.__bridge=function(j){window.__b119.push(JSON.parse(j));};setBusy(false); window.onClaudeEvent(JSON.stringify({type:'__clear'})); window.__b119=[];window.__m119=currentModel; showModel('sonnet'); addUserMessage('Step 1 on haiku: list the files in this directory. Step 2 on sonnet: summarise.', []);",
    "frames": [
     {
      "type": "stream_event",
@@ -932,7 +932,7 @@
     },
     {
      "js": "(function(){const e=[...document.querySelectorAll('#log .status.err')]; return e.length ? e[e.length-1].textContent : null;})()",
-     "equals": "The model was not switched, so the next step was not started.",
+     "equals": "The model was not switched, so nothing else was changed and the next step was not started.",
      "why": "DISCRIMINATING: and the user is told"
     },
     {

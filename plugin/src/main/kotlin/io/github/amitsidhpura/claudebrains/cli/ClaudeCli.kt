@@ -565,6 +565,15 @@ class ClaudeCli(
         put("settings", settings)
     })
 
+    /** Read-only, no turn: the applied model and effort (`applied`), measured 2026-11-25. */
+    fun getSettings(onResponse: (JsonObject?, String?) -> Unit) =
+        sendControlRequest(buildJsonObject { put("subtype", "get_settings") }, onResponse)
+
+    /** Read-only, no turn: plan usage (`rate_limits`), measured 2026-11-25 — 0.4 s the first
+     *  time in a process, about 0.02 s after. */
+    fun getUsage(onResponse: (JsonObject?, String?) -> Unit) =
+        sendControlRequest(buildJsonObject { put("subtype", "get_usage") }, onResponse)
+
     /** Host-initiated: cap extended thinking. null = reset to the session default; 0 = off.
      * (The CLI schema: max_thinking_tokens int|null, "omitted or null … resets".) */
     fun setMaxThinkingTokens(maxTokens: Int?) = sendControlRequest(buildJsonObject {

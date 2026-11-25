@@ -1755,14 +1755,17 @@ object SessionStore {
             "so it returned no result. Nobody asked it to stop.]",
     )
 
+    // The panel's `<session_state>` note (SessionStateNote) never shows on replay or in a title.
     private fun userTextFull(obj: JsonObject): String? =
-        textParts(obj["message"]?.jsonObject?.get("content"))
-            .joinToString("\n").ifBlank { null }
+        io.github.amitsidhpura.claudebrains.SessionStateNote.split(
+            textParts(obj["message"]?.jsonObject?.get("content")).joinToString("\n")).first
+            ?.ifBlank { null }
 
     /** First text part only, flattened to one line — the compact form titles and lists use. */
     private fun userText(obj: JsonObject): String? =
         textParts(obj["message"]?.jsonObject?.get("content"))
             .firstOrNull()
+            ?.let { io.github.amitsidhpura.claudebrains.SessionStateNote.split(it).first }
             ?.let { io.github.amitsidhpura.claudebrains.RenderLimits.splitIdeSelection(it).first }   // 6.6: never title a thread by its selection tag
             ?.trim()?.replace("\n", " ")
 }

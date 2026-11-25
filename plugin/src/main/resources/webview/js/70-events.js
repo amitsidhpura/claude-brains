@@ -412,7 +412,7 @@
         return;
       }
       if (ev.type === 'stream_event' || ev.type === 'user') return;
-      if (ev.type === 'result') { effortMuted = false; return; }
+      if (ev.type === 'result') { effortMuted = false; handoffEffortDone(); return; }
     }
     switch (ev.type) {
       case 'stream_event':       return onStream(ev.event || {});
@@ -839,7 +839,7 @@
         errorBlock(ev.error || 'model switch refused');
         if (handoffPending) {   // a refused handoff sends no continue; what was typed ahead may go
           handoffPending = null;
-          statusLine('The model was not switched, so the next step was not started.', SVG_ALERT, 'status err');
+          statusLine('The model was not switched, so nothing else was changed and the next step was not started.', SVG_ALERT, 'status err');
           drainQueue(false);
         }
         return;

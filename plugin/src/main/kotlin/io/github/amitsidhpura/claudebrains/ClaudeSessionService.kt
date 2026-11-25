@@ -221,6 +221,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     private fun startCli(resumeSessionId: String?) {
         runCatching { cli?.stop() }
+        // a new process hears the whole note again; fast mode starts as the saved preference
+        // (re-applied at every start) until the CLI's own fast_mode_state says otherwise
+        lastStateKey = null; lastSettings = null; lastUsage = null; fastState = if (fastMode()) "on" else "off"
         val trustDir = attestTrustDir.also { attestTrustDir = null }
         pendingPermissions.clear()
         pendingSuggestions.clear()
@@ -242,6 +245,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
                 // BEFORE the UI callback: the panel's own rendering must not be able to delay, or
                 // fail, the editor catching up with what the CLI just wrote to disk.
                 fileSync.onLine(line)
+                if (line.contains("\"fast_mode_state\"")) noteFastState(line)
                 onEventCb?.invoke(line)
             },
             onPermission = { requestId, toolName, input, suggestions, reason ->
@@ -453,9 +457,60 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     fun tasks(id: String): kotlinx.serialization.json.JsonArray =
         io.github.amitsidhpura.claudebrains.session.SessionStore.tasks(id)
 
-    /** Send a user turn with attachments (images / pdf / text). */
-    fun sendUser(text: String, attachments: List<io.github.amitsidhpura.claudebrains.cli.Attachment>) =
-        cli?.sendUserMessage(text, attachments)
+    /**
+     * Send a user turn with attachments (images / pdf / text). Model-switch items 3 and 4: the
+     * applied model / effort and the plan usage are read fresh first (two control requests, no
+     * turn), and a `<session_state>` note rides after the text when it says something new
+     * ([SessionStateNote]). The reads answer in well under a second; past [STATE_WAIT_MS] the
+     * message goes without a note rather than wait. Sends stay in order: each waits for the one
+     * before it ([sendChain]).
+     */
+    fun sendUser(text: String, attachments: List<io.github.amitsidhpura.claudebrains.cli.Attachment>) {
+        val c = cli ?: return
+        val done = java.util.concurrent.CompletableFuture<Unit>()
+        val prev = sendChain.getAndSet(done)
+        // A slash command goes as typed: text after its name would become its arguments
+        // (`/effort high` from the slider, `/compact` from the gauge).
+        if (text.trimStart().startsWith("/")) {
+            prev.whenComplete { _, _ -> try { c.sendUserMessage(text, attachments) } finally { done.complete(Unit) } }
+            return
+        }
+        prev.whenComplete { _, _ ->
+            var settings: JsonObject? = null; var usage: JsonObject? = null
+            val latch = java.util.concurrent.CountDownLatch(2)
+            c.getSettings { r, _ -> settings = r; latch.countDown() }
+            c.getUsage { r, _ -> usage = r; latch.countDown() }
+            // A read that fails or comes back late keeps the last good answer: seen 2026-11-25, one
+            // get_usage in a live run gave nothing and the note dropped its usage line, then
+            // restated it on the next message.
+            com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread {
+                try {
+                    latch.await(STATE_WAIT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    settings = (settings?.takeIf { it["applied"] != null } ?: lastSettings)?.also { lastSettings = it }
+                    usage = (usage?.takeIf { it["rate_limits"] != null } ?: lastUsage)?.also { lastUsage = it }
+                    val snap = SessionStateNote.snapshot(settings, usage, fastState)
+                    val tag = if (snap.key() != lastStateKey) SessionStateNote.tag(snap) else null
+                    if (tag != null) lastStateKey = snap.key()
+                    c.sendUserMessage(if (tag != null) SessionStateNote.append(text, tag) else text, attachments)
+                } finally { done.complete(Unit) }
+            }
+        }
+    }
+
+    private val sendChain = java.util.concurrent.atomic.AtomicReference(
+        java.util.concurrent.CompletableFuture.completedFuture(Unit))
+    @Volatile private var lastStateKey: List<Any?>? = null
+    @Volatile private var fastState: String? = null
+    @Volatile private var lastSettings: JsonObject? = null
+    @Volatile private var lastUsage: JsonObject? = null
+    private fun noteFastState(line: String) {
+        runCatching {
+            val o = Json.parseToJsonElement(line) as? JsonObject ?: return
+            val v = (o["fast_mode_state"] ?: (o["response"] as? JsonObject)?.let { r ->
+                r["fast_mode_state"] ?: (r["response"] as? JsonObject)?.get("fast_mode_state") })
+            (v as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.let { fastState = it.content }
+        }
+    }
 
     /**
      * Answer a permission card. Non-empty [suggestionTokens] means the user took one of the CLI's
@@ -682,6 +737,8 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     }
 
     private companion object {
+        /** How long a send waits for the session-state reads before it goes without a note. */
+        const val STATE_WAIT_MS = 2000L
         const val MODEL_KEY = "claudeCode.selectedModel"
         const val MODE_KEY = "claudeCode.permissionMode"
         const val CUSTOM_MODELS_KEY = "claudeCode.customModels"

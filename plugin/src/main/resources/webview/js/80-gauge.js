@@ -194,17 +194,40 @@
     (curTurn || log).appendChild(statusLine('Turn ended early · ' + r.replace(/_/g, ' '), SVG_ALERT, 'status err'));
   }
   /* ---------- model-switch handoff: the client's half ----------
-     A turn that ended with the marker (turnHandoff): draw the line, switch the model, and when the
-     CLI has answered the switch (`__model_set`) send the continue message as the next turn.
-     Nothing is sent for a model outside the allowlist or the roster, after a Stop or an error,
-     or past HANDOFF_MAX switches in a row with nothing typed by the user in between. */
+     A turn that ended with the marker (turnHandoff): draw the line, then make the changes in
+     order — the model (wait for the CLI's answer, `__model_set`), fast mode (apply_flag_settings,
+     no answer to wait for), the effort level (a muted /effort turn, exactly the slider's path —
+     the user's pick 2026-11-25; wait for its result) — and only then send the continue message
+     as the next turn. Nothing is changed when a value is outside the protocol, the model is not in
+     the roster, or fast mode is asked of a model without it; nothing after a Stop or an error,
+     or past HANDOFF_MAX changes in a row with nothing typed by the user in between. */
   const HANDOFF_MAX = 30;   // user, 2026-11-25
   let handoffPending = null, handoffRun = 0;
+  function handoffProblem(mark) {
+    if (mark.model && (HANDOFF_MODELS.indexOf(mark.model) < 0 ||
+        !allModels().some(function (m) { return m.value === mark.model; })))
+      return "Claude asked to switch to '" + mark.model + "', which is not a model this panel can switch to.";
+    if (mark.effort && HANDOFF_EFFORTS.indexOf(mark.effort) < 0)
+      return "Claude asked for effort '" + mark.effort + "', which is not an effort level.";
+    if (mark.speed && HANDOFF_SPEEDS.indexOf(mark.speed) < 0)
+      return "Claude asked for speed '" + mark.speed + "', which is neither fast nor standard.";
+    if (mark.speed === 'fast') {
+      const target = allModels().find(function (m) { return m.value === (mark.model || currentModel); });
+      if (!target || !target.supportsFastMode)
+        return 'Claude asked for fast mode on ' + chipLabelFor(mark.model || currentModel) + ', which does not offer it.';
+      // The account gate (measured live 2026-11-25: `extra_usage_disabled` with usage credits off)
+      // snaps the switch back on the next result and the step would run at standard speed — and
+      // Claude, told fast mode is still off, asked again. Only the SDK gate is ours to clear.
+      if (fastModeState !== 'on' && fastModeReason && fastModeReason !== 'sdk_opt_in_required')
+        return 'Claude asked for fast mode, which this account cannot use now (' +
+          (fastModeReason === 'extra_usage_disabled' ? 'usage credits are off' : fastModeReason) + ').';
+    }
+    return null;
+  }
   function startHandoff(mark) {
-    const known = HANDOFF_MODELS.indexOf(mark.model) >= 0 &&
-      allModels().some(function (m) { return m.value === mark.model; });
-    if (!known) {
-      statusLine("Claude asked to switch to '" + mark.model + "', which is not a model this panel can switch to. Nothing was switched.", SVG_ALERT, 'status err');
+    const problem = handoffProblem(mark);
+    if (problem) {
+      statusLine(problem + ' Nothing was changed.', SVG_ALERT, 'status err');
       return false;
     }
     if (handoffRun >= HANDOFF_MAX) {
@@ -213,17 +236,54 @@
     }
     handoffRun++;
     handoffLine(mark);
-    handoffPending = mark;
-    showModel(mark.model);
-    bridge({ kind: 'model', model: mark.model, ack: true });
+    handoffPending = { mark: mark, wait: null, model: !!mark.model && mark.model !== currentModel,
+                       speed: !!mark.speed, effort: !!mark.effort };
+    handoffAdvance();
     return true;
   }
-  function handoffContinue(model) {
-    const m = handoffPending;
-    if (!m || m.model !== model) return;
+  // The next change still to make, or the continue message when none is left.
+  function handoffAdvance() {
+    const h = handoffPending;
+    if (!h) return;
+    const mark = h.mark;
+    h.wait = null;
+    if (h.model) {
+      h.model = false; h.wait = 'model';
+      showModel(mark.model);
+      bridge({ kind: 'model', model: mark.model, ack: true });
+      return;
+    }
+    if (h.speed) {
+      h.speed = false;
+      const on = mark.speed === 'fast';
+      if ((fastModeState === 'on') !== on) {
+        fastModeState = on ? 'on' : 'off'; fastModeReason = '';
+        bridge({ kind: 'fastMode', on: on });
+        syncModelFooter();
+      }
+    }
+    if (h.effort) {
+      h.effort = false; h.wait = 'effort';
+      const i = efDots.findIndex(function (d) { return d.dataset.v === mark.effort; });
+      if (i >= 0) setEffortUI(i);
+      effortMuted = true;
+      bridge({ kind: 'user', text: '/effort ' + mark.effort });
+      return;
+    }
     handoffPending = null;
     if (busy) return;   // a turn the CLI started on its own got there first
-    sendTurn('continue next=' + m.next, [], null, true);
+    sendTurn('continue next=' + mark.next, [], null, true);
+  }
+  // __model_set: the CLI took the switch.
+  function handoffContinue(model) {
+    const h = handoffPending;
+    if (!h || h.wait !== 'model' || h.mark.model !== model) return;
+    handoffAdvance();
+  }
+  // The muted /effort turn's result.
+  function handoffEffortDone() {
+    const h = handoffPending;
+    if (h && h.wait === 'effort') handoffAdvance();
   }
 
   function onResult(ev) {
