@@ -1,5 +1,8 @@
 {
   "topic": "claude-brains",
-  "storage": "server",
-  "topics": []
+  "topics": [
+    "model-picker",
+    "flow-git"
+  ],
+  "storage": "server"
 }
