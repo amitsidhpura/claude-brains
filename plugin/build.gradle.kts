@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.19.0"
+version = "0.20.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,24 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.20.0</b>
+            <ul>
+              <li>Model switch: each switch can also change the effort level and fast mode, and
+                  says why; Claude may switch on its own when a step needs a stronger or a lighter
+                  model</li>
+              <li>The effort level you pick is kept across new conversations, IDE restarts and
+                  resumed conversations, and the slider shows the level actually in use — it used
+                  to fall back to the default and always show High</li>
+              <li>"Default" now runs the model the menu shows — with Default picked, or no model
+                  ever picked, sessions used to run on another model than the one named</li>
+              <li>An opened long message stays at most 40% of the panel's height and scrolls
+                  inside itself — it used to cover the whole reply under it</li>
+              <li>A conversation whose Claude process was killed mid-reply reopens with "No reply:
+                  the CLI stopped before answering" — it used to show a reply Claude never wrote</li>
+              <li>In a folder Claude Code does not trust yet, the notice also says that the
+                  folder's .mcp.json servers still run</li>
+              <li>A file changed outside the IDE no longer shows as new in Claude's diff tab</li>
+            </ul>
             <b>0.19.0</b>
             <ul>
               <li>Model switch between steps: ask for work split across models ("step 1 on Fable,
@@ -157,13 +175,6 @@ val changeNotesHtml = """
               <li>A popup list that fits no longer shows a scrollbar at some display scales</li>
               <li>A warning line appears when Claude Code could not save part of the
                   conversation (disk full or quota used up)</li>
-            </ul>
-            <b>0.17.1</b>
-            <ul>
-              <li>Opening a file, an edit's review diff and the "Files changed · Review" diff from
-                  the panel no longer uses an editor API that IntelliJ 2026.3 deprecates, so the
-                  plugin stays ready for the next IDE versions. Nothing changes in how they look
-                  or behave</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
