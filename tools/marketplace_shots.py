@@ -361,7 +361,7 @@ window.onClaudeEvent(JSON.stringify({type:'__cmdPins', pins:['commit','pre-tag',
 """
 
 S9_LEFT = S9_COMMON + r"""
-window.onClaudeEvent(JSON.stringify({type:'prompt_suggestion', suggestion:'commit this and tag v2.4.0', uuid:'ps1', session_id:'s1'}));
+window.onClaudeEvent(JSON.stringify({type:'prompt_suggestion', suggestion:'commit it', uuid:'ps1', session_id:'s1'}));
 """
 
 S9_RIGHT = S9_COMMON + r"""
