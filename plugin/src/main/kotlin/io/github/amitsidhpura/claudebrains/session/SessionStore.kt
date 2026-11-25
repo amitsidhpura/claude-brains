@@ -1006,6 +1006,17 @@ object SessionStore {
                             reqStart = ts
                         }
                         "assistant" -> {
+                            // #59 follow-up (2026-11-26): a turn whose CLI was killed mid-reply keeps
+                            // nothing of the reply, and resuming it makes the CLI write a reply of its
+                            // own — model "<synthetic>", "No response requested." — that never streams
+                            // live. Claude never said it: draw a status line in its place and count no
+                            // work, so no summary follows (measured on 2.1.332, `_local/probe-59/`;
+                            // SessionStoreKilledTurnTest). Only this exact text: other synthetic
+                            // records (local command output, API-error echoes) draw as they did.
+                            if (isNoReplyRecord(obj)) {
+                                out.add(Item("status").apply { text = NO_REPLY_LINE; icon = "stop" })
+                                continue
+                            }
                             reqWork = true
                             if (ts != null) reqLast = ts
                             val msg = obj["message"]?.jsonObject
@@ -1754,6 +1765,16 @@ object SessionStore {
         "[Agent call interrupted: the process running this conversation stopped before this agent finished, " +
             "so it returned no result. Nobody asked it to stop.]",
     )
+
+    /** The status line for the CLI's own no-reply record (see the replay loop's assistant arm). */
+    private const val NO_REPLY_LINE = "No reply: the CLI stopped before answering"
+
+    /** The record a resume writes for a turn killed before any reply was saved (CLI 2.1.332). */
+    private fun isNoReplyRecord(obj: JsonObject): Boolean {
+        val msg = obj["message"] as? JsonObject ?: return false
+        if ((msg["model"] as? JsonPrimitive)?.contentOrNull != "<synthetic>") return false
+        return textParts(msg["content"]).joinToString("").trim() == "No response requested."
+    }
 
     // The panel's `<session_state>` note (SessionStateNote) never shows on replay or in a title.
     private fun userTextFull(obj: JsonObject): String? =
