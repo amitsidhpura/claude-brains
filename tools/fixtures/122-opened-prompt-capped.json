@@ -1,0 +1,91 @@
+{
+ "item": "#65 doubt 15 (2026-11-26): an OPENED long prompt is capped at 40% of the panel and scrolls inside itself, so the pinned bubble never hides the reply; folded (3 lines) and short prompts are unchanged",
+ "branch": "css/25-turns.css .msg-user.fold.open (max-height var(--pin-max), overflow-y auto) · the token in css/00-tokens.css",
+ "provenance": "No CLI frames claimed: the prompt is drawn with addUserMessage (draw-only) and the reply is an un-streamed assistant frame in the wire's shape (as fixture 119), with window.__bridge stubbed for the drawing so nothing reaches the CLI. MEASURED 2026-11-26 in the sandbox before the change: an 81-line prompt folded to 78px (9% of an 858px panel); opened, the pinned bubble covered 98, 98, 98, 100, 100, 88 and 77% of the panel along the reply's scroll. VS Code caps a pinned prompt at 40% of the panel (2.1.330 webview, read for the 2026-11-22 audit). NEGATIVE CONTROL 2026-11-26 against the sandbox on the pre-change CSS: the two DISCRIMINATING asserts failed (maxCover 100, no inner scroll), every GUARD passed. Draw and measure are separate steps because the fold and its click handler attach one animation frame after addUserMessage. First fixed-build run: the cap held (359px of an 897px panel = 40%) but the fixture divided by the log's own height (858px → 42%) and sampled every 200px of a now-shorter scroll; it now divides by window.innerHeight and samples every 100px.",
+ "steps": [
+  {
+   "note": "draw a long prompt and its reply (the fold attaches one animation frame later)",
+   "setup": "window.__real122=window.__real122||window.__bridge; window.__bridge=function(){}; window.onClaudeEvent(JSON.stringify({type:'__clear'})); var lines=[]; for(var i=1;i<=80;i++) lines.push('  at com.example.app.Service'+i+'.handle(Service'+i+'.kt:'+(10+i)+')'); addUserMessage('Why does this crash? Here is the full stack trace:\\n'+lines.join('\\n'), []); var para=[]; for(var j=1;j<=40;j++) para.push('Paragraph '+j+': the crash comes from the service chain above; each frame hands the request on until the null value is read in the last handler, which is why the trace is this long.'); window.onClaudeEvent(JSON.stringify({type:'assistant', message:{model:'claude-haiku-5-5', type:'message', role:'assistant', content:[{type:'text', text:para.join('\\n\\n')}]}, parent_tool_use_id:null, session_id:'f122', uuid:'12212212-0000-4000-8000-000000000122'})); window.onClaudeEvent(JSON.stringify({type:'result', subtype:'success', is_error:false, duration_ms:900, num_turns:1, usage:{output_tokens:20}}));",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .msg-user').length",
+     "equals": 1,
+     "why": "GUARD: one prompt drawn"
+    }
+   ]
+  },
+  {
+   "note": "a long prompt opened and scrolled through its reply never covers more than 40% of the panel and scrolls inside itself; folded again it is the 3-line bubble",
+   "setup": "window.__m122=(function(){ var u=document.querySelector('#log .msg-user'); var sc=document.getElementById('log'); var folded=Math.round(u.getBoundingClientRect().height); u.classList.add('open'); var open=u.classList.contains('open'); var max=0, n=0; var end=sc.scrollHeight-sc.clientHeight; for(var t=0;t<=end;t+=100){ sc.scrollTop=t; var ur=u.getBoundingClientRect(), vr=sc.getBoundingClientRect(); var vis=Math.max(0,Math.min(ur.bottom,vr.bottom)-Math.max(ur.top,vr.top)); max=Math.max(max,100*vis/window.innerHeight); n++; } sc.scrollTop=0; var inner=u.scrollHeight>u.clientHeight+4; u.classList.remove('open'); var refolded=!u.classList.contains('open'); return {folded:folded, open:open, maxCover:Math.round(max), samples:n, innerScroll:inner, refolded:refolded}; })();",
+   "expect": [
+    {
+     "js": "window.__m122.folded < 120",
+     "equals": true,
+     "why": "GUARD: folded it is the 3-line bubble"
+    },
+    {
+     "js": "window.__m122.open",
+     "equals": true,
+     "why": "GUARD: the opened state is set (the class the click toggles; set directly — the click handler attaches one animation frame after drawing, which raced the harness)"
+    },
+    {
+     "js": "window.__m122.samples > 5",
+     "equals": true,
+     "why": "GUARD: the scroll walk really sampled the reply"
+    },
+    {
+     "js": "window.__m122.maxCover <= 41",
+     "equals": true,
+     "why": "DISCRIMINATING: opened, the pinned bubble covers at most 40% (+1 for rounding) of the panel (window.innerHeight: header, log and composer — what 40vh is) anywhere along the reply (pre-change: 100)"
+    },
+    {
+     "js": "window.__m122.innerScroll",
+     "equals": true,
+     "why": "DISCRIMINATING: the rest of the prompt scrolls inside the bubble"
+    },
+    {
+     "js": "window.__m122.refolded",
+     "equals": true,
+     "why": "GUARD: without the open class it is folded again"
+    }
+   ]
+  },
+  {
+   "note": "draw a short prompt",
+   "setup": "window.onClaudeEvent(JSON.stringify({type:'__clear'})); addUserMessage('Fix the typo in README.md, please.', []);",
+   "expect": [
+    {
+     "js": "document.querySelectorAll('#log .msg-user').length",
+     "equals": 1,
+     "why": "GUARD: one prompt drawn"
+    }
+   ]
+  },
+  {
+   "note": "a short prompt is drawn as before: no fold, no inner scroll",
+   "setup": "window.__s122=(function(){ var u=document.querySelector('#log .msg-user'); return {fold:u.classList.contains('fold'), h:Math.round(u.getBoundingClientRect().height), scroll:u.scrollHeight>u.clientHeight+4}; })();",
+   "expect": [
+    {
+     "js": "window.__s122.scroll",
+     "equals": false,
+     "why": "GUARD: no inner scroll on a short prompt"
+    },
+    {
+     "js": "window.__s122.h < 60",
+     "equals": true,
+     "why": "GUARD: one line tall"
+    }
+   ]
+  },
+  {
+   "note": "cleanup: the log cleared and the real bridge back",
+   "expect": [
+    {
+     "js": "(function(){ window.onClaudeEvent(JSON.stringify({type:'__clear'})); if(window.__real122){window.__bridge=window.__real122; window.__real122=null;} return true; })()",
+     "equals": true,
+     "why": "GUARD: cleanup"
+    }
+   ]
+  }
+ ]
+}

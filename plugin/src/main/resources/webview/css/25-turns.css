@@ -105,6 +105,9 @@
 /* position:sticky must survive the collapsed state's position:relative (same specificity,
    declared later) — without this, every folded user message silently stops pinning. */
 .msg-user.fold:not(.open) { position: sticky; }
+/* Opened, a long prompt stops at --pin-max and scrolls inside itself — pinned at the top it would
+   otherwise cover the whole reply it belongs to (fixture 122). Folded it is the 3-line cap above. */
+.msg-user.fold.open { max-height: var(--pin-max); overflow-y: auto; }
 /* Same fight over overflow: `.card .cmd` (0,2,0, declared later) beat the collapsed rule's
    overflow:hidden, so a folded command kept its horizontal scrollbar — and the scrollbar eats the
    bottom of the 3-line content box, clipping the 3rd line to a third of its height. Every other

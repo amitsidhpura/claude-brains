@@ -255,7 +255,8 @@
       <!-- FOLDED user message: over 3 lines collapses to 2 + a fading 3rd, and the WHOLE block is
            the click-toggle (chat.html foldBlock). This state regressed sticky-pinning once — the
            collapsed state sets position:relative and beat `.msg-user`'s sticky on equal
-           specificity, hence `.msg-user.fold:not(.open) { position: sticky }`. -->
+           specificity, hence `.msg-user.fold:not(.open) { position: sticky }`. OPENED (click it) it stops
+           at --pin-max (40% of the panel) and scrolls inside itself — `.msg-user.fold.open` (fixture 122). -->
       <!-- 1.30: the reply stamp — before the first .blk, inside .turn-body (the flex gap is cancelled
            down to --attach-gap by `.turn-body > .ts + .blk`) -->
       <div class="ts">10:42 AM</div>

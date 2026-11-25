@@ -47,6 +47,10 @@
      the five attached blocks carried -6/-2/+2/+2/+2 against an 18px flex gap, i.e. 12/16/20/20/20px,
      and three of them ended up FARTHER from their own tool line than an unrelated block. */
   --block-gap: 18px;
+  /* The tallest an OPENED user prompt may be, so a pinned one never hides the reply under it
+     (#65 doubt 15, 2026-11-26: an opened 81-line prompt covered up to 100% of the panel). 40% of
+     the panel is VS Code's own cap on its pinned prompt; the rest scrolls inside the bubble. */
+  --pin-max: 40vh;
   /* Type scale — the ONLY text sizes (audited 2026-08-28: 13/12/11/10 in 1px steps, all
      literals until then). base: prose, tool lines, verdicts · sm: IN/OUT, diffs, code, chips,
      secondary lines · xs: captions and meta (.t-note, dates, badges) · 2xs: micro labels (the
