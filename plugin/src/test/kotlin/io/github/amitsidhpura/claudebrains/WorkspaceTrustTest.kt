@@ -65,4 +65,12 @@ class WorkspaceTrustTest {
         assertEquals("~", WorkspaceTrust.display("/home/u", "/home/u"))
         assertEquals("/home/user2/x", WorkspaceTrust.display("/home/user2/x", "/home/u"))
     }
+
+    @Test fun `a project mcp file at the folder or any folder above it counts`() {
+        val at = setOf("/home/u/Sites/app")
+        assertEquals(true, WorkspaceTrust.hasProjectMcp(File("/home/u/Sites/app")) { it.path in at })
+        assertEquals(true, WorkspaceTrust.hasProjectMcp(File("/home/u/Sites/app/sub/dir")) { it.path in at })
+        assertEquals(false, WorkspaceTrust.hasProjectMcp(File("/home/u/Sites/other")) { it.path in at })
+        assertEquals(false, WorkspaceTrust.hasProjectMcp(File("/home/u")) { it.path in at })   // below does not count
+    }
 }

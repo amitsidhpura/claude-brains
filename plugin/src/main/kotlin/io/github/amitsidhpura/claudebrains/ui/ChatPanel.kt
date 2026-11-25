@@ -1028,6 +1028,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
                 put("untrusted", recorded != true && trusted == false)
                 put("dir", WorkspaceTrust.display(dir.absolutePath))
                 if (recorded == false) put("failed", true)
+                // doubt 13: the folder's .mcp.json servers run untrusted all the same
+                project.basePath?.let { if (WorkspaceTrust.hasProjectMcp(java.io.File(it))) put("mcp", true) }
             })
         }
     }

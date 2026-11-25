@@ -337,6 +337,10 @@
     trustEl.classList.remove('asking', 'sent');
     document.getElementById('trustYes').disabled = false;
     trustEl.hidden = !ev.untrusted;
+    // doubt 13 (2026-11-26): the folder's .mcp.json servers start untrusted all the same (measured on
+    // 2.1.332) — say so only when Kotlin found one, so the notice stays true either way.
+    const mcpEl = document.getElementById('trustMcp');
+    if (mcpEl) mcpEl.hidden = ev.mcp !== true;
     if (failed) errorBlock('Claude Code did not record trust for ' + (ev.dir || 'this folder') +
       '. Run `claude` in a terminal in that folder and accept its trust prompt there.');
   }

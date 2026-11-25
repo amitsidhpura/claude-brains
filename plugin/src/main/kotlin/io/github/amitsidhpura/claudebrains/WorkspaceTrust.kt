@@ -62,6 +62,15 @@ object WorkspaceTrust {
     fun attestDir(cwd: File, hasGit: (File) -> Boolean = { File(it, ".git").exists() }): File =
         generateSequence(cwd.absoluteFile) { it.parentFile }.firstOrNull(hasGit) ?: cwd.absoluteFile
 
+    /**
+     * Whether a project `.mcp.json` would load for a session started in [cwd]: one at [cwd] or in any
+     * folder above it. Measured on 2.1.332 (doubt 13, 2026-11-26, `_local/probe-15.7-mcp/`): with no
+     * trust record the server still started and connected, from [cwd] and from a parent folder, with
+     * or without git — so the trust line says so when this is true.
+     */
+    fun hasProjectMcp(cwd: File, exists: (File) -> Boolean = { File(it, ".mcp.json").isFile }): Boolean =
+        generateSequence(cwd.absoluteFile) { it.parentFile }.any(exists)
+
     /** [path] with the home prefix folded to `~`, for the line's confirm. */
     fun display(path: String, home: String = System.getProperty("user.home")): String {
         val p = norm(path); val h = norm(home)

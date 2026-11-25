@@ -1,7 +1,7 @@
 {
  "item": "15.7 — workspace trust line: shown while Claude Code has no trust record for the folder; Trust folder… → its own confirm → Trust sends one bridge frame; the line goes when the CLI recorded it (2026-11-22)",
  "branch": "js/60-composer.js showTrust (the __trust host frame: untrusted shows #trust with the folder in #trustDir, anything else hides it and clears .asking / .sent) · #trustBtn / #trustNo flip .asking and send nothing · #trustYes sends bridge kind 'trust' once, rests the buttons (.sent), and is refused in words (.wait) while a reply streams · failed:true after a click draws an error block and keeps the line",
- "provenance": "No CLI frames: __trust is OUR OWN Kotlin->webview frame (self-consistency only). What Kotlin puts in it is pinned by WorkspaceTrustTest (the record's read rule, against the shape of the CLI's own ~/.claude.json read 2026-11-22). The CLI facts behind the feature: `claude --help` on 2.1.330 says the trust dialog is skipped when stdout is not a TTY; a bare initialize in an untrusted folder answers success with nothing about trust (2.1.330 audit); probed 2026-11-22 with a scratch folder holding an output style, a SessionStart hook and one allow rule in .claude/settings.json: with no trust record the CLI dropped the allow rule (stderr 'Ignoring 1 permissions.allow entry … this workspace has not been trusted') while the output style applied and the hook ran, the same folder inside a trusted git repository had the rule applied (its git root is the trust key), while a repository of its own under a trusted plain folder, and a plain folder under it, had the rule dropped — a record does not cover what is below it; `initialize.workspaceTrust {accepted, directory}` answered by `workspace_trust_recorded` is read from the CLI's schema and from VS Code 2.1.330's host code and is NOT probed by this fixture — sending it writes the user's ~/.claude.json, so that half is the user's hand test. window.__bridge is wrapped for every click on Trust, so nothing reaches Kotlin and the sandbox CLI is never restarted. The last step puts the line back to hidden through the same frame. NEGATIVE CONTROL RUN 2026-11-22 against a build with the line's markup and styles but none of its script (the sandbox as it stood for the design render; `typeof showTrust` read 'undefined' first, the hand-set render state reset): 12 passed / 12 failed — eleven DISCRIMINATING asserts plus the layout guard that depends on the line showing; the .trust-wait lookup is null-safe because that span did not exist in the control's page.",
+ "provenance": "No CLI frames: __trust is OUR OWN Kotlin->webview frame (self-consistency only). What Kotlin puts in it is pinned by WorkspaceTrustTest (the record's read rule, against the shape of the CLI's own ~/.claude.json read 2026-11-22). The CLI facts behind the feature: `claude --help` on 2.1.330 says the trust dialog is skipped when stdout is not a TTY; a bare initialize in an untrusted folder answers success with nothing about trust (2.1.330 audit); probed 2026-11-22 with a scratch folder holding an output style, a SessionStart hook and one allow rule in .claude/settings.json: with no trust record the CLI dropped the allow rule (stderr 'Ignoring 1 permissions.allow entry … this workspace has not been trusted') while the output style applied and the hook ran, the same folder inside a trusted git repository had the rule applied (its git root is the trust key), while a repository of its own under a trusted plain folder, and a plain folder under it, had the rule dropped — a record does not cover what is below it; `initialize.workspaceTrust {accepted, directory}` answered by `workspace_trust_recorded` is read from the CLI's schema and from VS Code 2.1.330's host code and is NOT probed by this fixture — sending it writes the user's ~/.claude.json, so that half is the user's hand test. window.__bridge is wrapped for every click on Trust, so nothing reaches Kotlin and the sandbox CLI is never restarted. The last step puts the line back to hidden through the same frame. NEGATIVE CONTROL RUN 2026-11-22 against a build with the line's markup and styles but none of its script (the sandbox as it stood for the design render; `typeof showTrust` read 'undefined' first, the hand-set render state reset): 12 passed / 12 failed — eleven DISCRIMINATING asserts plus the layout guard that depends on the line showing; the .trust-wait lookup is null-safe because that span did not exist in the control's page. AMENDED 2026-11-26 (doubt 13): the `mcp` key is OUR frame too; the CLI fact behind it was measured on 2.1.332 in a scratch CLAUDE_CONFIG_DIR with no credentials (`_local/probe-15.7-mcp/`): a folder with no trust record had its .mcp.json server launched and `connected` (scope project) after a bare initialize, and a .mcp.json in a PARENT folder loaded the same way, with or without git. NEGATIVE CONTROL 2026-11-26 against the sandbox on the pre-change webview: 27 passed, 2 failed — the two DISCRIMINATING asserts of the mcp step. First fixed-build run 28/1: the step read the notice with textContent, which includes the hidden clause — the fixture now reads innerText (what is on screen).",
  "steps": [
   {
    "note": "an untrusted folder shows the line; Trust folder… and Cancel flip the confirm and send nothing",
@@ -142,6 +142,37 @@
     },
     {
      "js": "window.__t157d.hidden",
+     "equals": true,
+     "why": "GUARD: restore — the line is hidden again for the fixtures that follow"
+    }
+   ]
+  },
+  {
+   "note": "doubt 13 (2026-11-26): mcp:true adds 'but the MCP servers in its .mcp.json still run' to the notice; without it the notice is as before",
+   "setup": "window.__t157e=(function(){const T=document.getElementById('trust'); const M=document.getElementById('trustMcp'); const feed=function(o){window.onClaudeEvent(JSON.stringify(Object.assign({type:'__trust'},o)));}; const vis=function(){return !!M && !M.hidden && getComputedStyle(M).display!=='none';}; const say=function(){const s=T.querySelector('.trust-say:not(button)'); return s?s.innerText.replace(/\\s+/g,' ').trim():null;}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing',mcp:true}); const on={vis:vis(), text:say()}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing'}); const off={vis:vis(), text:say()}; feed({untrusted:true,dir:'~/Sites/claude-brains-testing',mcp:true}); feed({untrusted:false,dir:'~/Sites/claude-brains-testing'}); return {on:on, off:off, hidden:T.hidden, mcpAfter:vis()}; })();",
+   "expect": [
+    {
+     "js": "window.__t157e.on.vis",
+     "equals": true,
+     "why": "DISCRIMINATING: mcp:true shows the MCP clause"
+    },
+    {
+     "js": "window.__t157e.on.text",
+     "equals": "Claude Code does not trust this folder. The allow rules in its settings are ignored, but the MCP servers in its .mcp.json still run.",
+     "why": "DISCRIMINATING: the whole notice reads as one sentence pair"
+    },
+    {
+     "js": "window.__t157e.off.vis",
+     "equals": false,
+     "why": "GUARD: no mcp key, no clause"
+    },
+    {
+     "js": "window.__t157e.off.text",
+     "equals": "Claude Code does not trust this folder. The allow rules in its settings are ignored.",
+     "why": "GUARD: without the clause the notice is exactly the old one (passes on both builds)"
+    },
+    {
+     "js": "window.__t157e.hidden",
      "equals": true,
      "why": "GUARD: restore — the line is hidden again for the fixtures that follow"
     }
