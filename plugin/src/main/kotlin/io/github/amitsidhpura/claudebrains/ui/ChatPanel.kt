@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.Disposer
 import com.intellij.ide.BrowserUtil
 import com.intellij.ui.jcef.JBCefBrowser
@@ -855,7 +856,8 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         ApplicationManager.getApplication().invokeLater {
             val descriptor = saveDescriptor("Export Conversation", "Save the conversation as plain text")
             val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
-            val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, name)
+            // Start in the project root; a project with no folder gets null, the dialog's own default.
+            val wrapper = dialog.save(project.guessProjectDir(), name)
             if (wrapper != null) runCatching { wrapper.file.writeText(text, StandardCharsets.UTF_8) }
                 .onFailure {
                     com.intellij.openapi.diagnostic.Logger.getInstance(ChatPanel::class.java)
