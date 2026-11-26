@@ -48,9 +48,9 @@ a JCEF webview, so the IDE gets the full agent loop rather than a terminal in a 
 - **Streaming chat** with markdown, syntax highlighting, and live thinking blocks
 - **Permission cards** with real diffs — approve or reject each edit before it lands
 - **Plan mode**, `AskUserQuestion` cards, and a permission-mode switcher
-  (Manual / Edit automatically / Plan / Auto; until you pick one, your own
-  `permissions.defaultMode` applies, as in the terminal)
-- **Model picker** with custom models, plus an effort slider
+  (Manual / Edit automatically / Plan / Auto; a project starts on Manual until you pick one)
+- **Model picker** with custom models, plus an effort slider — the model, effort, mode and
+  pinned commands are saved for each project
 - **Sessions** — history, resume, replay of any past conversation from `~/.claude/projects`
 - **Editor integration** — clickable file references, `@`-file mentions, diagnostics, selection,
   and diff tabs via the IDE-MCP bridge

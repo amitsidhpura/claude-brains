@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.20.0"
+version = "0.21.0"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,16 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.21.0</b>
+            <ul>
+              <li>Settings per project: the model, effort level, fast mode, thinking, permission
+                  mode and the recent and pinned commands are saved for each project, so a change
+                  in one IDE window no longer carries into another project</li>
+              <li>A project with nothing saved starts on Default, medium effort, fast mode off,
+                  thinking on and Manual mode — it used to start on whatever was picked last in any
+                  project, or on the permissions.defaultMode in your Claude Code settings</li>
+              <li>Export conversation: the Save dialog opens in the project's folder</li>
+            </ul>
             <b>0.20.0</b>
             <ul>
               <li>Model switch: each switch can also change the effort level and fast mode, and
@@ -143,38 +153,6 @@ val changeNotesHtml = """
                   model menu</li>
               <li>A selection made with the keyboard in a plan gets the Comment button</li>
               <li>A running Monitor is named "Monitor" in the background list</li>
-            </ul>
-            <b>0.18.0</b>
-            <ul>
-              <li>Pinned commands: pin a command on its row in the / menu and it becomes a chip
-                  above the composer — one click sends it, or writes its name in front of your
-                  draft when it takes an argument. Drag chips to reorder; pins are shared by all
-                  projects</li>
-              <li>Live output: while a command runs, what it has printed so far shows under it,
-                  following the last lines, until the result replaces it</li>
-              <li>Math: LaTeX in a reply is drawn as formulas, inline and display (KaTeX);
-                  prices and code stay text</li>
-              <li>Prompt suggestions: after a reply, Claude Code's guess at your next prompt
-                  shows in the empty message box, marked "Suggestion" — Tab writes it in, nothing
-                  is sent until you send it</li>
-              <li>Workspace trust: when Claude Code does not trust the folder, a line above the
-                  composer says so and offers Trust folder… with a confirmation</li>
-              <li>The Thinking switch is shown locked on for models that cannot turn thinking
-                  off</li>
-              <li>Default in the model menu names the model Default really resolves to — it
-                  could show the last model you had picked by name</li>
-              <li>Prompt history: Up and Down recall prompts only from the first and last
-                  character of the draft, so a long draft that wraps can be moved through row by
-                  row</li>
-              <li>Markdown: indented code blocks are drawn as code, a * or _ inside inline code
-                  no longer starts italics elsewhere in the line, ~~~ fences work, and a code
-                  fence opened mid-line no longer leaves stray characters</li>
-              <li>The model name in the bar under the composer is cut with an ellipsis in a
-                  narrow panel instead of wrapping onto more lines</li>
-              <li>The @ menu lists files created since the panel opened</li>
-              <li>A popup list that fits no longer shows a scrollbar at some display scales</li>
-              <li>A warning line appears when Claude Code could not save part of the
-                  conversation (disk full or quota used up)</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()
