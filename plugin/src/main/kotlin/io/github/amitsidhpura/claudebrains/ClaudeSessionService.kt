@@ -92,20 +92,25 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     private val cwd: File get() = File(project.basePath ?: System.getProperty("user.home"))
 
+    /** Global settings, shared by every project (custom models, the two include switches; the
+     *  save-as-command scope lives in SaveCommandDialog). */
     private val props get() = PropertiesComponent.getInstance()
-    /** Persisted model choice (null/"default" = CLI default). */
-    fun selectedModel(): String? = props.getValue(MODEL_KEY)
+    /** Per-project settings (2026-11-26): model, effort, fast mode, thinking, permission mode and
+     *  the two slash-command lists, in the project's `.idea/workspace.xml` (git-ignored by the IDE),
+     *  so a pick in one window never carries into another project. A project with nothing saved
+     *  starts on Default, `medium`, fast off, thinking on, Manual, and empty command lists. */
+    private val projectProps get() = PropertiesComponent.getInstance(project)
+    /** Persisted model choice (null/"default" = Default, sent as `set_model default`). */
+    fun selectedModel(): String? = projectProps.getValue(MODEL_KEY)
 
     /**
-     * Persisted permission mode, or null when the user has never picked one (4.7, 2026-09-04):
-     * then the CLI is launched WITHOUT `--permission-mode` and decides for itself — the user's
-     * `permissions.defaultMode` from their settings files, else its own default — exactly as the
-     * VS Code extension does (`if(D) push("--permission-mode",D)`), and the chip follows the
-     * `system/init` broadcast. Measured: the flag BEATS the settings file, so the hardcoded
-     * `manual` this used to return silently overrode a user's `defaultMode: plan/auto` on first run.
+     * The project's permission mode, `manual` when it has never picked one (2026-11-26, the user's
+     * choice): the CLI is always launched WITH `--permission-mode`, which beats the user's
+     * `permissions.defaultMode` — so a new project never inherits Auto or another project's pick.
+     * Until 2026-11-26 a never-picked mode launched without the flag, as VS Code does (4.7).
      * The migration of stored values is [PermissionModes.resolveStored].
      */
-    fun selectedMode(): String? = PermissionModes.resolveStored(props.getValue(MODE_KEY))
+    fun selectedMode(): String = PermissionModes.resolveStored(projectProps.getValue(MODE_KEY))
 
     /** User-defined models (JSON array of {value, displayName, description}) — persisted across runs. */
     fun customModels(): String = props.getValue(CUSTOM_MODELS_KEY) ?: "[]"
@@ -113,20 +118,20 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** Persisted fast-mode preference (9.4). The CLI's flag layer is per-process, so every
      * (re)start re-applies it; actual state is reconciled from the CLI's own frames. */
-    fun fastMode(): Boolean = props.getBoolean(FAST_MODE_KEY, false)
+    fun fastMode(): Boolean = projectProps.getBoolean(FAST_MODE_KEY, false)
     fun setFastMode(on: Boolean) {
-        props.setValue(FAST_MODE_KEY, on, false)
+        projectProps.setValue(FAST_MODE_KEY, on, false)
         cli?.applyFlagSettings(kotlinx.serialization.json.buildJsonObject { put("fastMode", on) })
     }
 
-    /** Persisted effort level (9.2), saved from any `/effort <level>` message ([EffortPick]); null =
-     * never picked, the CLI's own default. Per-process in the CLI since 2.1.331, so every (re)start
-     * re-applies it. */
-    fun effortLevel(): String? = props.getValue(EFFORT_KEY)?.takeIf { it in EffortPick.LEVELS }
+    /** The project's effort level (9.2), saved from any `/effort <level>` message ([EffortPick]);
+     * `medium` when never picked ([startupEffort]). Per-process in the CLI since 2.1.331, so every
+     * (re)start re-applies it. */
+    fun effortLevel(): String = startupEffort(projectProps.getValue(EFFORT_KEY))
 
     /** The level the slider should show: the CLI's `applied.effort` read after the start-up
      * re-apply, or a newer pick, else the saved one. Seeded into a reloaded page. */
-    fun shownEffort(): String? = shownEffort ?: effortLevel()
+    fun shownEffort(): String = shownEffort ?: effortLevel()
     @Volatile private var shownEffort: String? = null
 
     /** Side question (8.11): answered off-thread by the CLI; see [ClaudeCli.askSideQuestion]. With
@@ -138,24 +143,24 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     }
 
     /** 6.6: whether the editor selection rides every prompt — the paperclip menu's "Include editor
-     *  selection" entry. Application-level like the model pick: global across projects, survives
+     *  selection" entry. Application-level (global across projects, unlike the model pick): survives
      *  restarts, seeded to the page on every load (ChatPanel.seedUi). Default ON. */
     fun includeSelection(): Boolean = props.getBoolean(SELECTION_KEY, true)
     fun setIncludeSelection(on: Boolean) = props.setValue(SELECTION_KEY, on, true)
 
-    /** 7.12: when each slash command was last sent ({name: epochMs}, JSON). Application-level like
-     *  the model pick, so the / menu's recent-first order spans projects and restarts. */
-    fun commandRecents(): String = SavedCommands.encodeRecent(SavedCommands.parseRecent(props.getValue(RECENT_CMDS_KEY)))
+    /** 7.12: when each slash command was last sent ({name: epochMs}, JSON). Per project, like the
+     *  model pick: a project's own `.claude/commands/` differ, so another project's order is noise. */
+    fun commandRecents(): String = SavedCommands.encodeRecent(SavedCommands.parseRecent(projectProps.getValue(RECENT_CMDS_KEY)))
     fun noteCommandUsed(name: String) =
-        props.setValue(RECENT_CMDS_KEY, SavedCommands.bumpRecent(props.getValue(RECENT_CMDS_KEY), name, System.currentTimeMillis()))
+        projectProps.setValue(RECENT_CMDS_KEY, SavedCommands.bumpRecent(projectProps.getValue(RECENT_CMDS_KEY), name, System.currentTimeMillis()))
 
     /** 7.13: the commands pinned above the composer (JSON array of names, in pin order).
-     *  Application-level like the model pick and the recents, so the strip is the same in every
-     *  project; a command a project does not have is simply not drawn there. Sanitised on the way
+     *  Per project, like the model pick and the recents, so a pin of a project's own command is
+     *  never a stale pin elsewhere; a command the project lacks is simply not drawn. Sanitised on the way
      *  in AND out, so the page never sees more than a list of plausible names. */
-    fun commandPins(): String = SavedCommands.encodePins(SavedCommands.parsePins(props.getValue(PINNED_CMDS_KEY)))
+    fun commandPins(): String = SavedCommands.encodePins(SavedCommands.parsePins(projectProps.getValue(PINNED_CMDS_KEY)))
     fun setCommandPins(jsonArray: String) =
-        props.setValue(PINNED_CMDS_KEY, SavedCommands.encodePins(SavedCommands.parsePins(jsonArray)))
+        projectProps.setValue(PINNED_CMDS_KEY, SavedCommands.encodePins(SavedCommands.parsePins(jsonArray)))
 
     /** 6.6: "Include open file" — the active file's content rides the prompt when nothing is
      *  highlighted (the highlight always wins). Same persistence as the selection switch. Default OFF. */
@@ -164,9 +169,9 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
     /** Persisted thinking preference (9.5), stored as the exception (off). ON resets the CLI to
      * its session default (max_thinking_tokens null); OFF caps it at 0. */
-    fun thinkingOff(): Boolean = props.getBoolean(THINKING_OFF_KEY, false)
+    fun thinkingOff(): Boolean = projectProps.getBoolean(THINKING_OFF_KEY, false)
     fun setThinking(on: Boolean) {
-        props.setValue(THINKING_OFF_KEY, !on, false)
+        projectProps.setValue(THINKING_OFF_KEY, !on, false)
         cli?.setMaxThinkingTokens(if (on) null else 0)
     }
 
@@ -308,7 +313,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         // `applied` past this flag layer (measured on 2.1.332, `_local/probe-effort-persist/`).
         // Then the slider is set from what the CLI actually runs on, picked or not — it used to
         // open on a fixed High while a never-picked CLI ran on `medium`.
-        effortLevel()?.let { lvl -> cli?.applyFlagSettings(buildJsonObject { put("effortLevel", lvl) }) }
+        cli?.applyFlagSettings(buildJsonObject { put("effortLevel", effortLevel()) })
         shownEffort = null
         cli?.getSettings { r, _ ->
             val applied = ((r?.get("applied") as? JsonObject)?.get("effort") as? JsonPrimitive)
@@ -501,7 +506,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
         // (`/effort high` from the slider, `/compact` from the gauge).
         if (text.trimStart().startsWith("/")) {
             // 9.2: an effort pick is saved here, whoever sent it (slider, switch marker, typed).
-            EffortPick.parse(text)?.let { lvl -> props.setValue(EFFORT_KEY, lvl); shownEffort = lvl }
+            EffortPick.parse(text)?.let { lvl -> projectProps.setValue(EFFORT_KEY, lvl); shownEffort = lvl }
             prev.whenComplete { _, _ -> try { c.sendUserMessage(text, attachments) } finally { done.complete(Unit) } }
             return
         }
@@ -632,7 +637,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      * a bypass option is ever wanted back.
      */
     fun setPermissionMode(mode: String) {
-        props.setValue(MODE_KEY, mode)
+        projectProps.setValue(MODE_KEY, mode)
         cli?.setPermissionMode(mode)
     }
 
@@ -678,7 +683,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
      */
     fun setModel(model: String, ack: Boolean = false) {
         val previous = selectedModel()
-        props.setValue(MODEL_KEY, model)
+        projectProps.setValue(MODEL_KEY, model)
         cli?.setModel(model) { _, err ->
             if (err != null) revertModel(model, previous, err)
             // Model-switch handoff: the page sends its continue message only once the CLI has
@@ -692,7 +697,7 @@ class ClaudeSessionService(private val project: Project) : Disposable {
     }
 
     private fun revertModel(model: String, previous: String?, error: String) {
-        if (selectedModel() == model) props.setValue(MODEL_KEY, previous)
+        if (selectedModel() == model) projectProps.setValue(MODEL_KEY, previous)
         onEventCb?.invoke(buildJsonObject {
             put("type", "__model_rejected")
             put("model", model)
@@ -784,3 +789,6 @@ class ClaudeSessionService(private val project: Project) : Disposable {
 
 /** The model sent to the CLI at every start: the saved pick, or `default` when none is saved (#65 doubt 19). */
 internal fun startupModel(saved: String?): String = saved?.takeIf { it.isNotBlank() } ?: "default"
+
+/** The effort level sent to the CLI at every start: the project's saved pick, or `medium` when none is saved. */
+internal fun startupEffort(saved: String?): String = saved?.takeIf { it in EffortPick.LEVELS } ?: "medium"

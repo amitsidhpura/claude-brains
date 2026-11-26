@@ -1051,11 +1051,9 @@ class ChatPanel(private val project: Project, parent: Disposable) {
             }
             pushFrame(frame)
         }
-        // The mode the CLI actually landed on (2.1.241+). With nothing persisted no flag was passed
-        // (4.7), and this is the only truth until `system/init` says the same with the FIRST TURN —
-        // measured 2026-09-04: a never-picked chip sat on its markup default while the CLI was on
-        // `auto`. With a flag it merely reconciles (manual comes back as `default`; the chip
-        // aliases it). Replayed into a reloaded page with the rest of this payload.
+        // The mode the CLI actually landed on (2.1.241+). The CLI is always launched with the
+        // project's mode flag (since 2026-11-26), so this merely reconciles (manual comes back as
+        // `default`; the chip aliases it). Replayed into a reloaded page with the rest of this payload.
         runCatching { meta["current_permission_mode"]?.jsonPrimitive?.content }.getOrNull()?.let { m ->
             pushFrame(buildJsonObject { put("type", "__mode"); put("mode", m) })
         }
@@ -1083,11 +1081,10 @@ class ChatPanel(private val project: Project, parent: Disposable) {
      * rather than what it was last sent.
      */
     private fun seedUi() {
-        // Seed the mode chip with the persisted mode the CLI was just launched with — it isn't in
-        // the initialize payload, and the chip's built-in default is "manual". Nothing persisted →
-        // nothing pushed: the CLI was launched without a mode flag, and its `system/init`
-        // broadcast is the only truth about where it landed (4.7).
-        session.selectedMode()?.let { m -> pushFrame(buildJsonObject { put("type", "__mode"); put("mode", m) }) }
+        // Seed the mode chip with the project's mode the CLI was just launched with — it isn't in
+        // the initialize payload. Since 2026-11-26 there always is one (`manual` when the project
+        // never picked a mode), and the CLI is always launched with that flag.
+        pushFrame(buildJsonObject { put("type", "__mode"); put("mode", session.selectedMode()) })
 
         // The project root, so a tool line can show `plugin/src/…` instead of repeating the whole
         // prefix on every row. From the IDE rather than the CLI's `system/init` cwd, which carries
@@ -1104,7 +1101,7 @@ class ChatPanel(private val project: Project, parent: Disposable) {
         pushFrame(buildJsonObject { put("type", "__thinking"); put("on", !session.thinkingOff()) })
         // 9.2: the effort the CLI runs on (or the saved pick before its answer) — the slider's
         // markup default is High, which a reloaded page would otherwise show whatever is applied.
-        session.shownEffort()?.let { lvl -> pushFrame(buildJsonObject { put("type", "__effort"); put("level", lvl) }) }
+        pushFrame(buildJsonObject { put("type", "__effort"); put("level", session.shownEffort()) })
         // 6.6: the selection switch and whatever the editor holds right now — the tracker only
         // pushes on CHANGE, so a reloaded page would otherwise show no pill until the caret moved.
         pushFrame(buildJsonObject { put("type", "__selPref"); put("on", session.includeSelection()); put("file", session.includeOpenFile()) })
