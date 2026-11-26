@@ -19,6 +19,7 @@ import javax.swing.JComponent
  *    pointer that stops dead on a control would get no tooltip until it moved again. When the
  *    text changes, the last real mouse move is dispatched once more so the manager looks again.
  *    The browser sees that repeat too and reports the same text, which changes nothing here.
+ *    Nothing is repeated between a press and the next plain move ([replayable]).
  *  - The text is page content (a tool line's `title` mirrors what the model wrote), and a Swing
  *    tooltip renders "<html>…" as markup: it is always escaped. Long text is given a width so it
  *    wraps instead of running off the screen.
@@ -36,6 +37,9 @@ internal class WebTooltip(private val comp: JComponent?) {
         })
         comp?.addMouseListener(object : MouseAdapter() {
             override fun mouseExited(e: MouseEvent) { last = null }
+            // A press makes the last plain move stale: Swing reports drags, not moves, until the
+            // release, so a replay would land where the press began, with no button held.
+            override fun mousePressed(e: MouseEvent) { last = null }
         })
     }
 
@@ -45,12 +49,18 @@ internal class WebTooltip(private val comp: JComponent?) {
         if (t == text) return
         text = t
         c.putClientProperty(JComponent.TOOL_TIP_TEXT_KEY, t?.let(::html))
-        val e = last ?: return
+        val e = replayable() ?: return
         if (!c.isShowing) return
         val again = MouseEvent(c, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, e.x, e.y, 0, false)
         nudge = again
         try { c.dispatchEvent(again) } finally { nudge = null }
     }
+
+    /** The mouse move [set] would dispatch again, or null for none. Never during a press or a drag:
+     *  the replay carries no button, and the page takes it as the button coming up — it ended every
+     *  pinned-command drag (7.13) at its first tooltip change, measured 2026-11-26 as a 30 Hz stream
+     *  of button-less moves at the press point interleaved with the real drag. */
+    internal fun replayable(): MouseEvent? = last
 
     companion object {
         /** Past this many characters a tooltip gets a fixed width and wraps. */

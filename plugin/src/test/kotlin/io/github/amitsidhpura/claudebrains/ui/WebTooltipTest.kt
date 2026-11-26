@@ -3,6 +3,8 @@ package io.github.amitsidhpura.claudebrains.ui
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import java.awt.event.InputEvent
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -45,6 +47,35 @@ class WebTooltipTest {
         assertNull(c.toolTipText)
         tip.set(null)
         assertNull(c.toolTipText)
+    }
+
+    private fun mouse(c: JPanel, id: Int, x: Int, mods: Int = 0) =
+        c.dispatchEvent(MouseEvent(c, id, 0L, mods, x, 5, 1, false, MouseEvent.BUTTON1))
+
+    @Test
+    fun `a resting pointer is replayed so a late tooltip still shows`() {
+        val c = JPanel()
+        val tip = WebTooltip(c)
+        mouse(c, MouseEvent.MOUSE_MOVED, 10)
+        assertEquals(10, tip.replayable()?.x)
+    }
+
+    @Test
+    fun `nothing is replayed while a button is held or after a press`() {
+        // A replay is a move with NO button at the last plain-move spot. Dispatched during a drag it
+        // told the page the button was up at the drag's start, ending a pinned-command drag (7.13) on
+        // its first tooltip change — and the replay itself changed the tooltip again, 30 times a second.
+        val c = JPanel()
+        val tip = WebTooltip(c)
+        mouse(c, MouseEvent.MOUSE_MOVED, 10)
+        mouse(c, MouseEvent.MOUSE_PRESSED, 10, InputEvent.BUTTON1_DOWN_MASK)
+        assertNull(tip.replayable(), "held after press")
+        mouse(c, MouseEvent.MOUSE_DRAGGED, 200, InputEvent.BUTTON1_DOWN_MASK)
+        assertNull(tip.replayable(), "held while dragging")
+        mouse(c, MouseEvent.MOUSE_RELEASED, 200)
+        assertNull(tip.replayable(), "the pre-press spot is stale after the release")
+        mouse(c, MouseEvent.MOUSE_MOVED, 210)
+        assertEquals(210, tip.replayable()?.x, "the next plain move is replayable again")
     }
 
     @Test
