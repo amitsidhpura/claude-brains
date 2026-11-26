@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.amitsidhpura"
-version = "0.21.0"
+version = "0.21.1"
 
 repositories {
     mavenCentral()
@@ -104,6 +104,11 @@ val skipVerifierIdes = providers.gradleProperty("skipVerifierIdes").isPresent
  * oldest.
  */
 val changeNotesHtml = """
+            <b>0.21.1</b>
+            <ul>
+              <li>Pinned commands can be dragged into a new order again — a drag used to end as
+                  soon as a tooltip changed, leaving the chip where it was</li>
+            </ul>
             <b>0.21.0</b>
             <ul>
               <li>Settings per project: the model, effort level, fast mode, thinking, permission
@@ -131,28 +136,6 @@ val changeNotesHtml = """
               <li>In a folder Claude Code does not trust yet, the notice also says that the
                   folder's .mcp.json servers still run</li>
               <li>A file changed outside the IDE no longer shows as new in Claude's diff tab</li>
-            </ul>
-            <b>0.19.0</b>
-            <ul>
-              <li>Model switch between steps: ask for work split across models ("step 1 on Fable,
-                  step 2 on Opus") and the panel changes the model at each step and continues on
-                  its own — a "Switch to …" line marks each change. Same conversation, so the
-                  next model sees everything before it</li>
-              <li>Prompt suggestions: Ctrl+Enter or the Send button on an empty message box sends
-                  the suggestion as it is; Tab still writes it in so you can edit it first</li>
-              <li>A turn started by a scheduled task or a loop wake-up opens with a line that
-                  says so</li>
-              <li>When a Stop hook sends Claude back to work, a warning line shows it with the
-                  hook's message under it</li>
-              <li>Hover tooltips on the panel's buttons show</li>
-              <li>The turn summary ends "· fast" when the request was served in fast mode</li>
-              <li>The panel no longer waits on every Read, Edit and Write while a modal IDE
-                  dialog is open, and keeps drawing under the dialog</li>
-              <li>A filename wider than the tool line is cut with an ellipsis</li>
-              <li>A model picked while a reply is running no longer mislabels Default in the
-                  model menu</li>
-              <li>A selection made with the keyboard in a plan gets the Comment button</li>
-              <li>A running Monitor is named "Monitor" in the background list</li>
             </ul>
             <p>Earlier versions: <a href="https://github.com/amitsidhpura/claude-brains/releases">github.com/amitsidhpura/claude-brains/releases</a></p>
         """.trimIndent()

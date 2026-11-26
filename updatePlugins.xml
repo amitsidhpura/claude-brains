@@ -7,8 +7,8 @@
      Release process: cxtify runbook.md § Release -->
 <plugins>
     <plugin id="io.github.amitsidhpura.claude-brains"
-            version="0.21.0"
-            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.21.0/claude-brains-0.21.0.zip">
+            version="0.21.1"
+            url="https://github.com/amitsidhpura/claude-brains/releases/download/v0.21.1/claude-brains-0.21.1.zip">
         <idea-version since-build="242"/>
         <name>Claude Brains</name>
         <description>Develop in the IDE. Configure in the Terminal. Claude Code for JetBrains
